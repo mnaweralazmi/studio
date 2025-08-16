@@ -67,15 +67,13 @@ const setTasksInStorage = (tasks: Task[]) => {
 
 
 export default function CalendarPage() {
-  const [date, setDate] = React.useState<Date | undefined>(undefined);
+  const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
 
   React.useEffect(() => {
-    // Set initial date on client to avoid hydration mismatch
-    setDate(new Date());
-    // Load tasks from localStorage
+    // Load tasks from localStorage once on component mount on the client
     setTasks(getTasksFromStorage());
   }, []);
 
@@ -99,14 +97,14 @@ export default function CalendarPage() {
         date: newTaskDate,
       };
       
-      // Clear query params immediately to prevent re-triggering
+      // Clear query params immediately to prevent re-triggering this effect
       router.replace('/calendar', {scroll: false});
-
-      setTasks(prevTasks => {
-        const updatedTasks = [...prevTasks, newTask];
-        setTasksInStorage(updatedTasks);
-        return updatedTasks;
-      });
+      
+      // IMPORTANT: Read from storage first to get the most up-to-date list
+      const currentTasks = getTasksFromStorage();
+      const updatedTasks = [...currentTasks, newTask];
+      setTasksInStorage(updatedTasks);
+      setTasks(updatedTasks);
 
       // Set calendar to the new task's date
       setDate(newTaskDate);
@@ -176,11 +174,11 @@ export default function CalendarPage() {
                   </Button>
                 )}
                 
-                {filteredTasks.length > 0 && (
+                {date && filteredTasks.length > 0 && (
                   <div className="w-full max-w-4xl mt-8">
                     <Card>
                       <CardHeader>
-                        <CardTitle>قائمة المهام لـ {format(date!, "PPP", { locale: arSA })}</CardTitle>
+                        <CardTitle>قائمة المهام لـ {format(date, "PPP", { locale: arSA })}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Table>
