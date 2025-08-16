@@ -67,10 +67,15 @@ const setTasksInStorage = (tasks: Task[]) => {
 
 
 export default function CalendarPage() {
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [date, setDate] = React.useState<Date | undefined>(undefined);
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Set initial date on client to avoid hydration mismatch
+  React.useEffect(() => {
+    setDate(new Date());
+  }, []);
 
   React.useEffect(() => {
     // Load tasks from localStorage once on component mount on the client
