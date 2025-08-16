@@ -80,9 +80,7 @@ export default function CalendarPage() {
   React.useEffect(() => {
     // Load tasks from localStorage once on component mount on the client
     setTasks(getTasksFromStorage());
-  }, []);
 
-  React.useEffect(() => {
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     const description = searchParams.get('description');
@@ -101,21 +99,22 @@ export default function CalendarPage() {
         fruit: fruit || undefined,
         date: newTaskDate,
       };
-      
+
       // Clear query params immediately to prevent re-triggering this effect
+      // and causing duplicate task creation.
       router.replace('/calendar', {scroll: false});
       
-      // IMPORTANT: Read from storage first to get the most up-to-date list
-      const currentTasks = getTasksFromStorage();
-      const updatedTasks = [...currentTasks, newTask];
-      setTasksInStorage(updatedTasks);
-      setTasks(updatedTasks);
+      setTasks(prevTasks => {
+          const updatedTasks = [...prevTasks, newTask];
+          setTasksInStorage(updatedTasks);
+          return updatedTasks;
+      });
 
       // Set calendar to the new task's date
       setDate(newTaskDate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []); // Run only once on mount
 
   const deleteTask = (id: string) => {
     setTasks(prevTasks => {
