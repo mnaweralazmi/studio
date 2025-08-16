@@ -64,7 +64,7 @@ export default function CalendarPage() {
     if (title && taskType && dateStr) {
       const newTaskDate = new Date(dateStr);
       const newTask: Task = {
-        id: Date.now() + Math.random(), // Unique ID
+        id: Date.now(), // Use a simpler ID for the check
         title,
         taskType,
         description: description || undefined,
@@ -72,14 +72,22 @@ export default function CalendarPage() {
       };
       
       // Clear query params immediately to prevent re-triggering
+      // This is the most important part of the fix
       router.replace('/calendar', {scroll: false});
 
       setTasks(prevTasks => {
-        // Prevent adding duplicate tasks from strict mode double-invoking
-        if (prevTasks.some(task => task.id === newTask.id)) {
-          return prevTasks;
+        // Prevent adding duplicate tasks by checking if a similar task was just added
+        const taskExists = prevTasks.some(
+          (task) =>
+            task.title === newTask.title &&
+            task.date.getTime() === newTask.date.getTime()
+        );
+
+        if (taskExists) {
+            return prevTasks;
         }
-        return [...prevTasks, newTask];
+        
+        return [...prevTasks, { ...newTask, id: Date.now() + Math.random() }]; // Add with a more unique ID
       });
 
       // Set calendar to the new task's date
