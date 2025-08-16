@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { AppLayout } from '@/components/app-layout';
 
 export const metadata: Metadata = {
   title: 'بلانتاسي',
@@ -22,7 +23,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <SidebarProvider>
-          {children}
+          <AppLayout>
+            {children}
+          </AppLayout>
         </SidebarProvider>
         <Toaster />
       </body>
