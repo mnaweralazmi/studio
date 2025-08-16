@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { AreaChart, PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Wallet } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -35,7 +35,6 @@ export default function BudgetPage() {
   const form = useForm<z.infer<typeof budgetFormSchema>>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
-      vegetable: undefined,
       quantity: 1,
       price: 0.1,
     },
@@ -48,7 +47,7 @@ export default function BudgetPage() {
       total: data.quantity * data.price,
     };
     setBudgetItems(prevItems => [...prevItems, newItem]);
-    form.reset();
+    form.reset({ quantity: 1, price: 0.1, vegetable: undefined });
     toast({
       title: "تمت إضافة البند بنجاح!",
       description: `تمت إضافة "${data.vegetable}" إلى الميزانية.`,
@@ -71,7 +70,7 @@ export default function BudgetPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AreaChart />
+              <Wallet />
               متتبع ميزانية الخضروات
             </CardTitle>
             <CardDescription>
@@ -81,28 +80,32 @@ export default function BudgetPage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <FormField
-                  control={form.control}
-                  name="vegetable"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>نوع الخضار</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر نوع الخضار..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {vegetableList.map(veg => (
-                            <SelectItem key={veg} value={veg}>{veg}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                
+                <div className="md:col-span-2">
+                  <FormField
+                    control={form.control}
+                    name="vegetable"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نوع الخضار</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر نوع الخضار..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {vegetableList.map(veg => (
+                              <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <FormField
                   control={form.control}
                   name="quantity"
@@ -116,6 +119,7 @@ export default function BudgetPage() {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="price"
@@ -129,8 +133,9 @@ export default function BudgetPage() {
                     </FormItem>
                   )}
                 />
+
                 <Button type="submit" className="md:col-start-4">
-                  <PlusCircle className="ml-2 h-4 w-4" />
+                  <PlusCircle className="mr-2 h-4 w-4" />
                   إضافة
                 </Button>
               </form>
@@ -144,32 +149,34 @@ export default function BudgetPage() {
               <CardTitle>قائمة المشتريات</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>الخضار</TableHead>
-                    <TableHead>الكمية (كيلو)</TableHead>
-                    <TableHead>سعر الكيلو</TableHead>
-                    <TableHead>الإجمالي</TableHead>
-                    <TableHead className="text-left">الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {budgetItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.vegetable}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.price.toFixed(2)} ريال</TableCell>
-                      <TableCell>{item.total.toFixed(2)} ريال</TableCell>
-                      <TableCell className="text-left">
-                        <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title="حذف البند">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>الخضار</TableHead>
+                      <TableHead>الكمية (كيلو)</TableHead>
+                      <TableHead>سعر الكيلو</TableHead>
+                      <TableHead>الإجمالي</TableHead>
+                      <TableHead className="text-left">الإجراءات</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {budgetItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.vegetable}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.price.toFixed(2)} ريال</TableCell>
+                        <TableCell>{item.total.toFixed(2)} ريال</TableCell>
+                        <TableCell className="text-left">
+                          <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title="حذف البند">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
                 <span>إجمالي التكلفة:</span>
                 <span>{totalBudget.toFixed(2)} ريال</span>
