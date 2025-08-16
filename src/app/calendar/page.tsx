@@ -64,19 +64,26 @@ export default function CalendarPage() {
     if (title && taskType && dateStr) {
       const newTaskDate = new Date(dateStr);
       const newTask: Task = {
-        id: Date.now() + Math.random(), // Add random number to avoid collision in strict mode
+        id: Date.now() + Math.random(), // Unique ID
         title,
         taskType,
         description: description || undefined,
         date: newTaskDate,
       };
-      setTasks(prevTasks => [...prevTasks, newTask]);
+      
+      // Clear query params immediately to prevent re-triggering
+      router.replace('/calendar', {scroll: false});
+
+      setTasks(prevTasks => {
+        // Prevent adding duplicate tasks from strict mode double-invoking
+        if (prevTasks.some(task => task.id === newTask.id)) {
+          return prevTasks;
+        }
+        return [...prevTasks, newTask];
+      });
+
       // Set calendar to the new task's date
       setDate(newTaskDate);
-      
-      // Clear query params after adding task to avoid re-adding on refresh
-      // Using router.replace is better than window.history
-      router.replace('/calendar', {scroll: false});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -86,7 +93,7 @@ export default function CalendarPage() {
   };
   
   const repeatTask = (task: Task) => {
-    const repeatedTask: Task = { ...task, id: Date.now(), title: `${task.title} (مكرر)` };
+    const repeatedTask: Task = { ...task, id: Date.now() + Math.random(), title: `${task.title} (مكرر)` };
     setTasks(prevTasks => [...prevTasks, repeatedTask]);
   };
 
