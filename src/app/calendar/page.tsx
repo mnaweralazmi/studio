@@ -72,19 +72,20 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Set initial date on client to avoid hydration mismatch
+  // Set initial date on client to avoid hydration mismatch and load tasks from storage
   React.useEffect(() => {
     setDate(new Date());
     setTasks(getTasksFromStorage());
   }, []);
 
   React.useEffect(() => {
-    const title = searchParams.get('title');
-    const taskType = searchParams.get('taskType');
-    const description = searchParams.get('description');
-    const vegetable = searchParams.get('vegetable');
-    const fruit = searchParams.get('fruit');
-    const dateStr = searchParams.get('date');
+    const params = new URLSearchParams(searchParams.toString());
+    const title = params.get('title');
+    const taskType = params.get('taskType');
+    const description = params.get('description');
+    const vegetable = params.get('vegetable');
+    const fruit = params.get('fruit');
+    const dateStr = params.get('date');
 
     if (title && taskType && dateStr) {
       const newTaskDate = new Date(dateStr);
@@ -108,25 +109,21 @@ export default function CalendarPage() {
       // Clear query params immediately to prevent re-triggering.
       router.replace('/calendar', {scroll: false});
     }
-    // Only run when searchParams change, and only if there are params to process.
+    // Only run when searchParams change (i.e. on navigation from add-task page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const deleteTask = (id: string) => {
-    setTasks(prevTasks => {
-        const updatedTasks = prevTasks.filter(task => task.id !== id);
-        setTasksInStorage(updatedTasks);
-        return updatedTasks;
-    });
+    const updatedTasks = tasks.filter(task => task.id !== id);
+    setTasksInStorage(updatedTasks);
+    setTasks(updatedTasks);
   };
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
-    setTasks(prevTasks => {
-        const updatedTasks = [...prevTasks, repeatedTask];
-        setTasksInStorage(updatedTasks);
-        return updatedTasks;
-    });
+    const updatedTasks = [...tasks, repeatedTask];
+    setTasksInStorage(updatedTasks);
+    setTasks(updatedTasks);
   };
 
   const getTaskIcon = (taskType: string) => {
