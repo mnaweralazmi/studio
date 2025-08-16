@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -18,12 +18,16 @@ const vegetableList = [
 ] as const;
 
 const budgetFormSchema = z.object({
-  vegetable: z.enum(vegetableList, { required_error: 'الرجاء اختيار نوع الخضار.' }),
-  quantity: z.coerce.number().min(0.1, { message: 'يجب أن تكون الكمية 0.1 على الأقل.' }),
-  price: z.coerce.number().min(0.01, { message: 'يجب أن يكون السعر إيجابياً.' }),
+  vegetable: z.enum(vegetableList, { 
+    required_error: 'الرجاء اختيار نوع الخضار.' 
+  }),
+  quantity: z.coerce.number().min(0.1, 'يجب أن تكون الكمية 0.1 على الأقل.'),
+  price: z.coerce.number().min(0.01, 'يجب أن يكون السعر إيجابياً.'),
 });
 
-type BudgetItem = z.infer<typeof budgetFormSchema> & {
+type BudgetFormValues = z.infer<typeof budgetFormSchema>;
+
+type BudgetItem = BudgetFormValues & {
   id: number;
   total: number;
 };
@@ -32,15 +36,16 @@ export default function BudgetPage() {
   const [budgetItems, setBudgetItems] = React.useState<BudgetItem[]>([]);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof budgetFormSchema>>({
+  const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
       quantity: 1,
       price: 0.1,
+      vegetable: undefined,
     },
   });
 
-  function onSubmit(data: z.infer<typeof budgetFormSchema>) {
+  function onSubmit(data: BudgetFormValues) {
     const newItem: BudgetItem = {
       ...data,
       id: Date.now(),
@@ -48,17 +53,17 @@ export default function BudgetPage() {
     };
     setBudgetItems(prevItems => [...prevItems, newItem]);
     
-    // Reset form but keep vegetable for easier multiple entries
+    // Reset form fields to their default values
     form.reset({
-        vegetable: data.vegetable,
-        quantity: 1,
-        price: 0.1,
+      vegetable: undefined,
+      quantity: 1,
+      price: 0.1,
     });
     
     toast({
       title: "تمت إضافة البند بنجاح!",
       description: `تمت إضافة "${data.vegetable}" إلى الميزانية.`,
-    })
+    });
   }
   
   function deleteItem(id: number) {
@@ -66,7 +71,7 @@ export default function BudgetPage() {
     toast({
       variant: "destructive",
       title: "تم حذف البند.",
-    })
+    });
   }
 
   const totalBudget = budgetItems.reduce((sum, item) => sum + item.total, 0);
