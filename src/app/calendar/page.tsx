@@ -74,12 +74,10 @@ export default function CalendarPage() {
 
   React.useEffect(() => {
     // Set initial date on client to avoid hydration mismatch
-    // And load tasks from localStorage
-    if (date === undefined) {
-      setDate(new Date());
-    }
+    setDate(new Date());
+    // Load tasks from localStorage
     setTasks(getTasksFromStorage());
-  }, [date]);
+  }, []);
 
   React.useEffect(() => {
     const title = searchParams.get('title');
