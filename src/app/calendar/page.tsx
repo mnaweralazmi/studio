@@ -116,7 +116,7 @@ export default function CalendarPage() {
                   className="rounded-md border"
                   disabled={!date}
                 />
-                <Button asChild>
+                <Button asChild disabled={!date}>
                   <NextLink href={`/calendar/add-task?date=${linkDate}`}>
                     <Plus className="ml-2 h-4 w-4" />
                     إضافة مهمة
