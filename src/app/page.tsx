@@ -1,6 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Leaf, Droplets, Bug, Scissors, Sprout, FlaskConical, Sun, Home as HomeIcon } from 'lucide-react';
+import { WateringScheduleGenerator } from '@/components/watering-schedule-generator';
 
 export default function Home() {
   const agriculturalSections = [
@@ -36,7 +37,7 @@ export default function Home() {
         <header className="text-center space-y-4">
           <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full">
             <Leaf className="h-6 w-6 text-primary" />
-            <span className="font-headline text-lg font-semibold text-primary-foreground">بلانتاسي</span>
+            <span className="font-headline text-lg font-semibold text-primary-foreground">مزارع كويتي</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground tracking-tight">
             معلومات وبيانات عن الزراعة
@@ -45,6 +46,8 @@ export default function Home() {
             كل ما تحتاجه من معلومات حول الزراعة، الري، الآفات، والتقليم في مكان واحد.
           </p>
         </header>
+
+        <WateringScheduleGenerator />
 
         <Card className="w-full max-w-4xl shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
@@ -73,7 +76,7 @@ export default function Home() {
         </Card>
 
         <footer className="text-center mt-12 text-sm text-muted-foreground font-body">
-            <p>&copy; {new Date().getFullYear()} بلانتاسي. صُنع بحب لكل ما هو أخضر.</p>
+            <p>&copy; {new Date().getFullYear()} مزارع كويتي. صُنع بحب لكل ما هو أخضر.</p>
         </footer>
       </div>
     </main>

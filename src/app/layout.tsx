@@ -5,8 +5,8 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppLayout } from '@/components/app-layout';
 
 export const metadata: Metadata = {
-  title: 'بلانتاسي',
-  description: 'مساعدك الشخصي للعناية بالنباتات.',
+  title: 'مزارع كويتي',
+  description: 'مساعدك الشخصي للزراعة في الكويت.',
 };
 
 export default function RootLayout({

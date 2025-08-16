@@ -26,7 +26,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 p-2 justify-center">
             <Leaf className="w-6 h-6 text-primary" />
             <h2 className="text-lg font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
-              بلانتاسي
+              مزارع كويتي
             </h2>
           </div>
         </SidebarHeader>
