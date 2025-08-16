@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -13,11 +14,23 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, DollarSign, Trash2, PlusCircle, ArrowDownCircle } from 'lucide-react';
 
-const expenseCategories = ["فواتير", "طعام", "وقود", "صيانة", "بذور وأسمدة", "عمالة", "أخرى"] as const;
+const expenseCategories = {
+  "فواتير": ["فاتورة كهرباء", "فاتورة ماء", "فاتورة انترنت", "فاتورة هاتف"],
+  "طعام": ["تسوق بقالة", "مطاعم", "توصيل"],
+  "وقود": ["بنزين", "ديزل"],
+  "صيانة": ["صيانة سيارة", "صيانة منزل", "أدوات"],
+  "بذور وأسمدة": ["بذور", "أسمدة", "تربة"],
+  "عمالة": ["راتب عامل", "أعمال يومية"],
+  "أخرى": ["مصروفات شخصية", "ترفيه", "طوارئ"],
+} as const;
+
+type Category = keyof typeof expenseCategories;
 
 const expenseFormSchema = z.object({
-  category: z.enum(expenseCategories, { required_error: "الرجاء اختيار الفئة." }),
-  description: z.string().min(2, "يجب أن يكون الوصف حرفين على الأقل."),
+  category: z.custom<Category>((val) => typeof val === "string" && val in expenseCategories, {
+    required_error: "الرجاء اختيار الفئة.",
+  }),
+  item: z.string({ required_error: "الرجاء اختيار البند." }),
   amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ إيجابياً."),
 });
 
@@ -31,14 +44,15 @@ type ExpenseItem = ExpenseFormValues & {
 function ExpensesContent() {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
     const { toast } = useToast();
-
+    
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
         defaultValues: {
-            description: "",
             amount: 0.01,
         },
     });
+
+    const selectedCategory = form.watch("category");
 
     function onSubmit(data: ExpenseFormValues) {
         const newExpense: ExpenseItem = {
@@ -47,7 +61,7 @@ function ExpensesContent() {
             date: new Date(),
         };
         setExpenses(prev => [...prev, newExpense]);
-        form.reset({ description: "", amount: 0.01, category: undefined });
+        form.reset();
         toast({ title: "تمت إضافة المصروف بنجاح!" });
     }
 
@@ -105,21 +119,31 @@ function ExpensesContent() {
                             <FormField control={form.control} name="category" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>الفئة</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select onValueChange={(value) => {
+                                        field.onChange(value);
+                                        form.setValue("item", ""); // Reset item when category changes
+                                    }} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger><SelectValue placeholder="اختر فئة..." /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                            {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormField control={form.control} name="item" render={({ field }) => (
                                 <FormItem className="md:col-span-2">
-                                    <FormLabel>الوصف</FormLabel>
-                                    <FormControl><Input placeholder="مثال: فاتورة كهرباء شهر مايو" {...field} /></FormControl>
+                                    <FormLabel>البند</FormLabel>
+                                     <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCategory}>
+                                        <FormControl>
+                                            <SelectTrigger><SelectValue placeholder={selectedCategory ? "اختر بندًا..." : "اختر الفئة أولاً"} /></SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {selectedCategory && expenseCategories[selectedCategory].map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -144,7 +168,7 @@ function ExpensesContent() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>الفئة</TableHead>
-                                <TableHead>الوصف</TableHead>
+                                <TableHead>البند</TableHead>
                                 <TableHead>المبلغ</TableHead>
                                 <TableHead>التاريخ</TableHead>
                                 <TableHead>إجراء</TableHead>
@@ -154,7 +178,7 @@ function ExpensesContent() {
                             {expenses.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.category}</TableCell>
-                                    <TableCell className="font-medium">{item.description}</TableCell>
+                                    <TableCell className="font-medium">{item.item}</TableCell>
                                     <TableCell>{item.amount.toFixed(2)} ريال</TableCell>
                                     <TableCell>{new Date(item.date).toLocaleDateString('ar-EG')}</TableCell>
                                     <TableCell>
