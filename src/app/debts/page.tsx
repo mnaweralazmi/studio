@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
 const debtFormSchema = z.object({
   creditor: z.string().min(2, "اسم الدائن مطلوب."),
   amount: z.coerce.number().min(0.01, "المبلغ يجب أن يكون إيجابياً."),
-  dueDate: z.date({ required_error: "تاريخ الاستحقاق مطلوب." }),
+  dueDate: z.date().optional(),
 });
 
 type DebtFormValues = z.infer<typeof debtFormSchema>;
@@ -39,6 +40,7 @@ function DebtsContent() {
         defaultValues: {
             creditor: "",
             amount: 0.01,
+            dueDate: undefined,
         },
     });
 
@@ -96,7 +98,7 @@ function DebtsContent() {
                                 <FormItem><FormLabel>المبلغ (ريال)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="dueDate" render={({ field }) => (
-                                <FormItem className="flex flex-col"><FormLabel>تاريخ الاستحقاق</FormLabel><Popover>
+                                <FormItem className="flex flex-col"><FormLabel>تاريخ الاستحقاق (اختياري)</FormLabel><Popover>
                                     <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
                                         {field.value ? format(field.value, "PPP") : <span>اختر تاريخًا</span>}
                                         <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
@@ -121,7 +123,7 @@ function DebtsContent() {
                                 <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50' : ''}>
                                     <TableCell className="font-medium">{item.creditor}</TableCell>
                                     <TableCell>{item.amount.toFixed(2)} ريال</TableCell>
-                                    <TableCell>{format(item.dueDate, "PPP")}</TableCell>
+                                    <TableCell>{item.dueDate ? format(item.dueDate, "PPP") : 'لا يوجد'}</TableCell>
                                     <TableCell><Badge variant={item.status === 'paid' ? 'default' : 'destructive'} className={item.status === 'paid' ? 'bg-green-600' : ''}>{item.status === 'paid' ? 'مدفوع' : 'غير مدفوع'}</Badge></TableCell>
                                     <TableCell className="flex gap-2">
                                         {item.status === 'unpaid' && <Button size="sm" onClick={() => settleDebt(item.id)}><CheckCircle className="h-4 w-4 mr-1" /> تسديد</Button>}
