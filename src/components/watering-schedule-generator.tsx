@@ -76,7 +76,7 @@ export function WateringScheduleGenerator() {
     <Card className="w-full max-w-2xl mx-auto shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline text-2xl">
-          جدول الري
+          مولد جدول الري
         </CardTitle>
         <CardDescription className="font-body">
           املأ تفاصيل نبتتك للحصول على جدول ري مخصص ومدعوم بالذكاء الاصطناعي.
@@ -92,7 +92,7 @@ export function WateringScheduleGenerator() {
                 <FormItem>
                   <FormLabel>نوع النبات</FormLabel>
                   <FormControl>
-                    <Input placeholder="على سبيل المثال، تين ورقي، صبار..." {...field} />
+                    <Input placeholder="على سبيل المثال، صبار، تين ورقي..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -146,8 +146,8 @@ export function WateringScheduleGenerator() {
               />
             </div>
             <Button type="submit" disabled={isLoading} size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-              <Droplets className="ml-2 h-4 w-4" />
-              {isLoading ? 'جاري العناية...' : 'إنشاء الجدول'}
+              <Droplets className="mr-2 h-4 w-4" />
+              {isLoading ? 'جاري الإنشاء...' : 'إنشاء الجدول'}
             </Button>
           </form>
         </Form>

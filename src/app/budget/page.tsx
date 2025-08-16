@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -19,8 +19,8 @@ const vegetableList = [
 
 const budgetFormSchema = z.object({
   vegetable: z.enum(vegetableList, { required_error: 'الرجاء اختيار نوع الخضار.' }),
-  quantity: z.coerce.number().min(1, { message: 'يجب أن تكون الكمية 1 على الأقل.' }),
-  price: z.coerce.number().min(0.1, { message: 'يجب أن يكون السعر إيجابياً.' }),
+  quantity: z.coerce.number().min(0.1, { message: 'يجب أن تكون الكمية 0.1 على الأقل.' }),
+  price: z.coerce.number().min(0.01, { message: 'يجب أن يكون السعر إيجابياً.' }),
 });
 
 type BudgetItem = z.infer<typeof budgetFormSchema> & {
@@ -47,7 +47,14 @@ export default function BudgetPage() {
       total: data.quantity * data.price,
     };
     setBudgetItems(prevItems => [...prevItems, newItem]);
-    form.reset();
+    
+    // Reset form but keep vegetable for easier multiple entries
+    form.reset({
+        vegetable: data.vegetable,
+        quantity: 1,
+        price: 0.1,
+    });
+    
     toast({
       title: "تمت إضافة البند بنجاح!",
       description: `تمت إضافة "${data.vegetable}" إلى الميزانية.`,
@@ -113,7 +120,7 @@ export default function BudgetPage() {
                     <FormItem>
                       <FormLabel>الكمية (كيلو)</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input type="number" step="0.1" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -127,7 +134,7 @@ export default function BudgetPage() {
                     <FormItem>
                       <FormLabel>السعر (للكيلو)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.1" {...field} />
+                        <Input type="number" step="0.01" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
