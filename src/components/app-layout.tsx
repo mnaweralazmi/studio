@@ -57,10 +57,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/expenses') || pathname.startsWith('/debts')} tooltip="المصروفات">
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/expenses')} tooltip="المصروفات والديون">
                 <NextLink href="/expenses">
                   <CreditCard />
-                  <span>المصروفات</span>
+                  <span>المصروفات والديون</span>
                 </NextLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -10,5 +10,9 @@ export default function DebtsPageRedirect() {
     router.replace('/expenses?tab=debts');
   }, [router]);
 
-  return null;
+  return (
+    <div className="flex flex-1 items-center justify-center">
+      <p>...جاري التحويل إلى صفحة الديون</p>
+    </div>
+  );
 }
