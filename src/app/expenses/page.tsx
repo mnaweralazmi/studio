@@ -32,36 +32,79 @@ const expenseFormSchema = z.object({
   }),
   item: z.string({ required_error: "الرجاء اختيار البند." }),
   amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ إيجابياً."),
+  workerName: z.string().optional(),
+  newWorkerName: z.string().optional(),
+}).refine(data => {
+    if (data.item === "راتب عامل" && data.workerName === 'add_new_worker') {
+        return !!data.newWorkerName && data.newWorkerName.length > 2;
+    }
+    if (data.item === "راتب عامل") {
+        return !!data.workerName;
+    }
+    return true;
+}, {
+    message: "الرجاء تحديد عامل أو إضافة عامل جديد (3 أحرف على الأقل).",
+    path: ['workerName'],
 });
+
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-type ExpenseItem = ExpenseFormValues & {
+type ExpenseItem = Omit<ExpenseFormValues, 'newWorkerName'> & {
   id: number;
   date: Date;
 };
 
 function ExpensesContent() {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
+    const [workers, setWorkers] = React.useState<string[]>([]);
     const { toast } = useToast();
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
         defaultValues: {
             amount: 0.01,
+            workerName: '',
+            newWorkerName: '',
         },
     });
 
     const selectedCategory = form.watch("category");
+    const selectedItem = form.watch("item");
+    const selectedWorker = form.watch("workerName");
 
     function onSubmit(data: ExpenseFormValues) {
+        let finalWorkerName = data.workerName;
+
+        if (data.item === 'راتب عامل') {
+            if (data.workerName === 'add_new_worker' && data.newWorkerName) {
+                finalWorkerName = data.newWorkerName;
+                if (!workers.includes(data.newWorkerName)) {
+                    setWorkers(prev => [...prev, data.newWorkerName]);
+                }
+            }
+        } else {
+            finalWorkerName = undefined;
+        }
+
         const newExpense: ExpenseItem = {
-            ...data,
             id: Date.now(),
             date: new Date(),
+            category: data.category,
+            item: data.item,
+            amount: data.amount,
+            workerName: finalWorkerName,
         };
+
         setExpenses(prev => [...prev, newExpense]);
-        form.reset();
+        form.reset({
+             category: undefined,
+             item: undefined,
+             amount: 0.01,
+             workerName: '',
+             newWorkerName: '',
+        });
+        form.clearErrors();
         toast({ title: "تمت إضافة المصروف بنجاح!" });
     }
 
@@ -115,46 +158,85 @@ function ExpensesContent() {
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <FormField control={form.control} name="category" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>الفئة</FormLabel>
-                                    <Select onValueChange={(value) => {
-                                        field.onChange(value);
-                                        form.setValue("item", ""); // Reset item when category changes
-                                    }} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="اختر فئة..." /></SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={form.control} name="item" render={({ field }) => (
-                                <FormItem className="md:col-span-2">
-                                    <FormLabel>البند</FormLabel>
-                                     <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCategory}>
-                                        <FormControl>
-                                            <SelectTrigger><SelectValue placeholder={selectedCategory ? "اختر بندًا..." : "اختر الفئة أولاً"} /></SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {selectedCategory && expenseCategories[selectedCategory].map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                           <FormField control={form.control} name="amount" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>المبلغ (ريال)</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <Button type="submit" className="md:col-start-4"><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField control={form.control} name="category" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>الفئة</FormLabel>
+                                        <Select onValueChange={(value: Category) => {
+                                            field.onChange(value);
+                                            form.setValue("item", "");
+                                            form.setValue("workerName", "");
+                                            form.setValue("newWorkerName", "");
+                                        }} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="اختر فئة..." /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="item" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>البند</FormLabel>
+                                         <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCategory}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder={selectedCategory ? "اختر بندًا..." : "اختر الفئة أولاً"} /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {selectedCategory && expenseCategories[selectedCategory].map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
+
+                            {selectedItem === 'راتب عامل' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="workerName" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>اسم العامل</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger><SelectValue placeholder="اختر عاملاً أو أضف جديدًا..." /></SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {workers.map(worker => <SelectItem key={worker} value={worker}>{worker}</SelectItem>)}
+                                                    <SelectItem value="add_new_worker">إضافة عامل جديد...</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    {selectedWorker === 'add_new_worker' && (
+                                         <FormField control={form.control} name="newWorkerName" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>اسم العامل الجديد</FormLabel>
+                                                <FormControl><Input placeholder="أدخل اسم العامل هنا" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    )}
+                                </div>
+                            )}
+
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField control={form.control} name="amount" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>المبلغ (ريال)</FormLabel>
+                                        <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
+                            
+                            <div className="flex justify-end pt-4">
+                                <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
+                            </div>
                         </form>
                     </Form>
                 </CardContent>
@@ -178,7 +260,12 @@ function ExpensesContent() {
                             {expenses.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.category}</TableCell>
-                                    <TableCell className="font-medium">{item.item}</TableCell>
+                                    <TableCell className="font-medium">
+                                        {item.item}
+                                        {item.workerName && item.item === 'راتب عامل' && (
+                                            <span className="text-muted-foreground text-xs mr-2">({item.workerName})</span>
+                                        )}
+                                    </TableCell>
                                     <TableCell>{item.amount.toFixed(2)} ريال</TableCell>
                                     <TableCell>{new Date(item.date).toLocaleDateString('ar-EG')}</TableCell>
                                     <TableCell>
