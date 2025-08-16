@@ -18,7 +18,7 @@ const vegetableList = [
   "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء"
 ] as const;
 
-const budgetFormSchema = z.object({
+const salesFormSchema = z.object({
   vegetable: z.enum(vegetableList, { 
     required_error: 'الرجاء اختيار نوع الخضار.' 
   }),
@@ -27,20 +27,21 @@ const budgetFormSchema = z.object({
   price: z.coerce.number().min(0.01, 'يجب أن يكون السعر إيجابياً.'),
 });
 
-type BudgetFormValues = z.infer<typeof budgetFormSchema>;
+type SalesFormValues = z.infer<typeof salesFormSchema>;
 
-type BudgetItem = BudgetFormValues & {
+type SalesItem = SalesFormValues & {
   id: number;
   total: number;
   pricePerKilo: number;
+  totalWeight: number;
 };
 
-export default function BudgetPage() {
-  const [budgetItems, setBudgetItems] = React.useState<BudgetItem[]>([]);
+export default function SalesPage() {
+  const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
 
-  const form = useForm<BudgetFormValues>({
-    resolver: zodResolver(budgetFormSchema),
+  const form = useForm<SalesFormValues>({
+    resolver: zodResolver(salesFormSchema),
     defaultValues: {
       quantity: 1,
       weightPerCarton: 1,
@@ -49,14 +50,15 @@ export default function BudgetPage() {
     },
   });
 
-  function onSubmit(data: BudgetFormValues) {
-    const newItem: BudgetItem = {
+  function onSubmit(data: SalesFormValues) {
+    const newItem: SalesItem = {
       ...data,
       id: Date.now(),
       total: data.quantity * data.price,
+      totalWeight: data.quantity * data.weightPerCarton,
       pricePerKilo: data.price / data.weightPerCarton,
     };
-    setBudgetItems(prevItems => [...prevItems, newItem]);
+    setSalesItems(prevItems => [...prevItems, newItem]);
     
     form.reset({
       vegetable: undefined,
@@ -66,20 +68,20 @@ export default function BudgetPage() {
     });
     
     toast({
-      title: "تمت إضافة البند بنجاح!",
-      description: `تمت إضافة "${data.vegetable}" إلى الميزانية.`,
+      title: "تمت إضافة المبيع بنجاح!",
+      description: `تمت إضافة "${data.vegetable}" إلى قائمة المبيعات.`,
     });
   }
   
   function deleteItem(id: number) {
-    setBudgetItems(prevItems => prevItems.filter(item => item.id !== id));
+    setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
     toast({
       variant: "destructive",
       title: "تم حذف البند.",
     });
   }
 
-  const totalBudget = budgetItems.reduce((sum, item) => sum + item.total, 0);
+  const totalSales = salesItems.reduce((sum, item) => sum + item.total, 0);
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
@@ -88,10 +90,10 @@ export default function BudgetPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wallet />
-              متتبع ميزانية الخضروات
+              متتبع مبيعات الخضروات
             </CardTitle>
             <CardDescription>
-              أضف مشترياتك من الخضروات لتتبع التكاليف وإدارة ميزانيتك بكفاءة.
+              أضف مبيعاتك من الخضروات لتتبع الأرباح وإدارة عملياتك بكفاءة.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -174,10 +176,10 @@ export default function BudgetPage() {
           </CardContent>
         </Card>
 
-        {budgetItems.length > 0 && (
+        {salesItems.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>قائمة المشتريات</CardTitle>
+              <CardTitle>قائمة المبيعات</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -187,6 +189,7 @@ export default function BudgetPage() {
                       <TableHead>الخضار</TableHead>
                       <TableHead>الكمية (كرتون)</TableHead>
                       <TableHead>وزن الكرتون (كيلو)</TableHead>
+                      <TableHead>الوزن الإجمالي (كيلو)</TableHead>
                       <TableHead>سعر الكرتون</TableHead>
                       <TableHead>سعر الكيلو</TableHead>
                       <TableHead>الإجمالي</TableHead>
@@ -194,11 +197,12 @@ export default function BudgetPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {budgetItems.map((item) => (
+                    {salesItems.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.vegetable}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{item.weightPerCarton.toFixed(1)}</TableCell>
+                        <TableCell>{item.totalWeight.toFixed(1)}</TableCell>
                         <TableCell>{item.price.toFixed(2)} دينار</TableCell>
                         <TableCell>{item.pricePerKilo.toFixed(2)} دينار</TableCell>
                         <TableCell>{item.total.toFixed(2)} دينار</TableCell>
@@ -213,8 +217,8 @@ export default function BudgetPage() {
                 </Table>
               </div>
               <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
-                <span>إجمالي التكلفة:</span>
-                <span>{totalBudget.toFixed(2)} دينار</span>
+                <span>إجمالي المبيعات:</span>
+                <span>{totalSales.toFixed(2)} دينار</span>
               </div>
             </CardContent>
           </Card>
@@ -223,5 +227,3 @@ export default function BudgetPage() {
     </main>
   );
 }
-
-    
