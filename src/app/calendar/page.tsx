@@ -42,9 +42,16 @@ const taskTypeTranslations: { [key: string]: string } = {
 
 
 export default function CalendarPage() {
-  const [date, setDate] = React.useState<Date | undefined>(new Date())
+  const [date, setDate] = React.useState<Date | undefined>(undefined);
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const searchParams = useSearchParams()
+
+  React.useEffect(() => {
+    // Set initial date on client to avoid hydration mismatch
+    if (date === undefined) {
+      setDate(new Date());
+    }
+  }, [date]);
 
   React.useEffect(() => {
     const title = searchParams.get('title');
@@ -53,16 +60,17 @@ export default function CalendarPage() {
     const dateStr = searchParams.get('date');
 
     if (title && taskType && dateStr) {
+      const newTaskDate = new Date(dateStr);
       const newTask: Task = {
         id: Date.now(),
         title,
         taskType,
         description: description || undefined,
-        date: new Date(dateStr),
+        date: newTaskDate,
       };
       setTasks(prevTasks => [...prevTasks, newTask]);
       // Set calendar to the new task's date
-      setDate(new Date(dateStr));
+      setDate(newTaskDate);
       // Clear query params after adding task to avoid re-adding on refresh
       window.history.replaceState(null, '', '/calendar');
     }
@@ -84,6 +92,8 @@ export default function CalendarPage() {
   
   const filteredTasks = tasks.filter(task => date && isSameDay(task.date, date));
 
+  const linkDate = date ? date.toISOString() : new Date().toISOString();
+
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
       <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">
@@ -104,9 +114,10 @@ export default function CalendarPage() {
                   selected={date}
                   onSelect={setDate}
                   className="rounded-md border"
+                  disabled={!date}
                 />
                 <Button asChild>
-                  <NextLink href={`/calendar/add-task?date=${date?.toISOString() || new Date().toISOString()}`}>
+                  <NextLink href={`/calendar/add-task?date=${linkDate}`}>
                     <Plus className="ml-2 h-4 w-4" />
                     إضافة مهمة
                   </NextLink>
