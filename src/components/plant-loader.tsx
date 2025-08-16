@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 
 const tips = [
-  "Did you know? Most houseplants prefer rainwater over tap water.",
-  "Rotate your plants every week to ensure they get even sunlight.",
-  "Yellow leaves can be a sign of overwatering.",
-  "Dusting your plant's leaves helps them absorb more sunlight.",
-  "Group plants together to create a more humid micro-environment.",
+  "هل تعلم؟ معظم النباتات المنزلية تفضل مياه الأمطار على مياه الصنبور.",
+  "قم بتدوير نباتاتك كل أسبوع لضمان حصولها على ضوء الشمس بشكل متساوٍ.",
+  "يمكن أن تكون الأوراق الصفراء علامة على الإفراط في الري.",
+  "يساعد نفض الغبار عن أوراق نباتك على امتصاص المزيد من ضوء الشمس.",
+  "قم بتجميع النباتات معًا لخلق بيئة صغيرة أكثر رطوبة.",
 ];
 
 export function PlantLoader() {

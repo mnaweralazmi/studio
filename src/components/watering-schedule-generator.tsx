@@ -16,7 +16,7 @@ import { PlantLoader } from '@/components/plant-loader';
 import { getWateringSchedule } from '@/app/actions';
 
 const formSchema = z.object({
-  plantType: z.string().min(2, { message: 'Plant type must be at least 2 characters.' }),
+  plantType: z.string().min(2, { message: 'يجب أن يكون نوع النبات من حرفين على الأقل.' }),
   season: z.enum(['Spring', 'Summer', 'Autumn', 'Winter']),
   location: z.enum(['Indoor', 'Outdoor', 'Greenhouse']),
 });
@@ -50,11 +50,11 @@ export function WateringScheduleGenerator() {
     if (result.success && result.data) {
       setSchedule(result.data);
     } else {
-      const errorMessage = result.error || 'An unknown error occurred.';
+      const errorMessage = result.error || 'حدث خطأ غير معروف.';
       setError(errorMessage);
       toast({
         variant: 'destructive',
-        title: 'Error Generating Schedule',
+        title: 'خطأ في إنشاء الجدول',
         description: errorMessage,
       });
     }
@@ -66,8 +66,8 @@ export function WateringScheduleGenerator() {
     if (schedule?.wateringSchedule) {
       navigator.clipboard.writeText(schedule.wateringSchedule);
       toast({
-        title: 'Copied to clipboard!',
-        description: 'You can now paste the schedule anywhere.',
+        title: 'تم النسخ إلى الحافظة!',
+        description: 'يمكنك الآن لصق الجدول في أي مكان.',
       });
     }
   };
@@ -77,10 +77,10 @@ export function WateringScheduleGenerator() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline text-2xl">
           <Leaf className="text-primary" />
-          Watering Schedule Generator
+          منشئ جدول الري
         </CardTitle>
         <CardDescription className="font-body">
-          Fill in your plant's details to get a custom, AI-powered watering schedule.
+          املأ تفاصيل نبتتك للحصول على جدول ري مخصص ومدعوم بالذكاء الاصطناعي.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -91,9 +91,9 @@ export function WateringScheduleGenerator() {
               name="plantType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Plant Type</FormLabel>
+                  <FormLabel>نوع النبات</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Fiddle Leaf Fig, Succulent..." {...field} />
+                    <Input placeholder="على سبيل المثال، تين ورقي، صبار..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -105,18 +105,18 @@ export function WateringScheduleGenerator() {
                 name="season"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Season</FormLabel>
+                    <FormLabel>الموسم</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a season" />
+                          <SelectValue placeholder="اختر موسماً" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Spring">Spring</SelectItem>
-                        <SelectItem value="Summer">Summer</SelectItem>
-                        <SelectItem value="Autumn">Autumn</SelectItem>
-                        <SelectItem value="Winter">Winter</SelectItem>
+                        <SelectItem value="Spring">الربيع</SelectItem>
+                        <SelectItem value="Summer">الصيف</SelectItem>
+                        <SelectItem value="Autumn">الخريف</SelectItem>
+                        <SelectItem value="Winter">الشتاء</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -128,17 +128,17 @@ export function WateringScheduleGenerator() {
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>الموقع</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a location" />
+                          <SelectValue placeholder="اختر موقعاً" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Indoor">Indoor</SelectItem>
-                        <SelectItem value="Outdoor">Outdoor</SelectItem>
-                        <SelectItem value="Greenhouse">Greenhouse</SelectItem>
+                        <SelectItem value="Indoor">داخلي</SelectItem>
+                        <SelectItem value="Outdoor">خارجي</SelectItem>
+                        <SelectItem value="Greenhouse">دفيئة</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -147,8 +147,8 @@ export function WateringScheduleGenerator() {
               />
             </div>
             <Button type="submit" disabled={isLoading} size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-              <Droplets className="mr-2 h-4 w-4" />
-              {isLoading ? 'Nurturing...' : 'Generate Schedule'}
+              <Droplets className="ml-2 h-4 w-4" />
+              {isLoading ? 'جاري العناية...' : 'إنشاء الجدول'}
             </Button>
           </form>
         </Form>
@@ -166,11 +166,11 @@ export function WateringScheduleGenerator() {
               <Card className="w-full bg-primary/10 border-primary/50">
                 <CardHeader className="flex flex-row items-start justify-between pb-4">
                     <div>
-                        <CardTitle className="font-headline text-xl">Your Custom Schedule</CardTitle>
+                        <CardTitle className="font-headline text-xl">جدولك المخصص</CardTitle>
                     </div>
                     <Button variant="ghost" size="icon" onClick={handleCopy} className=" -mt-2 -mr-2 text-primary-foreground">
                         <Copy className="h-5 w-5" />
-                        <span className="sr-only">Copy schedule</span>
+                        <span className="sr-only">نسخ الجدول</span>
                     </Button>
                 </CardHeader>
                 <CardContent>
