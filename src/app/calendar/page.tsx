@@ -39,11 +39,14 @@ const taskIcons: { [key: string]: React.ElementType } = {
 
 // Helper function to get tasks from localStorage safely.
 const getTasksFromStorage = (): Task[] => {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') {
+    return [];
+  }
   const tasksJson = localStorage.getItem('calendarTasks');
   if (!tasksJson) return [];
   try {
     const parsedTasks = JSON.parse(tasksJson);
+    // Ensure date objects are correctly parsed
     return parsedTasks.map((task: any) => ({
       ...task,
       date: new Date(task.date),
@@ -56,8 +59,9 @@ const getTasksFromStorage = (): Task[] => {
 
 // Helper function to set tasks in localStorage.
 const setTasksInStorage = (tasks: Task[]) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+  }
 };
 
 
@@ -79,36 +83,33 @@ export default function CalendarPage() {
     if (!isClient) return;
 
     const action = searchParams.get('action');
-    if (action === 'addTask') {
-      const title = searchParams.get('title');
-      const taskType = searchParams.get('taskType');
-      const dateStr = searchParams.get('date');
+    const title = searchParams.get('title');
+    const taskType = searchParams.get('taskType');
+    const dateStr = searchParams.get('date');
 
-      if (title && taskType && dateStr) {
-        const description = searchParams.get('description');
-        const vegetable = searchParams.get('vegetable');
-        const fruit = searchParams.get('fruit');
-        
-        const newTask: Task = {
-          id: `${Date.now()}-${Math.random()}`,
-          title,
-          taskType,
-          description: description || undefined,
-          vegetable: vegetable || undefined,
-          fruit: fruit || undefined,
-          date: new Date(dateStr),
-        };
-        
-        const updatedTasks = [...getTasksFromStorage(), newTask];
-        setTasksInStorage(updatedTasks);
-        setTasks(updatedTasks);
-        setDate(newTask.date);
+    if (action === 'addTask' && title && taskType && dateStr) {
+      const description = searchParams.get('description');
+      const vegetable = searchParams.get('vegetable');
+      const fruit = searchParams.get('fruit');
+      
+      const newTask: Task = {
+        id: `${Date.now()}-${Math.random()}`,
+        title,
+        taskType,
+        description: description || undefined,
+        vegetable: vegetable || undefined,
+        fruit: fruit || undefined,
+        date: new Date(dateStr),
+      };
+      
+      const updatedTasks = [...getTasksFromStorage(), newTask];
+      setTasksInStorage(updatedTasks);
+      setTasks(updatedTasks);
+      setDate(newTask.date);
 
-        // Clear query params to prevent re-adding on refresh
-        router.replace('/calendar', {scroll: false});
-      }
+      // Clear query params to prevent re-adding on refresh
+      router.replace('/calendar', {scroll: false});
     }
-  // This effect should run when searchParams change, but only on the client.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, searchParams]);
 
