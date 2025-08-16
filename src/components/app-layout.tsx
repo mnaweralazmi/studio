@@ -33,48 +33,40 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <NextLink href="/" passHref legacyBehavior>
-                <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="الرئيسية">
-                  <a>
-                    <Home />
-                    <span>الرئيسية</span>
-                  </a>
-                </SidebarMenuButton>
-              </NextLink>
+              <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="الرئيسية">
+                <NextLink href="/">
+                  <Home />
+                  <span>الرئيسية</span>
+                </NextLink>
+              </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <NextLink href="/calendar" passHref legacyBehavior>
-                <SidebarMenuButton asChild isActive={pathname === '/calendar'} tooltip="التقويم والمهام">
-                   <a>
-                    <Calendar />
-                    <span>التقويم والمهام</span>
-                  </a>
-                </SidebarMenuButton>
-              </NextLink>
+              <SidebarMenuButton asChild isActive={pathname === '/calendar'} tooltip="التقويم والمهام">
+                 <NextLink href="/calendar">
+                  <Calendar />
+                  <span>التقويم والمهام</span>
+                </NextLink>
+              </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <NextLink href="/budget" passHref legacyBehavior>
-                <SidebarMenuButton asChild isActive={pathname === '/budget'} tooltip="الميزانية">
-                  <a>
-                    <ClipboardList />
-                    <span>الميزانية</span>
-                  </a>
-                </SidebarMenuButton>
-              </NextLink>
+              <SidebarMenuButton asChild isActive={pathname === '/budget'} tooltip="الميزانية">
+                <NextLink href="/budget">
+                  <ClipboardList />
+                  <span>الميزانية</span>
+                </NextLink>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <NextLink href="/profile" passHref legacyBehavior>
-                <SidebarMenuButton asChild isActive={pathname === '/profile'} tooltip="ملف المستخدم">
-                  <a>
-                    <User />
-                    <span>ملف المستخدم</span>
-                  </a>
-                </SidebarMenuButton>
-              </NextLink>
+              <SidebarMenuButton asChild isActive={pathname === '/profile'} tooltip="ملف المستخدم">
+                <NextLink href="/profile">
+                  <User />
+                  <span>ملف المستخدم</span>
+                </NextLink>
+              </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
                <SidebarMenuButton asChild tooltip="تسجيل الخروج">
