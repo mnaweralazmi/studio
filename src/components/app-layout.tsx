@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +16,8 @@ import {
 import { Home, Calendar, ClipboardList, User, LogOut, Leaf } from 'lucide-react';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <div className="flex h-screen w-full">
       <Sidebar side="right" collapsible="icon">
@@ -29,19 +32,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" isActive tooltip="الرئيسية">
+              <SidebarMenuButton href="/" isActive={pathname === '/'} tooltip="الرئيسية">
                 <Home />
                 <span>الرئيسية</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" tooltip="التقويم والمهام">
+              <SidebarMenuButton href="/calendar" isActive={pathname === '/calendar'} tooltip="التقويم والمهام">
                 <Calendar />
                 <span>التقويم والمهام</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" tooltip="الميزانية">
+              <SidebarMenuButton href="/budget" isActive={pathname === '/budget'} tooltip="الميزانية">
                 <ClipboardList />
                 <span>الميزانية</span>
               </SidebarMenuButton>
@@ -51,7 +54,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" tooltip="ملف المستخدم">
+              <SidebarMenuButton href="/profile" isActive={pathname === '/profile'} tooltip="ملف المستخدم">
                 <User />
                 <span>ملف المستخدم</span>
               </SidebarMenuButton>
