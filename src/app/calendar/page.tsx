@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 type Task = {
-  id: number;
+  id: string;
   title: string;
   taskType: string;
   description?: string;
@@ -37,6 +37,35 @@ const taskIcons: { [key: string]: React.ElementType } = {
   "تسميد": TestTube,
 };
 
+// Helper function to get tasks from localStorage
+const getTasksFromStorage = (): Task[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  const tasksJson = localStorage.getItem('calendarTasks');
+  if (!tasksJson) return [];
+  try {
+    const parsedTasks = JSON.parse(tasksJson);
+    // Revive dates
+    return parsedTasks.map((task: any) => ({
+      ...task,
+      date: new Date(task.date),
+    }));
+  } catch (error) {
+    console.error("Failed to parse tasks from localStorage", error);
+    return [];
+  }
+};
+
+// Helper function to set tasks in localStorage
+const setTasksInStorage = (tasks: Task[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+};
+
+
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(undefined);
   const [tasks, setTasks] = React.useState<Task[]>([]);
@@ -45,9 +74,11 @@ export default function CalendarPage() {
 
   React.useEffect(() => {
     // Set initial date on client to avoid hydration mismatch
+    // And load tasks from localStorage
     if (date === undefined) {
       setDate(new Date());
     }
+    setTasks(getTasksFromStorage());
   }, [date]);
 
   React.useEffect(() => {
@@ -61,7 +92,7 @@ export default function CalendarPage() {
     if (title && taskType && dateStr) {
       const newTaskDate = new Date(dateStr);
       const newTask: Task = {
-        id: Date.now(), // Use a simpler ID for the check
+        id: `${Date.now()}-${Math.random()}`, // Create a unique ID
         title,
         taskType,
         description: description || undefined,
@@ -74,18 +105,9 @@ export default function CalendarPage() {
       router.replace('/calendar', {scroll: false});
 
       setTasks(prevTasks => {
-        // Prevent adding duplicate tasks by checking if a similar task was just added
-        const taskExists = prevTasks.some(
-          (task) =>
-            task.title === newTask.title &&
-            task.date.getTime() === newTask.date.getTime()
-        );
-
-        if (taskExists) {
-            return prevTasks;
-        }
-        
-        return [...prevTasks, { ...newTask, id: Date.now() + Math.random() }]; // Add with a more unique ID
+        const updatedTasks = [...prevTasks, newTask];
+        setTasksInStorage(updatedTasks);
+        return updatedTasks;
       });
 
       // Set calendar to the new task's date
@@ -94,13 +116,21 @@ export default function CalendarPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const deleteTask = (id: number) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  const deleteTask = (id: string) => {
+    setTasks(prevTasks => {
+        const updatedTasks = prevTasks.filter(task => task.id !== id);
+        setTasksInStorage(updatedTasks);
+        return updatedTasks;
+    });
   };
   
   const repeatTask = (task: Task) => {
-    const repeatedTask: Task = { ...task, id: Date.now() + Math.random(), title: `${task.title} (مكرر)` };
-    setTasks(prevTasks => [...prevTasks, repeatedTask]);
+    const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
+    setTasks(prevTasks => {
+        const updatedTasks = [...prevTasks, repeatedTask];
+        setTasksInStorage(updatedTasks);
+        return updatedTasks;
+    });
   };
 
   const getTaskIcon = (taskType: string) => {
