@@ -40,7 +40,7 @@ export default function Home() {
             <span className="font-headline text-lg font-semibold text-primary-foreground">مزارع كويتي</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground tracking-tight">
-            معلومات وبيانات عن الزراعة
+            دليلك الزراعي في الكويت
           </h1>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto font-body">
             كل ما تحتاجه من معلومات حول الزراعة، الري، الآفات، والتقليم في مكان واحد.
@@ -51,7 +51,12 @@ export default function Home() {
 
         <Card className="w-full max-w-4xl shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>دليلك الزراعي الشامل</CardTitle>
+            <CardTitle>
+              <div className="flex items-center gap-3">
+                <Leaf className="h-6 w-6 text-primary" />
+                <span>دليلك الزراعي الشامل</span>
+              </div>
+            </CardTitle>
             <CardDescription>
               تصفح الأقسام أدناه لمعرفة المزيد عن كل جانب من جوانب العناية بالنباتات.
             </CardDescription>
