@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -6,7 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
-import { Calendar as CalendarIcon, Plus, Trash2, Repeat, SprayCan, Sprout, TestTube, Droplets as DropletsIcon } from 'lucide-react'
+import { Calendar as CalendarIcon, Plus, Trash2, Repeat, SprayCan, Sprout, TestTube, Droplets as DropletsIcon, Apple, Carrot } from 'lucide-react'
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,6 +25,8 @@ type Task = {
   title: string;
   taskType: string;
   description?: string;
+  vegetable?: string;
+  fruit?: string;
   date: Date;
 };
 
@@ -33,14 +36,6 @@ const taskIcons: { [key: string]: React.ElementType } = {
   "زراعة": Sprout,
   "تسميد": TestTube,
 };
-
-const taskTypeTranslations: { [key: string]: string } = {
-    "رش": "رش",
-    "ري": "ري",
-    "زراعة": "زراعة",
-    "تسميد": "تسميد",
-};
-
 
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(undefined);
@@ -59,6 +54,8 @@ export default function CalendarPage() {
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     const description = searchParams.get('description');
+    const vegetable = searchParams.get('vegetable');
+    const fruit = searchParams.get('fruit');
     const dateStr = searchParams.get('date');
 
     if (title && taskType && dateStr) {
@@ -68,11 +65,12 @@ export default function CalendarPage() {
         title,
         taskType,
         description: description || undefined,
+        vegetable: vegetable || undefined,
+        fruit: fruit || undefined,
         date: newTaskDate,
       };
       
       // Clear query params immediately to prevent re-triggering
-      // This is the most important part of the fix
       router.replace('/calendar', {scroll: false});
 
       setTasks(prevTasks => {
@@ -162,7 +160,7 @@ export default function CalendarPage() {
                             <TableRow>
                               <TableHead>المهمة</TableHead>
                               <TableHead>النوع</TableHead>
-                              <TableHead>التاريخ</TableHead>
+                              <TableHead>التفاصيل</TableHead>
                               <TableHead className="text-left">الإجراءات</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -173,10 +171,25 @@ export default function CalendarPage() {
                                 <TableCell>
                                    <Badge variant="secondary" className="flex items-center gap-1 w-fit">
                                     {getTaskIcon(task.taskType)}
-                                    <span>{taskTypeTranslations[task.taskType]}</span>
+                                    <span>{task.taskType}</span>
                                   </Badge>
                                 </TableCell>
-                                <TableCell>{format(task.date, "PPP", { locale: arSA })}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-wrap gap-2">
+                                      {task.vegetable && (
+                                          <Badge variant="outline" className="flex items-center gap-1">
+                                              <Carrot className="h-3 w-3" />
+                                              {task.vegetable}
+                                          </Badge>
+                                      )}
+                                      {task.fruit && (
+                                           <Badge variant="outline" className="flex items-center gap-1">
+                                              <Apple className="h-3 w-3" />
+                                              {task.fruit}
+                                          </Badge>
+                                      )}
+                                  </div>
+                                </TableCell>
                                 <TableCell className="flex justify-end gap-2">
                                   <Button variant="ghost" size="icon" onClick={() => repeatTask(task)} title="تكرار المهمة">
                                     <Repeat className="h-4 w-4" />
