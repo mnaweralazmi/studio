@@ -21,7 +21,7 @@ const budgetFormSchema = z.object({
   vegetable: z.enum(vegetableList, { 
     required_error: 'الرجاء اختيار نوع الخضار.' 
   }),
-  quantity: z.coerce.number().min(0.1, 'يجب أن تكون الكمية 0.1 على الأقل.'),
+  quantity: z.coerce.number().min(1, 'يجب أن تكون الكمية 1 على الأقل.'),
   price: z.coerce.number().min(0.01, 'يجب أن يكون السعر إيجابياً.'),
 });
 
@@ -123,9 +123,9 @@ export default function BudgetPage() {
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الكمية (كيلو)</FormLabel>
+                      <FormLabel>الكمية (كرتون)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.1" {...field} />
+                        <Input type="number" step="1" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -137,7 +137,7 @@ export default function BudgetPage() {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>السعر (للكيلو بالدينار)</FormLabel>
+                      <FormLabel>السعر (للكرتون بالدينار)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} />
                       </FormControl>
@@ -166,8 +166,8 @@ export default function BudgetPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>الخضار</TableHead>
-                      <TableHead>الكمية (كيلو)</TableHead>
-                      <TableHead>سعر الكيلو</TableHead>
+                      <TableHead>الكمية (كرتون)</TableHead>
+                      <TableHead>سعر الكرتون</TableHead>
                       <TableHead>الإجمالي</TableHead>
                       <TableHead className="text-left">الإجراءات</TableHead>
                     </TableRow>
