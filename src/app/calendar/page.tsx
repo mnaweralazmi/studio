@@ -104,9 +104,11 @@ export default function CalendarPage() {
         setTasks(updatedTasks);
         setDate(newTask.date);
 
+        // Clear query params to prevent re-adding on refresh
         router.replace('/calendar', {scroll: false});
       }
     }
+  // This effect should run when searchParams change, but only on the client.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, searchParams]);
 
