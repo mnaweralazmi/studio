@@ -37,7 +37,7 @@ export default function BudgetPage() {
     defaultValues: {
       vegetable: undefined,
       quantity: 1,
-      price: 0.0,
+      price: 0.1,
     },
   });
 
@@ -87,7 +87,7 @@ export default function BudgetPage() {
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>نوع الخضار</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="اختر نوع الخضار..." />
