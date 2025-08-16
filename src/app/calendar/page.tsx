@@ -72,23 +72,25 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Set initial date on client to avoid hydration mismatch and load tasks from storage
+  // Load tasks from storage ONCE on component mount.
   React.useEffect(() => {
-    setDate(new Date());
     setTasks(getTasksFromStorage());
   }, []);
 
+  // Handle adding a new task from query params.
   React.useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     const title = params.get('title');
     const taskType = params.get('taskType');
-    const description = params.get('description');
-    const vegetable = params.get('vegetable');
-    const fruit = params.get('fruit');
-    const dateStr = params.get('date');
+    
+    // Only proceed if the essential params are present.
+    if (title && taskType) {
+      const description = params.get('description');
+      const vegetable = params.get('vegetable');
+      const fruit = params.get('fruit');
+      const dateStr = params.get('date');
+      const newTaskDate = dateStr ? new Date(dateStr) : new Date();
 
-    if (title && taskType && dateStr) {
-      const newTaskDate = new Date(dateStr);
       const newTask: Task = {
         id: `${Date.now()}-${Math.random()}`,
         title,
@@ -99,7 +101,8 @@ export default function CalendarPage() {
         date: newTaskDate,
       };
 
-      // CRITICAL FIX: Read from storage, update, then set state and storage.
+      // **CRITICAL FIX**: Read the latest from storage, update, then set state and storage.
+      // This prevents overwriting previous tasks.
       const existingTasks = getTasksFromStorage();
       const updatedTasks = [...existingTasks, newTask];
       setTasksInStorage(updatedTasks);
@@ -109,9 +112,19 @@ export default function CalendarPage() {
       // Clear query params immediately to prevent re-triggering.
       router.replace('/calendar', {scroll: false});
     }
-    // Only run when searchParams change (i.e. on navigation from add-task page)
+    // This effect should only run when the component mounts and the initial searchParams are read.
+    // The router.replace will not trigger it again because the dependency is on the searchParams object itself, not its content.
+    // However, to be absolutely safe and explicit, we can disable the dependency warning.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Set initial date on client to avoid hydration mismatch
+   React.useEffect(() => {
+    if(!date) {
+      setDate(new Date());
+    }
+  }, [date]);
+
 
   const deleteTask = (id: string) => {
     const updatedTasks = tasks.filter(task => task.id !== id);
@@ -121,7 +134,9 @@ export default function CalendarPage() {
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
-    const updatedTasks = [...tasks, repeatedTask];
+    // Read from storage before updating to ensure we have the latest list
+    const existingTasks = getTasksFromStorage();
+    const updatedTasks = [...existingTasks, repeatedTask];
     setTasksInStorage(updatedTasks);
     setTasks(updatedTasks);
   };
