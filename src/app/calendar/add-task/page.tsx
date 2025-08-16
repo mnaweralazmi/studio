@@ -3,8 +3,10 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import NextLink from "next/link"
+import { format } from 'date-fns';
+import { arSA } from 'date-fns/locale';
 
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +34,11 @@ const addTaskFormSchema = z.object({
 
 export default function AddTaskPage() {
   const router = useRouter()
+  const searchParams = useSearchParams();
   const { toast } = useToast()
+  
+  const dateStr = searchParams.get('date');
+  const selectedDate = dateStr ? new Date(dateStr) : new Date();
 
   const form = useForm<z.infer<typeof addTaskFormSchema>>({
     resolver: zodResolver(addTaskFormSchema),
@@ -54,6 +60,7 @@ export default function AddTaskPage() {
     if (data.description) {
       params.set('description', data.description);
     }
+    params.set('date', selectedDate.toISOString());
     
     router.push(`/calendar?${params.toString()}`);
   }
@@ -68,7 +75,7 @@ export default function AddTaskPage() {
               إضافة مهمة جديدة
             </CardTitle>
             <CardDescription>
-              املأ النموذج أدناه لإضافة مهمة جديدة إلى تقويمك.
+              أنت تضيف مهمة للتاريخ: {format(selectedDate, "PPP", { locale: arSA })}.
             </CardDescription>
           </CardHeader>
           <CardContent>

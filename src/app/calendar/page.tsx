@@ -3,6 +3,7 @@
 import * as React from "react"
 import NextLink from 'next/link';
 import { useSearchParams } from "next/navigation";
+import { isSameDay } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Calendar as CalendarIcon, Plus, Trash2, Repeat, SprayCan, Sprout, TestTube, Droplets as DropletsIcon } from 'lucide-react'
 import { Calendar } from "@/components/ui/calendar"
@@ -22,6 +23,7 @@ type Task = {
   title: string;
   taskType: string;
   description?: string;
+  date: Date;
 };
 
 const taskIcons: { [key: string]: React.ElementType } = {
@@ -48,15 +50,19 @@ export default function CalendarPage() {
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     const description = searchParams.get('description');
+    const dateStr = searchParams.get('date');
 
-    if (title && taskType) {
+    if (title && taskType && dateStr) {
       const newTask: Task = {
         id: Date.now(),
         title,
         taskType,
         description: description || undefined,
+        date: new Date(dateStr),
       };
       setTasks(prevTasks => [...prevTasks, newTask]);
+      // Set calendar to the new task's date
+      setDate(new Date(dateStr));
       // Clear query params after adding task to avoid re-adding on refresh
       window.history.replaceState(null, '', '/calendar');
     }
@@ -75,6 +81,8 @@ export default function CalendarPage() {
     const Icon = taskIcons[taskType] || CalendarIcon;
     return <Icon className="h-4 w-4" />;
   };
+  
+  const filteredTasks = tasks.filter(task => date && isSameDay(task.date, date));
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
@@ -98,13 +106,13 @@ export default function CalendarPage() {
                   className="rounded-md border"
                 />
                 <Button asChild>
-                  <NextLink href="/calendar/add-task">
+                  <NextLink href={`/calendar/add-task?date=${date?.toISOString() || new Date().toISOString()}`}>
                     <Plus className="ml-2 h-4 w-4" />
                     إضافة مهمة
                   </NextLink>
                 </Button>
                 
-                {tasks.length > 0 && (
+                {filteredTasks.length > 0 && (
                   <div className="w-full max-w-4xl mt-8">
                     <Card>
                       <CardHeader>
@@ -120,7 +128,7 @@ export default function CalendarPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {tasks.map((task) => (
+                            {filteredTasks.map((task) => (
                               <TableRow key={task.id}>
                                 <TableCell className="font-medium">{task.title}</TableCell>
                                 <TableCell>
