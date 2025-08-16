@@ -69,25 +69,28 @@ export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [isClient, setIsClient] = React.useState(false);
+  
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Load tasks from localStorage once on initial client mount.
+  // On initial client-side mount, load tasks from localStorage.
   React.useEffect(() => {
     setTasks(getTasksFromStorage());
     setIsClient(true);
   }, []);
 
-  // Effect to handle adding/updating tasks from query parameters.
+  // When a new task is added via URL params, update the state.
   React.useEffect(() => {
     if (!isClient) return;
 
     const action = searchParams.get('action');
+    if (action !== 'addTask') return;
+    
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     const dateStr = searchParams.get('date');
 
-    if (action === 'addTask' && title && taskType && dateStr) {
+    if (title && taskType && dateStr) {
       const description = searchParams.get('description');
       const vegetable = searchParams.get('vegetable');
       const fruit = searchParams.get('fruit');
@@ -102,28 +105,31 @@ export default function CalendarPage() {
         date: new Date(dateStr),
       };
       
-      const updatedTasks = [...getTasksFromStorage(), newTask];
-      setTasksInStorage(updatedTasks);
-      setTasks(updatedTasks);
+      setTasks(prevTasks => [...prevTasks, newTask]);
       setDate(newTask.date);
 
       // Clear query params to prevent re-adding on refresh
       router.replace('/calendar', {scroll: false});
     }
+  // This effect should only run when searchParams changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, searchParams]);
+  }, [searchParams, isClient]);
+
+  // When the tasks state changes, save it to localStorage.
+  React.useEffect(() => {
+    // We don't save on the initial empty state before the client has loaded.
+    if (isClient) {
+      setTasksInStorage(tasks);
+    }
+  }, [tasks, isClient]);
 
   const deleteTask = (id: string) => {
-    const updatedTasks = tasks.filter(task => task.id !== id);
-    setTasksInStorage(updatedTasks);
-    setTasks(updatedTasks);
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
   };
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
-    const updatedTasks = [...tasks, repeatedTask];
-    setTasksInStorage(updatedTasks);
-    setTasks(updatedTasks);
+    setTasks(prevTasks => [...prevTasks, repeatedTask]);
   };
 
   const getTaskIcon = (taskType: string) => {
@@ -236,6 +242,13 @@ export default function CalendarPage() {
                     </Card>
                   </div>
                 )}
+                
+                 {isClient && date && filteredTasks.length === 0 && (
+                   <div className="text-center text-muted-foreground mt-8">
+                     <p>لا توجد مهام لهذا اليوم.</p>
+                     <p>يمكنك إضافة مهمة جديدة باستخدام الزر أعلاه.</p>
+                   </div>
+                 )}
 
               </CardContent>
             </div>
@@ -244,5 +257,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
-    
