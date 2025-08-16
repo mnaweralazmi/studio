@@ -41,7 +41,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/calendar'} tooltip="التقويم والمهام">
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/calendar')} tooltip="التقويم والمهام">
                  <NextLink href="/calendar">
                   <Calendar />
                   <span>التقويم والمهام</span>
