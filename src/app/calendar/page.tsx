@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import NextLink from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Calendar as CalendarIcon, Plus } from 'lucide-react'
 import { Calendar } from "@/components/ui/calendar"
@@ -30,9 +31,11 @@ export default function CalendarPage() {
                   onSelect={setDate}
                   className="rounded-md border"
                 />
-                <Button>
-                  <Plus className="ml-2 h-4 w-4" />
-                  إضافة مهمة
+                <Button asChild>
+                  <NextLink href="/calendar/add-task">
+                    <Plus className="ml-2 h-4 w-4" />
+                    إضافة مهمة
+                  </NextLink>
                 </Button>
               </CardContent>
             </div>
