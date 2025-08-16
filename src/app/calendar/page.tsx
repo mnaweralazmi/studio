@@ -75,12 +75,11 @@ export default function CalendarPage() {
 
   // On initial client mount, load tasks from storage.
   React.useEffect(() => {
-    setIsClient(true);
     setTasks(getTasksFromStorage());
+    setIsClient(true);
   }, []);
 
   // Effect to handle adding a new task from query parameters.
-  // This runs when `isClient` becomes true or searchParams change.
   React.useEffect(() => {
     if (!isClient) {
       return;
@@ -90,7 +89,6 @@ export default function CalendarPage() {
     const taskType = searchParams.get('taskType');
     const dateStr = searchParams.get('date');
 
-    // Only proceed if the essential query params are present
     if (title && taskType && dateStr) {
       const description = searchParams.get('description');
       const vegetable = searchParams.get('vegetable');
@@ -107,7 +105,8 @@ export default function CalendarPage() {
         date: newTaskDate,
       };
       
-      const updatedTasks = [...getTasksFromStorage(), newTask];
+      const existingTasks = getTasksFromStorage();
+      const updatedTasks = [...existingTasks, newTask];
       setTasksInStorage(updatedTasks);
       setTasks(updatedTasks); 
       setDate(newTaskDate);
@@ -251,3 +250,4 @@ export default function CalendarPage() {
     </main>
   );
 }
+
