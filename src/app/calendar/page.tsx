@@ -103,6 +103,7 @@ export default function CalendarPage() {
       
       setTasks(prevTasks => [...prevTasks, newTask]);
       setDate(newTask.date);
+      // Use router.replace to clean the URL without adding to history
       router.replace('/calendar', {scroll: false});
     }
   // This effect should only run when searchParams changes.
