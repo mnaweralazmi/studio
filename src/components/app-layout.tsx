@@ -41,10 +41,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/calendar')} tooltip="الجدولة">
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/calendar')} tooltip="التقويم">
                  <NextLink href="/calendar">
                   <Calendar />
-                  <span>الجدولة</span>
+                  <span>التقويم</span>
                 </NextLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
