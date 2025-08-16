@@ -75,12 +75,10 @@ export default function CalendarPage() {
   // Set initial date on client to avoid hydration mismatch
   React.useEffect(() => {
     setDate(new Date());
+    setTasks(getTasksFromStorage());
   }, []);
 
   React.useEffect(() => {
-    // Load tasks from localStorage once on component mount on the client
-    setTasks(getTasksFromStorage());
-
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     const description = searchParams.get('description');
@@ -91,7 +89,7 @@ export default function CalendarPage() {
     if (title && taskType && dateStr) {
       const newTaskDate = new Date(dateStr);
       const newTask: Task = {
-        id: `${Date.now()}-${Math.random()}`, // Create a unique ID
+        id: `${Date.now()}-${Math.random()}`,
         title,
         taskType,
         description: description || undefined,
@@ -100,21 +98,19 @@ export default function CalendarPage() {
         date: newTaskDate,
       };
 
-      // Clear query params immediately to prevent re-triggering this effect
-      // and causing duplicate task creation.
-      router.replace('/calendar', {scroll: false});
-      
-      setTasks(prevTasks => {
-          const updatedTasks = [...prevTasks, newTask];
-          setTasksInStorage(updatedTasks);
-          return updatedTasks;
-      });
-
-      // Set calendar to the new task's date
+      // CRITICAL FIX: Read from storage, update, then set state and storage.
+      const existingTasks = getTasksFromStorage();
+      const updatedTasks = [...existingTasks, newTask];
+      setTasksInStorage(updatedTasks);
+      setTasks(updatedTasks);
       setDate(newTaskDate);
+
+      // Clear query params immediately to prevent re-triggering.
+      router.replace('/calendar', {scroll: false});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+    // Only run when searchParams change, and only if there are params to process.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const deleteTask = (id: string) => {
     setTasks(prevTasks => {
@@ -191,6 +187,7 @@ export default function CalendarPage() {
                               <TableHead>المهمة</TableHead>
                               <TableHead>النوع</TableHead>
                               <TableHead>التفاصيل</TableHead>
+                              <TableHead>التاريخ</TableHead>
                               <TableHead className="text-left">الإجراءات</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -220,6 +217,7 @@ export default function CalendarPage() {
                                       )}
                                   </div>
                                 </TableCell>
+                                <TableCell>{format(task.date, "P", { locale: arSA })}</TableCell>
                                 <TableCell className="flex justify-end gap-2">
                                   <Button variant="ghost" size="icon" onClick={() => repeatTask(task)} title="تكرار المهمة">
                                     <Repeat className="h-4 w-4" />
