@@ -10,10 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { ClipboardList, PlusCircle, Trash2 } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const vegetableList = [
+  "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء"
+] as const;
 
 const budgetFormSchema = z.object({
-  vegetable: z.string().min(2, { message: 'يجب أن يكون اسم الخضار حرفين على الأقل.' }),
+  vegetable: z.enum(vegetableList, { required_error: 'الرجاء اختيار نوع الخضار.' }),
   quantity: z.coerce.number().min(1, { message: 'يجب أن تكون الكمية 1 على الأقل.' }),
   price: z.coerce.number().min(0.1, { message: 'يجب أن يكون السعر إيجابياً.' }),
 });
@@ -30,7 +35,7 @@ export default function BudgetPage() {
   const form = useForm<z.infer<typeof budgetFormSchema>>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
-      vegetable: '',
+      vegetable: undefined,
       quantity: 1,
       price: 0,
     },
@@ -82,9 +87,18 @@ export default function BudgetPage() {
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>نوع الخضار</FormLabel>
-                      <FormControl>
-                        <Input placeholder="مثال: طماطم" {...field} />
-                      </FormControl>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر نوع الخضار..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {vegetableList.map(veg => (
+                            <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
