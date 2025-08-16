@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import NextLink from 'next/link';
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
@@ -45,7 +45,8 @@ const taskTypeTranslations: { [key: string]: string } = {
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(undefined);
   const [tasks, setTasks] = React.useState<Task[]>([]);
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   React.useEffect(() => {
     // Set initial date on client to avoid hydration mismatch
@@ -63,7 +64,7 @@ export default function CalendarPage() {
     if (title && taskType && dateStr) {
       const newTaskDate = new Date(dateStr);
       const newTask: Task = {
-        id: Date.now(),
+        id: Date.now() + Math.random(), // Add random number to avoid collision in strict mode
         title,
         taskType,
         description: description || undefined,
@@ -72,9 +73,12 @@ export default function CalendarPage() {
       setTasks(prevTasks => [...prevTasks, newTask]);
       // Set calendar to the new task's date
       setDate(newTaskDate);
+      
       // Clear query params after adding task to avoid re-adding on refresh
-      window.history.replaceState(null, '', '/calendar');
+      // Using router.replace is better than window.history
+      router.replace('/calendar', {scroll: false});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const deleteTask = (id: number) => {
