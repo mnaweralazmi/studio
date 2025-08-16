@@ -119,7 +119,7 @@ export default function CalendarPage() {
       router.replace('/calendar', {scroll: false});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isClient]); // Only re-run if searchParams or isClient changes.
+  }, [searchParams, isClient, router]); // Only re-run if searchParams or isClient changes.
 
 
   const deleteTask = (id: string) => {
