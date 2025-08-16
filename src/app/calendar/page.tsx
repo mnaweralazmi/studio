@@ -67,18 +67,29 @@ const setTasksInStorage = (tasks: Task[]) => {
 
 
 export default function CalendarPage() {
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [tasks, setTasks] = React.useState<Task[]>(getTasksFromStorage);
+  const [date, setDate] = React.useState<Date | undefined>(undefined);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [isClient, setIsClient] = React.useState(false); // New state to track client-side rendering
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Handle adding a new task from query params.
-  // This effect runs only when searchParams changes.
+  // Load tasks from storage and set initial date on client mount
   React.useEffect(() => {
+    setTasks(getTasksFromStorage());
+    setDate(new Date());
+    setIsClient(true); // Indicate that we are now on the client
+  }, []);
+
+  // Handle adding a new task from query params
+  React.useEffect(() => {
+    // Ensure this only runs on the client
+    if (!isClient) {
+      return;
+    }
+
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     
-    // Only proceed if the essential params are present.
     if (title && taskType) {
       const description = searchParams.get('description');
       const vegetable = searchParams.get('vegetable');
@@ -96,8 +107,7 @@ export default function CalendarPage() {
         date: newTaskDate,
       };
 
-      // **CRITICAL FIX**: Read the latest from storage, update, then set state and storage.
-      // This prevents overwriting the task list with a stale version from the state.
+      // **CRITICAL FIX**: Read latest from storage, update, then set state and storage.
       const existingTasks = getTasksFromStorage();
       const updatedTasks = [...existingTasks, newTask];
       setTasksInStorage(updatedTasks);
@@ -107,17 +117,9 @@ export default function CalendarPage() {
       // Clear query params immediately to prevent re-triggering.
       router.replace('/calendar', {scroll: false});
     }
-  // We only want this to run when the searchParams object itself is new,
-  // not on every render.
+    // This effect should run when searchParams object changes, but only on the client
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  // Set initial date on client to avoid hydration mismatch
-   React.useEffect(() => {
-    if(!date) {
-      setDate(new Date());
-    }
-  }, [date]);
+  }, [searchParams, isClient]);
 
 
   const deleteTask = (id: string) => {
@@ -128,7 +130,6 @@ export default function CalendarPage() {
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
-    // Read from storage before updating to ensure we have the latest list
     const existingTasks = getTasksFromStorage();
     const updatedTasks = [...existingTasks, repeatedTask];
     setTasksInStorage(updatedTasks);
@@ -169,6 +170,7 @@ export default function CalendarPage() {
                   selected={date}
                   onSelect={setDate}
                   className="rounded-md border"
+                  disabled={!isClient} // Disable calendar until client has mounted
                 />
                 {date && (
                   <Button asChild>
@@ -179,7 +181,7 @@ export default function CalendarPage() {
                   </Button>
                 )}
                 
-                {date && filteredTasks.length > 0 && (
+                {isClient && date && filteredTasks.length > 0 && (
                   <div className="w-full max-w-4xl mt-8">
                     <Card>
                       <CardHeader>
