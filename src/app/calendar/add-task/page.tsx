@@ -92,14 +92,13 @@ export default function AddTaskPage() {
       params.set('fruit', data.fruit);
     }
     params.set('date', selectedDate.toISOString());
-    params.set('action', 'addTask');
     
     toast({
       title: "تمت إضافة المهمة بنجاح!",
       description: `تم إنشاء مهمة "${data.title}" من نوع "${finalTaskType}".`,
     })
     
-    router.push(`/calendar?${params.toString()}`);
+    router.push(`/calendar?${params.toString()}&action=addTask`);
   }
 
   return (

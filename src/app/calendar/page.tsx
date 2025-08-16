@@ -82,11 +82,13 @@ export default function CalendarPage() {
   // When a new task is added via URL params, update the state.
   React.useEffect(() => {
     const action = searchParams.get('action');
+    if (action !== 'addTask') return;
+
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     const dateStr = searchParams.get('date');
 
-    if (action === 'addTask' && title && taskType && dateStr) {
+    if (title && taskType && dateStr) {
       const description = searchParams.get('description');
       const vegetable = searchParams.get('vegetable');
       const fruit = searchParams.get('fruit');
