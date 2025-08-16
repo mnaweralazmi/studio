@@ -69,20 +69,20 @@ const setTasksInStorage = (tasks: Task[]) => {
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(undefined);
   const [tasks, setTasks] = React.useState<Task[]>([]);
-  const [isClient, setIsClient] = React.useState(false); // New state to track client-side rendering
+  const [isClient, setIsClient] = React.useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Load tasks from storage and set initial date on client mount
+  // On initial client mount, load tasks from storage and set the date.
   React.useEffect(() => {
     setTasks(getTasksFromStorage());
     setDate(new Date());
-    setIsClient(true); // Indicate that we are now on the client
+    setIsClient(true);
   }, []);
 
-  // Handle adding a new task from query params
+  // Effect to handle adding a new task from query parameters.
+  // This should only run on the client and when the searchParams change.
   React.useEffect(() => {
-    // Ensure this only runs on the client
     if (!isClient) {
       return;
     }
@@ -90,6 +90,7 @@ export default function CalendarPage() {
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
     
+    // Only proceed if the essential query params are present
     if (title && taskType) {
       const description = searchParams.get('description');
       const vegetable = searchParams.get('vegetable');
@@ -98,7 +99,7 @@ export default function CalendarPage() {
       const newTaskDate = dateStr ? new Date(dateStr) : new Date();
 
       const newTask: Task = {
-        id: `${Date.now()}-${Math.random()}`,
+        id: `${Date.now()}-${Math.random()}`, // Unique ID
         title,
         taskType,
         description: description || undefined,
@@ -107,19 +108,18 @@ export default function CalendarPage() {
         date: newTaskDate,
       };
 
-      // **CRITICAL FIX**: Read latest from storage, update, then set state and storage.
+      // **CRITICAL FIX**: Read the latest from storage, update, then set state and storage.
       const existingTasks = getTasksFromStorage();
       const updatedTasks = [...existingTasks, newTask];
       setTasksInStorage(updatedTasks);
-      setTasks(updatedTasks);
-      setDate(newTaskDate);
+      setTasks(updatedTasks); // Update the state to reflect the new task immediately
+      setDate(newTaskDate); // Set calendar to the new task's date
 
-      // Clear query params immediately to prevent re-triggering.
+      // Clear query params immediately to prevent re-triggering on refresh or navigation.
       router.replace('/calendar', {scroll: false});
     }
-    // This effect should run when searchParams object changes, but only on the client
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isClient]);
+  }, [searchParams, isClient]); // Only re-run if searchParams or isClient changes.
 
 
   const deleteTask = (id: string) => {
@@ -130,6 +130,7 @@ export default function CalendarPage() {
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
+    // **CRITICAL FIX**: Read from storage before updating
     const existingTasks = getTasksFromStorage();
     const updatedTasks = [...existingTasks, repeatedTask];
     setTasksInStorage(updatedTasks);
@@ -141,6 +142,7 @@ export default function CalendarPage() {
     return <Icon className="h-4 w-4" />;
   };
   
+  // This is a derived state, it doesn't modify the original `tasks` array.
   const filteredTasks = tasks.filter(task => {
     if (!date) return false;
     const taskDate = new Date(task.date);
