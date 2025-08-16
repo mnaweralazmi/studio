@@ -98,8 +98,6 @@ export default function CalendarPage() {
            taskDate.getFullYear() === selectedDate.getFullYear();
   });
 
-  const linkDate = date ? date.toISOString() : new Date().toISOString();
-
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
       <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">
@@ -122,12 +120,14 @@ export default function CalendarPage() {
                   className="rounded-md border"
                   disabled={!date}
                 />
-                <Button asChild disabled={!date}>
-                  <NextLink href={`/calendar/add-task?date=${linkDate}`}>
-                    <Plus className="ml-2 h-4 w-4" />
-                    إضافة مهمة
-                  </NextLink>
-                </Button>
+                {date && (
+                  <Button asChild>
+                    <NextLink href={`/calendar/add-task?date=${date.toISOString()}`}>
+                      <Plus className="ml-2 h-4 w-4" />
+                      إضافة مهمة
+                    </NextLink>
+                  </Button>
+                )}
                 
                 {filteredTasks.length > 0 && (
                   <div className="w-full max-w-4xl mt-8">
