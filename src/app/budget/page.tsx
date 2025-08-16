@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Wallet, PlusCircle, Trash2 } from 'lucide-react';
+import { AreaChart, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -71,11 +71,11 @@ export default function BudgetPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Wallet />
-              الميزانية
+              <AreaChart />
+              متتبع ميزانية الخضروات
             </CardTitle>
             <CardDescription>
-              هنا يمكنك تتبع ميزانية الخضروات والأسعار.
+              أضف مشترياتك من الخضروات لتتبع التكاليف وإدارة ميزانيتك بكفاءة.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -141,7 +141,7 @@ export default function BudgetPage() {
         {budgetItems.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>قائمة الميزانية</CardTitle>
+              <CardTitle>قائمة المشتريات</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -171,7 +171,7 @@ export default function BudgetPage() {
                 </TableBody>
               </Table>
               <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
-                <span>إجمالي الميزانية:</span>
+                <span>إجمالي التكلفة:</span>
                 <span>{totalBudget.toFixed(2)} ريال</span>
               </div>
             </CardContent>
