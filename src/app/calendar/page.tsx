@@ -3,6 +3,8 @@
 import * as React from "react"
 import NextLink from 'next/link';
 import { useSearchParams } from "next/navigation";
+import { format } from 'date-fns';
+import { arSA } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Calendar as CalendarIcon, Plus, Trash2, Repeat, SprayCan, Sprout, TestTube, Droplets as DropletsIcon } from 'lucide-react'
 import { Calendar } from "@/components/ui/calendar"
@@ -133,7 +135,7 @@ export default function CalendarPage() {
                   <div className="w-full max-w-4xl mt-8">
                     <Card>
                       <CardHeader>
-                        <CardTitle>قائمة المهام</CardTitle>
+                        <CardTitle>قائمة المهام لـ {format(date!, "PPP", { locale: arSA })}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Table>
@@ -141,6 +143,7 @@ export default function CalendarPage() {
                             <TableRow>
                               <TableHead>المهمة</TableHead>
                               <TableHead>النوع</TableHead>
+                              <TableHead>التاريخ</TableHead>
                               <TableHead className="text-left">الإجراءات</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -154,6 +157,7 @@ export default function CalendarPage() {
                                     <span>{taskTypeTranslations[task.taskType]}</span>
                                   </Badge>
                                 </TableCell>
+                                <TableCell>{format(task.date, "PPP", { locale: arSA })}</TableCell>
                                 <TableCell className="flex justify-end gap-2">
                                   <Button variant="ghost" size="icon" onClick={() => repeatTask(task)} title="تكرار المهمة">
                                     <Repeat className="h-4 w-4" />
