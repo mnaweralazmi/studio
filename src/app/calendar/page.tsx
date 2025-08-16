@@ -37,7 +37,7 @@ const taskIcons: { [key: string]: React.ElementType } = {
   "تسميد": TestTube,
 };
 
-// Helper function to get tasks from localStorage
+// Helper function to get tasks from localStorage safely.
 const getTasksFromStorage = (): Task[] => {
   if (typeof window === 'undefined') {
     return [];
@@ -46,7 +46,7 @@ const getTasksFromStorage = (): Task[] => {
   if (!tasksJson) return [];
   try {
     const parsedTasks = JSON.parse(tasksJson);
-    // Revive dates
+    // Revive dates which are stored as strings
     return parsedTasks.map((task: any) => ({
       ...task,
       date: new Date(task.date),
@@ -57,7 +57,7 @@ const getTasksFromStorage = (): Task[] => {
   }
 };
 
-// Helper function to set tasks in localStorage
+// Helper function to set tasks in localStorage.
 const setTasksInStorage = (tasks: Task[]) => {
   if (typeof window === 'undefined') {
     return;
@@ -73,7 +73,7 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // On initial client mount, load tasks from storage and set the date.
+  // On initial client mount, load tasks from storage and set the initial date.
   React.useEffect(() => {
     setTasks(getTasksFromStorage());
     setDate(new Date());
@@ -81,7 +81,7 @@ export default function CalendarPage() {
   }, []);
 
   // Effect to handle adding a new task from query parameters.
-  // This should only run on the client and when the searchParams change.
+  // This runs when `isClient` becomes true.
   React.useEffect(() => {
     if (!isClient) {
       return;
@@ -89,17 +89,17 @@ export default function CalendarPage() {
 
     const title = searchParams.get('title');
     const taskType = searchParams.get('taskType');
-    
+    const dateStr = searchParams.get('date');
+
     // Only proceed if the essential query params are present
-    if (title && taskType) {
+    if (title && taskType && dateStr) {
       const description = searchParams.get('description');
       const vegetable = searchParams.get('vegetable');
       const fruit = searchParams.get('fruit');
-      const dateStr = searchParams.get('date');
-      const newTaskDate = dateStr ? new Date(dateStr) : new Date();
+      const newTaskDate = new Date(dateStr);
 
       const newTask: Task = {
-        id: `${Date.now()}-${Math.random()}`, // Unique ID
+        id: `${Date.now()}-${Math.random()}`,
         title,
         taskType,
         description: description || undefined,
@@ -107,7 +107,7 @@ export default function CalendarPage() {
         fruit: fruit || undefined,
         date: newTaskDate,
       };
-
+      
       // **CRITICAL FIX**: Read the latest from storage, update, then set state and storage.
       const existingTasks = getTasksFromStorage();
       const updatedTasks = [...existingTasks, newTask];
@@ -115,11 +115,13 @@ export default function CalendarPage() {
       setTasks(updatedTasks); // Update the state to reflect the new task immediately
       setDate(newTaskDate); // Set calendar to the new task's date
 
-      // Clear query params immediately to prevent re-triggering on refresh or navigation.
+      // Clear query params immediately to prevent re-triggering.
       router.replace('/calendar', {scroll: false});
     }
+  // We only want this to run once after the client loads and if params exist.
+  // Adding router and searchParams to deps caused re-runs. This setup is safer.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isClient, router]); // Only re-run if searchParams or isClient changes.
+  }, [isClient]); 
 
 
   const deleteTask = (id: string) => {
@@ -130,7 +132,6 @@ export default function CalendarPage() {
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
-    // **CRITICAL FIX**: Read from storage before updating
     const existingTasks = getTasksFromStorage();
     const updatedTasks = [...existingTasks, repeatedTask];
     setTasksInStorage(updatedTasks);
@@ -142,7 +143,6 @@ export default function CalendarPage() {
     return <Icon className="h-4 w-4" />;
   };
   
-  // This is a derived state, it doesn't modify the original `tasks` array.
   const filteredTasks = tasks.filter(task => {
     if (!date) return false;
     const taskDate = new Date(task.date);
@@ -172,9 +172,9 @@ export default function CalendarPage() {
                   selected={date}
                   onSelect={setDate}
                   className="rounded-md border"
-                  disabled={!isClient} // Disable calendar until client has mounted
+                  disabled={!isClient}
                 />
-                {date && (
+                {isClient && date && (
                   <Button asChild>
                     <NextLink href={`/calendar/add-task?date=${date.toISOString()}`}>
                       <Plus className="ml-2 h-4 w-4" />

@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import NextLink from "next/link"
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import React from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { PlusCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import React from "react"
+
 
 const taskTypes = ["رش", "ري", "زراعة", "تسميد"] as const;
 const vegetableList = [
@@ -57,7 +58,8 @@ export default function AddTaskPage() {
   const { toast } = useToast()
   
   const dateStr = searchParams.get('date');
-  const selectedDate = dateStr ? new Date(dateStr) : new Date();
+  // Add a fallback to new Date() if date is not in params, and ensure it's a valid date.
+  const selectedDate = dateStr && !isNaN(new Date(dateStr).getTime()) ? new Date(dateStr) : new Date();
 
   const form = useForm<z.infer<typeof addTaskFormSchema>>({
     resolver: zodResolver(addTaskFormSchema),
@@ -175,7 +177,7 @@ export default function AddTaskPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>الخضروات (اختياري)</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر نوع الخضار..." />
@@ -198,7 +200,7 @@ export default function AddTaskPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>الفواكه (اختياري)</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر نوع الفاكهة..." />
