@@ -1,20 +1,17 @@
 "use client";
 
 import * as React from 'react';
-import NextLink from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, Landmark, DollarSign, Trash2, PlusCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { CreditCard, Landmark, DollarSign, Trash2, PlusCircle, ArrowDownCircle } from 'lucide-react';
 
 const expenseCategories = ["فواتير", "طعام", "وقود", "صيانة", "بذور وأسمدة", "عمالة", "أخرى"] as const;
 
@@ -63,6 +60,18 @@ function ExpensesContent() {
 
     return (
         <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <CreditCard />
+                        إدارة المصروفات
+                    </CardTitle>
+                    <CardDescription>
+                        أضف وتتبع نفقاتك الزراعية للحفاظ على ميزانيتك.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+
             <div className="grid gap-4 md:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -76,22 +85,24 @@ function ExpensesContent() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">إجمالي الديون</CardTitle>
-                        <Landmark className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">0.00 ريال</div>
-                        <p className="text-xs text-muted-foreground">سيتم تفعيلها قريباً</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">صافي الرصيد</CardTitle>
+                        <CardTitle className="text-sm font-medium">عدد المصروفات</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">0.00 ريال</div>
-                        <p className="text-xs text-muted-foreground">سيتم تفعيلها قريباً</p>
+                        <div className="text-2xl font-bold">{expenses.length}</div>
+                        <p className="text-xs text-muted-foreground">إجمالي عدد البنود المسجلة</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">متوسط المصروف</CardTitle>
+                        <Landmark className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {expenses.length > 0 ? (totalExpenses / expenses.length).toFixed(2) : '0.00'} ريال
+                        </div>
+                        <p className="text-xs text-muted-foreground">متوسط ​​قيمة المصروف الواحد</p>
                     </CardContent>
                 </Card>
             </div>
@@ -174,53 +185,12 @@ function ExpensesContent() {
     );
 }
 
-function DebtsContent() {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>صفحة الديون</CardTitle>
-                <CardDescription>
-                    هنا يمكنك تتبع وإدارة جميع ديونك. سيتم بناء هذه الصفحة قريباً.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p>محتوى صفحة الديون قيد الإنشاء حاليًا.</p>
-            </CardContent>
-        </Card>
-    );
-}
 
 export default function ExpensesPage() {
-  const searchParams = useSearchParams();
-  const activeTab = searchParams.get('tab') === 'debts' ? 'debts' : 'expenses';
-
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
       <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
-        <Tabs value={activeTab} className="w-full">
-          <div className="flex justify-center">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-               <TabsTrigger value="expenses" asChild>
-                  <NextLink href="/expenses" className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    المصروفات
-                  </NextLink>
-               </TabsTrigger>
-               <TabsTrigger value="debts" asChild>
-                  <NextLink href="/expenses?tab=debts" className="flex items-center gap-2">
-                    <Landmark className="h-4 w-4" />
-                    الديون
-                  </NextLink>
-               </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="expenses" className="mt-6">
-            <ExpensesContent />
-          </TabsContent>
-          <TabsContent value="debts" className="mt-6">
-            <DebtsContent />
-          </TabsContent>
-        </Tabs>
+        <ExpensesContent />
       </div>
     </main>
   );
