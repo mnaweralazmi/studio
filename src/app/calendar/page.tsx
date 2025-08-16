@@ -3,7 +3,6 @@
 import * as React from "react"
 import NextLink from 'next/link';
 import { useSearchParams } from "next/navigation";
-import { isSameDay } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Calendar as CalendarIcon, Plus, Trash2, Repeat, SprayCan, Sprout, TestTube, Droplets as DropletsIcon } from 'lucide-react'
 import { Calendar } from "@/components/ui/calendar"
@@ -90,7 +89,14 @@ export default function CalendarPage() {
     return <Icon className="h-4 w-4" />;
   };
   
-  const filteredTasks = tasks.filter(task => date && isSameDay(task.date, date));
+  const filteredTasks = tasks.filter(task => {
+    if (!date) return false;
+    const taskDate = new Date(task.date);
+    const selectedDate = new Date(date);
+    return taskDate.getDate() === selectedDate.getDate() &&
+           taskDate.getMonth() === selectedDate.getMonth() &&
+           taskDate.getFullYear() === selectedDate.getFullYear();
+  });
 
   const linkDate = date ? date.toISOString() : new Date().toISOString();
 
