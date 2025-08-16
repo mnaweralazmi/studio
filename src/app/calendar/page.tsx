@@ -67,21 +67,20 @@ const setTasksInStorage = (tasks: Task[]) => {
 
 
 export default function CalendarPage() {
-  const [date, setDate] = React.useState<Date | undefined>(undefined);
+  const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [isClient, setIsClient] = React.useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // On initial client mount, load tasks from storage and set the initial date.
+  // On initial client mount, load tasks from storage.
   React.useEffect(() => {
-    setTasks(getTasksFromStorage());
-    setDate(new Date());
     setIsClient(true);
+    setTasks(getTasksFromStorage());
   }, []);
 
   // Effect to handle adding a new task from query parameters.
-  // This runs when `isClient` becomes true.
+  // This runs when `isClient` becomes true or searchParams change.
   React.useEffect(() => {
     if (!isClient) {
       return;
@@ -108,20 +107,16 @@ export default function CalendarPage() {
         date: newTaskDate,
       };
       
-      // **CRITICAL FIX**: Read the latest from storage, update, then set state and storage.
-      const existingTasks = getTasksFromStorage();
-      const updatedTasks = [...existingTasks, newTask];
+      const updatedTasks = [...getTasksFromStorage(), newTask];
       setTasksInStorage(updatedTasks);
-      setTasks(updatedTasks); // Update the state to reflect the new task immediately
-      setDate(newTaskDate); // Set calendar to the new task's date
+      setTasks(updatedTasks); 
+      setDate(newTaskDate);
 
       // Clear query params immediately to prevent re-triggering.
       router.replace('/calendar', {scroll: false});
     }
-  // We only want this to run once after the client loads and if params exist.
-  // Adding router and searchParams to deps caused re-runs. This setup is safer.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]); 
+  }, [isClient, searchParams]);
 
 
   const deleteTask = (id: string) => {
@@ -224,6 +219,11 @@ export default function CalendarPage() {
                                               {task.fruit}
                                           </Badge>
                                       )}
+                                      {task.description && (
+                                           <Badge variant="outline">
+                                              {task.description}
+                                          </Badge>
+                                      )}
                                   </div>
                                 </TableCell>
                                 <TableCell>{format(task.date, "P", { locale: arSA })}</TableCell>
@@ -251,3 +251,5 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    
