@@ -47,7 +47,7 @@ export default function BudgetPage() {
       total: data.quantity * data.price,
     };
     setBudgetItems(prevItems => [...prevItems, newItem]);
-    form.reset({ quantity: 1, price: 0.1, vegetable: undefined });
+    form.reset();
     toast({
       title: "تمت إضافة البند بنجاح!",
       description: `تمت إضافة "${data.vegetable}" إلى الميزانية.`,
