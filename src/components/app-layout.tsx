@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Home, Calendar, ClipboardList, User, LogOut, Leaf } from 'lucide-react';
+import { Home, Calendar, Wallet, User, LogOut, Leaf } from 'lucide-react';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -51,7 +51,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === '/budget'} tooltip="الميزانية">
                 <NextLink href="/budget">
-                  <ClipboardList />
+                  <Wallet />
                   <span>الميزانية</span>
                 </NextLink>
               </SidebarMenuButton>
