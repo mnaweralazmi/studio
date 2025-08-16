@@ -43,12 +43,19 @@ export default function AddTaskPage() {
   })
 
   function onSubmit(data: z.infer<typeof addTaskFormSchema>) {
-    console.log(data)
     toast({
       title: "تمت إضافة المهمة بنجاح!",
       description: `تم إنشاء مهمة "${data.title}" من نوع "${data.taskType}".`,
     })
-    router.push("/calendar")
+    
+    const params = new URLSearchParams();
+    params.set('title', data.title);
+    params.set('taskType', data.taskType);
+    if (data.description) {
+      params.set('description', data.description);
+    }
+    
+    router.push(`/calendar?${params.toString()}`);
   }
 
   return (
