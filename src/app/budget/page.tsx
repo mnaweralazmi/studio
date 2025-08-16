@@ -137,7 +137,7 @@ export default function BudgetPage() {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>السعر (للكيلو)</FormLabel>
+                      <FormLabel>السعر (للكيلو بالدينار)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} />
                       </FormControl>
@@ -177,8 +177,8 @@ export default function BudgetPage() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.vegetable}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.price.toFixed(2)} ريال</TableCell>
-                        <TableCell>{item.total.toFixed(2)} ريال</TableCell>
+                        <TableCell>{item.price.toFixed(2)} دينار</TableCell>
+                        <TableCell>{item.total.toFixed(2)} دينار</TableCell>
                         <TableCell className="text-left">
                           <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title="حذف البند">
                             <Trash2 className="h-4 w-4" />
@@ -191,7 +191,7 @@ export default function BudgetPage() {
               </div>
               <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
                 <span>إجمالي التكلفة:</span>
-                <span>{totalBudget.toFixed(2)} ريال</span>
+                <span>{totalBudget.toFixed(2)} دينار</span>
               </div>
             </CardContent>
           </Card>

@@ -160,7 +160,7 @@ function ExpensesContent() {
                         <ArrowDownCircle className="h-4 w-4 text-destructive" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} ريال</div>
+                        <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} دينار</div>
                         <p className="text-xs text-muted-foreground">مجموع كل النفقات المسجلة</p>
                     </CardContent>
                 </Card>
@@ -265,7 +265,7 @@ function ExpensesContent() {
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField control={form.control} name="amount" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>المبلغ (ريال)</FormLabel>
+                                        <FormLabel>المبلغ (دينار)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -304,7 +304,7 @@ function ExpensesContent() {
                                             <span className="text-muted-foreground text-xs mr-2">({item.workerName})</span>
                                         )}
                                     </TableCell>
-                                    <TableCell>{item.amount.toFixed(2)} ريال</TableCell>
+                                    <TableCell>{item.amount.toFixed(2)} دينار</TableCell>
                                     <TableCell>{new Date(item.date).toLocaleDateString('ar-EG')}</TableCell>
                                     <TableCell>
                                         <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title="حذف">
@@ -332,5 +332,4 @@ export default function ExpensesPage() {
     </main>
   );
 }
-
     

@@ -82,7 +82,7 @@ function DebtsContent() {
                     <Landmark className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{totalUnpaidDebts.toFixed(2)} ريال</div>
+                    <div className="text-2xl font-bold">{totalUnpaidDebts.toFixed(2)} دينار</div>
                 </CardContent>
             </Card>
 
@@ -95,7 +95,7 @@ function DebtsContent() {
                                 <FormItem><FormLabel>اسم الدائن</FormLabel><FormControl><Input placeholder="مثال: شركة الكهرباء" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="amount" render={({ field }) => (
-                                <FormItem><FormLabel>المبلغ (ريال)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>المبلغ (دينار)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="dueDate" render={({ field }) => (
                                 <FormItem className="flex flex-col"><FormLabel>تاريخ الاستحقاق (اختياري)</FormLabel><Popover>
@@ -122,7 +122,7 @@ function DebtsContent() {
                             {debts.map((item) => (
                                 <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50' : ''}>
                                     <TableCell className="font-medium">{item.creditor}</TableCell>
-                                    <TableCell>{item.amount.toFixed(2)} ريال</TableCell>
+                                    <TableCell>{item.amount.toFixed(2)} دينار</TableCell>
                                     <TableCell>{item.dueDate ? format(item.dueDate, "PPP") : 'لا يوجد'}</TableCell>
                                     <TableCell><Badge variant={item.status === 'paid' ? 'default' : 'destructive'} className={item.status === 'paid' ? 'bg-green-600' : ''}>{item.status === 'paid' ? 'مدفوع' : 'غير مدفوع'}</Badge></TableCell>
                                     <TableCell className="flex gap-2">
