@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Leaf, Droplets, Copy } from 'lucide-react';
+import { Droplets, Copy } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -76,8 +76,7 @@ export function WateringScheduleGenerator() {
     <Card className="w-full max-w-2xl mx-auto shadow-lg bg-card/80 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline text-2xl">
-          <Leaf className="text-primary" />
-          منشئ جدول الري
+          جدول الري
         </CardTitle>
         <CardDescription className="font-body">
           املأ تفاصيل نبتتك للحصول على جدول ري مخصص ومدعوم بالذكاء الاصطناعي.
