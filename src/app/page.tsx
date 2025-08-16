@@ -1,6 +1,6 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Leaf, Droplets, Bug, Scissors, Sprout, FlaskConical, Sun, Home as HomeIcon } from 'lucide-react';
+import { Leaf, Droplets, Bug, Scissors, Sprout, FlaskConical } from 'lucide-react';
 import { WateringScheduleGenerator } from '@/components/watering-schedule-generator';
 
 export default function Home() {
