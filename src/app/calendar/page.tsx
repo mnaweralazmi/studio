@@ -4,7 +4,7 @@ import * as React from "react"
 import NextLink from 'next/link';
 import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
-import { Calendar as CalendarIcon, Plus, Trash2, Repeat, Spray, Sprout, TestTube, Droplets as DropletsIcon } from 'lucide-react'
+import { Calendar as CalendarIcon, Plus, Trash2, Repeat, SprayCan, Sprout, TestTube, Droplets as DropletsIcon } from 'lucide-react'
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,7 +25,7 @@ type Task = {
 };
 
 const taskIcons: { [key: string]: React.ElementType } = {
-  "رش": Spray,
+  "رش": SprayCan,
   "ري": DropletsIcon,
   "زراعة": Sprout,
   "تسميد": TestTube,
