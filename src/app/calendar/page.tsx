@@ -81,8 +81,6 @@ export default function CalendarPage() {
 
   // When a new task is added via URL params, update the state.
   React.useEffect(() => {
-    if (!isClient) return;
-
     const action = searchParams.get('action');
     if (action !== 'addTask') return;
     
@@ -105,6 +103,7 @@ export default function CalendarPage() {
         date: new Date(dateStr),
       };
       
+      // Update state by adding the new task to the existing tasks
       setTasks(prevTasks => [...prevTasks, newTask]);
       setDate(newTask.date);
 
@@ -113,7 +112,7 @@ export default function CalendarPage() {
     }
   // This effect should only run when searchParams changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isClient]);
+  }, [searchParams]);
 
   // When the tasks state changes, save it to localStorage.
   React.useEffect(() => {
