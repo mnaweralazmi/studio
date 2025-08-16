@@ -64,8 +64,8 @@ export default function AddTaskPage() {
     defaultValues: {
       title: "",
       description: "",
-      vegetable: "",
-      fruit: "",
+      vegetable: "none",
+      fruit: "none",
       newTaskTypeName: ""
     },
   })
@@ -89,10 +89,10 @@ export default function AddTaskPage() {
     if (data.description) {
       params.set('description', data.description);
     }
-    if (data.vegetable) {
+    if (data.vegetable && data.vegetable !== 'none') {
       params.set('vegetable', data.vegetable);
     }
-    if (data.fruit) {
+    if (data.fruit && data.fruit !== 'none') {
       params.set('fruit', data.fruit);
     }
     params.set('date', selectedDate.toISOString());
@@ -182,7 +182,7 @@ export default function AddTaskPage() {
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                <SelectItem value="">لا يوجد</SelectItem>
+                                <SelectItem value="none">لا يوجد</SelectItem>
                                 {vegetableList.map(veg => (
                                 <SelectItem key={veg} value={veg}>{veg}</SelectItem>
                                 ))}
@@ -205,7 +205,7 @@ export default function AddTaskPage() {
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                <SelectItem value="">لا يوجد</SelectItem>
+                                <SelectItem value="none">لا يوجد</SelectItem>
                                 {fruitList.map(fruit => (
                                 <SelectItem key={fruit} value={fruit}>{fruit}</SelectItem>
                                 ))}
