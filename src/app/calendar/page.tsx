@@ -75,12 +75,14 @@ export default function CalendarPage() {
 
   // On initial client-side mount, load tasks from localStorage.
   React.useEffect(() => {
-    setTasks(getTasksFromStorage());
     setIsClient(true);
+    setTasks(getTasksFromStorage());
   }, []);
 
   // When a new task is added via URL params, update the state.
   React.useEffect(() => {
+    if (!isClient) return;
+
     const action = searchParams.get('action');
     if (action !== 'addTask') return;
 
@@ -103,30 +105,35 @@ export default function CalendarPage() {
         date: new Date(dateStr),
       };
       
-      setTasks(prevTasks => [...prevTasks, newTask]);
+      setTasks(prevTasks => {
+          const updatedTasks = [...prevTasks, newTask];
+          setTasksInStorage(updatedTasks);
+          return updatedTasks;
+      });
+
       setDate(newTask.date);
       // Use router.replace to clean the URL without adding to history
       router.replace('/calendar', {scroll: false});
     }
-  // This effect should only run when searchParams changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  // This effect should only run when searchParams changes on the client.
+  }, [searchParams, isClient, router]);
 
-  // When the tasks state changes, save it to localStorage.
-  React.useEffect(() => {
-    // We don't save on the initial empty state before the client has loaded.
-    if (isClient) {
-      setTasksInStorage(tasks);
-    }
-  }, [tasks, isClient]);
 
   const deleteTask = (id: string) => {
-    setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+    setTasks(prevTasks => {
+        const updatedTasks = prevTasks.filter(task => task.id !== id);
+        setTasksInStorage(updatedTasks);
+        return updatedTasks;
+    });
   };
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
-    setTasks(prevTasks => [...prevTasks, repeatedTask]);
+    setTasks(prevTasks => {
+        const updatedTasks = [...prevTasks, repeatedTask];
+        setTasksInStorage(updatedTasks);
+        return updatedTasks;
+    });
   };
 
   const getTaskIcon = (taskType: string) => {
