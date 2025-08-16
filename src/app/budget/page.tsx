@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from 'react';
@@ -22,6 +23,7 @@ const budgetFormSchema = z.object({
     required_error: 'الرجاء اختيار نوع الخضار.' 
   }),
   quantity: z.coerce.number().min(1, 'يجب أن تكون الكمية 1 على الأقل.'),
+  weightPerCarton: z.coerce.number().min(0.1, 'يجب أن يكون الوزن 0.1 كيلو على الأقل.'),
   price: z.coerce.number().min(0.01, 'يجب أن يكون السعر إيجابياً.'),
 });
 
@@ -30,6 +32,7 @@ type BudgetFormValues = z.infer<typeof budgetFormSchema>;
 type BudgetItem = BudgetFormValues & {
   id: number;
   total: number;
+  pricePerKilo: number;
 };
 
 export default function BudgetPage() {
@@ -40,6 +43,7 @@ export default function BudgetPage() {
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
       quantity: 1,
+      weightPerCarton: 1,
       price: 0.1,
       vegetable: undefined,
     },
@@ -50,13 +54,14 @@ export default function BudgetPage() {
       ...data,
       id: Date.now(),
       total: data.quantity * data.price,
+      pricePerKilo: data.price / data.weightPerCarton,
     };
     setBudgetItems(prevItems => [...prevItems, newItem]);
     
-    // Reset form fields to their default values
     form.reset({
       vegetable: undefined,
       quantity: 1,
+      weightPerCarton: 1,
       price: 0.1,
     });
     
@@ -78,7 +83,7 @@ export default function BudgetPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
+      <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -91,7 +96,7 @@ export default function BudgetPage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 
                 <div className="md:col-span-2">
                   <FormField
@@ -134,6 +139,20 @@ export default function BudgetPage() {
 
                 <FormField
                   control={form.control}
+                  name="weightPerCarton"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>الوزن (للكرتون بالكيلو)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="price"
                   render={({ field }) => (
                     <FormItem>
@@ -146,7 +165,7 @@ export default function BudgetPage() {
                   )}
                 />
 
-                <Button type="submit" className="md:col-start-4">
+                <Button type="submit" className="md:col-start-5">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   إضافة
                 </Button>
@@ -167,7 +186,9 @@ export default function BudgetPage() {
                     <TableRow>
                       <TableHead>الخضار</TableHead>
                       <TableHead>الكمية (كرتون)</TableHead>
+                      <TableHead>وزن الكرتون (كيلو)</TableHead>
                       <TableHead>سعر الكرتون</TableHead>
+                      <TableHead>سعر الكيلو</TableHead>
                       <TableHead>الإجمالي</TableHead>
                       <TableHead className="text-left">الإجراءات</TableHead>
                     </TableRow>
@@ -177,7 +198,9 @@ export default function BudgetPage() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.vegetable}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.weightPerCarton.toFixed(1)}</TableCell>
                         <TableCell>{item.price.toFixed(2)} دينار</TableCell>
+                        <TableCell>{item.pricePerKilo.toFixed(2)} دينار</TableCell>
                         <TableCell>{item.total.toFixed(2)} دينار</TableCell>
                         <TableCell className="text-left">
                           <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title="حذف البند">
@@ -200,3 +223,5 @@ export default function BudgetPage() {
     </main>
   );
 }
+
+    
