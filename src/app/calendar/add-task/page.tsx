@@ -58,7 +58,6 @@ export default function AddTaskPage() {
   const { toast } = useToast()
   
   const dateStr = searchParams.get('date');
-  // Add a fallback to new Date() if date is not in params, and ensure it's a valid date.
   const selectedDate = dateStr && !isNaN(new Date(dateStr).getTime()) ? new Date(dateStr) : new Date();
 
   const form = useForm<z.infer<typeof addTaskFormSchema>>({
@@ -80,11 +79,6 @@ export default function AddTaskPage() {
         finalTaskType = data.newTaskTypeName;
     }
     
-    toast({
-      title: "تمت إضافة المهمة بنجاح!",
-      description: `تم إنشاء مهمة "${data.title}" من نوع "${finalTaskType}".`,
-    })
-    
     const params = new URLSearchParams();
     params.set('title', data.title);
     params.set('taskType', finalTaskType);
@@ -98,6 +92,12 @@ export default function AddTaskPage() {
       params.set('fruit', data.fruit);
     }
     params.set('date', selectedDate.toISOString());
+    params.set('action', 'addTask');
+    
+    toast({
+      title: "تمت إضافة المهمة بنجاح!",
+      description: `تم إنشاء مهمة "${data.title}" من نوع "${finalTaskType}".`,
+    })
     
     router.push(`/calendar?${params.toString()}`);
   }
@@ -177,7 +177,7 @@ export default function AddTaskPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>الخضروات (اختياري)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || 'none'}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر نوع الخضار..." />
@@ -200,11 +200,11 @@ export default function AddTaskPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>الفواكه (اختياري)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || 'none'}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر نوع الفاكهة..." />
-                            </SelectTrigger>
+                            </Trigger>
                             </FormControl>
                             <SelectContent>
                                 <SelectItem value="none">لا يوجد</SelectItem>
@@ -251,5 +251,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    

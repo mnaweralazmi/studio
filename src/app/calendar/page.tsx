@@ -39,14 +39,11 @@ const taskIcons: { [key: string]: React.ElementType } = {
 
 // Helper function to get tasks from localStorage safely.
 const getTasksFromStorage = (): Task[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
+  if (typeof window === 'undefined') return [];
   const tasksJson = localStorage.getItem('calendarTasks');
   if (!tasksJson) return [];
   try {
     const parsedTasks = JSON.parse(tasksJson);
-    // Revive dates which are stored as strings
     return parsedTasks.map((task: any) => ({
       ...task,
       date: new Date(task.date),
@@ -59,9 +56,7 @@ const getTasksFromStorage = (): Task[] => {
 
 // Helper function to set tasks in localStorage.
 const setTasksInStorage = (tasks: Task[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
+  if (typeof window === 'undefined') return;
   localStorage.setItem('calendarTasks', JSON.stringify(tasks));
 };
 
@@ -73,50 +68,47 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // On initial client mount, load tasks from storage.
+  // Load tasks from localStorage once on initial client mount.
   React.useEffect(() => {
     setTasks(getTasksFromStorage());
     setIsClient(true);
   }, []);
 
-  // Effect to handle adding a new task from query parameters.
+  // Effect to handle adding/updating tasks from query parameters.
   React.useEffect(() => {
-    if (!isClient) {
-      return;
-    }
+    if (!isClient) return;
 
-    const title = searchParams.get('title');
-    const taskType = searchParams.get('taskType');
-    const dateStr = searchParams.get('date');
+    const action = searchParams.get('action');
+    if (action === 'addTask') {
+      const title = searchParams.get('title');
+      const taskType = searchParams.get('taskType');
+      const dateStr = searchParams.get('date');
 
-    if (title && taskType && dateStr) {
-      const description = searchParams.get('description');
-      const vegetable = searchParams.get('vegetable');
-      const fruit = searchParams.get('fruit');
-      const newTaskDate = new Date(dateStr);
+      if (title && taskType && dateStr) {
+        const description = searchParams.get('description');
+        const vegetable = searchParams.get('vegetable');
+        const fruit = searchParams.get('fruit');
+        
+        const newTask: Task = {
+          id: `${Date.now()}-${Math.random()}`,
+          title,
+          taskType,
+          description: description || undefined,
+          vegetable: vegetable || undefined,
+          fruit: fruit || undefined,
+          date: new Date(dateStr),
+        };
+        
+        const updatedTasks = [...getTasksFromStorage(), newTask];
+        setTasksInStorage(updatedTasks);
+        setTasks(updatedTasks);
+        setDate(newTask.date);
 
-      const newTask: Task = {
-        id: `${Date.now()}-${Math.random()}`,
-        title,
-        taskType,
-        description: description || undefined,
-        vegetable: vegetable || undefined,
-        fruit: fruit || undefined,
-        date: newTaskDate,
-      };
-      
-      const existingTasks = getTasksFromStorage();
-      const updatedTasks = [...existingTasks, newTask];
-      setTasksInStorage(updatedTasks);
-      setTasks(updatedTasks); 
-      setDate(newTaskDate);
-
-      // Clear query params immediately to prevent re-triggering.
-      router.replace('/calendar', {scroll: false});
+        router.replace('/calendar', {scroll: false});
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, searchParams]);
-
 
   const deleteTask = (id: string) => {
     const updatedTasks = tasks.filter(task => task.id !== id);
@@ -126,8 +118,7 @@ export default function CalendarPage() {
   
   const repeatTask = (task: Task) => {
     const repeatedTask: Task = { ...task, id: `${Date.now()}-${Math.random()}`, title: `${task.title} (مكرر)` };
-    const existingTasks = getTasksFromStorage();
-    const updatedTasks = [...existingTasks, repeatedTask];
+    const updatedTasks = [...tasks, repeatedTask];
     setTasksInStorage(updatedTasks);
     setTasks(updatedTasks);
   };
@@ -225,7 +216,7 @@ export default function CalendarPage() {
                                       )}
                                   </div>
                                 </TableCell>
-                                <TableCell>{format(task.date, "P", { locale: arSA })}</TableCell>
+                                <TableCell>{format(new Date(task.date), "P", { locale: arSA })}</TableCell>
                                 <TableCell className="flex justify-end gap-2">
                                   <Button variant="ghost" size="icon" onClick={() => repeatTask(task)} title="تكرار المهمة">
                                     <Repeat className="h-4 w-4" />
@@ -250,4 +241,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
