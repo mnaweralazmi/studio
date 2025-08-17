@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
+  const isAuthPage = pathname === '/login' || pathname === '/register';
 
   return (
     <html lang="ar" dir="rtl" className="dark">
@@ -23,7 +23,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        {isLoginPage ? (
+        {isAuthPage ? (
           <>
             {children}
             <Toaster />
@@ -35,7 +35,7 @@ export default function RootLayout({
             </AppLayout>
           </SidebarProvider>
         )}
-        {!isLoginPage && <Toaster />}
+        {!isAuthPage && <Toaster />}
       </body>
     </html>
   );

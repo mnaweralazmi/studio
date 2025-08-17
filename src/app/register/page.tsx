@@ -12,84 +12,82 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, LogIn } from 'lucide-react';
+import { Leaf, UserPlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-const loginFormSchema = z.object({
-  username: z.string().min(1, "اسم المستخدم مطلوب."),
-  password: z.string().min(1, "كلمة المرور مطلوبة."),
+const registerFormSchema = z.object({
+  username: z.string().min(3, "اسم المستخدم يجب أن يكون 3 أحرف على الأقل."),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل."),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "كلمتا المرور غير متطابقتين.",
+  path: ["confirmPassword"],
 });
 
-type LoginFormValues = z.infer<typeof loginFormSchema>;
+type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
     defaultValues: {
       username: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
-  function onSubmit(data: LoginFormValues) {
+  function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     // Simulate API call
     setTimeout(() => {
         const storedUsers = localStorage.getItem('users');
         const users = storedUsers ? JSON.parse(storedUsers) : [];
-        const adminUser = { username: 'mnawer1988', password: 'mnawer1988', role: 'admin', name: 'المدير العام' };
 
-        let foundUser;
-        if (data.username === adminUser.username && data.password === adminUser.password) {
-            foundUser = adminUser;
-        } else {
-            foundUser = users.find((u: any) => u.username === data.username && u.password === data.password);
+        const userExists = users.some((u: any) => u.username === data.username) || data.username === 'mnawer1988';
+        
+        if (userExists) {
+             toast({
+                variant: "destructive",
+                title: "خطأ في التسجيل",
+                description: "اسم المستخدم هذا موجود بالفعل.",
+            });
+            setIsLoading(false);
+            return;
         }
 
-      if (foundUser) {
-        const userToSave = {
-            username: foundUser.username,
-            role: foundUser.role || 'user',
-            name: foundUser.name || foundUser.username
-        };
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('user', JSON.stringify(userToSave));
-        
-        toast({
-          title: "تم تسجيل الدخول بنجاح!",
-          description: `أهلاً بك، ${userToSave.name}.`,
-        });
-        router.push('/');
-      } else {
-        toast({
-          variant: "destructive",
-          title: "فشل تسجيل الدخول",
-          description: "اسم المستخدم أو كلمة المرور غير صحيحة.",
-        });
-      }
+        const newUser = { username: data.username, password: data.password };
+        users.push(newUser);
+        localStorage.setItem('users', JSON.stringify(users));
+
+      toast({
+        title: "تم إنشاء الحساب بنجاح!",
+        description: "يمكنك الآن تسجيل الدخول باستخدام حسابك الجديد.",
+      });
+
+      router.push('/login');
       setIsLoading(false);
     }, 1000);
   }
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4 bg-background">
-       <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full mb-6">
+      <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
+         <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full mb-6">
             <Leaf className="h-6 w-6 text-primary" />
             <span className="font-headline text-lg font-semibold text-primary-foreground">مزارع كويتي</span>
         </div>
         <Card className="w-full">
             <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2">
-                    <LogIn />
-                    تسجيل الدخول
+                    <UserPlus />
+                    إنشاء حساب جديد
                 </CardTitle>
                 <CardDescription>
-                    أدخل بياناتك للوصول إلى حسابك.
+                    أدخل بياناتك لإنشاء حساب جديد.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -102,7 +100,7 @@ export default function LoginPage() {
                                 <FormItem>
                                 <FormLabel>اسم المستخدم</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="mnawer1988" {...field} />
+                                    <Input placeholder="اختر اسم مستخدم..." {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -115,24 +113,37 @@ export default function LoginPage() {
                                 <FormItem>
                                 <FormLabel>كلمة المرور</FormLabel>
                                 <FormControl>
-                                    <Input type="password" placeholder="mnawer1988" {...field} />
+                                    <Input type="password" placeholder="اختر كلمة مرور قوية..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="confirmPassword"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>تأكيد كلمة المرور</FormLabel>
+                                <FormControl>
+                                    <Input type="password" placeholder="أعد إدخال كلمة المرور..." {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
                          <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? "جاري التحقق..." : "تسجيل الدخول"}
+                            {isLoading ? "جاري الإنشاء..." : "إنشاء الحساب"}
                         </Button>
                     </form>
                 </Form>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
+             <CardFooter className="flex flex-col gap-4">
                 <Separator />
                 <p className="text-sm text-muted-foreground">
-                    ليس لديك حساب؟{' '}
-                    <NextLink href="/register" className="font-semibold text-primary hover:underline">
-                        إنشاء حساب جديد
+                    لديك حساب بالفعل؟{' '}
+                    <NextLink href="/login" className="font-semibold text-primary hover:underline">
+                        تسجيل الدخول
                     </NextLink>
                 </p>
             </CardFooter>
@@ -141,3 +152,4 @@ export default function LoginPage() {
     </main>
   );
 }
+
