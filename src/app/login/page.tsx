@@ -38,10 +38,17 @@ export default function LoginPage() {
     // Simulate API call
     setTimeout(() => {
       if (data.username === 'admin' && data.password === 'password') {
+        const user = {
+            username: 'admin',
+            role: 'admin',
+            name: 'المدير العام'
+        };
         localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('user', JSON.stringify(user));
+        
         toast({
           title: "تم تسجيل الدخول بنجاح!",
-          description: "أهلاً بك مرة أخرى.",
+          description: `أهلاً بك، ${user.name}.`,
         });
         router.push('/');
       } else {

@@ -31,6 +31,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('user');
     router.replace('/login');
   };
 
