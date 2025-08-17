@@ -37,9 +37,9 @@ export default function LoginPage() {
     setIsLoading(true);
     // Simulate API call
     setTimeout(() => {
-      if (data.username === 'admin' && data.password === 'password') {
+      if (data.username === 'mnawer1988' && data.password === 'mnawer1988') {
         const user = {
-            username: 'admin',
+            username: 'mnawer1988',
             role: 'admin',
             name: 'المدير العام'
         };
@@ -89,7 +89,7 @@ export default function LoginPage() {
                                 <FormItem>
                                 <FormLabel>اسم المستخدم</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="admin" {...field} />
+                                    <Input placeholder="mnawer1988" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                                 <FormItem>
                                 <FormLabel>كلمة المرور</FormLabel>
                                 <FormControl>
-                                    <Input type="password" placeholder="password" {...field} />
+                                    <Input type="password" placeholder="mnawer1988" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
