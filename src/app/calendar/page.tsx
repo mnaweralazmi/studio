@@ -72,10 +72,10 @@ export default function CalendarPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1">
+      <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
+        <div className="flex justify-center">
           <Card>
-            <CardContent className="p-2">
+            <CardContent className="p-0">
               <Calendar
                 mode="single"
                 selected={date}
@@ -90,7 +90,7 @@ export default function CalendarPage() {
             </CardContent>
           </Card>
         </div>
-        <div className="md:col-span-2">
+        <div>
           <Card className="min-h-[380px]">
             <CardHeader>
               <div className="flex justify-between items-center">
