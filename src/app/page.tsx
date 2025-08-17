@@ -1,86 +1,118 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Leaf, Droplets, Bug, Scissors, Sprout, FlaskConical } from 'lucide-react';
-import { WateringScheduleGenerator } from '@/components/watering-schedule-generator';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Leaf, Droplets, Bug, Scissors, Sprout, FlaskConical, PlayCircle } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Home() {
   const agriculturalSections = [
     {
       title: 'الري',
       icon: Droplets,
-      content: 'الماء هو سر الحياة لجميع النباتات. يعتمد الري الصحيح على نوع النبات، حجمه، نوع التربة، والموسم. من المهم التأكد من عدم الإفراط في الري أو التقصير فيه، حيث أن كليهما يمكن أن يضر بالجذور.',
+      description: 'تعلم أفضل الممارسات لسقي نباتاتك لضمان نمو صحي وتجنب الإفراط في الري أو نقصه.',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'watering plants'
     },
     {
       title: 'الآفات والأمراض',
       icon: Bug,
-      content: 'تعتبر الآفات والأمراض من أكبر التحديات في الزراعة. تشمل الآفات الشائعة حشرات المن، والعناكب الحمراء، والذباب الأبيض. يمكن مكافحتها باستخدام طرق طبيعية أو مبيدات حشرية مخصصة.',
+      description: 'اكتشف كيفية التعرف على الآفات والأمراض الشائعة وطرق الوقاية والمكافحة الفعالة.',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'plant pest'
     },
     {
       title: 'التقليم',
       icon: Scissors,
-      content: 'التقليم هو عملية إزالة أجزاء من النبات لتحسين صحته، شكله، وإنتاجيته. يساعد التقليم على إزالة الأفرع الميتة أو المريضة، زيادة تدفق الهواء، وتشجيع نمو جديد.',
+      description: 'أتقن فن التقليم لتحسين صحة النبات، تشجيع النمو الجديد، وزيادة إنتاج الثمار والأزهار.',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'pruning shears'
     },
     {
-      title: 'الزراعة والتربة',
+      title: 'التربة والتسميد',
       icon: Sprout,
-      content: 'تختلف متطلبات النباتات الداخلية عن النباتات الخارجية بشكل كبير. تحتاج النباتات الخارجية إلى التكيف مع تقلبات الطقس، بينما تحتاج النباتات الداخلية إلى إضاءة ورطوبة صناعية مناسبة.',
-    },
-    {
-      title: 'الأسمدة والمبيدات',
-      icon: FlaskConical,
-      content: 'تستخدم الأسمدة لتزويد التربة بالعناصر الغذائية التي تحتاجها النباتات للنمو، بينما تستخدم المبيدات لمكافحة الآفات والأمراض. يجب استخدام كلاهما بحذر ووفقًا للتعليمات لضمان سلامة النبات والبيئة.',
+      description: 'فهم أنواع التربة المختلفة وكيفية اختيار الأسمدة المناسبة لتغذية نباتاتك بشكل مثالي.',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'soil fertilizer'
     },
   ];
+
+  const videoSections = [
+    {
+      title: 'دورة أساسيات الزراعة المنزلية',
+      duration: '45 دقيقة',
+      image: 'https://placehold.co/1600x900.png',
+      hint: 'gardening tools'
+    },
+    {
+      title: 'كيفية زراعة الطماطم بنجاح',
+      duration: '15 دقيقة',
+      image: 'https://placehold.co/1600x900.png',
+      hint: 'tomato plant'
+    },
+    {
+      title: 'صنع السماد العضوي في المنزل',
+      duration: '20 دقيقة',
+      image: 'https://placehold.co/1600x900.png',
+      hint: 'compost pile'
+    }
+  ];
+
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">
+      <div className="w-full max-w-7xl mx-auto flex flex-col items-center gap-16">
         <header className="text-center space-y-4">
           <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full">
             <Leaf className="h-6 w-6 text-primary" />
             <span className="font-headline text-lg font-semibold text-primary-foreground">مزارع كويتي</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground tracking-tight">
-            دليلك الزراعي في الكويت
+            بوابتك لعالم الزراعة
           </h1>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto font-body">
-            كل ما تحتاجه من معلومات حول الزراعة، الري، الآفات، والتقليم في مكان واحد.
+            اكتشف مقالات وفيديوهات ونصائح الخبراء لمساعدتك في كل خطوة من رحلتك الزراعية.
           </p>
         </header>
 
-        <WateringScheduleGenerator />
+        <section className="w-full">
+            <h2 className="text-3xl font-bold text-center mb-8">المواضيع الزراعية</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {agriculturalSections.map((section) => (
+                    <Card key={section.title} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <CardHeader className="p-0">
+                             <Image src={section.image} alt={section.title} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={section.hint} />
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <CardTitle className="flex items-center gap-2 mb-2">
+                                <section.icon className="h-6 w-6 text-primary" />
+                                <span>{section.title}</span>
+                            </CardTitle>
+                            <p className="text-muted-foreground">{section.description}</p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        </section>
 
-        <Card className="w-full max-w-4xl shadow-lg bg-card/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>
-              <div className="flex items-center gap-3">
-                <Leaf className="h-6 w-6 text-primary" />
-                <span>دليلك الزراعي الشامل</span>
-              </div>
-            </CardTitle>
-            <CardDescription>
-              تصفح الأقسام أدناه لمعرفة المزيد عن كل جانب من جوانب العناية بالنباتات.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              {agriculturalSections.map((section, index) => (
-                <AccordionItem value={`item-${index + 1}`} key={index}>
-                  <AccordionTrigger className="text-lg font-semibold">
-                    <div className="flex items-center gap-3">
-                      <section.icon className="h-5 w-5 text-primary" />
-                      {section.title}
+        <section className="w-full">
+            <h2 className="text-3xl font-bold text-center mb-8">فيديوهات تعليمية</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {videoSections.map((video) => (
+                <Card key={video.title} className="overflow-hidden group cursor-pointer shadow-lg">
+                    <div className="relative">
+                        <Image src={video.image} alt={video.title} width={1600} height={900} className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={video.hint} />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <PlayCircle className="h-16 w-16 text-white/80 group-hover:text-white transition-colors"/>
+                        </div>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-base text-muted-foreground font-body pr-8">
-                    {section.content}
-                  </AccordionContent>
-                </AccordionItem>
+                    <CardContent className="p-4">
+                        <h3 className="font-semibold text-lg">{video.title}</h3>
+                        <p className="text-sm text-muted-foreground">{video.duration}</p>
+                    </CardContent>
+                </Card>
               ))}
-            </Accordion>
-          </CardContent>
-        </Card>
+            </div>
+        </section>
 
-        <footer className="text-center mt-12 text-sm text-muted-foreground font-body">
+        <footer className="text-center mt-8 text-sm text-muted-foreground font-body">
             <p>&copy; {new Date().getFullYear()} مزارع كويتي. صُنع بحب لكل ما هو أخضر.</p>
         </footer>
       </div>
