@@ -1,8 +1,9 @@
+
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import NextLink from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +19,20 @@ import { Home, Wallet, User, LogOut, Leaf, CreditCard, Landmark, CalendarDays } 
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    if (isAuthenticated !== 'true') {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  const handleLogout = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    localStorage.removeItem('isAuthenticated');
+    router.replace('/login');
+  };
 
   return (
     <div className="flex h-screen w-full">
@@ -86,7 +101,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarMenuItem>
             <SidebarMenuItem>
                <SidebarMenuButton asChild tooltip="تسجيل الخروج">
-                  <a href="#">
+                  <a href="#" onClick={handleLogout}>
                     <LogOut />
                     <span>تسجيل الخروج</span>
                   </a>
