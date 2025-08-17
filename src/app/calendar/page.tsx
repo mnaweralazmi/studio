@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -64,7 +64,11 @@ export default function CalendarPage() {
   };
 
   const selectedDateString = date ? format(date, 'yyyy-MM-dd') : '';
-  const tasksForSelectedDate = tasks.filter(task => format(new Date(task.dueDate), 'yyyy-MM-dd') === selectedDateString);
+  const tasksForSelectedDate = tasks.filter(task => {
+    const taskDate = new Date(task.dueDate);
+    if (!isValid(taskDate)) return false;
+    return format(taskDate, 'yyyy-MM-dd') === selectedDateString;
+  });
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
@@ -143,4 +147,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
