@@ -103,7 +103,7 @@ export default function CalendarPage() {
         vegetable: vegetable || undefined,
         fruit: fruit || undefined,
         date: new Date(dateStr),
-      };
+      }
       
       setTasks(prevTasks => {
           const updatedTasks = [...prevTasks, newTask];
