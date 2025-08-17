@@ -15,10 +15,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, CalendarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Task } from '../page';
+
+const vegetableList = [
+  "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء"
+] as const;
+
+const fruitList = ["تفاح", "موز", "برتقال", "فراولة", "عنب", "مانجو", "بطيخ", "رمان", "تين", "تمر"] as const;
+
 
 const taskFormSchema = z.object({
   title: z.string().min(3, "عنوان المهمة يجب أن يكون 3 أحرف على الأقل."),
@@ -26,6 +34,8 @@ const taskFormSchema = z.object({
   dueDate: z.date({
     required_error: "تاريخ الاستحقاق مطلوب.",
   }),
+  vegetable: z.string().optional(),
+  fruit: z.string().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -91,6 +101,60 @@ export default function AddTaskPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="vegetable"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>اختر الخضار (اختياري)</FormLabel>
+                            <Select onValueChange={(value) => {
+                              field.onChange(value);
+                              form.setValue('title', `سقي ${value}`);
+                              form.setValue('fruit', '');
+                            }} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="اختر نوع الخضار..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {vegetableList.map(veg => (
+                                  <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="fruit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>اختر الفاكهة (اختياري)</FormLabel>
+                            <Select onValueChange={(value) => {
+                              field.onChange(value);
+                              form.setValue('title', `سقي ${value}`);
+                              form.setValue('vegetable', '');
+                            }} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="اختر نوع الفاكهة..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {fruitList.map(fruit => (
+                                  <SelectItem key={fruit} value={fruit}>{fruit}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <FormField
                         control={form.control}
                         name="title"
