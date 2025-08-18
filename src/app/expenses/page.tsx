@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, DollarSign, Trash2, PlusCircle, ArrowDownCircle } from 'lucide-react';
+import { CreditCard, DollarSign, Trash2, PlusCircle, ArrowDownCircle, Repeat, TrendingUp } from 'lucide-react';
 
 const initialExpenseCategories: Record<string, string[]> = {
   "فواتير": ["فاتورة كهرباء", "فاتورة ماء", "فاتورة انترنت", "فاتورة هاتف"],
@@ -27,6 +27,7 @@ const initialExpenseCategories: Record<string, string[]> = {
 type Category = keyof typeof initialExpenseCategories;
 
 const expenseFormSchema = z.object({
+  type: z.enum(['fixed', 'variable'], { required_error: "الرجاء تحديد نوع المصروف." }),
   category: z.custom<Category>((val) => typeof val === "string" && val in initialExpenseCategories, {
     required_error: "الرجاء اختيار الفئة.",
   }),
@@ -148,6 +149,7 @@ function ExpensesContent() {
         const newExpense: ExpenseItem = {
             id: Date.now(),
             date: new Date(),
+            type: data.type,
             category: data.category,
             item: finalItemName,
             amount: data.amount,
@@ -156,6 +158,7 @@ function ExpensesContent() {
 
         setExpenses(prev => [...prev, newExpense]);
         form.reset({
+             type: undefined,
              category: undefined,
              item: undefined,
              amount: 0.01,
@@ -172,7 +175,11 @@ function ExpensesContent() {
         toast({ variant: "destructive", title: "تم حذف المصروف." });
     }
 
-    const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+    const fixedExpenses = expenses.filter(e => e.type === 'fixed');
+    const variableExpenses = expenses.filter(e => e.type === 'variable');
+
+    const totalFixedExpenses = fixedExpenses.reduce((sum, item) => sum + item.amount, 0);
+    const totalVariableExpenses = variableExpenses.reduce((sum, item) => sum + item.amount, 0);
 
     return (
         <div className="space-y-6">
@@ -183,7 +190,7 @@ function ExpensesContent() {
                         إدارة المصروفات
                     </CardTitle>
                     <CardDescription>
-                        أضف وتتبع نفقاتك الزراعية للحفاظ على ميزانيتك.
+                        أضف وتتبع نفقاتك الثابتة والمتغيرة للحفاظ على ميزانيتك.
                     </CardDescription>
                 </CardHeader>
             </Card>
@@ -191,22 +198,22 @@ function ExpensesContent() {
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">إجمالي المصروفات</CardTitle>
-                        <ArrowDownCircle className="h-4 w-4 text-destructive" />
+                        <CardTitle className="text-sm font-medium">إجمالي المصروفات الثابتة</CardTitle>
+                        <Repeat className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalExpenses.toFixed(2)} دينار</div>
-                        <p className="text-xs text-muted-foreground">مجموع كل النفقات المسجلة</p>
+                        <div className="text-2xl font-bold">{totalFixedExpenses.toFixed(2)} دينار</div>
+                        <p className="text-xs text-muted-foreground">مجموع النفقات الشهرية المتكررة</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">عدد بنود المصروفات</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">إجمالي المصروفات المتغيرة</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{expenses.length}</div>
-                        <p className="text-xs text-muted-foreground">إجمالي عدد البنود المسجلة</p>
+                        <div className="text-2xl font-bold">{totalVariableExpenses.toFixed(2)} دينار</div>
+                        <p className="text-xs text-muted-foreground">مجموع النفقات غير المتكررة</p>
                     </CardContent>
                 </Card>
             </div>
@@ -218,7 +225,22 @@ function ExpensesContent() {
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                 <FormField control={form.control} name="type" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>نوع المصروف</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="اختر النوع..." /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="fixed">ثابت شهري</SelectItem>
+                                                <SelectItem value="variable">متغير</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
                                 <FormField control={form.control} name="category" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>الفئة</FormLabel>
@@ -226,8 +248,6 @@ function ExpensesContent() {
                                             field.onChange(value);
                                             form.setValue("item", "");
                                             form.setValue("workerName", "");
-                                            form.setValue("newWorkerName", "");
-                                            form.setValue("newItemName", "");
                                         }} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger><SelectValue placeholder="اختر فئة..." /></SelectTrigger>
@@ -297,15 +317,13 @@ function ExpensesContent() {
                                 </div>
                             )}
 
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={form.control} name="amount" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>المبلغ (دينار)</FormLabel>
-                                        <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+                             <FormField control={form.control} name="amount" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>المبلغ (دينار)</FormLabel>
+                                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
                             
                             <div className="flex justify-end pt-4">
                                 <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
@@ -315,22 +333,44 @@ function ExpensesContent() {
                 </CardContent>
             </Card>
 
-            {expenses.length > 0 && (
+            {fixedExpenses.length > 0 && (
             <Card>
-                <CardHeader><CardTitle>قائمة المصروفات</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-5 w-5" /> المصروفات الثابتة الشهرية</CardTitle></CardHeader>
                 <CardContent>
                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>الفئة</TableHead>
-                                <TableHead>البند</TableHead>
-                                <TableHead>المبلغ</TableHead>
-                                <TableHead>التاريخ</TableHead>
-                                <TableHead>إجراء</TableHead>
-                            </TableRow>
-                        </TableHeader>
+                        <TableHeader><TableRow><TableHead>الفئة</TableHead><TableHead>البند</TableHead><TableHead>المبلغ</TableHead><TableHead>إجراء</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {expenses.map((item) => (
+                            {fixedExpenses.map((item) => (
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.category}</TableCell>
+                                    <TableCell className="font-medium">
+                                        {item.item}
+                                        {item.workerName && item.item === 'راتب عامل' && (
+                                            <span className="text-muted-foreground text-xs mr-2">({item.workerName})</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>{item.amount.toFixed(2)} دينار</TableCell>
+                                    <TableCell>
+                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title="حذف">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            )}
+
+            {variableExpenses.length > 0 && (
+            <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> المصروفات المتغيرة</CardTitle></CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>الفئة</TableHead><TableHead>البند</TableHead><TableHead>المبلغ</TableHead><TableHead>التاريخ</TableHead><TableHead>إجراء</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {variableExpenses.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.category}</TableCell>
                                     <TableCell className="font-medium">
@@ -367,3 +407,5 @@ export default function ExpensesPage() {
     </main>
   );
 }
+
+    
