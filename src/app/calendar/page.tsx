@@ -33,6 +33,13 @@ export default function CalendarPage() {
       loadTasks(parsedUser.username);
     }
   }, []);
+  
+  React.useEffect(() => {
+    if (user) {
+       saveTasks(tasks);
+    }
+  }, [tasks, user]);
+
 
   const loadTasks = (username: string) => {
      try {
@@ -55,13 +62,12 @@ export default function CalendarPage() {
     if (user) {
         const userTasksKey = `calendarTasks_${user.username}`;
         localStorage.setItem(userTasksKey, JSON.stringify(updatedTasks));
-        setTasks(updatedTasks);
     }
   };
 
   const deleteTask = (taskId: string) => {
     const updatedTasks = tasks.filter(task => task.id !== taskId);
-    saveTasks(updatedTasks);
+    setTasks(updatedTasks);
     toast({
       variant: "destructive",
       title: "تم حذف المهمة بنجاح!",
@@ -72,7 +78,7 @@ export default function CalendarPage() {
     const updatedTasks = tasks.map(task => 
       task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task
     );
-    saveTasks(updatedTasks);
+    setTasks(updatedTasks);
     toast({
       title: updatedTasks.find(t => t.id === taskId)?.isCompleted ? "أحسنت!" : "تم تحديث المهمة",
       description: updatedTasks.find(t => t.id === taskId)?.isCompleted ? "تم إنجاز المهمة بنجاح." : "المهمة غير مكتملة.",

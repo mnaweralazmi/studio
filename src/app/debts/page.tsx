@@ -44,7 +44,6 @@ function DebtsContent() {
             const userDebtsKey = `debts_${parsedUser.username}`;
             const storedDebts = localStorage.getItem(userDebtsKey);
             if (storedDebts) {
-                // Ensure dueDate is a Date object
                 const parsedDebts = JSON.parse(storedDebts).map((debt: any) => ({
                     ...debt,
                     dueDate: debt.dueDate ? new Date(debt.dueDate) : undefined,

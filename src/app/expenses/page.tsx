@@ -334,5 +334,3 @@ export default function ExpensesPage() {
     </main>
   );
 }
-
-    

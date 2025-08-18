@@ -138,7 +138,6 @@ export default function WorkersPage() {
             const workersKey = `workers_${parsedUser.username}`;
             const storedWorkers = localStorage.getItem(workersKey);
             if (storedWorkers) {
-                // Initialize optional fields if they don't exist
                 const parsedWorkers = JSON.parse(storedWorkers).map((w: any) => ({
                     ...w,
                     paidMonths: w.paidMonths || [],
