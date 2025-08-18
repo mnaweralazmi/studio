@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, Droplets, Bug, Scissors, Sprout, Wheat, PlayCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { Leaf, Droplets, Bug, Scissors, Sprout, Wheat, Wind, PlayCircle, PlusCircle, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
@@ -26,6 +26,14 @@ interface User {
   name: string;
 }
 
+export interface SubTopic {
+  id: string;
+  titleKey: TranslationKeys;
+  descriptionKey: TranslationKeys;
+  image: string;
+  hint: string;
+}
+
 export interface AgriculturalSection {
   id: string;
   titleKey: TranslationKeys;
@@ -33,6 +41,9 @@ export interface AgriculturalSection {
   descriptionKey: TranslationKeys;
   image: string;
   hint: string;
+  subTopics: SubTopic[];
+  title?: string;
+  description?: string;
 }
 
 interface VideoSection {
@@ -41,6 +52,8 @@ interface VideoSection {
   durationKey: TranslationKeys;
   image: string;
   hint: string;
+  title?: string;
+  duration?: string;
 }
 
 const iconComponents = {
@@ -48,14 +61,77 @@ const iconComponents = {
   Bug,
   Scissors,
   Sprout,
-  Wheat
+  Wheat,
+  Wind,
 };
 
 export const initialAgriculturalSections: AgriculturalSection[] = [
-    { id: '1', titleKey: 'topicIrrigation', iconName: 'Droplets', descriptionKey: 'topicIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'watering plants' },
-    { id: '2', titleKey: 'topicPests', iconName: 'Bug', descriptionKey: 'topicPestsDesc', image: 'https://placehold.co/600x400.png', hint: 'plant pest' },
-    { id: '3', titleKey: 'topicPruning', iconName: 'Scissors', descriptionKey: 'topicPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'pruning shears' },
-    { id: '4', titleKey: 'topicSoil', iconName: 'Sprout', descriptionKey: 'topicSoilDesc', image: 'https://placehold.co/600x400.png', hint: 'soil fertilizer' },
+    { 
+        id: '1', 
+        titleKey: 'topicIrrigation', 
+        iconName: 'Droplets', 
+        descriptionKey: 'topicIrrigationDesc', 
+        image: 'https://placehold.co/600x400.png', 
+        hint: 'watering plants',
+        subTopics: [
+            { id: 'drip', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'drip irrigation' },
+            { id: 'sprinkler', titleKey: 'subTopicSprinklerIrrigation', descriptionKey: 'subTopicSprinklerIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'sprinkler irrigation' },
+            { id: 'traditional', titleKey: 'subTopicTraditionalIrrigation', descriptionKey: 'subTopicTraditionalIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'traditional irrigation' },
+            { id: 'modern', titleKey: 'subTopicModernIrrigation', descriptionKey: 'subTopicModernIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'modern irrigation' }
+        ]
+    },
+    { 
+        id: '2', 
+        titleKey: 'topicPests', 
+        iconName: 'Bug', 
+        descriptionKey: 'topicPestsDesc', 
+        image: 'https://placehold.co/600x400.png', 
+        hint: 'plant pest',
+        subTopics: [
+            { id: 'natural', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://placehold.co/600x400.png', hint: 'ladybug on leaf' },
+            { id: 'chemical', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://placehold.co/600x400.png', hint: 'spraying pesticides' },
+            { id: 'prevention', titleKey: 'subTopicPestPrevention', descriptionKey: 'subTopicPestPreventionDesc', image: 'https://placehold.co/600x400.png', hint: 'healthy plants' }
+        ]
+    },
+    { 
+        id: '3', 
+        titleKey: 'topicPruning', 
+        iconName: 'Scissors', 
+        descriptionKey: 'topicPruningDesc', 
+        image: 'https://placehold.co/600x400.png', 
+        hint: 'pruning shears',
+        subTopics: [
+            { id: 'formative', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://placehold.co/600x400.png', hint: 'young tree pruning' },
+            { id: 'fruiting', titleKey: 'subTopicFruitingPruning', descriptionKey: 'subTopicFruitingPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'pruning fruit tree' },
+            { id: 'renewal', titleKey: 'subTopicRenewalPruning', descriptionKey: 'subTopicRenewalPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'old branch cutting' }
+        ]
+    },
+    { 
+        id: '4', 
+        titleKey: 'topicSoil', 
+        iconName: 'Sprout', 
+        descriptionKey: 'topicSoilDesc', 
+        image: 'https://placehold.co/600x400.png', 
+        hint: 'soil fertilizer',
+        subTopics: [
+            { id: 'analysis', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://placehold.co/600x400.png', hint: 'soil testing kit' },
+            { id: 'improvement', titleKey: 'subTopicSoilImprovement', descriptionKey: 'subTopicSoilImprovementDesc', image: 'https://placehold.co/600x400.png', hint: 'adding compost' },
+            { id: 'fertilization-types', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://placehold.co/600x400.png', hint: 'fertilizer bags' }
+        ]
+    },
+    { 
+        id: '5', 
+        titleKey: 'topicHarvesting', 
+        iconName: 'Wheat', 
+        descriptionKey: 'topicHarvestingDesc', 
+        image: 'https://placehold.co/600x400.png', 
+        hint: 'harvest basket',
+        subTopics: [
+            { id: 'timing', titleKey: 'subTopicHarvestTiming', descriptionKey: 'subTopicHarvestTimingDesc', image: 'https://placehold.co/600x400.png', hint: 'ripe tomatoes' },
+            { id: 'methods', titleKey: 'subTopicHarvestingMethods', descriptionKey: 'subTopicHarvestingMethodsDesc', image: 'https://placehold.co/600x400.png', hint: 'harvesting vegetables' },
+            { id: 'post-harvest', titleKey: 'subTopicPostHarvest', descriptionKey: 'subTopicPostHarvestDesc', image: 'https://placehold.co/600x400.png', hint: 'vegetable storage' }
+        ]
+    }
 ];
 
 const initialVideoSections: VideoSection[] = [
@@ -81,8 +157,8 @@ export default function Home() {
   const { toast } = useToast();
   const { t, language } = useLanguage();
   const [user, setUser] = React.useState<User | null>(null);
-  const [agriculturalSections, setAgriculturalSections] = React.useState<any[]>([]);
-  const [videoSections, setVideoSections] = React.useState<any[]>([]);
+  const [agriculturalSections, setAgriculturalSections] = React.useState<AgriculturalSection[]>([]);
+  const [videoSections, setVideoSections] = React.useState<VideoSection[]>([]);
   
   const [isTopicDialogOpen, setTopicDialogOpen] = React.useState(false);
   const [isVideoDialogOpen, setVideoDialogOpen] = React.useState(false);
@@ -113,13 +189,14 @@ export default function Home() {
   });
   
   function onAddTopic(data: z.infer<typeof topicFormSchema>) {
-    const newTopic = {
+    const newTopic: AgriculturalSection = {
       id: crypto.randomUUID(),
-      title: data.title,
-      description: data.description,
+      titleKey: data.title as TranslationKeys, // This is a limitation, new topics won't be translatable
+      descriptionKey: data.description as TranslationKeys,
       iconName: data.iconName,
       image: data.image,
       hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
+      subTopics: []
     };
     const updatedSections = [...agriculturalSections, newTopic];
     setAgriculturalSections(updatedSections);
@@ -132,8 +209,8 @@ export default function Home() {
   function onAddVideo(data: z.infer<typeof videoFormSchema>) {
     const newVideo = {
         id: crypto.randomUUID(),
-        title: data.title,
-        duration: data.duration,
+        titleKey: data.title as TranslationKeys,
+        durationKey: data.duration as TranslationKeys,
         image: data.image,
         hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
     };
@@ -211,7 +288,7 @@ export default function Home() {
                   </Dialog>
                 )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
                 {agriculturalSections.map((section) => {
                     const Icon = iconComponents[section.iconName as keyof typeof iconComponents] || Sprout;
                     const title = section.titleKey ? t(section.titleKey) : section.title;
@@ -220,7 +297,7 @@ export default function Home() {
                     <Link key={section.id} href={`/topics/${section.id}`} className="group">
                         <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
                             <CardHeader className="p-0">
-                                <Image src={section.image} alt={title} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={section.hint} />
+                                <Image src={section.image} alt={title!} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={section.hint} />
                             </CardHeader>
                             <CardContent className="p-6 flex-1 flex flex-col">
                                 <CardTitle className="flex items-center gap-2 mb-2">
@@ -277,7 +354,7 @@ export default function Home() {
                 return (
                 <Card key={video.id} className="overflow-hidden group cursor-pointer shadow-lg relative">
                     <div className="relative">
-                        <Image src={video.image} alt={title} width={1600} height={900} className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={video.hint} />
+                        <Image src={video.image} alt={title!} width={1600} height={900} className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={video.hint} />
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                             <PlayCircle className="h-16 w-16 text-white/80 group-hover:text-white transition-colors"/>
                         </div>
@@ -303,5 +380,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
