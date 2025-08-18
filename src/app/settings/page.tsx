@@ -178,7 +178,7 @@ export default function SettingsPage() {
                         <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>{t('bio')}</FormLabel><FormControl><Textarea placeholder={t('bioPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </CardContent>
                     <CardFooter className="border-t pt-6 flex justify-end">
-                        <Button type="submit"> <Save className="ml-2 h-4 w-4" /> {t('saveChanges')} </Button>
+                        <Button type="submit"> <Save className={language === 'ar' ? 'mr-2' : 'ml-2'} /> {t('saveChanges')} </Button>
                     </CardFooter>
                 </form>
             </Form>
