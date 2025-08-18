@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, PlusCircle, Edit, Trash2, PlayCircle, BookOpen } from 'lucide-react';
+import { Leaf, PlusCircle, Edit, Trash2, PlayCircle, BookOpen, Droplets, Bug, Scissors, Sprout } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
 import type arTranslations from '@/locales/ar.json';
@@ -103,6 +103,13 @@ const initialVideoSections: VideoSection[] = [
     { id: '2', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://placehold.co/1600x900.png', hint: 'tomato plant' },
     { id: '3', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/1600x900.png', hint: 'compost pile' }
 ];
+
+const quickAccessTopics = [
+    { id: '1', title: 'ري', icon: Droplets, href: '/topics/1' },
+    { id: '2', title: 'آفات', icon: Bug, href: '/topics/2' },
+    { id: '3', title: 'بذور', icon: Sprout, href: '/topics/1' },
+    { id: '4', title: 'تقليم', icon: Scissors, href: '/topics/3' },
+]
 
 
 export default function Home() {
@@ -239,6 +246,20 @@ export default function Home() {
           </p>
         </header>
         
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 w-full max-w-2xl">
+            {quickAccessTopics.map((topic) => {
+                const Icon = topic.icon;
+                return (
+                     <Link href={topic.href} key={topic.id} className="group flex flex-col items-center gap-2 text-center">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:scale-110">
+                            <Icon className="h-8 w-8" />
+                        </div>
+                        <p className="font-semibold text-sm text-foreground">{topic.title}</p>
+                    </Link>
+                )
+            })}
+        </div>
+
         <Separator className="w-full" />
         
         {/* Agricultural Topics Section */}
@@ -377,3 +398,5 @@ export default function Home() {
     </main>
   );
 }
+
+    
