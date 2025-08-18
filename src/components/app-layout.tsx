@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import NextLink from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -14,19 +14,24 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
   SidebarFooter,
+  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import { Home, Wallet, CreditCard, Landmark, CalendarDays, Users, Settings, LogOut, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { language, t } = useLanguage();
+  const [isLoading, setIsLoading] = React.useState(true);
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated');
     if (isAuthenticated !== 'true') {
       router.replace('/login');
+    } else {
+      setIsLoading(false);
     }
   }, [router]);
 
@@ -46,6 +51,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/workers', label: t('workers'), icon: Users, startsWith: '/workers' },
   ];
 
+  if (isLoading) {
+    return (
+        <div className="flex h-screen w-full">
+            <div className="hidden md:flex h-full w-12 flex-col gap-4 border-r bg-sidebar p-2">
+                 <div className="flex items-center gap-2 p-2 justify-center">
+                    <Skeleton className="h-6 w-6" />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuSkeleton showIcon />
+                </div>
+            </div>
+            <div className="flex-1 p-4">
+                <Skeleton className="h-full w-full" />
+            </div>
+        </div>
+    )
+  }
 
   return (
     <div className="flex h-screen w-full">
