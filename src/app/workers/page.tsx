@@ -146,18 +146,22 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
                 </Button>
             </DialogTrigger>
             <DialogContent>
-                <DialogHeader>
+                 <DialogHeader>
                     <DialogTitle>تسديد راتب لـ {worker.name}</DialogTitle>
                     <DialogDescription>
-                        اختر الشهر لتسجيل دفعة الراتب. الراتب الأساسي: {worker.baseSalary.toFixed(2)} دينار.
+                        الراتب الأساسي: {worker.baseSalary.toFixed(2)} دينار.
                     </DialogDescription>
                 </DialogHeader>
+                <div className="flex gap-2 py-4">
+                    <Button onClick={handleConfirm} disabled={!selectedMonth} className="flex-1">تأكيد الدفع</Button>
+                    <Button variant="secondary" onClick={() => setIsOpen(false)} className="flex-1">إلغاء</Button>
+                </div>
                 <div className="py-4">
                      <Select onValueChange={(val) => setSelectedMonth(Number(val))} value={selectedMonth?.toString()}>
                         <SelectTrigger>
                             <SelectValue placeholder="اختر الشهر..." />
                         </SelectTrigger>
-                        <SelectContent position="popper" side="bottom">
+                        <SelectContent>
                             {months.map(m => {
                                 const paid = isMonthPaid(m.value);
                                 return (
@@ -169,10 +173,6 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
                         </SelectContent>
                     </Select>
                 </div>
-                <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsOpen(false)}>إلغاء</Button>
-                    <Button onClick={handleConfirm} disabled={!selectedMonth}>تأكيد الدفع</Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
