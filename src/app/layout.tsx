@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppLayout } from '@/components/app-layout';
 import { usePathname } from 'next/navigation';
+import React, { useEffect } from 'react';
 
 export default function RootLayout({
   children,
@@ -15,6 +16,20 @@ export default function RootLayout({
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
+  useEffect(() => {
+    const theme = localStorage.getItem("theme") || "theme-green";
+    const mode = localStorage.getItem("mode") || "dark";
+    
+    const body = document.body;
+    body.classList.remove("theme-green", "theme-blue", "theme-orange");
+    body.classList.add(theme);
+
+    const html = document.documentElement;
+    html.classList.remove("light", "dark");
+    html.classList.add(mode);
+    
+  }, []);
+
   return (
     <html lang="ar" dir="rtl" className="dark">
       <head>
@@ -22,7 +37,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased theme-green">
         {isAuthPage ? (
           <>
             {children}
