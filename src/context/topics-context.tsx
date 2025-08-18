@@ -12,35 +12,14 @@ interface TopicsContextType {
 const TopicsContext = createContext<TopicsContextType | undefined>(undefined);
 
 export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [topics, setTopics] = useState<AgriculturalSection[]>(initialAgriculturalSections);
+  
+  // Note: For simplicity and to resolve hydration/loading issues,
+  // we are no longer persisting changes to localStorage.
+  // Changes made by the admin will only exist in memory for the current session.
+  // A proper database would be needed for permanent storage.
 
-  useEffect(() => {
-    try {
-      const storedTopics = localStorage.getItem('agriculturalSections');
-      if (storedTopics) {
-        setTopics(JSON.parse(storedTopics));
-      } else {
-        setTopics(initialAgriculturalSections);
-      }
-    } catch (error) {
-        console.error("Failed to parse or set data in localStorage:", error);
-        setTopics(initialAgriculturalSections);
-    }
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-        try {
-            localStorage.setItem('agriculturalSections', JSON.stringify(topics));
-        } catch (error) {
-            console.error("Failed to save data to localStorage:", error);
-        }
-    }
-  }, [topics, isLoaded]);
-
-  const value = useMemo(() => ({ topics, setTopics }), [topics, setTopics]);
+  const value = useMemo(() => ({ topics, setTopics }), [topics]);
 
   return (
     <TopicsContext.Provider value={value}>
