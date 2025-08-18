@@ -3,10 +3,11 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { initialAgriculturalSections, AgriculturalSection, SubTopic } from '@/lib/topics-data';
+import type { AgriculturalSection, SubTopic } from '@/lib/topics-data';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/context/language-context';
+import { useTopics } from '@/context/topics-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -15,17 +16,15 @@ export default function TopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
+  const { topics } = useTopics();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
 
   React.useEffect(() => {
-    const storedTopics = localStorage.getItem('agriculturalSections');
-    const topics = storedTopics ? JSON.parse(storedTopics) : initialAgriculturalSections;
-    
-    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId);
-    if (currentTopic) {
-      setTopic(currentTopic);
+    if (topics.length > 0 && params.topicId) {
+      const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId);
+      setTopic(currentTopic || null);
     }
-  }, [params.topicId]);
+  }, [params.topicId, topics]);
 
   if (!topic) {
     return <div>{t('loading')}</div>; 

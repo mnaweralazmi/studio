@@ -3,9 +3,10 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { initialAgriculturalSections, AgriculturalSection, SubTopic } from '@/lib/topics-data';
+import type { AgriculturalSection, SubTopic } from '@/lib/topics-data';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
+import { useTopics } from '@/context/topics-context';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -14,29 +15,27 @@ export default function SubTopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
+  const { topics } = useTopics();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   const [subTopic, setSubTopic] = React.useState<SubTopic | null>(null);
 
   React.useEffect(() => {
-    const storedTopics = localStorage.getItem('agriculturalSections');
-    const topics = storedTopics ? JSON.parse(storedTopics) : initialAgriculturalSections;
-    
-    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId);
-    if (currentTopic) {
-      setTopic(currentTopic);
-      const currentSubTopic = currentTopic.subTopics.find((st: SubTopic) => st.id === params.subTopicId);
-      if (currentSubTopic) {
-        setSubTopic(currentSubTopic);
+    if (topics.length > 0 && params.topicId && params.subTopicId) {
+      const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId);
+      if (currentTopic) {
+        setTopic(currentTopic);
+        const currentSubTopic = currentTopic.subTopics.find((st: SubTopic) => st.id === params.subTopicId);
+        setSubTopic(currentSubTopic || null);
       }
     }
-  }, [params.topicId, params.subTopicId]);
+  }, [params.topicId, params.subTopicId, topics]);
 
   if (!topic || !subTopic) {
     return <div>{t('loading')}</div>; 
   }
 
-  const title = t(subTopic.titleKey);
-  const description = t(subTopic.descriptionKey);
+  const title = t(subTopic.titleKey as any);
+  const description = t(subTopic.descriptionKey as any);
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -45,7 +44,7 @@ export default function SubTopicDetailsPage() {
             <div>
                 <Button variant="outline" onClick={() => router.back()} className="mb-6">
                 <ArrowLeft className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                {t('backToTopics', { topicName: t(topic.titleKey) })}
+                {t('backToTopics', { topicName: t(topic.titleKey as any) })}
                 </Button>
             </div>
             

@@ -8,6 +8,7 @@ import { AppLayout } from '@/components/app-layout';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
+import { TopicsProvider } from '@/context/topics-context';
 import { useRouter } from 'next/navigation';
 
 function AppBody({ children }: { children: React.ReactNode }) {
@@ -76,7 +77,9 @@ export default function RootLayout({
 }>) {
   return (
     <LanguageProvider>
-      <AppBody>{children}</AppBody>
+        <TopicsProvider>
+            <AppBody>{children}</AppBody>
+        </TopicsProvider>
     </LanguageProvider>
   );
 }
