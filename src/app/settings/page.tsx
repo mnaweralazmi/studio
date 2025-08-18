@@ -34,7 +34,7 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-export default function ProfilePage() {
+export default function SettingsPage() {
     const { toast } = useToast();
     const [user, setUser] = React.useState<any>(null);
 

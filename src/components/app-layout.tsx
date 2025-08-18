@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Home, Wallet, User, LogOut, Leaf, CreditCard, Landmark, CalendarDays, Users } from 'lucide-react';
+import { Home, Wallet, User, LogOut, Leaf, CreditCard, Landmark, CalendarDays, Users, Settings } from 'lucide-react';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -101,10 +101,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/profile'} tooltip="ملف المستخدم">
-                <NextLink href="/profile">
-                  <User />
-                  <span>ملف المستخدم</span>
+              <SidebarMenuButton asChild isActive={pathname === '/settings'} tooltip="الإعدادات">
+                <NextLink href="/settings">
+                  <Settings />
+                  <span>الإعدادات</span>
                 </NextLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
