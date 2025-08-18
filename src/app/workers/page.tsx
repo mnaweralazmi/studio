@@ -12,6 +12,7 @@ import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog'
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
 import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
 import type { Worker, Transaction, TransactionFormValues } from '@/components/workers/types';
+import { useAuth } from '@/context/auth-context';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, label: 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
@@ -19,17 +20,14 @@ const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February'
 export default function WorkersPage() {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const { toast } = useToast();
-    const [user, setUser] = React.useState<any>(null);
+    const { user } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
 
 
     React.useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            const workersKey = `workers_${parsedUser.username}`;
+        if (user) {
+            const workersKey = `workers_${user.uid}`;
             const storedWorkers = localStorage.getItem(workersKey);
             if (storedWorkers) {
                 const parsedWorkers = JSON.parse(storedWorkers).map((w: any) => ({
@@ -41,11 +39,11 @@ export default function WorkersPage() {
                 setWorkers(parsedWorkers);
             }
         }
-    }, []);
+    }, [user]);
 
     React.useEffect(() => {
         if (user) {
-            const workersKey = `workers_${user.username}`;
+            const workersKey = `workers_${user.uid}`;
             localStorage.setItem(workersKey, JSON.stringify(workers));
         }
     }, [workers, user]);

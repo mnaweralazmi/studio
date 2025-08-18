@@ -19,24 +19,38 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useLanguage, Language } from '@/context/language-context';
+import { useAuth } from '@/context/auth-context';
+import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 
 const profileFormSchema = z.object({
     name: z.string().min(3, "يجب أن يتكون الاسم من 3 أحرف على الأقل."),
-    username: z.string(),
     email: z.string().email("البريد الإلكتروني غير صالح."),
-    password: z.string().min(6, "يجب أن تكون كلمة المرور 6 أحرف على الأقل.").optional().or(z.literal('')),
+    currentPassword: z.string().optional(),
+    newPassword: z.string().min(6, "يجب أن تكون كلمة المرور 6 أحرف على الأقل.").optional().or(z.literal('')),
     confirmPassword: z.string().optional(),
     bio: z.string().optional(),
     avatarUrl: z.string().optional(),
 }).refine(data => {
-    if (data.password) {
-        return data.password === data.confirmPassword;
+    if (data.newPassword) {
+        return data.newPassword === data.confirmPassword;
     }
     return true;
 }, {
     message: "كلمتا المرور غير متطابقتين.",
     path: ["confirmPassword"],
+}).refine(data => {
+    if (data.newPassword) {
+        return !!data.currentPassword;
+    }
+    return true;
+}, {
+    message: "كلمة المرور الحالية مطلوبة لتغييرها.",
+    path: ["currentPassword"],
 });
+
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -45,7 +59,7 @@ type Mode = "light" | "dark";
 
 export default function SettingsPage() {
     const { toast } = useToast();
-    const [user, setUser] = React.useState<any>(null);
+    const { user, loading } = useAuth();
     const [theme, setTheme] = React.useState<Theme>('theme-green');
     const [mode, setMode] = React.useState<Mode>('dark');
     const { language, setLanguage, t } = useLanguage();
@@ -53,37 +67,27 @@ export default function SettingsPage() {
 
     const profileForm = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: { name: "", username: "", email: "", bio: "", avatarUrl: "", password: "", confirmPassword: "" },
+        defaultValues: { name: "", email: "", bio: "", avatarUrl: "", currentPassword: "", newPassword: "", confirmPassword: "" },
     });
-
+    
     React.useEffect(() => {
-        // Load user data
-        const storedUserStr = localStorage.getItem('user');
-        if (storedUserStr) {
-            const storedUser = JSON.parse(storedUserStr);
-            const allUsersStr = localStorage.getItem('users');
-            const allUsers = allUsersStr ? JSON.parse(allUsersStr) : [];
-            let currentUserDetails = allUsers.find((u: any) => u.username === storedUser.username);
-            
-            if (!currentUserDetails && storedUser.username === 'mnawer1988') {
-                 currentUserDetails = { username: 'mnawer1988', password: 'mnawer1988', role: 'admin', name: 'المدير العام', email: 'admin@example.com', bio: 'أنا مدير هذا الموقع.', avatarUrl: '' };
-            }
-
-            if (currentUserDetails) {
-                 setUser(currentUserDetails);
-                 profileForm.reset({
-                    name: currentUserDetails.name || '',
-                    username: currentUserDetails.username || '',
-                    email: currentUserDetails.email || '',
-                    bio: currentUserDetails.bio || '',
-                    avatarUrl: currentUserDetails.avatarUrl || '',
-                    password: '',
-                    confirmPassword: '',
-                });
-            }
+        if (user) {
+            const fetchUserData = async () => {
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    profileForm.reset({
+                        name: user.displayName || userData.name || '',
+                        email: user.email || '',
+                        bio: userData.bio || '',
+                        avatarUrl: user.photoURL || userData.avatarUrl || '',
+                    });
+                }
+            };
+            fetchUserData();
         }
-        
-        // Load theme and mode
+
         const savedTheme = localStorage.getItem('theme') as Theme || 'theme-green';
         const savedMode = localStorage.getItem('mode') as Mode || 'dark';
         
@@ -97,43 +101,66 @@ export default function SettingsPage() {
         html.classList.remove('light', 'dark');
         html.classList.add(savedMode);
 
-    }, [profileForm]);
+    }, [user, profileForm]);
     
     const avatarUrl = profileForm.watch('avatarUrl');
 
-    function onProfileSubmit(data: ProfileFormValues) {
+    async function onProfileSubmit(data: ProfileFormValues) {
+        if (!user) return;
+        
         try {
-            const allUsersStr = localStorage.getItem('users');
-            let allUsers = allUsersStr ? JSON.parse(allUsersStr) : [];
-            let userIndex = allUsers.findIndex((u: any) => u.username === user.username);
-            
-            const updatedUser = { ...user, name: data.name, email: data.email, bio: data.bio, avatarUrl: data.avatarUrl, ...(data.password && { password: data.password }) };
-            
-            if (userIndex !== -1) {
-                 allUsers[userIndex] = updatedUser;
-            } else if (user.username === 'mnawer1988' && user.role === 'admin') {
-                // Special handling for admin if not in 'users' list
-                // This part might need adjustment based on how admin data is truly managed
+            // Update password if provided
+            if (data.newPassword && data.currentPassword) {
+                const credential = EmailAuthProvider.credential(user.email!, data.currentPassword);
+                await reauthenticateWithCredential(user, credential);
+                await updatePassword(user, data.newPassword);
+                toast({ title: "تم تحديث كلمة المرور بنجاح" });
             }
+
+            // Update profile info
+            await updateProfile(user, { displayName: data.name, photoURL: data.avatarUrl });
             
-            localStorage.setItem('users', JSON.stringify(allUsers));
-            localStorage.setItem('user', JSON.stringify({ username: updatedUser.username, name: updatedUser.name, role: updatedUser.role }));
-            setUser(updatedUser);
+            // Update user data in Firestore
+            const userDocRef = doc(db, 'users', user.uid);
+            await setDoc(userDocRef, { 
+                name: data.name, 
+                bio: data.bio, 
+                avatarUrl: data.avatarUrl,
+            }, { merge: true });
+
             setFileName(null);
             toast({ title: t('profileUpdated'), description: t('profileUpdatedSuccess') });
-            profileForm.reset({ ...profileForm.getValues(), password: '', confirmPassword: '' });
-        } catch (error) {
-             toast({ variant: "destructive", title: t('error'), description: t('profileUpdateFailed') });
+            profileForm.reset({ ...profileForm.getValues(), currentPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error: any) {
+             let description = t('profileUpdateFailed');
+             if (error.code === 'auth/wrong-password') {
+                 description = 'كلمة المرور الحالية غير صحيحة.';
+             }
+             toast({ variant: "destructive", title: t('error'), description: description });
         }
     }
 
-    const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user) return;
         const file = event.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                profileForm.setValue('avatarUrl', reader.result as string);
+            reader.onloadend = async () => {
+                const dataUrl = reader.result as string;
+                profileForm.setValue('avatarUrl', dataUrl); // show preview immediately
                 setFileName(file.name);
+
+                // Upload to Firebase Storage
+                const storage = getStorage();
+                const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
+                
+                try {
+                    await uploadString(storageRef, dataUrl, 'data_url');
+                    const downloadUrl = await getDownloadURL(storageRef);
+                    profileForm.setValue('avatarUrl', downloadUrl); // update with final URL
+                } catch(error) {
+                    toast({ variant: "destructive", title: "فشل رفع الصورة" });
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -173,8 +200,8 @@ export default function SettingsPage() {
                     <CardContent className="space-y-8">
                         <div className="flex items-center gap-6 flex-wrap">
                              <Avatar className="h-24 w-24">
-                                <AvatarImage src={avatarUrl || 'https://placehold.co/100x100.png'} alt={user?.name} data-ai-hint="user avatar" />
-                                <AvatarFallback>{user?.name?.[0].toUpperCase()}</AvatarFallback>
+                                <AvatarImage src={avatarUrl || 'https://placehold.co/100x100.png'} alt={user?.displayName || ''} data-ai-hint="user avatar" />
+                                <AvatarFallback>{user?.displayName?.[0].toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-[200px]">
                                 <FormField
@@ -205,13 +232,13 @@ export default function SettingsPage() {
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField control={profileForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>{t('fullName')}</FormLabel><FormControl><Input placeholder={t('enterFullName')} {...field} /></FormControl><FormMessage /></FormItem> )} />
-                             <FormField control={profileForm.control} name="username" render={({ field }) => ( <FormItem><FormLabel>{t('username')} ({t('cannotChange')})</FormLabel><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem> )} />
-                             <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem><FormLabel>{t('email')}</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                             <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem><FormLabel>{t('email')} ({t('cannotChange')})</FormLabel><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem> )} />
                         </div>
                          <div>
                             <h3 className="text-lg font-medium mb-4">{t('changePassword')}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={profileForm.control} name="password" render={({ field }) => ( <FormItem><FormLabel>{t('newPassword')}</FormLabel><FormControl><Input type="password" placeholder={t('leaveBlank')} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <FormField control={profileForm.control} name="currentPassword" render={({ field }) => ( <FormItem><FormLabel>كلمة المرور الحالية</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={profileForm.control} name="newPassword" render={({ field }) => ( <FormItem><FormLabel>{t('newPassword')}</FormLabel><FormControl><Input type="password" placeholder={t('leaveBlank')} {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={profileForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>{t('confirmNewPassword')}</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         </div>
@@ -299,5 +326,3 @@ export default function SettingsPage() {
     </main>
   );
 }
-
-    

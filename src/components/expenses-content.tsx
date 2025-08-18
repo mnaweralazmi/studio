@@ -14,6 +14,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
+import { useAuth } from '@/context/auth-context';
 
 const initialExpenseCategoriesAr: Record<string, string[]> = {
   "فواتير": ["كهرباء", "ماء", "انترنت", "هاتف"],
@@ -67,33 +68,29 @@ export function ExpensesContent() {
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
 
     const { toast } = useToast();
-    const [user, setUser] = React.useState<any>(null);
+    const { user } = useAuth();
 
     React.useEffect(() => {
         const initialCategories = language === 'ar' ? initialExpenseCategoriesAr : initialExpenseCategoriesEn;
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            
-            const expensesKey = `expenses_${parsedUser.username}`;
+        if (user) {
+            const expensesKey = `expenses_${user.uid}`;
             const storedExpenses = localStorage.getItem(expensesKey);
             if (storedExpenses) {
                 setExpenses(JSON.parse(storedExpenses).map((e: any) => ({...e, date: new Date(e.date)})));
             }
 
-            const categoriesKey = `expenseCategories_${parsedUser.username}_${language}`;
+            const categoriesKey = `expenseCategories_${user.uid}_${language}`;
             const storedCategories = localStorage.getItem(categoriesKey);
             setExpenseCategories(storedCategories ? JSON.parse(storedCategories) : initialCategories);
         } else {
              setExpenseCategories(initialCategories);
         }
-    }, [language]);
+    }, [language, user]);
 
     React.useEffect(() => {
         if (user) {
-            localStorage.setItem(`expenses_${user.username}`, JSON.stringify(expenses));
-            localStorage.setItem(`expenseCategories_${user.username}_${language}`, JSON.stringify(expenseCategories));
+            localStorage.setItem(`expenses_${user.uid}`, JSON.stringify(expenses));
+            localStorage.setItem(`expenseCategories_${user.uid}_${language}`, JSON.stringify(expenseCategories));
         }
     }, [expenses, expenseCategories, user, language]);
     

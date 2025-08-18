@@ -14,9 +14,13 @@ import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { Leaf, UserPlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+
 
 const registerFormSchema = z.object({
-  username: z.string().min(3, "اسم المستخدم يجب أن يكون 3 أحرف على الأقل."),
+  name: z.string().min(3, "الاسم يجب أن يكون 3 أحرف على الأقل."),
   email: z.string().email("البريد الإلكتروني غير صالح."),
   password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل."),
   confirmPassword: z.string(),
@@ -35,44 +39,50 @@ export default function RegisterPage() {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
-      username: "",
+      name: "",
       email: "",
       password: "",
       confirmPassword: "",
     },
   });
 
-  function onSubmit(data: RegisterFormValues) {
+  async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-        const storedUsers = localStorage.getItem('users');
-        const users = storedUsers ? JSON.parse(storedUsers) : [];
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const user = userCredential.user;
 
-        const userExists = users.some((u: any) => u.username === data.username) || data.username === 'mnawer1988';
+        await updateProfile(user, {
+            displayName: data.name
+        });
+
+        await setDoc(doc(db, "users", user.uid), {
+            name: data.name,
+            email: data.email,
+            role: 'user', // Default role
+            createdAt: new Date()
+        });
         
-        if (userExists) {
-             toast({
-                variant: "destructive",
-                title: "خطأ في التسجيل",
-                description: "اسم المستخدم هذا موجود بالفعل.",
-            });
-            setIsLoading(false);
-            return;
+        toast({
+            title: "تم إنشاء الحساب بنجاح!",
+            description: "يمكنك الآن تسجيل الدخول باستخدام حسابك الجديد.",
+        });
+
+        router.push('/login');
+
+    } catch (error: any) {
+        let description = "حدث خطأ ما أثناء إنشاء حسابك.";
+        if (error.code === 'auth/email-already-in-use') {
+            description = "هذا البريد الإلكتروني مستخدم بالفعل.";
         }
-
-        const newUser = { username: data.username, password: data.password, email: data.email, name: data.username, role: 'user' };
-        users.push(newUser);
-        localStorage.setItem('users', JSON.stringify(users));
-
-      toast({
-        title: "تم إنشاء الحساب بنجاح!",
-        description: "يمكنك الآن تسجيل الدخول باستخدام حسابك الجديد.",
-      });
-
-      router.push('/login');
+        toast({
+            variant: "destructive",
+            title: "خطأ في التسجيل",
+            description: description,
+        });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   }
 
   return (
@@ -97,12 +107,12 @@ export default function RegisterPage() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                          <FormField
                             control={form.control}
-                            name="username"
+                            name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>اسم المستخدم</FormLabel>
+                                <FormLabel>الاسم</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="اختر اسم مستخدم..." {...field} />
+                                    <Input placeholder="أدخل اسمك..." {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -167,4 +177,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-

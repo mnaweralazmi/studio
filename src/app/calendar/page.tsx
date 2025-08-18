@@ -12,6 +12,7 @@ import { PlusCircle, Trash2, CalendarDays, CheckCircle, ListTodo, History, Forwa
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/context/language-context';
+import { useAuth } from '@/context/auth-context';
 
 export interface Task {
   id: string;
@@ -25,15 +26,12 @@ export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const { toast } = useToast();
-  const [user, setUser] = React.useState<any>(null);
+  const { user } = useAuth();
   const { language, t } = useLanguage();
 
   React.useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      const userTasksKey = `calendarTasks_${parsedUser.username}`;
+    if (user) {
+      const userTasksKey = `calendarTasks_${user.uid}`;
       const storedTasks = localStorage.getItem(userTasksKey);
       if (storedTasks) {
           try {
@@ -44,11 +42,11 @@ export default function CalendarPage() {
           }
       }
     }
-  }, []);
+  }, [user]);
 
   React.useEffect(() => {
     if (user) {
-        const userTasksKey = `calendarTasks_${user.username}`;
+        const userTasksKey = `calendarTasks_${user.uid}`;
         localStorage.setItem(userTasksKey, JSON.stringify(tasks));
     }
   }, [tasks, user]);

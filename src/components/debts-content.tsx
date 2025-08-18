@@ -19,6 +19,7 @@ import { Landmark, Trash2, PlusCircle, CalendarIcon, CheckCircle } from 'lucide-
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
+import { useAuth } from '@/context/auth-context';
 
 
 const debtFormSchema = z.object({
@@ -37,15 +38,12 @@ type DebtItem = DebtFormValues & {
 export function DebtsContent() {
     const [debts, setDebts] = React.useState<DebtItem[]>([]);
     const { toast } = useToast();
-    const [user, setUser] = React.useState<any>(null);
+    const { user } = useAuth();
     const { language, t } = useLanguage();
 
     React.useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            const userDebtsKey = `debts_${parsedUser.username}`;
+        if (user) {
+            const userDebtsKey = `debts_${user.uid}`;
             const storedDebts = localStorage.getItem(userDebtsKey);
             if (storedDebts) {
                 const parsedDebts = JSON.parse(storedDebts).map((debt: any) => ({
@@ -55,11 +53,11 @@ export function DebtsContent() {
                 setDebts(parsedDebts);
             }
         }
-    }, []);
+    }, [user]);
 
     React.useEffect(() => {
         if (user) {
-            const userDebtsKey = `debts_${user.username}`;
+            const userDebtsKey = `debts_${user.uid}`;
             localStorage.setItem(userDebtsKey, JSON.stringify(debts));
         }
     }, [debts, user]);
@@ -176,4 +174,3 @@ export function DebtsContent() {
         </div>
     );
 }
-

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import NextLink from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -17,24 +17,20 @@ import {
 } from '@/components/ui/sidebar';
 import { Home, Wallet, CreditCard, Landmark, CalendarDays, Users, Settings, LogOut, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
+import { useAuth } from '@/context/auth-context';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { language, t } = useLanguage();
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    // This hook is used to avoid hydration mismatch by ensuring content
-    // that depends on localStorage is only rendered on the client.
-    setIsLoading(false);
-  }, []);
-
-  const handleLogout = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleLogout = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('user');
+    await signOut(auth);
     router.replace('/login');
   };
 
@@ -46,8 +42,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/debts', label: t('debts'), icon: Landmark, startsWith: '/debts' },
     { href: '/workers', label: t('workers'), icon: Users, startsWith: '/workers' },
   ];
-
-  if (isLoading) {
+  
+  if (loading || !user) {
     return (
         <div className="flex h-screen w-full bg-background">
             <div className="hidden md:flex h-full">

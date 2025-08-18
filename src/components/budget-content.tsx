@@ -14,6 +14,7 @@ import { PlusCircle, Trash2, Wallet } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/context/language-context';
+import { useAuth } from '@/context/auth-context';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -40,27 +41,24 @@ type SalesItem = SalesFormValues & {
 export function BudgetContent() {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
-  const [user, setUser] = React.useState<any>(null);
+  const { user } = useAuth();
   const { language, t } = useLanguage();
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
 
 
   React.useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      const userSalesKey = `salesItems_${parsedUser.username}`;
+    if (user) {
+      const userSalesKey = `salesItems_${user.uid}`;
       const storedSales = localStorage.getItem(userSalesKey);
       if (storedSales) {
         setSalesItems(JSON.parse(storedSales));
       }
     }
-  }, []);
+  }, [user]);
 
   React.useEffect(() => {
     if (user) {
-      const userSalesKey = `salesItems_${user.username}`;
+      const userSalesKey = `salesItems_${user.uid}`;
       localStorage.setItem(userSalesKey, JSON.stringify(salesItems));
     }
   }, [salesItems, user]);

@@ -21,6 +21,7 @@ import { PlusCircle, CalendarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Task } from '../page';
 import { useLanguage } from '@/context/language-context';
+import { useAuth } from '@/context/auth-context';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -46,6 +47,7 @@ export default function AddTaskPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { language, t } = useLanguage();
+  const { user } = useAuth();
   
   const taskTitles = language === 'ar' ? taskTitlesAr : taskTitlesEn;
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
@@ -81,13 +83,12 @@ export default function AddTaskPage() {
 
 
   function onSubmit(data: TaskFormValues) {
+    if (!user) {
+        toast({ variant: "destructive", title: t('error'), description: "يجب تسجيل الدخول لحفظ المهام." });
+        return;
+    }
     try {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-            throw new Error("User not found");
-        }
-        const user = JSON.parse(userStr);
-        const userTasksKey = `calendarTasks_${user.username}`;
+        const userTasksKey = `calendarTasks_${user.uid}`;
         
         const storedTasks = localStorage.getItem(userTasksKey);
         const tasks: Task[] = storedTasks ? JSON.parse(storedTasks) : [];

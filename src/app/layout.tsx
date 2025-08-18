@@ -12,6 +12,7 @@ import { TopicsProvider } from '@/context/topics-context';
 import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AuthProvider, useAuth } from '@/context/auth-context';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -22,8 +23,9 @@ const cairo = Cairo({
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useAuth();
+  
   const isAuthPage = pathname === '/login' || pathname === '/register';
-  const [isClientLoaded, setIsClientLoaded] = useState(false);
 
   useEffect(() => {
     const theme = localStorage.getItem("theme") || "theme-green";
@@ -37,30 +39,37 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     html.classList.remove("light", "dark");
     html.classList.add(mode);
 
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    if (!isAuthPage && isAuthenticated !== 'true') {
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !user && !isAuthPage) {
       router.replace('/login');
-    } else {
-        setIsClientLoaded(true);
     }
-  }, [pathname, isAuthPage, router]);
+  }, [user, loading, isAuthPage, pathname, router]);
+
+
+  if (loading) {
+    return (
+        <div className="flex h-screen w-full bg-background items-center justify-center">
+            <Skeleton className="h-20 w-20" />
+        </div>
+    );
+  }
 
   if (isAuthPage) {
     return <>{children}<Toaster /></>;
   }
-
-  if (!isClientLoaded) {
-    return (
-        <div className="flex h-screen w-full bg-background">
-            <div className="hidden md:flex h-full">
-               <Skeleton className="h-full w-[256px]" />
-            </div>
-            <div className="flex-1 p-4">
-                <Skeleton className="h-full w-full" />
-            </div>
+  
+  if (!user) {
+    // This case should be handled by the redirect effect,
+    // but as a fallback we can show a loader or null.
+     return (
+        <div className="flex h-screen w-full bg-background items-center justify-center">
+            <Skeleton className="h-20 w-20" />
         </div>
     );
   }
+
 
   return (
     <SidebarProvider>
@@ -93,11 +102,13 @@ export default function RootLayout({
     <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className={`dark ${cairo.className}`}>
       <head />
       <body className="antialiased theme-green">
-        <LanguageProvider>
-          <TopicsProvider>
-            <RootLayoutContent>{children}</RootLayoutContent>
-          </TopicsProvider>
-        </LanguageProvider>
+        <AuthProvider>
+            <LanguageProvider>
+            <TopicsProvider>
+                <RootLayoutContent>{children}</RootLayoutContent>
+            </TopicsProvider>
+            </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

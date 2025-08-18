@@ -14,6 +14,7 @@ import { ArrowLeft, Trash2, Pencil, PlayCircle, FileText } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ContentDialog, ContentFormValues } from '@/components/content-dialog';
+import { useAuth } from '@/context/auth-context';
 
 export default function TopicDetailsPage() {
   const params = useParams();
@@ -23,16 +24,10 @@ export default function TopicDetailsPage() {
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   const { toast } = useToast();
   
-  const [user, setUser] = React.useState<any>(null);
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingContent, setEditingContent] = React.useState<{type: 'subtopic' | 'video', data: SubTopic | VideoSection} | undefined>(undefined);
 
-  React.useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
 
   React.useEffect(() => {
     if (topics.length > 0 && params.topicId) {
