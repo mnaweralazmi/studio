@@ -116,7 +116,11 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
     const [selectedMonth, setSelectedMonth] = React.useState<number | undefined>();
     const currentYear = new Date().getFullYear();
 
-    const unpaidMonths = months.filter(m => !worker.paidMonths.some(pm => pm.month === m.value && pm.year === currentYear));
+    const isMonthPaid = (monthValue: number) => {
+        return worker.paidMonths.some(pm => pm.month === monthValue && pm.year === currentYear);
+    }
+
+    const unpaidMonths = months.filter(m => !isMonthPaid(m.value));
 
     const handleConfirm = () => {
         if (selectedMonth) {
@@ -154,11 +158,14 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
                             <SelectValue placeholder="اختر الشهر..." />
                         </SelectTrigger>
                         <SelectContent>
-                            {unpaidMonths.length > 0 ? (
-                                unpaidMonths.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>)
-                            ) : (
-                                <SelectItem value="none" disabled>جميع الرواتب مسددة</SelectItem>
-                            )}
+                            {months.map(m => {
+                                const paid = isMonthPaid(m.value);
+                                return (
+                                <SelectItem key={m.value} value={m.value.toString()} disabled={paid}>
+                                    {m.label} {paid ? '(مدفوع)' : ''}
+                                </SelectItem>
+                                )
+                            })}
                         </SelectContent>
                     </Select>
                 </div>
@@ -279,6 +286,7 @@ export default function WorkersPage() {
             if (storedWorkers) {
                 const parsedWorkers = JSON.parse(storedWorkers).map((w: any) => ({
                     ...w,
+                    baseSalary: w.baseSalary || 0,
                     paidMonths: w.paidMonths || [],
                     transactions: w.transactions || [],
                 }));
@@ -516,6 +524,8 @@ export default function WorkersPage() {
   );
 }
 
+
+    
 
     
 
