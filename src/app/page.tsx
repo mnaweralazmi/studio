@@ -3,16 +3,20 @@
 
 import * as React from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, PlusCircle, Trash2, Edit } from 'lucide-react';
+import { Leaf, PlusCircle, Trash2, Edit, ArrowLeft, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
 import type arTranslations from '@/locales/ar.json';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TopicDialog, TopicFormValues } from '@/components/topic-dialog';
 import { VideoDialog, VideoFormValues } from '@/components/video-dialog';
 import { iconComponents, IconName } from '@/components/icons';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { cn } from '@/lib/utils';
+
 
 type TranslationKeys = keyof typeof arTranslations;
 
@@ -154,11 +158,15 @@ export default function Home() {
   }, []);
 
   React.useEffect(() => {
-      localStorage.setItem('agriculturalSections', JSON.stringify(agriculturalSections));
+      if (agriculturalSections.length > 0) {
+        localStorage.setItem('agriculturalSections', JSON.stringify(agriculturalSections));
+      }
   }, [agriculturalSections]);
 
   React.useEffect(() => {
+    if (videoSections.length > 0) {
       localStorage.setItem('videoSections', JSON.stringify(videoSections));
+    }
   }, [videoSections]);
 
   const isAdmin = user?.role === 'admin';
@@ -249,6 +257,10 @@ export default function Home() {
       setEditingVideo(video);
       setVideoDialogOpen(true);
   }
+  
+  if (agriculturalSections.length === 0) {
+      return null;
+  }
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
@@ -267,8 +279,8 @@ export default function Home() {
         </header>
 
         <section className="w-full">
-            <div className="flex justify-center items-center mb-8 gap-4">
-                <h2 className="text-3xl font-bold text-center">{t('agriculturalTopics')}</h2>
+            <div className="flex justify-between items-center mb-8 gap-4">
+                <h2 className="text-3xl font-bold">{t('agriculturalTopics')}</h2>
                  {isAdmin && (
                     <TopicDialog
                         isOpen={isTopicDialogOpen}
@@ -279,42 +291,90 @@ export default function Home() {
                     />
                  )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
-                {agriculturalSections.map((section) => {
+
+             <Tabs defaultValue={agriculturalSections[0].id} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1.5">
+                    {agriculturalSections.map(section => {
+                       const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
+                       const title = section.titleKey === 'custom' ? section.title : t(section.titleKey);
+                       return (
+                         <TabsTrigger key={section.id} value={section.id} className="flex flex-col items-center gap-2 h-20 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:text-primary">
+                            <Icon className="h-6 w-6" />
+                            <span>{title}</span>
+                         </TabsTrigger>
+                       )
+                    })}
+                </TabsList>
+                {agriculturalSections.map(section => {
                     const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
                     const title = section.titleKey === 'custom' ? section.title : t(section.titleKey);
                     const description = section.descriptionKey === 'custom' ? section.description : t(section.descriptionKey);
+
                     return (
-                    <Link key={section.id} href={`/topics/${section.id}`} className="group">
-                        <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
-                            <CardHeader className="p-0">
-                                <Image src={section.image} alt={title!} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={section.hint} />
-                            </CardHeader>
-                            <CardContent className="p-6 flex-1 flex flex-col">
-                                <CardTitle className="flex items-center gap-2 mb-2">
-                                    <Icon className="h-6 w-6 text-primary" />
-                                    <span>{title}</span>
-                                </CardTitle>
-                                <p className="text-muted-foreground text-sm flex-1">{description}</p>
-                            </CardContent>
-                             {isAdmin && (
-                                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="secondary" size="icon" onClick={(e) => openEditTopicDialog(section, e)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="destructive" size="icon" onClick={(e) => deleteTopic(section.id, e)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            )}
-                        </Card>
-                    </Link>
-                )})}
-            </div>
+                        <TabsContent key={section.id} value={section.id} className="mt-6">
+                            <Card className="border-none shadow-none">
+                                <CardContent className="p-2">
+                                     <Carousel
+                                        opts={{
+                                            align: "start",
+                                            loop: true,
+                                            direction: language === 'ar' ? 'rtl' : 'ltr',
+                                        }}
+                                        className="w-full"
+                                    >
+                                        <div className="flex justify-between items-center mb-4 px-2">
+                                            <div className="flex items-center gap-4">
+                                                <Icon className="h-8 w-8 text-primary" />
+                                                <div>
+                                                    <h3 className="text-2xl font-bold">{title}</h3>
+                                                    <p className="text-muted-foreground">{description}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <CarouselPrevious />
+                                                <CarouselNext />
+                                            </div>
+                                        </div>
+                                        <CarouselContent>
+                                            {section.subTopics.map((subTopic) => {
+                                                const subTopicTitle = t(subTopic.titleKey);
+                                                const subTopicDescription = t(subTopic.descriptionKey);
+                                                return (
+                                                <CarouselItem key={subTopic.id} className="md:basis-1/2 lg:basis-1/3">
+                                                    <div className="p-1">
+                                                    <Link href={`/topics/${section.id}/${subTopic.id}`} className="group">
+                                                        <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
+                                                            <CardHeader className="p-0">
+                                                                <Image src={subTopic.image} alt={subTopicTitle} width={600} height={400} className="w-full h-40 object-cover" data-ai-hint={subTopic.hint} />
+                                                            </CardHeader>
+                                                            <CardContent className="p-6 flex-1 flex flex-col">
+                                                                <CardTitle className="mb-2 text-lg">
+                                                                    {subTopicTitle}
+                                                                </CardTitle>
+                                                                <p className="text-muted-foreground text-sm flex-1">{subTopicDescription.substring(0, 120)}...</p>
+                                                            </CardContent>
+                                                        </Card>
+                                                    </Link>
+                                                    </div>
+                                                </CarouselItem>
+                                            )})}
+                                             {section.subTopics.length === 0 && (
+                                                <div className="w-full text-center py-12 text-muted-foreground">
+                                                   لا توجد مواضيع فرعية متاحة حاليًا.
+                                                </div>
+                                            )}
+                                        </CarouselContent>
+                                    </Carousel>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )
+                })}
+            </Tabs>
         </section>
 
         <section className="w-full">
-             <div className="flex justify-center items-center mb-8 gap-4">
+             <div className="flex justify-between items-center mb-8 gap-4">
                 <h2 className="text-3xl font-bold text-center">{t('educationalVideos')}</h2>
                 {isAdmin && (
                    <VideoDialog
@@ -335,7 +395,7 @@ export default function Home() {
                     <div className="relative">
                         <Image src={video.image} alt={title!} width={1600} height={900} className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={video.hint} />
                     </div>
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 bg-card">
                         <h3 className="font-semibold text-lg">{title}</h3>
                         <p className="text-sm text-muted-foreground">{duration}</p>
                     </CardContent>
@@ -361,5 +421,7 @@ export default function Home() {
     </main>
   );
 }
+
+    
 
     
