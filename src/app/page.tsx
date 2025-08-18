@@ -5,21 +5,22 @@ import * as React from 'react';
 import * as Lucide from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/context/language-context';
-import { useTopics } from '@/context/topics-context';
-import { AgriculturalSection } from '@/lib/topics-data';
+
+const quickAccessTopics = [
+    { id: '1', titleKey: 'topicIrrigation', iconName: 'Droplets' },
+    { id: '2', titleKey: 'topicPests', iconName: 'Bug' },
+    { id: '3', titleKey: 'topicPruning', iconName: 'Scissors' },
+    { id: '4', titleKey: 'topicSoil', iconName: 'Sprout' }
+];
 
 const getIcon = (name: string) => {
     const Icon = Lucide[name as keyof typeof Lucide] as React.ElementType;
-    return Icon ? <Icon className="h-8 w-8" /> : <Lucide.Sprout className="h-8 w-8" />;
+    return Icon ? <Icon className="h-8 w-8" /> : <Lucide.Leaf className="h-8 w-8" />;
 };
 
-
 export default function Home() {
-  const { t, language } = useLanguage();
-  const { topics } = useTopics();
+  const { t } = useLanguage();
   
-  const quickAccessTopics = topics.filter(topic => ['1', '2', '3', '4'].includes(topic.id));
-
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
       <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">
@@ -38,7 +39,7 @@ export default function Home() {
         
         <section className="w-full border-t pt-8">
             <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
                 {quickAccessTopics.map((topic) => {
                     const title = t(topic.titleKey as any);
                     return (
