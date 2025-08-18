@@ -14,7 +14,6 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
   SidebarFooter,
-  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import { Home, Wallet, CreditCard, Landmark, CalendarDays, Users, Settings, LogOut, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
@@ -53,25 +52,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-        <div className="flex h-screen w-full">
-            <div className="hidden md:flex h-full w-12 flex-col gap-4 border-r bg-sidebar p-2">
-                 <div className="flex items-center gap-2 p-2 justify-center">
-                    <Skeleton className="h-6 w-6" />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <SidebarMenuSkeleton showIcon />
-                    <SidebarMenuSkeleton showIcon />
-                    <SidebarMenuSkeleton showIcon />
-                    <SidebarMenuSkeleton showIcon />
-                    <SidebarMenuSkeleton showIcon />
-                    <SidebarMenuSkeleton showIcon />
-                </div>
+        <div className="flex h-screen w-full bg-background">
+            <div className="hidden md:flex h-full">
+               <Skeleton className="h-full w-[256px]" />
             </div>
             <div className="flex-1 p-4">
                 <Skeleton className="h-full w-full" />
             </div>
         </div>
-    )
+    );
   }
 
   return (
