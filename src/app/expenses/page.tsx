@@ -89,7 +89,7 @@ function ExpensesContent() {
                 setExpenseCategories(JSON.parse(storedCategories));
             }
         }
-    }, []);
+    }, [language]);
 
     React.useEffect(() => {
         if (user) {
@@ -162,8 +162,8 @@ function ExpensesContent() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <CreditCard />
+                    <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+                        <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
                         {t('expenseManagement')}
                     </CardTitle>
                     <CardDescription>
@@ -197,7 +197,7 @@ function ExpensesContent() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>{t('addNewExpense')}</CardTitle>
+                    <CardTitle className="text-xl sm:text-2xl">{t('addNewExpense')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
@@ -283,7 +283,7 @@ function ExpensesContent() {
             <div className="grid md:grid-cols-2 gap-6">
                 {fixedExpenses.length > 0 && (
                 <Card>
-                    <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</CardTitle></CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
                             <Table>
@@ -312,7 +312,7 @@ function ExpensesContent() {
 
                 {variableExpenses.length > 0 && (
                 <Card>
-                    <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</CardTitle></CardHeader>
                     <CardContent>
                          <div className="overflow-x-auto">
                             <Table>
@@ -347,7 +347,7 @@ function ExpensesContent() {
 
 export default function ExpensesPage() {
   return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
+    <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
         <ExpensesContent />
       </div>

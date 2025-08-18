@@ -107,12 +107,12 @@ export default function SalesPage() {
   const totalSales = salesItems.reduce((sum, item) => sum + item.total, 0);
 
   return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
+    <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet />
+            <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+              <Wallet className="h-5 w-5 sm:h-6 sm:w-6"/>
               {t('vegetableSalesTracker')}
             </CardTitle>
             <CardDescription>
@@ -202,7 +202,7 @@ export default function SalesPage() {
         {salesItems.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>{t('salesList')}</CardTitle>
+              <CardTitle className="text-xl sm:text-2xl">{t('salesList')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">

@@ -161,13 +161,13 @@ export default function SettingsPage() {
     }
 
   return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
+    <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
           <Card>
             <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)}>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"> <User /> {t('userProfile')} </CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"> <User className="h-5 w-5 sm:h-6 sm:w-6" /> {t('userProfile')} </CardTitle>
                         <CardDescription> {t('userProfileDesc')} </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
@@ -226,12 +226,12 @@ export default function SettingsPage() {
           
           <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Palette /> {t('displayAndLanguage')}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Palette className="h-5 w-5 sm:h-6 sm:w-6" /> {t('displayAndLanguage')}</CardTitle>
                 <CardDescription>{t('displayAndLanguageDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2"><Languages /> {t('language')}</Label>
+                      <Label className="flex items-center gap-2"><Languages className="h-4 w-4" /> {t('language')}</Label>
                       <Select value={language} onValueChange={(value: Language) => handleLanguageChange(value)}>
                           <SelectTrigger>
                               <SelectValue placeholder={t('selectLanguage')} />
@@ -274,7 +274,7 @@ export default function SettingsPage() {
 
           <Card>
               <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Bell /> {t('notifications')}</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Bell className="h-5 w-5 sm:h-6 sm:w-6"/> {t('notifications')}</CardTitle>
                   <CardDescription>{t('notificationsDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
