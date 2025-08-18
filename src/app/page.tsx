@@ -331,8 +331,8 @@ export default function Home() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <CarouselPrevious />
-                                                <CarouselNext />
+                                                <CarouselPrevious className="relative -left-0 -right-0 top-0 -translate-y-0" />
+                                                <CarouselNext className="relative -left-0 -right-0 top-0 -translate-y-0" />
                                             </div>
                                         </div>
                                         <CarouselContent>
