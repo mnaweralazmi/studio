@@ -56,10 +56,12 @@ export default function RegisterPage() {
             displayName: data.name
         });
 
+        const isAdmin = data.email.toLowerCase() === 'mnaweralazmi88@gmail.com';
+
         await setDoc(doc(db, "users", user.uid), {
             name: data.name,
             email: data.email,
-            role: 'user', // Default role
+            role: isAdmin ? 'admin' : 'user', // Set role based on email
             createdAt: new Date()
         });
         
