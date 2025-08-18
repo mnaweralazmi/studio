@@ -31,8 +31,8 @@ export default function TopicDetailsPage() {
     return <div>{t('loading')}</div>; 
   }
 
-  const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey);
-  const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey);
+  const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey as any);
+  const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey as any);
 
 
   return (
@@ -54,8 +54,8 @@ export default function TopicDetailsPage() {
              <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {topic.subTopics.map((subTopic: SubTopic) => {
-                    const subTopicTitle = subTopic.titleKey === 'custom' ? 'Custom Title' : t(subTopic.titleKey);
-                    const subTopicDescription = subTopic.descriptionKey === 'custom' ? 'Custom Description' : t(subTopic.descriptionKey);
+                    const subTopicTitle = subTopic.titleKey === 'custom' ? 'Custom Title' : t(subTopic.titleKey as any);
+                    const subTopicDescription = subTopic.descriptionKey === 'custom' ? 'Custom Description' : t(subTopic.descriptionKey as any);
                     return (
                     <Link key={subTopic.id} href={`/topics/${topic.id}/${subTopic.id}`} className="group">
                         <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">

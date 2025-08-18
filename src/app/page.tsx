@@ -8,10 +8,10 @@ import Link from 'next/link';
 
 
 const quickAccessTopics = [
-    { id: '1', title: 'ري', icon: Droplets, href: '/topics/1' },
-    { id: '2', title: 'آفات', icon: Bug, href: '/topics/2' },
-    { id: '4', title: 'بذور', icon: Sprout, href: '/topics/4' },
-    { id: '3', title: 'تقليم', icon: Scissors, href: '/topics/3' },
+    { id: '1', titleKey: 'topicIrrigation', icon: Droplets, href: '/topics/1' },
+    { id: '2', titleKey: 'topicPests', icon: Bug, href: '/topics/2' },
+    { id: '3', titleKey: 'topicPruning', icon: Scissors, href: '/topics/3' },
+    { id: '4', titleKey: 'topicSoil', icon: Sprout, href: '/topics/4' },
 ]
 
 
@@ -42,7 +42,7 @@ export default function Home() {
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:scale-110">
                             <Icon className="h-8 w-8" />
                         </div>
-                        <p className="font-semibold text-sm text-foreground">{topic.title}</p>
+                        <p className="font-semibold text-sm text-foreground">{t(topic.titleKey as any)}</p>
                     </Link>
                 )
             })}
