@@ -5,13 +5,15 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { format } from 'date-fns';
+import { arSA } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { Users, Trash2, PlusCircle, Award, ArrowDownCircle, DollarSign, Eye, BadgeAlert, BadgeCheck, BadgeHelp } from 'lucide-react';
+import { Users, Trash2, PlusCircle, Award, ArrowDownCircle, DollarSign, Eye, BadgeAlert, BadgeCheck, BadgeHelp, Banknote } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,9 +49,9 @@ export interface Transaction {
     type: 'salary' | 'bonus' | 'deduction';
     amount: number;
     date: string;
-    month: number;
-    year: number;
     description: string;
+    month?: number;
+    year?: number;
 }
 
 export interface Worker extends WorkerFormValues {
@@ -64,6 +66,50 @@ const months = [
     { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' },
     { value: 10, label: 'أكتوبر' }, { value: 11, label: 'نوفمبر' }, { value: 12, label: 'ديسمبر' }
 ];
+
+
+// --- Sub-components for better organization ---
+
+function AddWorkerDialog({ onAdd }: { onAdd: (data: WorkerFormValues) => void }) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const form = useForm<WorkerFormValues>({
+        resolver: zodResolver(workerFormSchema),
+        defaultValues: { name: "", baseSalary: 0 },
+    });
+
+    const handleSubmit = (data: WorkerFormValues) => {
+        onAdd(data);
+        form.reset();
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="ml-2 h-4 w-4" />
+                    إضافة عامل جديد
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>إضافة عامل جديد</DialogTitle>
+                    <DialogDescription>أدخل تفاصيل العامل الجديد والراتب الأساسي.</DialogDescription>
+                </DialogHeader>
+                 <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-4">
+                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>اسم العامل</FormLabel><FormControl><Input placeholder="أدخل اسم العامل..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="baseSalary" render={({ field }) => (<FormItem><FormLabel>الراتب الأساسي (دينار)</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>إلغاء</Button>
+                            <Button type="submit">إضافة عامل</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm: (workerId: string, month: number, year: number, amount: number) => void; }) {
     const [isOpen, setIsOpen] = React.useState(false);
@@ -92,7 +138,7 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={unpaidMonths.length === 0}>
                     <DollarSign className="h-4 w-4 ml-1" />
-                    استلام راتب
+                    دفع الراتب
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -125,6 +171,99 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
     );
 }
 
+const transactionFormSchema = z.object({
+  type: z.enum(['bonus', 'deduction']),
+  amount: z.coerce.number().min(0.01, "المبلغ يجب أن يكون إيجابياً."),
+  description: z.string().min(3, "الوصف مطلوب."),
+});
+type TransactionFormValues = z.infer<typeof transactionFormSchema>;
+
+function FinancialRecordDialog({ worker, onAddTransaction }: { worker: Worker, onAddTransaction: (workerId: string, transaction: TransactionFormValues) => void }) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const form = useForm<TransactionFormValues>({
+        resolver: zodResolver(transactionFormSchema),
+        defaultValues: { type: 'bonus', amount: 10, description: "" },
+    });
+
+    const handleSubmit = (data: TransactionFormValues) => {
+        onAddTransaction(worker.id, data);
+        form.reset();
+    };
+
+    const workerBalance = (worker.transactions || []).reduce((acc, t) => {
+        if (t.type === 'bonus') return acc + t.amount;
+        if (t.type === 'deduction' || t.type === 'salary') return acc - t.amount;
+        return acc;
+    }, 0);
+
+    return (
+         <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                   <Eye className="h-4 w-4 ml-1" />
+                   عرض السجل المالي
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>السجل المالي لـ {worker.name}</DialogTitle>
+                    <DialogDescription>
+                        إجمالي الرصيد الحالي: <span className={`font-bold ${workerBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>{workerBalance.toFixed(2)} دينار</span>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div className="max-h-96 overflow-y-auto pr-2">
+                        <h4 className="font-semibold mb-2">سجل المعاملات</h4>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>الوصف</TableHead><TableHead className="text-left">المبلغ</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {worker.transactions.length > 0 ? worker.transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
+                                    <TableRow key={t.id}>
+                                        <TableCell>{format(new Date(t.date), 'yyyy/MM/dd')}</TableCell>
+                                        <TableCell>{t.description}</TableCell>
+                                        <TableCell className={`text-left font-mono ${t.type === 'bonus' ? 'text-green-500' : 'text-red-500'}`}>
+                                            {t.type === 'bonus' ? '+' : '-'}{t.amount.toFixed(2)}
+                                        </TableCell>
+                                    </TableRow>
+                                )) : <TableRow><TableCell colSpan={3} className="text-center">لا توجد معاملات.</TableCell></TableRow>}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold mb-2">إضافة معاملة جديدة</h4>
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 p-4 border rounded-md">
+                                <FormField control={form.control} name="type" render={({ field }) => (
+                                    <FormItem><FormLabel>النوع</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="bonus">مكافأة</SelectItem><SelectItem value="deduction">خصم</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="amount" render={({ field }) => (
+                                    <FormItem><FormLabel>المبلغ (دينار)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="description" render={({ field }) => (
+                                    <FormItem><FormLabel>الوصف</FormLabel><FormControl><Input placeholder="أدخل وصفًا..." {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <Button type="submit" className="w-full">
+                                    <PlusCircle className="ml-2 h-4 w-4" />
+                                    إضافة معاملة
+                                </Button>
+                            </form>
+                        </Form>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsOpen(false)}>إغلاق</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+
+// --- Main Page Component ---
+
 export default function WorkersPage() {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const { toast } = useToast();
@@ -155,13 +294,6 @@ export default function WorkersPage() {
         }
     }, [workers, user]);
     
-    const form = useForm<WorkerFormValues>({
-        resolver: zodResolver(workerFormSchema),
-        defaultValues: {
-            name: "",
-            baseSalary: 0,
-        },
-    });
 
     function addWorker(data: WorkerFormValues) {
         const workerExists = workers.some(w => w.name.toLowerCase() === data.name.toLowerCase());
@@ -182,7 +314,6 @@ export default function WorkersPage() {
             transactions: [],
         };
         setWorkers(prev => [...prev, newWorker]);
-        form.reset();
         toast({ title: "تمت إضافة العامل بنجاح!" });
     }
 
@@ -213,31 +344,49 @@ export default function WorkersPage() {
         }));
         toast({ title: "تم تسجيل الراتب بنجاح!" });
     }
+
+    function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
+         setWorkers(prev => prev.map(w => {
+            if (w.id === workerId) {
+                const newTransaction: Transaction = {
+                    id: crypto.randomUUID(),
+                    type: transaction.type,
+                    amount: transaction.amount,
+                    date: new Date().toISOString(),
+                    description: transaction.description,
+                };
+                return {
+                    ...w,
+                    transactions: [...w.transactions, newTransaction],
+                };
+            }
+            return w;
+        }));
+        toast({ title: "تمت إضافة المعاملة بنجاح!" });
+    }
   
-    const getWorkerStatus = (worker: Worker) => {
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
-        const paidMonths = worker.paidMonths || [];
-        const transactions = worker.transactions || [];
-        const isPaid = paidMonths.some(p => p.month === currentMonth && p.year === currentYear);
-        const balance = transactions.reduce((acc, t) => {
+    const getWorkerBalance = (worker: Worker) => {
+        return (worker.transactions || []).reduce((acc, t) => {
              if (t.type === 'bonus') return acc + t.amount;
              if (t.type === 'deduction' || t.type === 'salary') return acc - t.amount;
              return acc;
         }, 0);
-        
-        const unpaidSalaries = (worker.baseSalary * (currentMonth - paidMonths.filter(p => p.year === currentYear).length));
-        const totalBalance = unpaidSalaries + balance;
-
-
-        if (isPaid) return { text: 'مدفوع', color: 'bg-green-600', icon: BadgeCheck };
-        if (totalBalance > 0) return { text: `غير مدفوع (${totalBalance.toFixed(2)})`, color: 'bg-red-600', icon: BadgeAlert };
-        return { text: 'لا يوجد رصيد', color: 'bg-gray-500', icon: BadgeHelp };
     }
+    
+    const getMonthStatus = (worker: Worker, month: number, year: number) => {
+        return worker.paidMonths.some(p => p.month === month && p.year === year);
+    }
+
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
+    const totalUnpaidSalariesThisMonth = workers
+        .filter(w => !getMonthStatus(w, currentMonth, currentYear))
+        .reduce((sum, w) => sum + w.baseSalary, 0);
 
     return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
+      <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -245,57 +394,38 @@ export default function WorkersPage() {
                     إدارة العمالة والرواتب
                 </CardTitle>
                 <CardDescription>
-                    أضف العمال، تتبع رواتبهم، وقم بإدارة المكافآت والخصومات.
+                    أضف العمال، تتبع رواتبهم، وقم بإدارة المكافآت والخصومات بكفاءة.
                 </CardDescription>
             </CardHeader>
         </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">إجمالي عدد العمال</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{workers.length}</div>
+                    <p className="text-xs text-muted-foreground">عدد العمال المسجلين حالياً</p>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">الرواتب غير المدفوعة (هذا الشهر)</CardTitle>
+                    <Banknote className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold text-destructive">{totalUnpaidSalariesThisMonth.toFixed(2)} دينار</div>
+                    <p className="text-xs text-muted-foreground">مجموع رواتب شهر {months.find(m => m.value === currentMonth)?.label} غير المدفوعة</p>
+                </CardContent>
+            </Card>
+        </div>
         
         <Card>
-            <CardHeader>
-                <CardTitle>إضافة عامل جديد</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(addWorker)} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>اسم العامل</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="أدخل اسم العامل..." {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="baseSalary"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>الراتب الأساسي (دينار)</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" step="1" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <Button type="submit" className="self-end">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            إضافة عامل
-                        </Button>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
-
-        {workers.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>قائمة العمال</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>قائمة العمال</CardTitle>
+                <AddWorkerDialog onAdd={addWorker} />
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -304,38 +434,31 @@ export default function WorkersPage() {
                     <TableRow>
                       <TableHead>اسم العامل</TableHead>
                       <TableHead>الراتب الأساسي</TableHead>
-                       <TableHead>حالة الراتب (الشهر الحالي)</TableHead>
+                       <TableHead>حالة راتب الشهر الحالي</TableHead>
+                       <TableHead>الرصيد الإجمالي</TableHead>
                       <TableHead className="text-left">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {workers.map((worker) => {
-                      const status = getWorkerStatus(worker);
-                      const StatusIcon = status.icon;
+                    {workers.length > 0 ? workers.map((worker) => {
+                      const isPaidThisMonth = getMonthStatus(worker, currentMonth, currentYear);
+                      const balance = getWorkerBalance(worker);
                       return (
                       <TableRow key={worker.id}>
                         <TableCell className="font-medium">{worker.name}</TableCell>
                         <TableCell>{(worker.baseSalary || 0).toFixed(2)} دينار</TableCell>
                         <TableCell>
-                           <Badge className={`${status.color} text-white`}>
-                                <StatusIcon className="h-3 w-3 ml-1"/>
-                                {status.text}
+                           <Badge className={`${isPaidThisMonth ? 'bg-green-600' : 'bg-red-600'} text-white`}>
+                                {isPaidThisMonth ? <BadgeCheck className="h-3 w-3 ml-1"/> : <BadgeAlert className="h-3 w-3 ml-1"/>}
+                                {isPaidThisMonth ? 'مدفوع' : 'غير مدفوع'}
                             </Badge>
                         </TableCell>
-                        <TableCell className="text-left flex gap-2">
+                        <TableCell className={`font-mono ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {balance.toFixed(2)} دينار
+                        </TableCell>
+                        <TableCell className="text-left flex gap-2 justify-end">
                             <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
-                            <Button variant="secondary" size="sm" disabled>
-                                <Award className="h-4 w-4 ml-1" />
-                                مكافأة
-                            </Button>
-                            <Button variant="secondary" size="sm" disabled>
-                               <ArrowDownCircle className="h-4 w-4 ml-1" />
-                                خصم
-                            </Button>
-                             <Button variant="ghost" size="sm">
-                               <Eye className="h-4 w-4 ml-1" />
-                                عرض التفاصيل
-                            </Button>
+                            <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
                            <AlertDialog>
                               <AlertDialogTrigger asChild>
                                   <Button variant="destructive" size="icon" title="حذف العامل">
@@ -359,14 +482,22 @@ export default function WorkersPage() {
                             </AlertDialog>
                         </TableCell>
                       </TableRow>
-                    )})}
+                    )}) : (
+                        <TableRow>
+                            <TableCell colSpan={5} className="text-center h-24">
+                                لا يوجد عمال بعد. قم بإضافة عامل جديد لبدء الإدارة.
+                            </TableCell>
+                        </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
           </Card>
-        )}
       </div>
     </main>
   );
 }
+
+
+    
