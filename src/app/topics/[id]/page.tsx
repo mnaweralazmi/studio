@@ -21,7 +21,8 @@ export default function TopicDetailsPage() {
     const storedTopics = localStorage.getItem('agriculturalSections');
     const topics = storedTopics ? JSON.parse(storedTopics) : initialAgriculturalSections;
     
-    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId);
+    // Consistent slug access: use topicId
+    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId); 
     if (currentTopic) {
       setTopic(currentTopic);
     }
@@ -31,8 +32,9 @@ export default function TopicDetailsPage() {
     return <div>{t('loading')}</div>; 
   }
 
-  const title = t(topic.titleKey);
-  const description = t(topic.descriptionKey);
+  const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey);
+  const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey);
+
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -50,10 +52,11 @@ export default function TopicDetailsPage() {
           </div>
           
           <section className="w-full border-t pt-8">
+             <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {topic.subTopics.map((subTopic: SubTopic) => {
-                    const subTopicTitle = t(subTopic.titleKey);
-                    const subTopicDescription = t(subTopic.descriptionKey);
+                    const subTopicTitle = subTopic.titleKey === 'custom' ? 'Custom Title' : t(subTopic.titleKey);
+                    const subTopicDescription = subTopic.descriptionKey === 'custom' ? 'Custom Description' : t(subTopic.descriptionKey);
                     return (
                     <Link key={subTopic.id} href={`/topics/${topic.id}/${subTopic.id}`} className="group">
                         <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
