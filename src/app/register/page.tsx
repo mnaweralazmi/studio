@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 
 const registerFormSchema = z.object({
   username: z.string().min(3, "اسم المستخدم يجب أن يكون 3 أحرف على الأقل."),
+  email: z.string().email("البريد الإلكتروني غير صالح."),
   password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل."),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
@@ -35,6 +36,7 @@ export default function RegisterPage() {
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
       username: "",
+      email: "",
       password: "",
       confirmPassword: "",
     },
@@ -59,7 +61,7 @@ export default function RegisterPage() {
             return;
         }
 
-        const newUser = { username: data.username, password: data.password };
+        const newUser = { username: data.username, password: data.password, email: data.email, name: data.username, role: 'user' };
         users.push(newUser);
         localStorage.setItem('users', JSON.stringify(users));
 
@@ -101,6 +103,19 @@ export default function RegisterPage() {
                                 <FormLabel>اسم المستخدم</FormLabel>
                                 <FormControl>
                                     <Input placeholder="اختر اسم مستخدم..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>البريد الإلكتروني</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="user@example.com" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
