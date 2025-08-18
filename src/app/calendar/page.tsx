@@ -2,14 +2,15 @@
 "use client";
 
 import * as React from 'react';
-import { format, isValid } from 'date-fns';
+import { format, isValid, isFuture, isToday } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, Trash2, CalendarDays, CheckCircle, ListTodo, ListChecks } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarDays, CheckCircle, ListTodo, ListChecks, Forward } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from '@/components/ui/badge';
 
 export interface Task {
   id: string;
@@ -92,8 +93,16 @@ export default function CalendarPage() {
     return format(taskDate, 'yyyy-MM-dd') === selectedDateString;
   });
 
-  const upcomingTasks = tasksForSelectedDate.filter(task => !task.isCompleted);
-  const completedTasks = tasksForSelectedDate.filter(task => task.isCompleted);
+  const upcomingTasksForSelectedDate = tasksForSelectedDate.filter(task => !task.isCompleted);
+  const completedTasksForSelectedDate = tasksForSelectedDate.filter(task => task.isCompleted);
+  
+  const allUpcomingTasks = tasks
+    .filter(task => {
+        const taskDate = new Date(task.dueDate);
+        return isValid(taskDate) && (isFuture(taskDate) || isToday(taskDate)) && !task.isCompleted;
+    })
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
@@ -116,7 +125,7 @@ export default function CalendarPage() {
               </CardContent>
             </Card>
           </div>
-          <div className="flex-1 w-full">
+          <div className="flex-1 w-full space-y-8">
             <Card className="min-h-[405px]">
                 <CardHeader>
                 <div className="flex justify-between items-center">
@@ -141,9 +150,9 @@ export default function CalendarPage() {
                             <ListTodo />
                             المهام القادمة
                         </h3>
-                        {upcomingTasks.length > 0 ? (
+                        {upcomingTasksForSelectedDate.length > 0 ? (
                             <ul className="space-y-3">
-                            {upcomingTasks.map(task => (
+                            {upcomingTasksForSelectedDate.map(task => (
                                 <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-background transition-all">
                                 <div className="flex-1 space-y-1">
                                     <p className="font-medium">{task.title}</p>
@@ -171,9 +180,9 @@ export default function CalendarPage() {
                             <ListChecks />
                             المهام المنجزة
                         </h3>
-                        {completedTasks.length > 0 ? (
+                        {completedTasksForSelectedDate.length > 0 ? (
                             <ul className="space-y-3">
-                            {completedTasks.map(task => (
+                            {completedTasksForSelectedDate.map(task => (
                                 <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50 transition-all">
                                 <div className="flex-1 space-y-1">
                                     <p className="font-medium line-through text-muted-foreground">{task.title}</p>
@@ -196,6 +205,44 @@ export default function CalendarPage() {
                             </div>
                         )}
                     </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Forward />
+                        كل المهام القادمة
+                    </CardTitle>
+                    <CardDescription>نظرة عامة على جميع المهام المستقبلية غير المنجزة.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {allUpcomingTasks.length > 0 ? (
+                        <ul className="space-y-3 max-h-96 overflow-y-auto">
+                        {allUpcomingTasks.map(task => (
+                            <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-background transition-all">
+                                <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-medium">{task.title}</p>
+                                        <Badge variant="outline">{format(new Date(task.dueDate), 'd MMM', { locale: arSA })}</Badge>
+                                    </div>
+                                    {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button variant='default' size="icon" onClick={() => toggleTaskCompletion(task.id)} title='إنجاز المهمة'>
+                                        <CheckCircle className="h-5 w-5" />
+                                    </Button>
+                                    <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)} title="حذف المهمة">
+                                        <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                </div>
+                            </li>
+                        ))}
+                        </ul>
+                    ) : (
+                        <div className="text-center text-muted-foreground py-4">
+                            <p>لا توجد لديك مهام قادمة. عظيم!</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
           </div>
