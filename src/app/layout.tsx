@@ -6,13 +6,16 @@ import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppLayout } from '@/components/app-layout';
 import { usePathname } from 'next/navigation';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
+import { useRouter } from 'next/navigation';
 
 function AppBody({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
   const pathname = usePathname();
+  const router = useRouter();
   const isAuthPage = pathname === '/login' || pathname === '/register';
+  const [isClientLoaded, setIsClientLoaded] = useState(false);
 
   useEffect(() => {
     const theme = localStorage.getItem("theme") || "theme-green";
@@ -25,8 +28,32 @@ function AppBody({ children }: { children: React.ReactNode }) {
     const html = document.documentElement;
     html.classList.remove("light", "dark");
     html.classList.add(mode);
+
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    if (!isAuthPage && isAuthenticated !== 'true') {
+      router.replace('/login');
+    } else {
+        setIsClientLoaded(true);
+    }
     
-  }, []);
+  }, [pathname, isAuthPage, router]);
+
+  const renderContent = () => {
+    if (!isClientLoaded && !isAuthPage) {
+        return null; // Or a loading spinner covering the whole page
+    }
+    if (isAuthPage) {
+        return <>{children}<Toaster /></>;
+    }
+    return (
+        <SidebarProvider>
+            <AppLayout>
+                {children}
+            </AppLayout>
+            <Toaster />
+        </SidebarProvider>
+    );
+  }
 
   return (
     <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className="dark">
@@ -36,19 +63,7 @@ function AppBody({ children }: { children: React.ReactNode }) {
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased theme-green">
-        {isAuthPage ? (
-          <>
-            {children}
-            <Toaster />
-          </>
-        ) : (
-          <SidebarProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </SidebarProvider>
-        )}
-        {!isAuthPage && <Toaster />}
+        {renderContent()}
       </body>
     </html>
   );
