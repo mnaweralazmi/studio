@@ -180,7 +180,7 @@ export default function WorkersPage() {
                     {workers.map((worker) => (
                       <TableRow key={worker.id}>
                         <TableCell className="font-medium">{worker.name}</TableCell>
-                        <TableCell>{worker.baseSalary.toFixed(2)} دينار</TableCell>
+                        <TableCell>{(worker.baseSalary || 0).toFixed(2)} دينار</TableCell>
                         <TableCell className="text-left flex gap-2">
                             <Button variant="outline" size="sm">
                                 <DollarSign className="h-4 w-4 ml-1" />
