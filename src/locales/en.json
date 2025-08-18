@@ -54,10 +54,16 @@
     "homeHeaderSubtitle": "Discover articles, videos, and expert advice to help you on every step of your farming journey.",
     "agriculturalTopics": "Agricultural Topics",
     "addTopic": "Add Topic",
-    "deleteTopic": "Topic has been deleted.",
+    "editTopic": "Edit Topic",
+    "deleteTopicSuccess": "Topic has been deleted.",
+    "addTopicSuccess": "Topic added successfully.",
+    "editTopicSuccess": "Topic updated successfully.",
     "educationalVideos": "Educational Videos",
     "addVideo": "Add Video",
-    "deleteVideo": "Video has been deleted.",
+    "editVideo": "Edit Video",
+    "deleteVideoSuccess": "Video has been deleted.",
+    "addVideoSuccess": "Video added successfully.",
+    "editVideoSuccess": "Video updated successfully.",
     "footerText": "Kuwaiti Farmer. Made with love for all that is green.",
     "topicIrrigation": "Irrigation & Fertilization",
     "topicIrrigationDesc": "Learn best practices for watering and fertilizing your plants to ensure healthy and strong growth.",
@@ -156,6 +162,7 @@
     "expenseDeleted": "Expense has been deleted.",
     "fixedMonthlyExpenses": "Fixed Expenses",
     "variableExpenses": "Variable Expenses",
+    "expensesList": "Expenses List",
     "tableCategory": "Category",
     "tableItem": "Item",
     "tableAmount": "Amount",
@@ -239,6 +246,7 @@
     "iconScissors": "Scissors",
     "iconSprout": "Sprout",
     "iconWheat": "Wheat",
+    "iconWind": "Wind",
     "duration": "Duration",
     "durationPlaceholder": "e.g. 15 minutes",
     "backToHome": "Back to Home",
@@ -276,5 +284,8 @@
     "subTopicHarvestingMethodsDesc": "Manual and mechanical methods for harvesting and how to avoid damaging the crop.",
     "subTopicPostHarvest": "Post-Harvest Handling",
     "subTopicPostHarvestDesc": "Steps for cooling, sorting, packing, and storing to maintain crop quality.",
-    "expensesList": "Expenses List"
+    "image": "Image",
+    "uploadImage": "Upload Image"
 }
+
+    

@@ -2,21 +2,17 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, Droplets, Bug, Scissors, Sprout, Wheat, Wind, PlayCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { Leaf, PlusCircle, Trash2, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
 import type arTranslations from '@/locales/ar.json';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { TopicDialog, TopicFormValues } from '@/components/topic-dialog';
+import { VideoDialog, VideoFormValues } from '@/components/video-dialog';
+import { iconComponents, IconName } from '@/components/icons';
 
 type TranslationKeys = keyof typeof arTranslations;
 
@@ -37,7 +33,7 @@ export interface SubTopic {
 export interface AgriculturalSection {
   id: string;
   titleKey: TranslationKeys;
-  iconName: keyof typeof iconComponents;
+  iconName: IconName;
   descriptionKey: TranslationKeys;
   image: string;
   hint: string;
@@ -46,7 +42,7 @@ export interface AgriculturalSection {
   description?: string;
 }
 
-interface VideoSection {
+export interface VideoSection {
   id: string;
   titleKey: TranslationKeys;
   durationKey: TranslationKeys;
@@ -55,15 +51,6 @@ interface VideoSection {
   title?: string;
   duration?: string;
 }
-
-const iconComponents = {
-  Droplets,
-  Bug,
-  Scissors,
-  Sprout,
-  Wheat,
-  Wind,
-};
 
 export const initialAgriculturalSections: AgriculturalSection[] = [
     { 
@@ -140,19 +127,6 @@ const initialVideoSections: VideoSection[] = [
     { id: '3', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/1600x900.png', hint: 'compost pile' }
 ];
 
-const topicFormSchema = z.object({
-  title: z.string().min(3, "العنوان مطلوب"),
-  description: z.string().min(10, "الوصف مطلوب"),
-  image: z.string().url("رابط الصورة غير صالح"),
-  iconName: z.enum(Object.keys(iconComponents) as [keyof typeof iconComponents]),
-});
-
-const videoFormSchema = z.object({
-  title: z.string().min(3, "العنوان مطلوب"),
-  duration: z.string().min(3, "المدة مطلوبة"),
-  image: z.string().url("رابط الصورة غير صالح"),
-});
-
 export default function Home() {
   const { toast } = useToast();
   const { t, language } = useLanguage();
@@ -161,7 +135,10 @@ export default function Home() {
   const [videoSections, setVideoSections] = React.useState<VideoSection[]>([]);
   
   const [isTopicDialogOpen, setTopicDialogOpen] = React.useState(false);
+  const [editingTopic, setEditingTopic] = React.useState<AgriculturalSection | undefined>(undefined);
+  
   const [isVideoDialogOpen, setVideoDialogOpen] = React.useState(false);
+  const [editingVideo, setEditingVideo] = React.useState<VideoSection | undefined>(undefined);
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -176,70 +153,95 @@ export default function Home() {
     setVideoSections(storedVideos ? JSON.parse(storedVideos) : initialVideoSections);
   }, []);
 
+  React.useEffect(() => {
+      localStorage.setItem('agriculturalSections', JSON.stringify(agriculturalSections));
+  }, [agriculturalSections]);
+
+  React.useEffect(() => {
+      localStorage.setItem('videoSections', JSON.stringify(videoSections));
+  }, [videoSections]);
+
   const isAdmin = user?.role === 'admin';
 
-  const topicForm = useForm<z.infer<typeof topicFormSchema>>({
-    resolver: zodResolver(topicFormSchema),
-    defaultValues: { title: "", description: "", image: "", iconName: 'Sprout' },
-  });
-
-  const videoForm = useForm<z.infer<typeof videoFormSchema>>({
-    resolver: zodResolver(videoFormSchema),
-    defaultValues: { title: "", duration: "", image: "" },
-  });
-  
-  function onAddTopic(data: z.infer<typeof topicFormSchema>) {
-    const newTopic: AgriculturalSection = {
-      id: crypto.randomUUID(),
-      titleKey: data.title as TranslationKeys, // This is a limitation, new topics won't be translatable
-      descriptionKey: data.description as TranslationKeys,
-      iconName: data.iconName,
-      image: data.image,
-      hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
-      subTopics: []
-    };
-    const updatedSections = [...agriculturalSections, newTopic];
-    setAgriculturalSections(updatedSections);
-    localStorage.setItem('agriculturalSections', JSON.stringify(updatedSections));
-    toast({ title: t('addTopic') });
-    topicForm.reset();
-    setTopicDialogOpen(false);
-  }
-
-  function onAddVideo(data: z.infer<typeof videoFormSchema>) {
-    const newVideo = {
-        id: crypto.randomUUID(),
+  function handleAddOrUpdateTopic(data: TopicFormValues) {
+    const topicData = {
         titleKey: data.title as TranslationKeys,
-        durationKey: data.duration as TranslationKeys,
+        descriptionKey: data.description as TranslationKeys,
+        iconName: data.iconName,
         image: data.image,
         hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
     };
-    const updatedVideos = [...videoSections, newVideo];
-    setVideoSections(updatedVideos);
-    localStorage.setItem('videoSections', JSON.stringify(updatedVideos));
-    toast({ title: t('addVideo') });
-    videoForm.reset();
-    setVideoDialogOpen(false);
+
+    if (editingTopic) {
+        // Update existing topic
+        const updatedSections = agriculturalSections.map(s => s.id === editingTopic.id ? { ...s, ...topicData } : s);
+        setAgriculturalSections(updatedSections);
+        toast({ title: t('editTopicSuccess') });
+    } else {
+        // Add new topic
+        const newTopic: AgriculturalSection = {
+            id: crypto.randomUUID(),
+            ...topicData,
+            subTopics: []
+        };
+        setAgriculturalSections(prev => [...prev, newTopic]);
+        toast({ title: t('addTopicSuccess') });
+    }
+    setEditingTopic(undefined);
+    setTopicDialogOpen(false);
   }
-  
+
+  function handleAddOrUpdateVideo(data: VideoFormValues) {
+      const videoData = {
+          titleKey: data.title as TranslationKeys,
+          durationKey: data.duration as TranslationKeys,
+          image: data.image,
+          hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
+      };
+
+      if(editingVideo) {
+          const updatedVideos = videoSections.map(v => v.id === editingVideo.id ? { ...v, ...videoData } : v);
+          setVideoSections(updatedVideos);
+          toast({ title: t('editVideoSuccess') });
+      } else {
+          const newVideo: VideoSection = {
+              id: crypto.randomUUID(),
+              ...videoData
+          };
+          setVideoSections(prev => [...prev, newVideo]);
+          toast({ title: t('addVideoSuccess') });
+      }
+      setEditingVideo(undefined);
+      setVideoDialogOpen(false);
+  }
+
   function deleteTopic(id: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    const updatedSections = agriculturalSections.filter(s => s.id !== id);
-    setAgriculturalSections(updatedSections);
-    localStorage.setItem('agriculturalSections', JSON.stringify(updatedSections));
-    toast({ variant: "destructive", title: t('deleteTopic') });
+    setAgriculturalSections(prev => prev.filter(s => s.id !== id));
+    toast({ variant: "destructive", title: t('deleteTopicSuccess') });
   }
 
   function deleteVideo(id: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    const updatedVideos = videoSections.filter(v => v.id !== id);
-    setVideoSections(updatedVideos);
-    localStorage.setItem('videoSections', JSON.stringify(updatedVideos));
-    toast({ variant: "destructive", title: t('deleteVideo') });
+    setVideoSections(prev => prev.filter(v => v.id !== id));
+    toast({ variant: "destructive", title: t('deleteVideoSuccess') });
   }
 
+  function openEditTopicDialog(topic: AgriculturalSection, e: React.MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditingTopic(topic);
+      setTopicDialogOpen(true);
+  }
+
+  function openEditVideoDialog(video: VideoSection, e: React.MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditingVideo(video);
+      setVideoDialogOpen(true);
+  }
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
@@ -261,41 +263,23 @@ export default function Home() {
             <div className="flex justify-center items-center mb-8 gap-4">
                 <h2 className="text-3xl font-bold text-center">{t('agriculturalTopics')}</h2>
                  {isAdmin && (
-                  <Dialog open={isTopicDialogOpen} onOpenChange={setTopicDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                        {t('addTopic')}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{t('addTopic')}</DialogTitle>
-                      </DialogHeader>
-                      <Form {...topicForm}>
-                        <form onSubmit={topicForm.handleSubmit(onAddTopic)} className="space-y-4">
-                          <FormField control={topicForm.control} name="title" render={({ field }) => ( <FormItem><FormLabel>{t('title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={topicForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>{t('description')}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={topicForm.control} name="image" render={({ field }) => ( <FormItem><FormLabel>{t('imageUrl')}</FormLabel><FormControl><Input placeholder="https://placehold.co/600x400.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                           <FormField control={topicForm.control} name="iconName" render={({ field }) => ( <FormItem><FormLabel>{t('icon')}</FormLabel><FormControl><select {...field} className="w-full p-2 border rounded-md bg-background"><option value="Droplets">{t('iconDroplets')}</option><option value="Bug">{t('iconBug')}</option><option value="Scissors">{t('iconScissors')}</option><option value="Sprout">{t('iconSprout')}</option><option value="Wheat">{t('iconWheat')}</option></select></FormControl><FormMessage /></FormItem> )} />
-                          <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="secondary">{t('cancel')}</Button></DialogClose>
-                            <Button type="submit">{t('add')}</Button>
-                          </DialogFooter>
-                        </form>
-                      </Form>
-                    </DialogContent>
-                  </Dialog>
-                )}
+                    <TopicDialog
+                        isOpen={isTopicDialogOpen}
+                        setIsOpen={setTopicDialogOpen}
+                        onSubmit={handleAddOrUpdateTopic}
+                        topic={editingTopic}
+                        setEditingTopic={setEditingTopic}
+                    />
+                 )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
                 {agriculturalSections.map((section) => {
-                    const Icon = iconComponents[section.iconName as keyof typeof iconComponents] || Sprout;
-                    const title = section.titleKey ? t(section.titleKey) : section.title;
-                    const description = section.descriptionKey ? t(section.descriptionKey) : section.description;
+                    const Icon = iconComponents[section.iconName] || Sprout;
+                    const title = t(section.titleKey as TranslationKeys, section.title);
+                    const description = t(section.descriptionKey as TranslationKeys, section.description);
                     return (
                     <Link key={section.id} href={`/topics/${section.id}`} className="group">
-                        <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
+                        <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
                             <CardHeader className="p-0">
                                 <Image src={section.image} alt={title!} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={section.hint} />
                             </CardHeader>
@@ -306,10 +290,15 @@ export default function Home() {
                                 </CardTitle>
                                 <p className="text-muted-foreground text-sm flex-1">{description}</p>
                             </CardContent>
-                            {isAdmin && (
-                                <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => deleteTopic(section.id, e)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                             {isAdmin && (
+                                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="secondary" size="icon" onClick={(e) => openEditTopicDialog(section, e)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="destructive" size="icon" onClick={(e) => deleteTopic(section.id, e)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             )}
                         </Card>
                     </Link>
@@ -321,52 +310,37 @@ export default function Home() {
              <div className="flex justify-center items-center mb-8 gap-4">
                 <h2 className="text-3xl font-bold text-center">{t('educationalVideos')}</h2>
                 {isAdmin && (
-                   <Dialog open={isVideoDialogOpen} onOpenChange={setVideoDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                        {t('addVideo')}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{t('addVideo')}</DialogTitle>
-                      </DialogHeader>
-                      <Form {...videoForm}>
-                        <form onSubmit={videoForm.handleSubmit(onAddVideo)} className="space-y-4">
-                          <FormField control={videoForm.control} name="title" render={({ field }) => ( <FormItem><FormLabel>{t('title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={videoForm.control} name="duration" render={({ field }) => ( <FormItem><FormLabel>{t('duration')}</FormLabel><FormControl><Input placeholder={t('durationPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={videoForm.control} name="image" render={({ field }) => ( <FormItem><FormLabel>{t('imageUrl')}</FormLabel><FormControl><Input placeholder="https://placehold.co/1600x900.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="secondary">{t('cancel')}</Button></DialogClose>
-                            <Button type="submit">{t('add')}</Button>
-                          </DialogFooter>
-                        </form>
-                      </Form>
-                    </DialogContent>
-                  </Dialog>
+                   <VideoDialog
+                        isOpen={isVideoDialogOpen}
+                        setIsOpen={setVideoDialogOpen}
+                        onSubmit={handleAddOrUpdateVideo}
+                        video={editingVideo}
+                        setEditingVideo={setEditingVideo}
+                   />
                 )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {videoSections.map((video) => {
-                const title = video.titleKey ? t(video.titleKey) : video.title;
-                const duration = video.durationKey ? t(video.durationKey) : video.duration;
+                const title = t(video.titleKey as TranslationKeys, video.title);
+                const duration = t(video.durationKey as TranslationKeys, video.duration);
                 return (
                 <Card key={video.id} className="overflow-hidden group cursor-pointer shadow-lg relative">
                     <div className="relative">
                         <Image src={video.image} alt={title!} width={1600} height={900} className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={video.hint} />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <PlayCircle className="h-16 w-16 text-white/80 group-hover:text-white transition-colors"/>
-                        </div>
                     </div>
                     <CardContent className="p-4">
                         <h3 className="font-semibold text-lg">{title}</h3>
                         <p className="text-sm text-muted-foreground">{duration}</p>
                     </CardContent>
                     {isAdmin && (
-                        <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => deleteVideo(video.id, e)}>
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="secondary" size="icon" onClick={(e) => openEditVideoDialog(video, e)}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="destructive" size="icon" onClick={(e) => deleteVideo(video.id, e)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     )}
                 </Card>
               )})}
@@ -380,3 +354,5 @@ export default function Home() {
     </main>
   );
 }
+
+    

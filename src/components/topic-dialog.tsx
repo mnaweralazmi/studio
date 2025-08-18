@@ -1,0 +1,147 @@
+
+"use client";
+
+import * as React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useLanguage } from '@/context/language-context';
+import { PlusCircle, Upload, Image as ImageIcon } from 'lucide-react';
+import { iconComponents, IconName } from '@/components/icons';
+import type { AgriculturalSection } from '@/app/page';
+import Image from 'next/image';
+
+const topicFormSchema = z.object({
+  title: z.string().min(3, "العنوان مطلوب"),
+  description: z.string().min(10, "الوصف مطلوب"),
+  image: z.string().min(1, "الصورة مطلوبة"),
+  iconName: z.enum(Object.keys(iconComponents) as [IconName]),
+});
+
+export type TopicFormValues = z.infer<typeof topicFormSchema>;
+
+interface TopicDialogProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  onSubmit: (data: TopicFormValues) => void;
+  topic?: AgriculturalSection;
+  setEditingTopic: (topic: AgriculturalSection | undefined) => void;
+}
+
+export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopic }: TopicDialogProps) {
+  const { t, language } = useLanguage();
+
+  const form = useForm<TopicFormValues>({
+    resolver: zodResolver(topicFormSchema),
+    defaultValues: { title: "", description: "", image: "", iconName: 'Sprout' },
+  });
+
+  React.useEffect(() => {
+    if (topic) {
+      form.reset({
+        title: topic.title || t(topic.titleKey),
+        description: topic.description || t(topic.descriptionKey),
+        image: topic.image,
+        iconName: topic.iconName,
+      });
+    } else {
+      form.reset({ title: "", description: "", image: "", iconName: 'Sprout' });
+    }
+  }, [topic, form, t]);
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setEditingTopic(undefined);
+      form.reset();
+    }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('image', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const imagePreview = form.watch('image');
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+          {t('addTopic')}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{topic ? t('editTopic') : t('addTopic')}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField control={form.control} name="title" render={({ field }) => ( <FormItem><FormLabel>{t('title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="description" render={({ field }) => ( <FormItem><FormLabel>{t('description')}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
+            
+            <FormField
+                control={form.control}
+                name="image"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{t('image')}</FormLabel>
+                    <div className="flex items-center gap-4">
+                        <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted/50 overflow-hidden">
+                        {imagePreview ? (
+                            <Image src={imagePreview} alt="Preview" width={96} height={96} className="object-cover w-full h-full" />
+                        ) : (
+                            <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                        )}
+                        </div>
+                        <Button asChild variant="outline">
+                            <label>
+                                <Upload className="mr-2 h-4 w-4" />
+                                {t('uploadImage')}
+                                <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
+                            </label>
+                        </Button>
+                    </div>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+
+            <FormField control={form.control} name="iconName" render={({ field }) => ( 
+              <FormItem>
+                <FormLabel>{t('icon')}</FormLabel>
+                <FormControl>
+                    <select {...field} className="w-full p-2 border rounded-md bg-background dark:bg-black dark:text-white">
+                        {Object.keys(iconComponents).map(iconName => (
+                            <option key={iconName} value={iconName}>{t(`icon${iconName}` as any)}</option>
+                        ))}
+                    </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem> 
+            )} />
+
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => handleOpenChange(false)}>{t('cancel')}</Button>
+              <Button type="submit">{topic ? t('saveChanges') : t('add')}</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+    

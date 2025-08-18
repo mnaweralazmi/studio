@@ -54,10 +54,16 @@
     "homeHeaderSubtitle": "اكتشف مقالات وفيديوهات ونصائح الخبراء لمساعدتك في كل خطوة من رحلتك الزراعية.",
     "agriculturalTopics": "المواضيع الزراعية",
     "addTopic": "إضافة موضوع",
-    "deleteTopic": "تم حذف الموضوع.",
+    "editTopic": "تعديل الموضوع",
+    "deleteTopicSuccess": "تم حذف الموضوع بنجاح.",
+    "addTopicSuccess": "تم إضافة الموضوع بنجاح.",
+    "editTopicSuccess": "تم تحديث الموضوع بنجاح.",
     "educationalVideos": "فيديوهات تعليمية",
     "addVideo": "إضافة فيديو",
-    "deleteVideo": "تم حذف الفيديو.",
+    "editVideo": "تعديل الفيديو",
+    "deleteVideoSuccess": "تم حذف الفيديو بنجاح.",
+    "addVideoSuccess": "تم إضافة الفيديو بنجاح.",
+    "editVideoSuccess": "تم تحديث الفيديو بنجاح.",
     "footerText": "مزارع كويتي. صُنع بحب لكل ما هو أخضر.",
     "topicIrrigation": "الري والتسميد",
     "topicIrrigationDesc": "تعلم أفضل الممارسات لسقي وتسميد نباتاتك لضمان نمو صحي وقوي.",
@@ -156,6 +162,7 @@
     "expenseDeleted": "تم حذف المصروف.",
     "fixedMonthlyExpenses": "المصروفات الثابتة",
     "variableExpenses": "المصروفات المتغيرة",
+    "expensesList": "قائمة المصروفات",
     "tableCategory": "الفئة",
     "tableItem": "البند",
     "tableAmount": "المبلغ",
@@ -238,7 +245,8 @@
     "iconBug": "حشرة",
     "iconScissors": "مقص",
     "iconSprout": "برعم",
-    "iconWheat": "قمح",
+    "iconWheat": "سنابل",
+    "iconWind": "رياح",
     "duration": "المدة",
     "durationPlaceholder": "مثال: 15 دقيقة",
     "backToHome": "العودة إلى الرئيسية",
@@ -276,5 +284,8 @@
     "subTopicHarvestingMethodsDesc": "الأساليب اليدوية والآلية للحصاد وكيفية تجنب إتلاف المحصول.",
     "subTopicPostHarvest": "مرحلة ما بعد الحصاد",
     "subTopicPostHarvestDesc": "خطوات التبريد والفرز والتعبئة والتخزين للحفاظ على جودة المحصول.",
-    "expensesList": "قائمة المصروفات"
+    "image": "الصورة",
+    "uploadImage": "رفع صورة"
 }
+
+    
