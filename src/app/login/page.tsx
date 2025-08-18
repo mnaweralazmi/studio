@@ -103,7 +103,7 @@ export default function LoginPage() {
                                 <FormItem>
                                 <FormLabel>اسم المستخدم</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="mnawer1988" {...field} />
+                                    <Input placeholder="" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -119,7 +119,7 @@ export default function LoginPage() {
                                     <FormControl>
                                         <Input 
                                             type={showPassword ? "text" : "password"} 
-                                            placeholder="mnawer1988" 
+                                            placeholder="" 
                                             {...field}
                                             className="pr-10" 
                                         />
