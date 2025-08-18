@@ -113,24 +113,11 @@ const quickAccessTopics = [
 
 
 export default function Home() {
-  const { toast } = useToast();
-  const { t, language } = useLanguage();
-  const [user, setUser] = React.useState<User | null>(null);
+  const { t } = useLanguage();
   const [agriculturalSections, setAgriculturalSections] = React.useState<AgriculturalSection[]>([]);
   const [videoSections, setVideoSections] = React.useState<VideoSection[]>([]);
-  
-  const [isTopicDialogOpen, setTopicDialogOpen] = React.useState(false);
-  const [editingTopic, setEditingTopic] = React.useState<AgriculturalSection | undefined>(undefined);
-  
-  const [isVideoDialogOpen, setVideoDialogOpen] = React.useState(false);
-  const [editingVideo, setEditingVideo] = React.useState<VideoSection | undefined>(undefined);
 
   React.useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-
     const storedTopics = localStorage.getItem('agriculturalSections');
     setAgriculturalSections(storedTopics ? JSON.parse(storedTopics) : initialAgriculturalSections);
 
@@ -149,86 +136,6 @@ export default function Home() {
       localStorage.setItem('videoSections', JSON.stringify(videoSections));
     }
   }, [videoSections]);
-
-  const isAdmin = user?.role === 'admin';
-
-  function handleAddOrUpdateTopic(data: TopicFormValues) {
-    const iconName = data.iconName as IconName;
-    const isValidIcon = Object.keys(iconComponents).includes(iconName);
-
-    const topicData = {
-        title: data.title,
-        description: data.description,
-        iconName: isValidIcon ? iconName : ('Sprout' as IconName),
-        image: data.image,
-        hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
-    };
-
-    if (editingTopic) {
-        const updatedSections = agriculturalSections.map(s => s.id === editingTopic.id ? { ...s, ...topicData, titleKey: 'custom' as TranslationKeys, descriptionKey: 'custom' as TranslationKeys } : s);
-        setAgriculturalSections(updatedSections);
-        toast({ title: t('editTopicSuccess') });
-    } else {
-        const newTopic: AgriculturalSection = {
-            id: crypto.randomUUID(),
-            titleKey: 'custom' as TranslationKeys,
-            descriptionKey: 'custom' as TranslationKeys,
-            ...topicData,
-            subTopics: []
-        };
-        setAgriculturalSections(prev => [...prev, newTopic]);
-        toast({ title: t('addTopicSuccess') });
-    }
-    setEditingTopic(undefined);
-    setTopicDialogOpen(false);
-  }
-
-  function handleDeleteTopic(topicId: string) {
-    setAgriculturalSections(prev => prev.filter(t => t.id !== topicId));
-    toast({ variant: 'destructive', title: t('deleteTopicSuccess') });
-  }
-
-  function handleAddOrUpdateVideo(data: VideoFormValues) {
-      const videoData = {
-          title: data.title,
-          duration: data.duration,
-          image: data.image,
-          hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
-      };
-
-      if(editingVideo) {
-          const updatedVideos = videoSections.map(v => v.id === editingVideo.id ? { ...v, ...videoData, titleKey: 'custom' as TranslationKeys, durationKey: 'custom' as TranslationKeys } : v);
-          setVideoSections(updatedVideos);
-          toast({ title: t('editVideoSuccess') });
-      } else {
-          const newVideo: VideoSection = {
-              id: crypto.randomUUID(),
-              titleKey: 'custom' as TranslationKeys,
-              durationKey: 'custom' as TranslationKeys,
-              ...videoData
-          };
-          setVideoSections(prev => [...prev, newVideo]);
-          toast({ title: t('addVideoSuccess') });
-      }
-      setEditingVideo(undefined);
-      setVideoDialogOpen(false);
-  }
-
-  function handleDeleteVideo(videoId: string) {
-    setVideoSections(prev => prev.filter(v => v.id !== videoId));
-    toast({ variant: 'destructive', title: t('deleteVideoSuccess') });
-  }
-
-  const handleEditTopic = (topic: AgriculturalSection) => {
-    setEditingTopic(topic);
-    setTopicDialogOpen(true);
-  };
-  
-  const handleEditVideo = (video: VideoSection) => {
-    setEditingVideo(video);
-    setVideoDialogOpen(true);
-  };
-
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -260,137 +167,6 @@ export default function Home() {
             })}
         </div>
 
-        <Separator className="w-full" />
-        
-        {/* Agricultural Topics Section */}
-        <section className="w-full text-start">
-            <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold flex items-center gap-3"><BookOpen /> {t('agriculturalTopics')}</h2>
-                {isAdmin && (
-                    <TopicDialog
-                        isOpen={isTopicDialogOpen}
-                        setIsOpen={setTopicDialogOpen}
-                        onSubmit={handleAddOrUpdateTopic}
-                        topic={editingTopic}
-                        setEditingTopic={setEditingTopic}
-                    />
-                )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {agriculturalSections.map(topic => {
-                    const Icon = iconComponents[topic.iconName] || Sprout;
-                    const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey);
-                    const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey);
-
-                    return (
-                    <Card key={topic.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                        <CardHeader>
-                            <Image src={topic.image} alt={title} width={600} height={400} className="w-full h-40 object-cover rounded-t-lg" data-ai-hint={topic.hint} />
-                            <CardTitle className="pt-4 flex items-center gap-3">
-                                <Icon className="w-6 h-6 text-primary" />
-                                <span>{title}</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1">
-                            <CardDescription>{description}</CardDescription>
-                        </CardContent>
-                        <CardFooter className="flex justify-between items-center bg-muted/50 p-4">
-                             <Button asChild variant="outline">
-                                <Link href={`/topics/${topic.id}`}>
-                                    {t('readMore')}
-                                </Link>
-                            </Button>
-                            {isAdmin && (
-                                <div className="flex gap-2">
-                                     <Button variant="ghost" size="icon" onClick={() => handleEditTopic(topic)} title={t('editTopic')}>
-                                        <Edit className="w-5 h-5" />
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={t('delete')}>
-                                                <Trash2 className="w-5 h-5" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                                                <AlertDialogDescription>{t('confirmDeleteWorkerDesc', {workerName: title})}</AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteTopic(topic.id)}>{t('confirmDelete')}</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            )}
-                        </CardFooter>
-                    </Card>
-                )})}
-            </div>
-        </section>
-
-        <Separator className="w-full" />
-
-        {/* Educational Videos Section */}
-        <section className="w-full text-start">
-            <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold flex items-center gap-3"><PlayCircle /> {t('educationalVideos')}</h2>
-                {isAdmin && (
-                   <VideoDialog
-                        isOpen={isVideoDialogOpen}
-                        setIsOpen={setVideoDialogOpen}
-                        onSubmit={handleAddOrUpdateVideo}
-                        video={editingVideo}
-                        setEditingVideo={setEditingVideo}
-                   />
-                )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {videoSections.map(video => {
-                    const title = video.titleKey === 'custom' && video.title ? video.title : t(video.titleKey);
-                    const duration = video.durationKey === 'custom' && video.duration ? video.duration : t(video.durationKey);
-                    return(
-                    <Card key={video.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                        <CardHeader className="p-0 relative">
-                            <Image src={video.image} alt={title} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={video.hint} />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                            <div className="absolute bottom-0 left-0 p-4">
-                                <CardTitle className="text-primary-foreground text-lg">{title}</CardTitle>
-                            </div>
-                            <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">{duration}</div>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                           {isAdmin && (
-                                <div className="flex justify-end gap-2">
-                                     <Button variant="ghost" size="icon" onClick={() => handleEditVideo(video)} title={t('editVideo')}>
-                                        <Edit className="w-5 h-5" />
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={t('delete')}>
-                                                <Trash2 className="w-5 h-5" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                                                <AlertDialogDescription>{t('confirmDeleteWorkerDesc', {workerName: title})}</AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteVideo(video.id)}>{t('confirmDelete')}</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )})}
-            </div>
-        </section>
-
         <footer className="text-center mt-16 text-sm text-muted-foreground font-body">
             <p>&copy; {new Date().getFullYear()} {t('footerText')}</p>
         </footer>
@@ -398,5 +174,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
