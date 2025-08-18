@@ -41,7 +41,7 @@ export default function SalesPage() {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
   const [user, setUser] = React.useState<any>(null);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -91,8 +91,8 @@ export default function SalesPage() {
     });
     
     toast({
-      title: "تمت إضافة المبيع بنجاح!",
-      description: `تمت إضافة "${data.vegetable}" إلى قائمة المبيعات.`,
+      title: t('salesAddedSuccess'),
+      description: `${t('salesAddedDesc')} "${data.vegetable}"`,
     });
   }
   
@@ -100,7 +100,7 @@ export default function SalesPage() {
     setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
     toast({
       variant: "destructive",
-      title: "تم حذف البند.",
+      title: t('itemDeleted'),
     });
   }
 
@@ -113,10 +113,10 @@ export default function SalesPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wallet />
-              متتبع مبيعات الخضروات
+              {t('vegetableSalesTracker')}
             </CardTitle>
             <CardDescription>
-              أضف مبيعاتك من الخضروات لتتبع الأرباح وإدارة عملياتك بكفاءة.
+             {t('vegetableSalesTrackerDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -129,11 +129,11 @@ export default function SalesPage() {
                     name="vegetable"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>نوع الخضار</FormLabel>
+                        <FormLabel>{t('vegetableType')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="اختر نوع الخضار..." />
+                              <SelectValue placeholder={t('selectVegetable')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -153,7 +153,7 @@ export default function SalesPage() {
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الكمية (كرتون)</FormLabel>
+                      <FormLabel>{t('quantityInCartons')}</FormLabel>
                       <FormControl>
                         <Input type="number" step="1" {...field} />
                       </FormControl>
@@ -167,7 +167,7 @@ export default function SalesPage() {
                   name="weightPerCarton"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الوزن (للكرتون بالكيلو)</FormLabel>
+                      <FormLabel>{t('weightPerCartonInKg')}</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.1" {...field} />
                       </FormControl>
@@ -181,7 +181,7 @@ export default function SalesPage() {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>السعر (للكرتون بالدينار)</FormLabel>
+                      <FormLabel>{t('pricePerCartonInDinar')}</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} />
                       </FormControl>
@@ -192,7 +192,7 @@ export default function SalesPage() {
 
                 <Button type="submit" className="md:col-start-5">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  إضافة
+                  {t('add')}
                 </Button>
               </form>
             </Form>
@@ -202,21 +202,21 @@ export default function SalesPage() {
         {salesItems.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>قائمة المبيعات</CardTitle>
+              <CardTitle>{t('salesList')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>الخضار</TableHead>
-                      <TableHead>الكمية (كرتون)</TableHead>
-                      <TableHead>وزن الكرتون (كيلو)</TableHead>
-                      <TableHead>الوزن الإجمالي (كيلو)</TableHead>
-                      <TableHead>سعر الكرتون</TableHead>
-                      <TableHead>سعر الكيلو</TableHead>
-                      <TableHead>الإجمالي</TableHead>
-                      <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>الإجراءات</TableHead>
+                      <TableHead>{t('tableVegetable')}</TableHead>
+                      <TableHead>{t('tableQuantityCarton')}</TableHead>
+                      <TableHead>{t('tableCartonWeightKg')}</TableHead>
+                      <TableHead>{t('tableTotalWeightKg')}</TableHead>
+                      <TableHead>{t('tableCartonPrice')}</TableHead>
+                      <TableHead>{t('tableKiloPrice')}</TableHead>
+                      <TableHead>{t('tableTotal')}</TableHead>
+                      <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -226,11 +226,11 @@ export default function SalesPage() {
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{item.weightPerCarton.toFixed(1)}</TableCell>
                         <TableCell>{item.totalWeight.toFixed(1)}</TableCell>
-                        <TableCell>{item.price.toFixed(2)} دينار</TableCell>
-                        <TableCell>{item.pricePerKilo.toFixed(2)} دينار</TableCell>
-                        <TableCell>{item.total.toFixed(2)} دينار</TableCell>
+                        <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
+                        <TableCell>{item.pricePerKilo.toFixed(2)} {t('dinar')}</TableCell>
+                        <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
                         <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}>
-                          <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title="حذف البند">
+                          <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title={t('deleteItem')}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -240,8 +240,8 @@ export default function SalesPage() {
                 </Table>
               </div>
               <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
-                <span>إجمالي المبيعات:</span>
-                <span>{totalSales.toFixed(2)} دينار</span>
+                <span>{t('totalSales')}:</span>
+                <span>{totalSales.toFixed(2)} {t('dinar')}</span>
               </div>
             </CardContent>
           </Card>

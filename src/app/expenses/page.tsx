@@ -13,22 +13,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp } from 'lucide-react';
+import { useLanguage } from '@/context/language-context';
 
 const initialExpenseCategories: Record<string, string[]> = {
   "فواتير": ["فاتورة كهرباء", "فاتورة ماء", "فاتورة انترنت", "فاتورة هاتف"],
-  "طعام": ["تسوق بقالة", "مطاعم", "توصيل"],
-  "وقود": ["بنزين", "ديزل"],
-  "صيانة": ["صيانة سيارة", "صيانة منزل", "أدوات"],
-  "بذور وأسمدة": ["بذور", "أسمدة", "تربة"],
-  "عمالة": ["أعمال يومية"],
-  "أخرى": ["مصروفات شخصية", "ترفيه", "طوارئ"],
+  "مستلزمات زراعية": ["بذور", "أسمدة", "تربة", "مبيدات", "أدوات زراعية"],
+  "صيانة": ["صيانة المعدات", "صيانة المباني"],
+  "وقود ومركبات": ["بنزين", "ديزل", "صيانة مركبة"],
+  "عمالة": ["رواتب", "أعمال يومية"],
+  "نثريات": ["مصروفات إدارية", "طعام وشراب", "طوارئ"],
+};
+
+const initialExpenseCategoriesEn: Record<string, string[]> = {
+    "Bills": ["Electricity Bill", "Water Bill", "Internet Bill", "Phone Bill"],
+    "Farming Supplies": ["Seeds", "Fertilizers", "Soil", "Pesticides", "Farming Tools"],
+    "Maintenance": ["Equipment Maintenance", "Building Maintenance"],
+    "Fuel & Vehicles": ["Gasoline", "Diesel", "Vehicle Maintenance"],
+    "Labor": ["Salaries", "Daily Wages"],
+    "Miscellaneous": ["Administrative Expenses", "Food & Drink", "Emergencies"],
 };
 
 type Category = keyof typeof initialExpenseCategories;
 
 const expenseFormSchema = z.object({
   type: z.enum(['fixed', 'variable'], { required_error: "الرجاء تحديد نوع المصروف." }),
-  category: z.custom<Category>((val) => typeof val === "string" && val in initialExpenseCategories, {
+  category: z.custom<string>((val) => typeof val === "string" && (val in initialExpenseCategories || val in initialExpenseCategoriesEn), {
     required_error: "الرجاء اختيار الفئة.",
   }),
   item: z.string({ required_error: "الرجاء اختيار البند." }),
@@ -53,9 +62,14 @@ type ExpenseItem = Omit<ExpenseFormValues, 'newItemName'> & {
 
 function ExpensesContent() {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
-    const [expenseCategories, setExpenseCategories] = React.useState(initialExpenseCategories);
+    const { language, t } = useLanguage();
+    const [expenseCategories, setExpenseCategories] = React.useState(language === 'ar' ? initialExpenseCategories : initialExpenseCategoriesEn);
     const { toast } = useToast();
     const [user, setUser] = React.useState<any>(null);
+
+    React.useEffect(() => {
+        setExpenseCategories(language === 'ar' ? initialExpenseCategories : initialExpenseCategoriesEn);
+    }, [language]);
 
     React.useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -69,7 +83,7 @@ function ExpensesContent() {
                 setExpenses(JSON.parse(storedExpenses).map((e: any) => ({...e, date: new Date(e.date)})));
             }
 
-            const categoriesKey = `expenseCategories_${parsedUser.username}`;
+            const categoriesKey = `expenseCategories_${parsedUser.username}_${language}`;
             const storedCategories = localStorage.getItem(categoriesKey);
             if (storedCategories) {
                 setExpenseCategories(JSON.parse(storedCategories));
@@ -80,9 +94,9 @@ function ExpensesContent() {
     React.useEffect(() => {
         if (user) {
             localStorage.setItem(`expenses_${user.username}`, JSON.stringify(expenses));
-            localStorage.setItem(`expenseCategories_${user.username}`, JSON.stringify(expenseCategories));
+            localStorage.setItem(`expenseCategories_${user.username}_${language}`, JSON.stringify(expenseCategories));
         }
-    }, [expenses, expenseCategories, user]);
+    }, [expenses, expenseCategories, user, language]);
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
@@ -104,7 +118,7 @@ function ExpensesContent() {
         if (data.item === 'add_new_item' && data.newItemName) {
             finalItemName = data.newItemName;
             setExpenseCategories(prev => {
-                const newCategories = { ...prev };
+                const newCategories: Record<string, string[]> = { ...prev };
                 if (data.category && !newCategories[data.category].includes(data.newItemName!)) {
                     newCategories[data.category] = [...newCategories[data.category], data.newItemName!];
                 }
@@ -130,12 +144,12 @@ function ExpensesContent() {
              newItemName: '',
         });
         form.clearErrors();
-        toast({ title: "تمت إضافة المصروف بنجاح!" });
+        toast({ title: t('expenseAddedSuccess') });
     }
 
     function deleteExpense(id: number) {
         setExpenses(prev => prev.filter(item => item.id !== id));
-        toast({ variant: "destructive", title: "تم حذف المصروف." });
+        toast({ variant: "destructive", title: t('expenseDeleted') });
     }
 
     const fixedExpenses = expenses.filter(e => e.type === 'fixed');
@@ -150,10 +164,10 @@ function ExpensesContent() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <CreditCard />
-                        إدارة المصروفات
+                        {t('expenseManagement')}
                     </CardTitle>
                     <CardDescription>
-                        أضف وتتبع نفقاتك الثابتة والمتغيرة للحفاظ على ميزانيتك.
+                        {t('expenseManagementDesc')}
                     </CardDescription>
                 </CardHeader>
             </Card>
@@ -161,29 +175,29 @@ function ExpensesContent() {
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">إجمالي المصروفات الثابتة</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('totalFixedExpenses')}</CardTitle>
                         <Repeat className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalFixedExpenses.toFixed(2)} دينار</div>
-                        <p className="text-xs text-muted-foreground">مجموع النفقات الشهرية المتكررة</p>
+                        <div className="text-2xl font-bold">{totalFixedExpenses.toFixed(2)} {t('dinar')}</div>
+                        <p className="text-xs text-muted-foreground">{t('totalFixedExpensesDesc')}</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">إجمالي المصروفات المتغيرة</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('totalVariableExpenses')}</CardTitle>
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalVariableExpenses.toFixed(2)} دينار</div>
-                        <p className="text-xs text-muted-foreground">مجموع النفقات غير المتكررة</p>
+                        <div className="text-2xl font-bold">{totalVariableExpenses.toFixed(2)} {t('dinar')}</div>
+                        <p className="text-xs text-muted-foreground">{t('totalVariableExpensesDesc')}</p>
                     </CardContent>
                 </Card>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>إضافة مصروف جديد</CardTitle>
+                    <CardTitle>{t('addNewExpense')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
@@ -191,14 +205,14 @@ function ExpensesContent() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                  <FormField control={form.control} name="type" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>نوع المصروف</FormLabel>
+                                        <FormLabel>{t('expenseType')}</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger><SelectValue placeholder="اختر النوع..." /></SelectTrigger>
+                                                <SelectTrigger><SelectValue placeholder={t('selectType')} /></SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="fixed">ثابت شهري</SelectItem>
-                                                <SelectItem value="variable">متغير</SelectItem>
+                                                <SelectItem value="fixed">{t('expenseTypeFixed')}</SelectItem>
+                                                <SelectItem value="variable">{t('expenseTypeVariable')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -206,13 +220,13 @@ function ExpensesContent() {
                                 )} />
                                 <FormField control={form.control} name="category" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>الفئة</FormLabel>
+                                        <FormLabel>{t('category')}</FormLabel>
                                         <Select onValueChange={(value: Category) => {
                                             field.onChange(value);
                                             form.setValue("item", undefined);
                                         }} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger><SelectValue placeholder="اختر فئة..." /></SelectTrigger>
+                                                <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
@@ -224,14 +238,14 @@ function ExpensesContent() {
                                 {selectedCategory && (
                                 <FormField control={form.control} name="item" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>البند</FormLabel>
+                                        <FormLabel>{t('item')}</FormLabel>
                                          <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger><SelectValue placeholder="اختر بندًا..." /></SelectTrigger>
+                                                <SelectTrigger><SelectValue placeholder={t('selectItem')} /></SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {expenseCategories[selectedCategory]?.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                                                <SelectItem value="add_new_item">إضافة بند جديد...</SelectItem>
+                                                {expenseCategories[selectedCategory as Category]?.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                                                <SelectItem value="add_new_item">{t('addNewItem')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -243,8 +257,8 @@ function ExpensesContent() {
                             {selectedItem === 'add_new_item' && (
                                 <FormField control={form.control} name="newItemName" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>اسم البند الجديد</FormLabel>
-                                        <FormControl><Input placeholder="أدخل اسم البند هنا" {...field} /></FormControl>
+                                        <FormLabel>{t('newItemName')}</FormLabel>
+                                        <FormControl><Input placeholder={t('newItemNamePlaceholder')} {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
@@ -252,14 +266,14 @@ function ExpensesContent() {
                             
                              <FormField control={form.control} name="amount" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>المبلغ (دينار)</FormLabel>
+                                    <FormLabel>{t('amountInDinar')}</FormLabel>
                                     <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
                             
                             <div className="flex justify-end pt-4">
-                                <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
+                                <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" />{t('add')}</Button>
                             </div>
                         </form>
                     </Form>
@@ -268,10 +282,10 @@ function ExpensesContent() {
 
             {fixedExpenses.length > 0 && (
             <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-5 w-5" /> المصروفات الثابتة الشهرية</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</CardTitle></CardHeader>
                 <CardContent>
                     <Table>
-                        <TableHeader><TableRow><TableHead>الفئة</TableHead><TableHead>البند</TableHead><TableHead>المبلغ</TableHead><TableHead>إجراء</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableAmount')}</TableHead><TableHead>{t('tableAction')}</TableHead></TableRow></TableHeader>
                         <TableBody>
                             {fixedExpenses.map((item) => (
                                 <TableRow key={item.id}>
@@ -279,9 +293,9 @@ function ExpensesContent() {
                                     <TableCell className="font-medium">
                                         {item.item}
                                     </TableCell>
-                                    <TableCell>{item.amount.toFixed(2)} دينار</TableCell>
+                                    <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                     <TableCell>
-                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title="حذف">
+                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
@@ -295,10 +309,10 @@ function ExpensesContent() {
 
             {variableExpenses.length > 0 && (
             <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> المصروفات المتغيرة</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</CardTitle></CardHeader>
                 <CardContent>
                     <Table>
-                        <TableHeader><TableRow><TableHead>الفئة</TableHead><TableHead>البند</TableHead><TableHead>المبلغ</TableHead><TableHead>التاريخ</TableHead><TableHead>إجراء</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableAmount')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead>{t('tableAction')}</TableHead></TableRow></TableHeader>
                         <TableBody>
                             {variableExpenses.map((item) => (
                                 <TableRow key={item.id}>
@@ -306,10 +320,10 @@ function ExpensesContent() {
                                     <TableCell className="font-medium">
                                         {item.item}
                                     </TableCell>
-                                    <TableCell>{item.amount.toFixed(2)} دينار</TableCell>
-                                    <TableCell>{new Date(item.date).toLocaleDateString('ar-EG')}</TableCell>
+                                    <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                    <TableCell>{new Date(item.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</TableCell>
                                     <TableCell>
-                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title="حذف">
+                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TableCell>

@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
-import { arSA } from 'date-fns/locale';
+import { arSA, enUS } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -20,37 +20,24 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, CalendarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Task } from '../page';
+import { useLanguage } from '@/context/language-context';
 
-const taskTitles = [
-    "سقي",
-    "تسميد",
-    "تقليم",
-    "مكافحة حشرات",
-    "حصاد",
-    "تعشيب",
-    "فحص النباتات",
-    "مهمة أخرى"
-] as const;
+const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
+const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
 
-const vegetableList = [
-  "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل"
-] as const;
+const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
+const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
 
-const fruitList = [
-    "فراولة", "توت", "تين", "عنب", "بطيخ", "شمام", "رمان", "مانجو", "موز", "تفاح", "برتقال", "ليمون"
-] as const;
+const fruitListAr = [ "فراولة", "توت", "تين", "عنب", "بطيخ", "شمام", "رمان", "مانجو", "موز", "تفاح", "برتقال", "ليمون" ] as const;
+const fruitListEn = [ "Strawberry", "Berry", "Fig", "Grape", "Watermelon", "Melon", "Pomegranate", "Mango", "Banana", "Apple", "Orange", "Lemon" ] as const;
 
 
 const taskFormSchema = z.object({
-  title: z.enum(taskTitles, {
-    required_error: "الرجاء اختيار عنوان للمهمة."
-  }),
+  title: z.string({ required_error: "الرجاء اختيار عنوان للمهمة." }),
   vegetable: z.string().optional(),
   fruit: z.string().optional(),
   description: z.string().optional(),
-  dueDate: z.date({
-    required_error: "تاريخ الاستحقاق مطلوب.",
-  }),
+  dueDate: z.date({ required_error: "تاريخ الاستحقاق مطلوب.", }),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -58,7 +45,12 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 export default function AddTaskPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { language, t } = useLanguage();
   
+  const taskTitles = language === 'ar' ? taskTitlesAr : taskTitlesEn;
+  const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
+  const fruitList = language === 'ar' ? fruitListAr : fruitListEn;
+
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
@@ -112,8 +104,8 @@ export default function AddTaskPage() {
         localStorage.setItem(userTasksKey, JSON.stringify(tasks));
         
         toast({
-            title: "نجاح!",
-            description: "تمت إضافة مهمتك الجديدة إلى التقويم.",
+            title: t('taskAddedSuccess'),
+            description: t('taskAddedDesc'),
         });
 
         router.push('/calendar');
@@ -121,8 +113,8 @@ export default function AddTaskPage() {
         console.error("Failed to save task to localStorage", error);
         toast({
             variant: "destructive",
-            title: "خطأ!",
-            description: "لم نتمكن من حفظ المهمة. الرجاء المحاولة مرة أخرى.",
+            title: t('error'),
+            description: t('taskSaveFailed'),
         });
     }
   }
@@ -136,10 +128,10 @@ export default function AddTaskPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <PlusCircle />
-                        إضافة مهمة جديدة
+                        {t('addNewTask')}
                     </CardTitle>
                     <CardDescription>
-                        املأ التفاصيل أدناه لإضافة مهمة إلى تقويمك.
+                        {t('addNewTaskDesc')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -148,11 +140,11 @@ export default function AddTaskPage() {
                         name="title"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>عنوان المهمة</FormLabel>
+                            <FormLabel>{t('taskTitle')}</FormLabel>
                              <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="اختر المهمة..." />
+                                  <SelectValue placeholder={t('selectTask')} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -172,11 +164,11 @@ export default function AddTaskPage() {
                             name="vegetable"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>اختر الخضار (اختياري)</FormLabel>
+                                    <FormLabel>{t('selectVegetableOptional')}</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="اختر نوع الخضار..." />
+                                                <SelectValue placeholder={t('selectVegetable')} />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -194,11 +186,11 @@ export default function AddTaskPage() {
                             name="fruit"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>اختر الفاكهة (اختياري)</FormLabel>
+                                    <FormLabel>{t('selectFruitOptional')}</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="اختر نوع الفاكهة..." />
+                                                <SelectValue placeholder={t('selectFruit')} />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -218,9 +210,9 @@ export default function AddTaskPage() {
                         name="description"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>الوصف</FormLabel>
+                            <FormLabel>{t('description')}</FormLabel>
                             <FormControl>
-                                <Textarea placeholder="أضف وصفًا موجزًا للمهمة..." {...field} />
+                                <Textarea placeholder={t('taskDescriptionPlaceholder')} {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -231,7 +223,7 @@ export default function AddTaskPage() {
                         name="dueDate"
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
-                                <FormLabel>تاريخ الاستحقاق</FormLabel>
+                                <FormLabel>{t('dueDate')}</FormLabel>
                                 <Popover>
                                 <PopoverTrigger asChild>
                                     <FormControl>
@@ -239,13 +231,14 @@ export default function AddTaskPage() {
                                         variant={"outline"}
                                         className={cn(
                                         "pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
+                                        !field.value && "text-muted-foreground",
+                                        language === 'ar' ? 'pr-3' : 'pl-3'
                                         )}
                                     >
                                         {field.value ? (
-                                        format(field.value, "PPP", { locale: arSA })
+                                        format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS })
                                         ) : (
-                                        <span>اختر تاريخًا</span>
+                                        <span>{t('pickDate')}</span>
                                         )}
                                         <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
                                     </Button>
@@ -257,7 +250,7 @@ export default function AddTaskPage() {
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         initialFocus
-                                        locale={arSA}
+                                        locale={language === 'ar' ? arSA : enUS}
                                     />
                                 </PopoverContent>
                                 </Popover>
@@ -268,11 +261,11 @@ export default function AddTaskPage() {
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => router.back()}>
-                        إلغاء
+                        {t('cancel')}
                     </Button>
                     <Button type="submit">
-                        <PlusCircle className="ml-2 h-4 w-4" />
-                        إضافة المهمة
+                        <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+                        {t('addTask')}
                     </Button>
                 </CardFooter>
                 </Card>
@@ -282,5 +275,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    
