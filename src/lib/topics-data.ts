@@ -9,26 +9,14 @@ export interface SubTopic {
   
 export interface AgriculturalSection {
     id: string;
-    titleKey: 'custom' | string;
-    title?: string;
-    descriptionKey: 'custom' | string;
-    description?: string;
+    titleKey: string;
+    descriptionKey: string;
     iconName: string;
     image: string;
     hint?: string;
     subTopics: SubTopic[];
 }
   
-export interface VideoSection {
-    id: string;
-    titleKey: 'custom' | string;
-    title?: string;
-    durationKey: 'custom' | string;
-    duration?: string;
-    image: string;
-    hint?: string;
-}
-
 export const initialAgriculturalSections: AgriculturalSection[] = [
     {
       id: '1',
@@ -84,11 +72,3 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       ],
     },
 ];
-  
-export const initialVideoSections: VideoSection[] = [
-    { id: '1', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://placehold.co/600x400.png', hint: 'gardening tools' },
-    { id: '2', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://placehold.co/600x400.png', hint: 'tomato plant' },
-    { id: '3', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/600x400.png', hint: 'compost bin' },
-];
-
-    
