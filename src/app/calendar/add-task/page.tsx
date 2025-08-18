@@ -28,7 +28,16 @@ const taskTitles = [
     "مكافحة حشرات",
     "حصاد",
     "تعشيب",
-    "فحص النباتات"
+    "فحص النباتات",
+    "مهمة أخرى"
+] as const;
+
+const vegetableList = [
+  "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل"
+] as const;
+
+const fruitList = [
+    "فراولة", "توت", "تين", "عنب", "بطيخ", "شمام", "رمان", "مانجو", "موز", "تفاح", "برتقال", "ليمون"
 ] as const;
 
 
@@ -36,6 +45,8 @@ const taskFormSchema = z.object({
   title: z.enum(taskTitles, {
     required_error: "الرجاء اختيار عنوان للمهمة."
   }),
+  vegetable: z.string().optional(),
+  fruit: z.string().optional(),
   description: z.string().optional(),
   dueDate: z.date({
     required_error: "تاريخ الاستحقاق مطلوب.",
@@ -54,8 +65,28 @@ export default function AddTaskPage() {
       title: undefined,
       description: "",
       dueDate: new Date(),
+      vegetable: "",
+      fruit: ""
     },
   });
+
+  const selectedVegetable = form.watch('vegetable');
+  const selectedFruit = form.watch('fruit');
+
+  React.useEffect(() => {
+    if (selectedVegetable) {
+        form.setValue('fruit', '');
+        form.setValue('description', selectedVegetable);
+    }
+  }, [selectedVegetable, form]);
+
+  React.useEffect(() => {
+    if (selectedFruit) {
+        form.setValue('vegetable', '');
+        form.setValue('description', selectedFruit);
+    }
+  }, [selectedFruit, form]);
+
 
   function onSubmit(data: TaskFormValues) {
     try {
@@ -134,14 +165,62 @@ export default function AddTaskPage() {
                             </FormItem>
                         )}
                     />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="vegetable"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>اختر الخضار (اختياري)</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="اختر نوع الخضار..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {vegetableList.map(veg => (
+                                            <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="fruit"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>اختر الفاكهة (اختياري)</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="اختر نوع الفاكهة..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {fruitList.map(fruit => (
+                                            <SelectItem key={fruit} value={fruit}>{fruit}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
                      <FormField
                         control={form.control}
                         name="description"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>الوصف (اختياري)</FormLabel>
+                            <FormLabel>الوصف</FormLabel>
                             <FormControl>
-                                <Textarea placeholder="أضف وصفًا موجزًا للمهمة، مثل اسم النبات..." {...field} />
+                                <Textarea placeholder="أضف وصفًا موجزًا للمهمة..." {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -203,3 +282,5 @@ export default function AddTaskPage() {
     </main>
   );
 }
+
+    
