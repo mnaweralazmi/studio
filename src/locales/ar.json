@@ -54,8 +54,10 @@
     "homeHeaderSubtitle": "اكتشف مقالات وفيديوهات ونصائح الخبراء لمساعدتك في كل خطوة من رحلتك الزراعية.",
     "agriculturalTopics": "المواضيع الزراعية",
     "addTopic": "إضافة موضوع",
+    "deleteTopic": "تم حذف الموضوع.",
     "educationalVideos": "فيديوهات تعليمية",
     "addVideo": "إضافة فيديو",
+    "deleteVideo": "تم حذف الفيديو.",
     "footerText": "مزارع كويتي. صُنع بحب لكل ما هو أخضر.",
     "topicIrrigation": "الري والتسميد",
     "topicIrrigationDesc": "تعلم أفضل الممارسات لسقي وتسميد نباتاتك لضمان نمو صحي وقوي.",
@@ -239,7 +241,8 @@
     "durationPlaceholder": "مثال: 15 دقيقة",
     "topicDetails": "تفاصيل الموضوع",
     "backToHome": "العودة إلى الرئيسية",
-    "otherTopics": "مواضيع أخرى قد تهمك"
+    "otherTopics": "مواضيع أخرى قد تهمك",
+    "loading": "جاري التحميل..."
 }
 
     

@@ -16,6 +16,9 @@ import { Leaf, Droplets, Bug, Scissors, Sprout, Wheat, PlayCircle, PlusCircle, T
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
+import type arTranslations from '@/locales/ar.json';
+
+type TranslationKeys = keyof typeof arTranslations;
 
 interface User {
   username: string;
@@ -25,17 +28,17 @@ interface User {
 
 export interface AgriculturalSection {
   id: string;
-  titleKey: keyof typeof import('@/locales/ar.json');
+  titleKey: TranslationKeys;
   iconName: keyof typeof iconComponents;
-  descriptionKey: keyof typeof import('@/locales/ar.json');
+  descriptionKey: TranslationKeys;
   image: string;
   hint: string;
 }
 
 interface VideoSection {
   id: string;
-  titleKey: keyof typeof import('@/locales/ar.json');
-  durationKey: keyof typeof import('@/locales/ar.json');
+  titleKey: TranslationKeys;
+  durationKey: TranslationKeys;
   image: string;
   hint: string;
 }
@@ -121,7 +124,7 @@ export default function Home() {
     const updatedSections = [...agriculturalSections, newTopic];
     setAgriculturalSections(updatedSections);
     localStorage.setItem('agriculturalSections', JSON.stringify(updatedSections));
-    toast({ title: "تمت إضافة الموضوع بنجاح!" });
+    toast({ title: t('addTopic') });
     topicForm.reset();
     setTopicDialogOpen(false);
   }
@@ -137,7 +140,7 @@ export default function Home() {
     const updatedVideos = [...videoSections, newVideo];
     setVideoSections(updatedVideos);
     localStorage.setItem('videoSections', JSON.stringify(updatedVideos));
-    toast({ title: "تمت إضافة الفيديو بنجاح!" });
+    toast({ title: t('addVideo') });
     videoForm.reset();
     setVideoDialogOpen(false);
   }
@@ -148,7 +151,7 @@ export default function Home() {
     const updatedSections = agriculturalSections.filter(s => s.id !== id);
     setAgriculturalSections(updatedSections);
     localStorage.setItem('agriculturalSections', JSON.stringify(updatedSections));
-    toast({ variant: "destructive", title: "تم حذف الموضوع." });
+    toast({ variant: "destructive", title: t('deleteTopic') });
   }
 
   function deleteVideo(id: string, e: React.MouseEvent) {
@@ -157,7 +160,7 @@ export default function Home() {
     const updatedVideos = videoSections.filter(v => v.id !== id);
     setVideoSections(updatedVideos);
     localStorage.setItem('videoSections', JSON.stringify(updatedVideos));
-    toast({ variant: "destructive", title: "تم حذف الفيديو." });
+    toast({ variant: "destructive", title: t('deleteVideo') });
   }
 
 
@@ -167,7 +170,7 @@ export default function Home() {
         <header className="text-center space-y-4">
           <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full">
             <Leaf className="h-6 w-6 text-primary" />
-            <span className="font-headline text-lg font-semibold text-primary-foreground">{t('kuwaitiFarmer')}</span>
+            <span className="font-headline text-lg font-semibold text-primary">{t('kuwaitiFarmer')}</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground tracking-tight">
             {t('homeHeaderTitle')}
@@ -211,8 +214,8 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {agriculturalSections.map((section) => {
                     const Icon = iconComponents[section.iconName as keyof typeof iconComponents] || Sprout;
-                    const title = section.titleKey ? t(section.titleKey as any) : section.title;
-                    const description = section.descriptionKey ? t(section.descriptionKey as any) : section.description;
+                    const title = section.titleKey ? t(section.titleKey) : section.title;
+                    const description = section.descriptionKey ? t(section.descriptionKey) : section.description;
                     return (
                     <Link key={section.id} href={`/topics/${section.id}`} className="group">
                         <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
@@ -269,8 +272,8 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {videoSections.map((video) => {
-                const title = video.titleKey ? t(video.titleKey as any) : video.title;
-                const duration = video.durationKey ? t(video.durationKey as any) : video.duration;
+                const title = video.titleKey ? t(video.titleKey) : video.title;
+                const duration = video.durationKey ? t(video.durationKey) : video.duration;
                 return (
                 <Card key={video.id} className="overflow-hidden group cursor-pointer shadow-lg relative">
                     <div className="relative">

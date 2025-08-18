@@ -54,8 +54,10 @@
     "homeHeaderSubtitle": "Discover articles, videos, and expert advice to help you on every step of your farming journey.",
     "agriculturalTopics": "Agricultural Topics",
     "addTopic": "Add Topic",
+    "deleteTopic": "Topic has been deleted.",
     "educationalVideos": "Educational Videos",
     "addVideo": "Add Video",
+    "deleteVideo": "Video has been deleted.",
     "footerText": "Kuwaiti Farmer. Made with love for all that is green.",
     "topicIrrigation": "Irrigation & Fertilization",
     "topicIrrigationDesc": "Learn best practices for watering and fertilizing your plants to ensure healthy and strong growth.",
@@ -239,7 +241,8 @@
     "durationPlaceholder": "e.g. 15 minutes",
     "topicDetails": "Topic Details",
     "backToHome": "Back to Home",
-    "otherTopics": "Other Topics You Might Like"
+    "otherTopics": "Other Topics You Might Like",
+    "loading": "Loading..."
 }
 
     
