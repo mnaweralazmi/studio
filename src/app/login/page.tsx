@@ -70,15 +70,15 @@ export default function LoginPage() {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
 
-        // Check if user exists in Firestore, if not create a document
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
+            const isAdmin = user.email === 'a.alfoudry@gmail.com';
             await setDoc(userDocRef, {
                 name: user.displayName,
                 email: user.email,
-                role: 'user', // Default role
+                role: isAdmin ? 'admin' : 'user', // Set role to admin if email matches
                 createdAt: new Date()
             });
         }
