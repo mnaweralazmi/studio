@@ -9,10 +9,12 @@ import { useTopics } from '@/context/topics-context';
 import type { AgriculturalSection } from '@/lib/topics-data';
 
 const quickAccessIconMapping: { [key: string]: React.ElementType } = {
-  '1': Droplets,
-  '2': Bug,
-  '3': Scissors,
-  '4': Sprout,
+  'Droplets': Droplets,
+  'Bug': Bug,
+  'Scissors': Scissors,
+  'Sprout': Sprout,
+  'Leaf': Leaf,
+  'Carrot': Sprout, // Fallback icon
 };
 
 export default function Home() {
@@ -39,7 +41,7 @@ export default function Home() {
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 w-full max-w-2xl">
             {quickAccessTopics.map((topic: AgriculturalSection) => {
-                const Icon = quickAccessIconMapping[topic.id];
+                const Icon = quickAccessIconMapping[topic.iconName] || Leaf;
                 return (
                      <Link href={`/topics/${topic.id}`} key={topic.id} className="group flex flex-col items-center gap-2 text-center">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:scale-110">
