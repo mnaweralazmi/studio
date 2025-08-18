@@ -157,7 +157,7 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
                         <SelectTrigger>
                             <SelectValue placeholder="اختر الشهر..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper">
                             {months.map(m => {
                                 const paid = isMonthPaid(m.value);
                                 return (
