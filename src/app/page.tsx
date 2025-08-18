@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Leaf, Droplets, Bug, Scissors, Sprout, Wheat, PlayCircle, PlusCircle, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
+import Link from 'next/link';
 
 interface User {
   username: string;
@@ -22,7 +23,7 @@ interface User {
   name: string;
 }
 
-interface AgriculturalSection {
+export interface AgriculturalSection {
   id: string;
   titleKey: keyof typeof import('@/locales/ar.json');
   iconName: keyof typeof iconComponents;
@@ -47,7 +48,7 @@ const iconComponents = {
   Wheat
 };
 
-const initialAgriculturalSections: AgriculturalSection[] = [
+export const initialAgriculturalSections: AgriculturalSection[] = [
     { id: '1', titleKey: 'topicIrrigation', iconName: 'Droplets', descriptionKey: 'topicIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'watering plants' },
     { id: '2', titleKey: 'topicPests', iconName: 'Bug', descriptionKey: 'topicPestsDesc', image: 'https://placehold.co/600x400.png', hint: 'plant pest' },
     { id: '3', titleKey: 'topicPruning', iconName: 'Scissors', descriptionKey: 'topicPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'pruning shears' },
@@ -141,14 +142,18 @@ export default function Home() {
     setVideoDialogOpen(false);
   }
   
-  function deleteTopic(id: string) {
+  function deleteTopic(id: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     const updatedSections = agriculturalSections.filter(s => s.id !== id);
     setAgriculturalSections(updatedSections);
     localStorage.setItem('agriculturalSections', JSON.stringify(updatedSections));
     toast({ variant: "destructive", title: "تم حذف الموضوع." });
   }
 
-  function deleteVideo(id: string) {
+  function deleteVideo(id: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     const updatedVideos = videoSections.filter(v => v.id !== id);
     setVideoSections(updatedVideos);
     localStorage.setItem('videoSections', JSON.stringify(updatedVideos));
@@ -185,17 +190,17 @@ export default function Home() {
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>إضافة موضوع زراعي جديد</DialogTitle>
+                        <DialogTitle>{t('addTopic')}</DialogTitle>
                       </DialogHeader>
                       <Form {...topicForm}>
                         <form onSubmit={topicForm.handleSubmit(onAddTopic)} className="space-y-4">
-                          <FormField control={topicForm.control} name="title" render={({ field }) => ( <FormItem><FormLabel>العنوان</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={topicForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>الوصف</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={topicForm.control} name="image" render={({ field }) => ( <FormItem><FormLabel>رابط الصورة</FormLabel><FormControl><Input placeholder="https://placehold.co/600x400.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                           <FormField control={topicForm.control} name="iconName" render={({ field }) => ( <FormItem><FormLabel>الأيقونة</FormLabel><FormControl><select {...field} className="w-full p-2 border rounded-md bg-background"><option value="Droplets">قطرات</option><option value="Bug">حشرة</option><option value="Scissors">مقص</option><option value="Sprout">برعم</option><option value="Wheat">قمح</option></select></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={topicForm.control} name="title" render={({ field }) => ( <FormItem><FormLabel>{t('title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={topicForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>{t('description')}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={topicForm.control} name="image" render={({ field }) => ( <FormItem><FormLabel>{t('imageUrl')}</FormLabel><FormControl><Input placeholder="https://placehold.co/600x400.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                           <FormField control={topicForm.control} name="iconName" render={({ field }) => ( <FormItem><FormLabel>{t('icon')}</FormLabel><FormControl><select {...field} className="w-full p-2 border rounded-md bg-background"><option value="Droplets">{t('iconDroplets')}</option><option value="Bug">{t('iconBug')}</option><option value="Scissors">{t('iconScissors')}</option><option value="Sprout">{t('iconSprout')}</option><option value="Wheat">{t('iconWheat')}</option></select></FormControl><FormMessage /></FormItem> )} />
                           <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="secondary">إلغاء</Button></DialogClose>
-                            <Button type="submit">إضافة</Button>
+                            <DialogClose asChild><Button type="button" variant="secondary">{t('cancel')}</Button></DialogClose>
+                            <Button type="submit">{t('add')}</Button>
                           </DialogFooter>
                         </form>
                       </Form>
@@ -206,26 +211,28 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {agriculturalSections.map((section) => {
                     const Icon = iconComponents[section.iconName as keyof typeof iconComponents] || Sprout;
-                    const title = section.titleKey ? t(section.titleKey) : section.title;
-                    const description = section.descriptionKey ? t(section.descriptionKey) : section.description;
+                    const title = section.titleKey ? t(section.titleKey as any) : section.title;
+                    const description = section.descriptionKey ? t(section.descriptionKey as any) : section.description;
                     return (
-                    <Card key={section.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 group relative">
-                        <CardHeader className="p-0">
-                             <Image src={section.image} alt={title} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={section.hint} />
-                        </CardHeader>
-                        <CardContent className="p-6">
-                            <CardTitle className="flex items-center gap-2 mb-2">
-                                <Icon className="h-6 w-6 text-primary" />
-                                <span>{title}</span>
-                            </CardTitle>
-                            <p className="text-muted-foreground">{description}</p>
-                        </CardContent>
-                        {isAdmin && (
-                            <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteTopic(section.id)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </Card>
+                    <Link key={section.id} href={`/topics/${section.id}`} className="group">
+                        <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
+                            <CardHeader className="p-0">
+                                <Image src={section.image} alt={title} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={section.hint} />
+                            </CardHeader>
+                            <CardContent className="p-6 flex-1 flex flex-col">
+                                <CardTitle className="flex items-center gap-2 mb-2">
+                                    <Icon className="h-6 w-6 text-primary" />
+                                    <span>{title}</span>
+                                </CardTitle>
+                                <p className="text-muted-foreground text-sm flex-1">{description}</p>
+                            </CardContent>
+                            {isAdmin && (
+                                <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => deleteTopic(section.id, e)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </Card>
+                    </Link>
                 )})}
             </div>
         </section>
@@ -243,16 +250,16 @@ export default function Home() {
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>إضافة فيديو تعليمي جديد</DialogTitle>
+                        <DialogTitle>{t('addVideo')}</DialogTitle>
                       </DialogHeader>
                       <Form {...videoForm}>
                         <form onSubmit={videoForm.handleSubmit(onAddVideo)} className="space-y-4">
-                          <FormField control={videoForm.control} name="title" render={({ field }) => ( <FormItem><FormLabel>العنوان</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={videoForm.control} name="duration" render={({ field }) => ( <FormItem><FormLabel>المدة</FormLabel><FormControl><Input placeholder="مثال: 15 دقيقة" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={videoForm.control} name="image" render={({ field }) => ( <FormItem><FormLabel>رابط الصورة المصغرة</FormLabel><FormControl><Input placeholder="https://placehold.co/1600x900.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={videoForm.control} name="title" render={({ field }) => ( <FormItem><FormLabel>{t('title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={videoForm.control} name="duration" render={({ field }) => ( <FormItem><FormLabel>{t('duration')}</FormLabel><FormControl><Input placeholder={t('durationPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={videoForm.control} name="image" render={({ field }) => ( <FormItem><FormLabel>{t('imageUrl')}</FormLabel><FormControl><Input placeholder="https://placehold.co/1600x900.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
                           <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="secondary">إلغاء</Button></DialogClose>
-                            <Button type="submit">إضافة</Button>
+                            <DialogClose asChild><Button type="button" variant="secondary">{t('cancel')}</Button></DialogClose>
+                            <Button type="submit">{t('add')}</Button>
                           </DialogFooter>
                         </form>
                       </Form>
@@ -262,8 +269,8 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {videoSections.map((video) => {
-                const title = video.titleKey ? t(video.titleKey) : video.title;
-                const duration = video.durationKey ? t(video.durationKey) : video.duration;
+                const title = video.titleKey ? t(video.titleKey as any) : video.title;
+                const duration = video.durationKey ? t(video.durationKey as any) : video.duration;
                 return (
                 <Card key={video.id} className="overflow-hidden group cursor-pointer shadow-lg relative">
                     <div className="relative">
@@ -277,7 +284,7 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground">{duration}</p>
                     </CardContent>
                     {isAdmin && (
-                        <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteVideo(video.id)}>
+                        <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => deleteVideo(video.id, e)}>
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     )}
@@ -293,3 +300,5 @@ export default function Home() {
     </main>
   );
 }
+
+    

@@ -226,7 +226,20 @@
     "close": "إغلاق",
     "profilePicture": "الصورة الشخصية",
     "changePicture": "تغيير الصورة",
-    "noFileSelected": "لم يتم اختيار أي ملف"
+    "noFileSelected": "لم يتم اختيار أي ملف",
+    "title": "العنوان",
+    "imageUrl": "رابط الصورة",
+    "icon": "الأيقونة",
+    "iconDroplets": "قطرات",
+    "iconBug": "حشرة",
+    "iconScissors": "مقص",
+    "iconSprout": "برعم",
+    "iconWheat": "قمح",
+    "duration": "المدة",
+    "durationPlaceholder": "مثال: 15 دقيقة",
+    "topicDetails": "تفاصيل الموضوع",
+    "backToHome": "العودة إلى الرئيسية",
+    "otherTopics": "مواضيع أخرى قد تهمك"
 }
 
     

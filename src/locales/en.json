@@ -226,7 +226,20 @@
     "close": "Close",
     "profilePicture": "Profile Picture",
     "changePicture": "Change Picture",
-    "noFileSelected": "No file selected"
+    "noFileSelected": "No file selected",
+    "title": "Title",
+    "imageUrl": "Image URL",
+    "icon": "Icon",
+    "iconDroplets": "Droplets",
+    "iconBug": "Bug",
+    "iconScissors": "Scissors",
+    "iconSprout": "Sprout",
+    "iconWheat": "Wheat",
+    "duration": "Duration",
+    "durationPlaceholder": "e.g. 15 minutes",
+    "topicDetails": "Topic Details",
+    "backToHome": "Back to Home",
+    "otherTopics": "Other Topics You Might Like"
 }
 
     
