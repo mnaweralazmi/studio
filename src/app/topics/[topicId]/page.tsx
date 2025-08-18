@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { initialAgriculturalSections, AgriculturalSection, SubTopic } from '@/app/page';
+import { initialAgriculturalSections, AgriculturalSection, SubTopic } from '@/lib/topics-data';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/context/language-context';
