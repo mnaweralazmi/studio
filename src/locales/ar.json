@@ -154,7 +154,7 @@
     "amountInDinar": "المبلغ (دينار)",
     "expenseAddedSuccess": "تمت إضافة المصروف بنجاح!",
     "expenseDeleted": "تم حذف المصروف.",
-    "fixedMonthlyExpenses": "المصروفات الثابتة الشهرية",
+    "fixedMonthlyExpenses": "المصروفات الثابتة",
     "variableExpenses": "المصروفات المتغيرة",
     "tableCategory": "الفئة",
     "tableItem": "البند",
@@ -275,7 +275,6 @@
     "subTopicHarvestingMethods": "طرق الحصاد",
     "subTopicHarvestingMethodsDesc": "الأساليب اليدوية والآلية للحصاد وكيفية تجنب إتلاف المحصول.",
     "subTopicPostHarvest": "مرحلة ما بعد الحصاد",
-    "subTopicPostHarvestDesc": "خطوات التبريد والفرز والتعبئة والتخزين للحفاظ على جودة المحصول."
+    "subTopicPostHarvestDesc": "خطوات التبريد والفرز والتعبئة والتخزين للحفاظ على جودة المحصول.",
+    "expensesList": "قائمة المصروفات"
 }
-
-    

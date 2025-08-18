@@ -154,7 +154,7 @@
     "amountInDinar": "Amount (KWD)",
     "expenseAddedSuccess": "Expense added successfully!",
     "expenseDeleted": "Expense has been deleted.",
-    "fixedMonthlyExpenses": "Fixed Monthly Expenses",
+    "fixedMonthlyExpenses": "Fixed Expenses",
     "variableExpenses": "Variable Expenses",
     "tableCategory": "Category",
     "tableItem": "Item",
@@ -275,7 +275,6 @@
     "subTopicHarvestingMethods": "Harvesting Methods",
     "subTopicHarvestingMethodsDesc": "Manual and mechanical methods for harvesting and how to avoid damaging the crop.",
     "subTopicPostHarvest": "Post-Harvest Handling",
-    "subTopicPostHarvestDesc": "Steps for cooling, sorting, packing, and storing to maintain crop quality."
+    "subTopicPostHarvestDesc": "Steps for cooling, sorting, packing, and storing to maintain crop quality.",
+    "expensesList": "Expenses List"
 }
-
-    
