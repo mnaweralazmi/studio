@@ -112,7 +112,7 @@
     "vegetableType": "Vegetable Type",
     "quantityInCartons": "Quantity (Cartons)",
     "weightPerCartonInKg": "Weight (Kg/Carton)",
-    "pricePerCartonInDinar": "Price (Dinar/Carton)",
+    "pricePerCartonInDinar": "Price (KWD/Carton)",
     "add": "Add",
     "salesAddedSuccess": "Sale added successfully!",
     "salesAddedDesc": "Added",
@@ -223,5 +223,10 @@
     "deduction": "Deduction",
     "transactionDescPlaceholder": "e.g., Salary advance",
     "addTransaction": "Add Transaction",
-    "close": "Close"
+    "close": "Close",
+    "profilePicture": "Profile Picture",
+    "changePicture": "Change Picture",
+    "noFileSelected": "No file selected"
 }
+
+    

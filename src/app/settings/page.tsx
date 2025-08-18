@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { User, Save, Palette, Bell, Languages } from 'lucide-react';
+import { User, Save, Palette, Bell, Languages, Upload } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,7 +27,7 @@ const profileFormSchema = z.object({
     password: z.string().min(6, "يجب أن تكون كلمة المرور 6 أحرف على الأقل.").optional().or(z.literal('')),
     confirmPassword: z.string().optional(),
     bio: z.string().optional(),
-    avatarUrl: z.string().url("الرجاء إدخال رابط صورة صالح.").optional().or(z.literal('')),
+    avatarUrl: z.string().optional(),
 }).refine(data => {
     if (data.password) {
         return data.password === data.confirmPassword;
@@ -49,6 +49,7 @@ export default function SettingsPage() {
     const [theme, setTheme] = React.useState<Theme>('theme-green');
     const [mode, setMode] = React.useState<Mode>('dark');
     const { language, setLanguage, t } = useLanguage();
+    const [fileName, setFileName] = React.useState<string | null>(null);
 
     const profileForm = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -110,17 +111,33 @@ export default function SettingsPage() {
             
             if (userIndex !== -1) {
                  allUsers[userIndex] = updatedUser;
+            } else if (user.username === 'mnawer1988' && user.role === 'admin') {
+                // Special handling for admin if not in 'users' list
+                // This part might need adjustment based on how admin data is truly managed
             }
             
             localStorage.setItem('users', JSON.stringify(allUsers));
             localStorage.setItem('user', JSON.stringify({ username: updatedUser.username, name: updatedUser.name, role: updatedUser.role }));
             setUser(updatedUser);
+            setFileName(null);
             toast({ title: t('profileUpdated'), description: t('profileUpdatedSuccess') });
             profileForm.reset({ ...profileForm.getValues(), password: '', confirmPassword: '' });
         } catch (error) {
              toast({ variant: "destructive", title: t('error'), description: t('profileUpdateFailed') });
         }
     }
+
+    const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                profileForm.setValue('avatarUrl', reader.result as string);
+                setFileName(file.name);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleThemeChange = (newTheme: Theme) => {
         setTheme(newTheme);
@@ -154,13 +171,36 @@ export default function SettingsPage() {
                         <CardDescription> {t('userProfileDesc')} </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-6 flex-wrap">
                              <Avatar className="h-24 w-24">
                                 <AvatarImage src={avatarUrl || 'https://placehold.co/100x100.png'} alt={user?.name} data-ai-hint="user avatar" />
                                 <AvatarFallback>{user?.name?.[0].toUpperCase()}</AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
-                                <FormField control={profileForm.control} name="avatarUrl" render={({ field }) => ( <FormItem><FormLabel>{t('avatarUrl')}</FormLabel><FormControl><Input placeholder="https://example.com/avatar.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                            <div className="flex-1 min-w-[200px]">
+                                <FormField
+                                  control={profileForm.control}
+                                  name="avatarUrl"
+                                  render={() => (
+                                    <FormItem>
+                                      <FormLabel>{t('profilePicture')}</FormLabel>
+                                      <FormControl>
+                                        <div className="flex flex-col gap-2">
+                                          <Button asChild variant="outline" className="w-fit">
+                                            <Label className="cursor-pointer">
+                                              <Upload className="h-4 w-4" />
+                                              <span>{t('changePicture')}</span>
+                                              <Input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
+                                            </Label>
+                                          </Button>
+                                          <p className="text-xs text-muted-foreground">
+                                             {fileName || t('noFileSelected')}
+                                          </p>
+                                        </div>
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
                             </div>
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -178,7 +218,7 @@ export default function SettingsPage() {
                         <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>{t('bio')}</FormLabel><FormControl><Textarea placeholder={t('bioPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </CardContent>
                     <CardFooter className="border-t pt-6 flex justify-end">
-                        <Button type="submit"> <Save className={language === 'ar' ? 'mr-2' : 'ml-2'} /> {t('saveChanges')} </Button>
+                        <Button type="submit"> <Save className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} /> {t('saveChanges')} </Button>
                     </CardFooter>
                 </form>
             </Form>
@@ -259,3 +299,5 @@ export default function SettingsPage() {
     </main>
   );
 }
+
+    

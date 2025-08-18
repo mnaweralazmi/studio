@@ -223,5 +223,10 @@
     "deduction": "خصم",
     "transactionDescPlaceholder": "مثال: سلفة على الراتب",
     "addTransaction": "إضافة معاملة",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "profilePicture": "الصورة الشخصية",
+    "changePicture": "تغيير الصورة",
+    "noFileSelected": "لم يتم اختيار أي ملف"
 }
+
+    
