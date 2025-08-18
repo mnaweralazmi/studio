@@ -74,7 +74,7 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       id: '4',
       titleKey: "topicSoil",
       descriptionKey: "topicSoilDesc",
-      iconName: 'Leaf',
+      iconName: 'Sprout',
       image: 'https://placehold.co/600x400.png',
       hint: 'rich soil',
       subTopics: [
