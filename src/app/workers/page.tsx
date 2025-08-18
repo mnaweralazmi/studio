@@ -218,14 +218,16 @@ export default function WorkersPage() {
     const getWorkerStatus = (worker: Worker) => {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
-        const isPaid = worker.paidMonths.some(p => p.month === currentMonth && p.year === currentYear);
-        const balance = worker.transactions.reduce((acc, t) => {
+        const paidMonths = worker.paidMonths || [];
+        const transactions = worker.transactions || [];
+        const isPaid = paidMonths.some(p => p.month === currentMonth && p.year === currentYear);
+        const balance = transactions.reduce((acc, t) => {
              if (t.type === 'bonus') return acc + t.amount;
              if (t.type === 'deduction' || t.type === 'salary') return acc - t.amount;
              return acc;
         }, 0);
         
-        const unpaidSalaries = (worker.baseSalary * (currentMonth - worker.paidMonths.filter(p => p.year === currentYear).length));
+        const unpaidSalaries = (worker.baseSalary * (currentMonth - paidMonths.filter(p => p.year === currentYear).length));
         const totalBalance = unpaidSalaries + balance;
 
 
