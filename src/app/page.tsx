@@ -5,12 +5,37 @@ import * as React from 'react';
 import { Droplets, Bug, Scissors, Sprout, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
+import type { IconName } from '@/components/icons';
+
+
+export interface AgriculturalSection {
+    id: string;
+    titleKey: 'custom' | string;
+    title?: string;
+    descriptionKey: 'custom' | string;
+    description?: string;
+    iconName: IconName;
+    image: string;
+    hint?: string;
+    subTopics: any[];
+}
+
+export interface VideoSection {
+    id: string;
+    titleKey: 'custom' | string;
+    title?: string;
+    durationKey: 'custom' | string;
+    duration?: string;
+    image: string;
+    hint?: string;
+}
+
 
 const quickAccessTopics = [
     { id: '1', title: 'ري', icon: Droplets, href: '/topics/1' },
     { id: '2', title: 'آفات', icon: Bug, href: '/topics/2' },
-    { id: '3', title: 'بذور', icon: Sprout, href: '/topics/4' },
-    { id: '4', title: 'تقليم', icon: Scissors, href: '/topics/3' },
+    { id: '4', title: 'بذور', icon: Sprout, href: '/topics/4' },
+    { id: '3', title: 'تقليم', icon: Scissors, href: '/topics/3' },
 ]
 
 
@@ -54,3 +79,4 @@ export default function Home() {
     </main>
   );
 }
+
