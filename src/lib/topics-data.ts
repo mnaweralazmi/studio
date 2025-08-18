@@ -1,6 +1,4 @@
 
-import type { IconName } from '@/components/icons';
-
 export interface SubTopic {
     id: string;
     titleKey: string;
@@ -15,7 +13,7 @@ export interface AgriculturalSection {
     title?: string;
     descriptionKey: 'custom' | string;
     description?: string;
-    iconName: IconName;
+    iconName: string;
     image: string;
     hint?: string;
     subTopics: SubTopic[];
