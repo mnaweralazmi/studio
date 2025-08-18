@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/context/language-context';
-import { PlusCircle, Upload, Image as ImageIcon, Sprout } from 'lucide-react';
+import { PlusCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import type { AgriculturalSection } from '@/lib/topics-data';
 import Image from 'next/image';
 
@@ -33,7 +33,7 @@ interface TopicDialogProps {
 }
 
 export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopic }: TopicDialogProps) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   const form = useForm<TopicFormValues>({
     resolver: zodResolver(topicFormSchema),
@@ -53,7 +53,7 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
     } else {
       form.reset({ title: "", description: "", image: "", iconName: 'Sprout' });
     }
-  }, [topic, form, t]);
+  }, [topic, form, t, isOpen]);
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -85,7 +85,7 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
-          <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+          <PlusCircle className="mr-2 h-4 w-4" />
           {t('addTopic')}
         </Button>
       </DialogTrigger>
@@ -101,7 +101,7 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
             <FormField
                 control={form.control}
                 name="image"
-                render={({ field }) => (
+                render={() => (
                 <FormItem>
                     <FormLabel>{t('image')}</FormLabel>
                     <div className="flex items-center gap-4">
@@ -129,7 +129,7 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
               <FormItem>
                 <FormLabel>{t('iconNameLucide')}</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g. Leaf" {...field} />
+                    <Input placeholder="e.g. Sprout" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem> 
@@ -145,3 +145,5 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
     </Dialog>
   );
 }
+
+    

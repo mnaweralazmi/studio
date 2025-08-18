@@ -83,19 +83,6 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
          { id: '4-3', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://placehold.co/600x400.png', hint: 'fertilizer bags' },
       ],
     },
-     {
-      id: '5',
-      titleKey: "topicHarvesting",
-      descriptionKey: "topicHarvestingDesc",
-      iconName: 'Carrot',
-      image: 'https://placehold.co/600x400.png',
-      hint: 'harvest basket',
-      subTopics: [
-        { id: '5-1', titleKey: 'subTopicHarvestTiming', descriptionKey: 'subTopicHarvestTimingDesc', image: 'https://placehold.co/600x400.png', hint: 'ripe tomato' },
-        { id: '5-2', titleKey: 'subTopicHarvestingMethods', descriptionKey: 'subTopicHarvestingMethodsDesc', image: 'https://placehold.co/600x400.png', hint: 'harvesting wheat' },
-        { id: '5-3', titleKey: 'subTopicPostHarvest', descriptionKey: 'subTopicPostHarvestDesc', image: 'https://placehold.co/600x400.png', hint: 'vegetable crate' },
-      ],
-    },
 ];
   
 export const initialVideoSections: VideoSection[] = [
@@ -103,3 +90,5 @@ export const initialVideoSections: VideoSection[] = [
     { id: '2', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://placehold.co/600x400.png', hint: 'tomato plant' },
     { id: '3', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/600x400.png', hint: 'compost bin' },
 ];
+
+    

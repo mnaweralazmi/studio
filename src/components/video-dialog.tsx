@@ -31,7 +31,7 @@ interface VideoDialogProps {
 }
 
 export function VideoDialog({ isOpen, setIsOpen, onSubmit, video, setEditingVideo }: VideoDialogProps) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   const form = useForm<VideoFormValues>({
     resolver: zodResolver(videoFormSchema),
@@ -40,15 +40,17 @@ export function VideoDialog({ isOpen, setIsOpen, onSubmit, video, setEditingVide
 
   React.useEffect(() => {
     if (video) {
+        const title = video.titleKey === 'custom' && video.title ? video.title : t(video.titleKey as any);
+        const duration = video.durationKey === 'custom' && video.duration ? video.duration : t(video.durationKey as any);
       form.reset({
-        title: video.title || t(video.titleKey),
-        duration: video.duration || t(video.durationKey),
+        title: title,
+        duration: duration,
         image: video.image,
       });
     } else {
       form.reset({ title: "", duration: "", image: "" });
     }
-  }, [video, form, t]);
+  }, [video, form, t, isOpen]);
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -80,7 +82,7 @@ export function VideoDialog({ isOpen, setIsOpen, onSubmit, video, setEditingVide
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
           <Button>
-            <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+            <PlusCircle className="mr-2 h-4 w-4" />
             {t('addVideo')}
           </Button>
       </DialogTrigger>
@@ -130,3 +132,5 @@ export function VideoDialog({ isOpen, setIsOpen, onSubmit, video, setEditingVide
     </Dialog>
   );
 }
+
+    
