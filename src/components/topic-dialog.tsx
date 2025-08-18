@@ -11,8 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/context/language-context';
-import { PlusCircle, Upload, Image as ImageIcon } from 'lucide-react';
-import { iconComponents, IconName } from '@/components/icons';
+import { PlusCircle, Upload, Image as ImageIcon, Sprout } from 'lucide-react';
 import type { AgriculturalSection } from '@/lib/topics-data';
 import Image from 'next/image';
 
@@ -43,8 +42,8 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
 
   React.useEffect(() => {
     if (topic) {
-        const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey);
-        const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey);
+        const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey as any);
+        const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey as any);
       form.reset({
         title: title,
         description: description,

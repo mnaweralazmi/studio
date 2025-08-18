@@ -10,6 +10,13 @@ import React, { useEffect, useState } from 'react';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { TopicsProvider } from '@/context/topics-context';
 import { useRouter } from 'next/navigation';
+import { Cairo } from 'next/font/google';
+
+const cairo = Cairo({
+  subsets: ['arabic', 'latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+});
 
 function AppBody({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
@@ -57,13 +64,10 @@ function AppBody({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className="dark">
+    <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className={`dark ${cairo.className}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased theme-green">
+      <body className="antialiased theme-green">
         {renderContent()}
       </body>
     </html>

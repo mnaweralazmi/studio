@@ -5,18 +5,21 @@ import * as React from 'react';
 import { Droplets, Bug, Scissors, Sprout, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
+import { useTopics } from '@/context/topics-context';
+import type { AgriculturalSection } from '@/lib/topics-data';
 
-
-const quickAccessTopics = [
-    { id: '1', titleKey: 'topicIrrigation', icon: Droplets, href: '/topics/1' },
-    { id: '2', titleKey: 'topicPests', icon: Bug, href: '/topics/2' },
-    { id: '3', titleKey: 'topicPruning', icon: Scissors, href: '/topics/3' },
-    { id: '4', titleKey: 'topicSoil', icon: Sprout, href: '/topics/4' },
-]
-
+const quickAccessIconMapping: { [key: string]: React.ElementType } = {
+  '1': Droplets,
+  '2': Bug,
+  '3': Scissors,
+  '4': Sprout,
+};
 
 export default function Home() {
   const { t } = useLanguage();
+  const { topics } = useTopics();
+
+  const quickAccessTopics = topics.filter(topic => ['1', '2', '3', '4'].includes(topic.id));
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -35,12 +38,12 @@ export default function Home() {
         </header>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 w-full max-w-2xl">
-            {quickAccessTopics.map((topic) => {
-                const Icon = topic.icon;
+            {quickAccessTopics.map((topic: AgriculturalSection) => {
+                const Icon = quickAccessIconMapping[topic.id];
                 return (
-                     <Link href={topic.href} key={topic.id} className="group flex flex-col items-center gap-2 text-center">
+                     <Link href={`/topics/${topic.id}`} key={topic.id} className="group flex flex-col items-center gap-2 text-center">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:scale-110">
-                            <Icon className="h-8 w-8" />
+                            {Icon && <Icon className="h-8 w-8" />}
                         </div>
                         <p className="font-semibold text-sm text-foreground">{t(topic.titleKey as any)}</p>
                     </Link>
