@@ -21,12 +21,11 @@ export default function TopicDetailsPage() {
     const storedTopics = localStorage.getItem('agriculturalSections');
     const topics = storedTopics ? JSON.parse(storedTopics) : initialAgriculturalSections;
     
-    // Consistent slug access: use topicId
-    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId); 
+    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.id);
     if (currentTopic) {
       setTopic(currentTopic);
     }
-  }, [params.topicId]);
+  }, [params.id]);
 
   if (!topic) {
     return <div>{t('loading')}</div>; 
@@ -80,3 +79,4 @@ export default function TopicDetailsPage() {
     </main>
   );
 }
+
