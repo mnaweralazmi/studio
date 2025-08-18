@@ -74,7 +74,7 @@ export default function LoginPage() {
         const userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
-            const isAdmin = user.email === 'a.alfoudry@gmail.com';
+            const isAdmin = user.email === 'mnaweralazmil88@gmail.com';
             await setDoc(userDocRef, {
                 name: user.displayName,
                 email: user.email,
