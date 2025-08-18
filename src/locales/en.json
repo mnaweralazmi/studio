@@ -241,12 +241,7 @@
     "title": "Title",
     "imageUrl": "Image URL",
     "icon": "Icon",
-    "iconDroplets": "Droplets",
-    "iconBug": "Bug",
-    "iconScissors": "Scissors",
-    "iconSprout": "Sprout",
-    "iconWheat": "Wheat",
-    "iconWind": "Wind",
+    "iconNameLucide": "Icon Name (Lucide)",
     "duration": "Duration",
     "durationPlaceholder": "e.g. 15 minutes",
     "backToHome": "Back to Home",
@@ -285,7 +280,8 @@
     "subTopicPostHarvest": "Post-Harvest Handling",
     "subTopicPostHarvestDesc": "Steps for cooling, sorting, packing, and storing to maintain crop quality.",
     "image": "Image",
-    "uploadImage": "Upload Image"
+    "uploadImage": "Upload Image",
+    "custom": ""
 }
 
     

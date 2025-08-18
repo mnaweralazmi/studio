@@ -20,7 +20,7 @@ const topicFormSchema = z.object({
   title: z.string().min(3, "العنوان مطلوب"),
   description: z.string().min(10, "الوصف مطلوب"),
   image: z.string().min(1, "الصورة مطلوبة"),
-  iconName: z.enum(Object.keys(iconComponents) as [IconName]),
+  iconName: z.string().min(1, "اسم الأيقونة مطلوب"),
 });
 
 export type TopicFormValues = z.infer<typeof topicFormSchema>;
@@ -43,9 +43,11 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
 
   React.useEffect(() => {
     if (topic) {
+        const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey);
+        const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey);
       form.reset({
-        title: topic.title || t(topic.titleKey),
-        description: topic.description || t(topic.descriptionKey),
+        title: title,
+        description: description,
         image: topic.image,
         iconName: topic.iconName,
       });
@@ -121,13 +123,9 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
 
             <FormField control={form.control} name="iconName" render={({ field }) => ( 
               <FormItem>
-                <FormLabel>{t('icon')}</FormLabel>
+                <FormLabel>{t('iconNameLucide')}</FormLabel>
                 <FormControl>
-                    <select {...field} className="w-full p-2 border rounded-md bg-background dark:bg-black dark:text-white">
-                        {Object.keys(iconComponents).map(iconName => (
-                            <option key={iconName} value={iconName}>{t(`icon${iconName}` as any)}</option>
-                        ))}
-                    </select>
+                    <Input placeholder="e.g. Leaf" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem> 

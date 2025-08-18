@@ -164,23 +164,28 @@ export default function Home() {
   const isAdmin = user?.role === 'admin';
 
   function handleAddOrUpdateTopic(data: TopicFormValues) {
+    const iconName = data.iconName as IconName;
+    const isValidIcon = Object.keys(iconComponents).includes(iconName);
+
     const topicData = {
-        titleKey: data.title as TranslationKeys,
-        descriptionKey: data.description as TranslationKeys,
-        iconName: data.iconName,
+        title: data.title,
+        description: data.description,
+        iconName: isValidIcon ? iconName : ('Sprout' as IconName),
         image: data.image,
         hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
     };
 
     if (editingTopic) {
         // Update existing topic
-        const updatedSections = agriculturalSections.map(s => s.id === editingTopic.id ? { ...s, ...topicData } : s);
+        const updatedSections = agriculturalSections.map(s => s.id === editingTopic.id ? { ...s, ...topicData, titleKey: 'custom' as TranslationKeys, descriptionKey: 'custom' as TranslationKeys } : s);
         setAgriculturalSections(updatedSections);
         toast({ title: t('editTopicSuccess') });
     } else {
         // Add new topic
         const newTopic: AgriculturalSection = {
             id: crypto.randomUUID(),
+            titleKey: 'custom' as TranslationKeys,
+            descriptionKey: 'custom' as TranslationKeys,
             ...topicData,
             subTopics: []
         };
@@ -193,19 +198,21 @@ export default function Home() {
 
   function handleAddOrUpdateVideo(data: VideoFormValues) {
       const videoData = {
-          titleKey: data.title as TranslationKeys,
-          durationKey: data.duration as TranslationKeys,
+          title: data.title,
+          duration: data.duration,
           image: data.image,
           hint: data.title.toLowerCase().split(" ").slice(0,2).join(" "),
       };
 
       if(editingVideo) {
-          const updatedVideos = videoSections.map(v => v.id === editingVideo.id ? { ...v, ...videoData } : v);
+          const updatedVideos = videoSections.map(v => v.id === editingVideo.id ? { ...v, ...videoData, titleKey: 'custom' as TranslationKeys, durationKey: 'custom' as TranslationKeys } : v);
           setVideoSections(updatedVideos);
           toast({ title: t('editVideoSuccess') });
       } else {
           const newVideo: VideoSection = {
               id: crypto.randomUUID(),
+              titleKey: 'custom' as TranslationKeys,
+              durationKey: 'custom' as TranslationKeys,
               ...videoData
           };
           setVideoSections(prev => [...prev, newVideo]);
@@ -274,9 +281,9 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
                 {agriculturalSections.map((section) => {
-                    const Icon = iconComponents[section.iconName] || Sprout;
-                    const title = t(section.titleKey as TranslationKeys, section.title);
-                    const description = t(section.descriptionKey as TranslationKeys, section.description);
+                    const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
+                    const title = section.titleKey === 'custom' ? section.title : t(section.titleKey);
+                    const description = section.descriptionKey === 'custom' ? section.description : t(section.descriptionKey);
                     return (
                     <Link key={section.id} href={`/topics/${section.id}`} className="group">
                         <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
@@ -321,8 +328,8 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {videoSections.map((video) => {
-                const title = t(video.titleKey as TranslationKeys, video.title);
-                const duration = t(video.durationKey as TranslationKeys, video.duration);
+                const title = video.titleKey === 'custom' ? video.title : t(video.titleKey);
+                const duration = video.durationKey === 'custom' ? video.duration : t(video.durationKey);
                 return (
                 <Card key={video.id} className="overflow-hidden group cursor-pointer shadow-lg relative">
                     <div className="relative">

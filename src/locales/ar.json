@@ -241,12 +241,7 @@
     "title": "العنوان",
     "imageUrl": "رابط الصورة",
     "icon": "الأيقونة",
-    "iconDroplets": "قطرات",
-    "iconBug": "حشرة",
-    "iconScissors": "مقص",
-    "iconSprout": "برعم",
-    "iconWheat": "سنابل",
-    "iconWind": "رياح",
+    "iconNameLucide": "اسم الأيقونة (Lucide)",
     "duration": "المدة",
     "durationPlaceholder": "مثال: 15 دقيقة",
     "backToHome": "العودة إلى الرئيسية",
@@ -285,7 +280,8 @@
     "subTopicPostHarvest": "مرحلة ما بعد الحصاد",
     "subTopicPostHarvestDesc": "خطوات التبريد والفرز والتعبئة والتخزين للحفاظ على جودة المحصول.",
     "image": "الصورة",
-    "uploadImage": "رفع صورة"
+    "uploadImage": "رفع صورة",
+    "custom": ""
 }
 
     
