@@ -39,6 +39,27 @@ type SalesItem = SalesFormValues & {
 export default function SalesPage() {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
+  const [user, setUser] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      const userSalesKey = `salesItems_${parsedUser.username}`;
+      const storedSales = localStorage.getItem(userSalesKey);
+      if (storedSales) {
+        setSalesItems(JSON.parse(storedSales));
+      }
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (user) {
+      const userSalesKey = `salesItems_${user.username}`;
+      localStorage.setItem(userSalesKey, JSON.stringify(salesItems));
+    }
+  }, [salesItems, user]);
 
   const form = useForm<SalesFormValues>({
     resolver: zodResolver(salesFormSchema),

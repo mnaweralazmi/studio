@@ -68,6 +68,41 @@ function ExpensesContent() {
     const [workers, setWorkers] = React.useState<string[]>([]);
     const [expenseCategories, setExpenseCategories] = React.useState(initialExpenseCategories);
     const { toast } = useToast();
+    const [user, setUser] = React.useState<any>(null);
+
+    React.useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            
+            const expensesKey = `expenses_${parsedUser.username}`;
+            const storedExpenses = localStorage.getItem(expensesKey);
+            if (storedExpenses) {
+                setExpenses(JSON.parse(storedExpenses).map((e: any) => ({...e, date: new Date(e.date)})));
+            }
+
+            const workersKey = `workers_${parsedUser.username}`;
+            const storedWorkers = localStorage.getItem(workersKey);
+            if (storedWorkers) {
+                setWorkers(JSON.parse(storedWorkers));
+            }
+
+            const categoriesKey = `expenseCategories_${parsedUser.username}`;
+            const storedCategories = localStorage.getItem(categoriesKey);
+            if (storedCategories) {
+                setExpenseCategories(JSON.parse(storedCategories));
+            }
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (user) {
+            localStorage.setItem(`expenses_${user.username}`, JSON.stringify(expenses));
+            localStorage.setItem(`workers_${user.username}`, JSON.stringify(workers));
+            localStorage.setItem(`expenseCategories_${user.username}`, JSON.stringify(expenseCategories));
+        }
+    }, [expenses, workers, expenseCategories, user]);
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
@@ -213,7 +248,7 @@ function ExpensesContent() {
                                                 <SelectTrigger><SelectValue placeholder="اختر بندًا..." /></SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {expenseCategories[selectedCategory].map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                                                {expenseCategories[selectedCategory]?.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
                                                 <SelectItem value="add_new_item">إضافة بند جديد...</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -332,4 +367,3 @@ export default function ExpensesPage() {
     </main>
   );
 }
-    

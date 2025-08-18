@@ -55,7 +55,14 @@ export default function AddTaskPage() {
 
   function onSubmit(data: TaskFormValues) {
     try {
-        const storedTasks = localStorage.getItem('calendarTasks');
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+            throw new Error("User not found");
+        }
+        const user = JSON.parse(userStr);
+        const userTasksKey = `calendarTasks_${user.username}`;
+        
+        const storedTasks = localStorage.getItem(userTasksKey);
         const tasks: Task[] = storedTasks ? JSON.parse(storedTasks) : [];
         
         const newTask: Task = {
@@ -67,7 +74,7 @@ export default function AddTaskPage() {
         };
 
         tasks.push(newTask);
-        localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+        localStorage.setItem(userTasksKey, JSON.stringify(tasks));
         
         toast({
             title: "نجاح!",

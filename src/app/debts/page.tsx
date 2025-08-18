@@ -34,6 +34,32 @@ type DebtItem = DebtFormValues & {
 function DebtsContent() {
     const [debts, setDebts] = React.useState<DebtItem[]>([]);
     const { toast } = useToast();
+    const [user, setUser] = React.useState<any>(null);
+
+    React.useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            const userDebtsKey = `debts_${parsedUser.username}`;
+            const storedDebts = localStorage.getItem(userDebtsKey);
+            if (storedDebts) {
+                // Ensure dueDate is a Date object
+                const parsedDebts = JSON.parse(storedDebts).map((debt: any) => ({
+                    ...debt,
+                    dueDate: debt.dueDate ? new Date(debt.dueDate) : undefined,
+                }));
+                setDebts(parsedDebts);
+            }
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (user) {
+            const userDebtsKey = `debts_${user.username}`;
+            localStorage.setItem(userDebtsKey, JSON.stringify(debts));
+        }
+    }, [debts, user]);
 
     const form = useForm<DebtFormValues>({
         resolver: zodResolver(debtFormSchema),
@@ -103,7 +129,7 @@ function DebtsContent() {
                                         {field.value ? format(field.value, "PPP") : <span>اختر تاريخًا</span>}
                                         <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
                                     </Button></FormControl></PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date()} initialFocus /></PopoverContent>
+                                    <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
                                 </Popover><FormMessage /></FormItem>
                             )} />
                             <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> إضافة دين</Button>

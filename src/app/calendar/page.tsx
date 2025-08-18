@@ -23,23 +23,40 @@ export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const { toast } = useToast();
+  const [user, setUser] = React.useState<any>(null);
 
   React.useEffect(() => {
-    try {
-      const storedTasks = localStorage.getItem('calendarTasks');
-      if (storedTasks) {
-        setTasks(JSON.parse(storedTasks));
-      }
-    } catch (error) {
-      console.error("Failed to parse tasks from localStorage", error);
-      // Handle corrupted data by clearing it
-      localStorage.removeItem('calendarTasks');
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      loadTasks(parsedUser.username);
     }
   }, []);
 
+  const loadTasks = (username: string) => {
+     try {
+      const userTasksKey = `calendarTasks_${username}`;
+      const storedTasks = localStorage.getItem(userTasksKey);
+      if (storedTasks) {
+        setTasks(JSON.parse(storedTasks));
+      } else {
+        setTasks([]);
+      }
+    } catch (error) {
+      console.error("Failed to parse tasks from localStorage", error);
+      if (user) {
+        localStorage.removeItem(`calendarTasks_${user.username}`);
+      }
+    }
+  }
+
   const saveTasks = (updatedTasks: Task[]) => {
-    localStorage.setItem('calendarTasks', JSON.stringify(updatedTasks));
-    setTasks(updatedTasks);
+    if (user) {
+        const userTasksKey = `calendarTasks_${user.username}`;
+        localStorage.setItem(userTasksKey, JSON.stringify(updatedTasks));
+        setTasks(updatedTasks);
+    }
   };
 
   const deleteTask = (taskId: string) => {
