@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/context/language-context';
 import { PlusCircle, Upload, Image as ImageIcon } from 'lucide-react';
-import type { VideoSection } from '@/app/page';
+import type { VideoSection } from '@/lib/topics-data';
 import Image from 'next/image';
 
 const videoFormSchema = z.object({

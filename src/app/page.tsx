@@ -5,30 +5,6 @@ import * as React from 'react';
 import { Droplets, Bug, Scissors, Sprout, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
-import type { IconName } from '@/components/icons';
-
-
-export interface AgriculturalSection {
-    id: string;
-    titleKey: 'custom' | string;
-    title?: string;
-    descriptionKey: 'custom' | string;
-    description?: string;
-    iconName: IconName;
-    image: string;
-    hint?: string;
-    subTopics: any[];
-}
-
-export interface VideoSection {
-    id: string;
-    titleKey: 'custom' | string;
-    title?: string;
-    durationKey: 'custom' | string;
-    duration?: string;
-    image: string;
-    hint?: string;
-}
 
 
 const quickAccessTopics = [
@@ -79,4 +55,3 @@ export default function Home() {
     </main>
   );
 }
-

@@ -105,4 +105,3 @@ export const initialVideoSections: VideoSection[] = [
     { id: '2', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://placehold.co/600x400.png', hint: 'tomato plant' },
     { id: '3', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/600x400.png', hint: 'compost bin' },
 ];
-

@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/context/language-context';
 import { PlusCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import { iconComponents, IconName } from '@/components/icons';
-import type { AgriculturalSection } from '@/app/page';
+import type { AgriculturalSection } from '@/lib/topics-data';
 import Image from 'next/image';
 
 const topicFormSchema = z.object({
