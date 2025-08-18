@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, PlusCircle, Trash2, Edit } from 'lucide-react';
+import { Leaf, PlusCircle, Trash2, Edit, PlayCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
@@ -427,3 +427,5 @@ export default function Home() {
     </main>
   );
 }
+
+    
