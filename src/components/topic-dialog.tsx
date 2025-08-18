@@ -43,8 +43,8 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
 
   React.useEffect(() => {
     if (topic) {
-        const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey);
-        const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey);
+        const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey);
+        const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey);
       form.reset({
         title: title,
         description: description,
@@ -74,6 +74,11 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
       reader.readAsDataURL(file);
     }
   };
+  
+  const handleDialogSubmit = (data: TopicFormValues) => {
+      onSubmit(data);
+      handleOpenChange(false);
+  }
 
   const imagePreview = form.watch('image');
 
@@ -90,7 +95,7 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
           <DialogTitle>{topic ? t('editTopic') : t('addTopic')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleDialogSubmit)} className="space-y-4">
             <FormField control={form.control} name="title" render={({ field }) => ( <FormItem><FormLabel>{t('title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="description" render={({ field }) => ( <FormItem><FormLabel>{t('description')}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
             
@@ -141,5 +146,3 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
     </Dialog>
   );
 }
-
-    

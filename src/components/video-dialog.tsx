@@ -68,6 +68,11 @@ export function VideoDialog({ isOpen, setIsOpen, onSubmit, video, setEditingVide
       reader.readAsDataURL(file);
     }
   };
+  
+  const handleDialogSubmit = (data: VideoFormValues) => {
+      onSubmit(data);
+      handleOpenChange(false);
+  }
 
   const imagePreview = form.watch('image');
 
@@ -84,7 +89,7 @@ export function VideoDialog({ isOpen, setIsOpen, onSubmit, video, setEditingVide
           <DialogTitle>{video ? t('editVideo') : t('addVideo')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleDialogSubmit)} className="space-y-4">
             <FormField control={form.control} name="title" render={({ field }) => ( <FormItem><FormLabel>{t('title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="duration" render={({ field }) => ( <FormItem><FormLabel>{t('duration')}</FormLabel><FormControl><Input placeholder={t('durationPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
             
@@ -125,5 +130,3 @@ export function VideoDialog({ isOpen, setIsOpen, onSubmit, video, setEditingVide
     </Dialog>
   );
 }
-
-    

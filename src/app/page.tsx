@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, PlusCircle } from 'lucide-react';
+import { Leaf, PlusCircle, Edit, Trash2, PlayCircle, BookOpen } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
 import type arTranslations from '@/locales/ar.json';
@@ -12,6 +12,10 @@ import { TopicDialog, TopicFormValues } from '@/components/topic-dialog';
 import { VideoDialog, VideoFormValues } from '@/components/video-dialog';
 import { iconComponents, IconName } from '@/components/icons';
 import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Image from 'next/image';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 
 type TranslationKeys = keyof typeof arTranslations;
 
@@ -91,32 +95,6 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
             { id: 'fruiting', titleKey: 'subTopicFruitingPruning', descriptionKey: 'subTopicFruitingPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'pruning fruit tree' },
             { id: 'renewal', titleKey: 'subTopicRenewalPruning', descriptionKey: 'subTopicRenewalPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'old branch cutting' }
         ]
-    },
-    { 
-        id: '4', 
-        titleKey: 'topicSoil', 
-        iconName: 'Sprout', 
-        descriptionKey: 'topicSoilDesc', 
-        image: 'https://placehold.co/600x400.png', 
-        hint: 'soil fertilizer',
-        subTopics: [
-            { id: 'analysis', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://placehold.co/600x400.png', hint: 'soil testing kit' },
-            { id: 'improvement', titleKey: 'subTopicSoilImprovement', descriptionKey: 'subTopicSoilImprovementDesc', image: 'https://placehold.co/600x400.png', hint: 'adding compost' },
-            { id: 'fertilization-types', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://placehold.co/600x400.png', hint: 'fertilizer bags' }
-        ]
-    },
-    { 
-        id: '5', 
-        titleKey: 'topicHarvesting', 
-        iconName: 'Wheat', 
-        descriptionKey: 'topicHarvestingDesc', 
-        image: 'https://placehold.co/600x400.png', 
-        hint: 'harvest basket',
-        subTopics: [
-            { id: 'timing', titleKey: 'subTopicHarvestTiming', descriptionKey: 'subTopicHarvestTimingDesc', image: 'https://placehold.co/600x400.png', hint: 'ripe tomatoes' },
-            { id: 'methods', titleKey: 'subTopicHarvestingMethods', descriptionKey: 'subTopicHarvestingMethodsDesc', image: 'https://placehold.co/600x400.png', hint: 'harvesting vegetables' },
-            { id: 'post-harvest', titleKey: 'subTopicPostHarvest', descriptionKey: 'subTopicPostHarvestDesc', image: 'https://placehold.co/600x400.png', hint: 'vegetable storage' }
-        ]
     }
 ];
 
@@ -125,6 +103,7 @@ const initialVideoSections: VideoSection[] = [
     { id: '2', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://placehold.co/1600x900.png', hint: 'tomato plant' },
     { id: '3', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/1600x900.png', hint: 'compost pile' }
 ];
+
 
 export default function Home() {
   const { toast } = useToast();
@@ -153,13 +132,13 @@ export default function Home() {
   }, []);
 
   React.useEffect(() => {
-      if (agriculturalSections.length > 0) {
+      if (agriculturalSections.length > 0 || initialAgriculturalSections.length > 0) {
         localStorage.setItem('agriculturalSections', JSON.stringify(agriculturalSections));
       }
   }, [agriculturalSections]);
 
   React.useEffect(() => {
-    if (videoSections.length > 0) {
+    if (videoSections.length > 0 || initialVideoSections.length > 0) {
       localStorage.setItem('videoSections', JSON.stringify(videoSections));
     }
   }, [videoSections]);
@@ -197,6 +176,11 @@ export default function Home() {
     setTopicDialogOpen(false);
   }
 
+  function handleDeleteTopic(topicId: string) {
+    setAgriculturalSections(prev => prev.filter(t => t.id !== topicId));
+    toast({ variant: 'destructive', title: t('deleteTopicSuccess') });
+  }
+
   function handleAddOrUpdateVideo(data: VideoFormValues) {
       const videoData = {
           title: data.title,
@@ -223,9 +207,25 @@ export default function Home() {
       setVideoDialogOpen(false);
   }
 
+  function handleDeleteVideo(videoId: string) {
+    setVideoSections(prev => prev.filter(v => v.id !== videoId));
+    toast({ variant: 'destructive', title: t('deleteVideoSuccess') });
+  }
+
+  const handleEditTopic = (topic: AgriculturalSection) => {
+    setEditingTopic(topic);
+    setTopicDialogOpen(true);
+  };
+  
+  const handleEditVideo = (video: VideoSection) => {
+    setEditingVideo(video);
+    setVideoDialogOpen(true);
+  };
+
+
   return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-4xl mx-auto flex flex-col items-center gap-12 text-center">
+    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
+      <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12 text-center">
         <header className="space-y-4">
           <div className="inline-flex items-center gap-3 bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">
             <Leaf className="h-5 w-5" />
@@ -238,13 +238,13 @@ export default function Home() {
             {t('homeHeaderSubtitle')}
           </p>
         </header>
-
-        <div className="w-full space-y-8 max-w-2xl">
-          <Separator />
-            <div className="flex justify-between items-center">
-                <Link href="/topics/1" className="text-2xl font-bold hover:text-primary transition-colors">
-                  {t('agriculturalTopics')}
-                </Link>
+        
+        <Separator className="w-full" />
+        
+        {/* Agricultural Topics Section */}
+        <section className="w-full text-start">
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold flex items-center gap-3"><BookOpen /> {t('agriculturalTopics')}</h2>
                 {isAdmin && (
                     <TopicDialog
                         isOpen={isTopicDialogOpen}
@@ -255,9 +255,66 @@ export default function Home() {
                     />
                 )}
             </div>
-          <Separator />
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">{t('educationalVideos')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {agriculturalSections.map(topic => {
+                    const Icon = iconComponents[topic.iconName] || Sprout;
+                    const title = topic.titleKey === 'custom' && topic.title ? topic.title : t(topic.titleKey);
+                    const description = topic.descriptionKey === 'custom' && topic.description ? topic.description : t(topic.descriptionKey);
+
+                    return (
+                    <Card key={topic.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <CardHeader>
+                            <Image src={topic.image} alt={title} width={600} height={400} className="w-full h-40 object-cover rounded-t-lg" data-ai-hint={topic.hint} />
+                            <CardTitle className="pt-4 flex items-center gap-3">
+                                <Icon className="w-6 h-6 text-primary" />
+                                <span>{title}</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1">
+                            <CardDescription>{description}</CardDescription>
+                        </CardContent>
+                        <CardFooter className="flex justify-between items-center bg-muted/50 p-4">
+                             <Button asChild variant="outline">
+                                <Link href={`/topics/${topic.id}`}>
+                                    {t('readMore')}
+                                </Link>
+                            </Button>
+                            {isAdmin && (
+                                <div className="flex gap-2">
+                                     <Button variant="ghost" size="icon" onClick={() => handleEditTopic(topic)} title={t('editTopic')}>
+                                        <Edit className="w-5 h-5" />
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={t('delete')}>
+                                                <Trash2 className="w-5 h-5" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
+                                                <AlertDialogDescription>{t('confirmDeleteWorkerDesc', {workerName: title})}</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteTopic(topic.id)}>{t('confirmDelete')}</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            )}
+                        </CardFooter>
+                    </Card>
+                )})}
+            </div>
+        </section>
+
+        <Separator className="w-full" />
+
+        {/* Educational Videos Section */}
+        <section className="w-full text-start">
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold flex items-center gap-3"><PlayCircle /> {t('educationalVideos')}</h2>
                 {isAdmin && (
                    <VideoDialog
                         isOpen={isVideoDialogOpen}
@@ -268,8 +325,50 @@ export default function Home() {
                    />
                 )}
             </div>
-          <Separator />
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {videoSections.map(video => {
+                    const title = video.titleKey === 'custom' && video.title ? video.title : t(video.titleKey);
+                    const duration = video.durationKey === 'custom' && video.duration ? video.duration : t(video.durationKey);
+                    return(
+                    <Card key={video.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <CardHeader className="p-0 relative">
+                            <Image src={video.image} alt={title} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={video.hint} />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                            <div className="absolute bottom-0 left-0 p-4">
+                                <CardTitle className="text-primary-foreground text-lg">{title}</CardTitle>
+                            </div>
+                            <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">{duration}</div>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                           {isAdmin && (
+                                <div className="flex justify-end gap-2">
+                                     <Button variant="ghost" size="icon" onClick={() => handleEditVideo(video)} title={t('editVideo')}>
+                                        <Edit className="w-5 h-5" />
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={t('delete')}>
+                                                <Trash2 className="w-5 h-5" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
+                                                <AlertDialogDescription>{t('confirmDeleteWorkerDesc', {workerName: title})}</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteVideo(video.id)}>{t('confirmDelete')}</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )})}
+            </div>
+        </section>
 
         <footer className="text-center mt-16 text-sm text-muted-foreground font-body">
             <p>&copy; {new Date().getFullYear()} {t('footerText')}</p>
@@ -278,5 +377,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
