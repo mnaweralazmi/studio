@@ -112,6 +112,9 @@ function ExpensesContent() {
             workerName: '',
             newWorkerName: '',
             newItemName: '',
+            type: undefined,
+            category: undefined,
+            item: undefined,
         },
     });
 
