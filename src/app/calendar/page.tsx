@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { format, isValid, isFuture, isToday } from 'date-fns';
+import { format, isValid, isFuture, isToday, isPast } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
