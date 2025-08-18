@@ -21,11 +21,11 @@ export default function TopicDetailsPage() {
     const storedTopics = localStorage.getItem('agriculturalSections');
     const topics = storedTopics ? JSON.parse(storedTopics) : initialAgriculturalSections;
     
-    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.id);
+    const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId);
     if (currentTopic) {
       setTopic(currentTopic);
     }
-  }, [params.id]);
+  }, [params.topicId]);
 
   if (!topic) {
     return <div>{t('loading')}</div>; 
