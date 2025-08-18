@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Home, Wallet, User, LogOut, Leaf, CreditCard, Landmark, CalendarDays } from 'lucide-react';
+import { Home, Wallet, User, LogOut, Leaf, CreditCard, Landmark, CalendarDays, Users } from 'lucide-react';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -85,6 +85,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NextLink href="/debts">
                   <Landmark />
                   <span>الديون</span>
+                </NextLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/workers')} tooltip="العمالة">
+                <NextLink href="/workers">
+                  <Users />
+                  <span>العمالة</span>
                 </NextLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
