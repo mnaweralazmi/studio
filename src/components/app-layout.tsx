@@ -15,11 +15,13 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Home, Wallet, User, LogOut, Leaf, CreditCard, Landmark, CalendarDays, Users, Settings } from 'lucide-react';
+import { Home, Wallet, CreditCard, Landmark, CalendarDays, Users, Settings, LogOut, Leaf } from 'lucide-react';
+import { useLanguage } from '@/context/language-context';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated');
@@ -35,6 +37,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     router.replace('/login');
   };
 
+  const navItems = [
+    { href: '/', label: t('home'), icon: Home, startsWith: '/' },
+    { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
+    { href: '/budget', label: t('budget'), icon: Wallet, startsWith: '/budget' },
+    { href: '/expenses', label: t('expenses'), icon: CreditCard, startsWith: '/expenses' },
+    { href: '/debts', label: t('debts'), icon: Landmark, startsWith: '/debts' },
+    { href: '/workers', label: t('workers'), icon: Users, startsWith: '/workers' },
+  ];
+
+
   return (
     <div className="flex h-screen w-full">
       <Sidebar side="right" collapsible="icon">
@@ -42,77 +54,39 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 p-2 justify-center">
             <Leaf className="w-6 h-6 text-primary" />
             <h2 className="text-lg font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
-              مزارع كويتي
+              {t('kuwaitiFarmer')}
             </h2>
           </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="الرئيسية">
-                <NextLink href="/">
-                  <Home />
-                  <span>الرئيسية</span>
-                </NextLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/calendar')} tooltip="التقويم والمهام">
-                <NextLink href="/calendar">
-                  <CalendarDays />
-                  <span>التقويم والمهام</span>
-                </NextLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/budget')} tooltip="الميزانية">
-                <NextLink href="/budget">
-                  <Wallet />
-                  <span>الميزانية</span>
-                </NextLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/expenses')} tooltip="المصروفات">
-                <NextLink href="/expenses">
-                  <CreditCard />
-                  <span>المصروفات</span>
-                </NextLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/debts')} tooltip="الديون">
-                <NextLink href="/debts">
-                  <Landmark />
-                  <span>الديون</span>
-                </NextLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/workers')} tooltip="العمالة">
-                <NextLink href="/workers">
-                  <Users />
-                  <span>العمالة</span>
-                </NextLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {navItems.map(item => (
+                 <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.startsWith)} tooltip={item.label}>
+                        <NextLink href={item.href}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                        </NextLink>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/settings'} tooltip="الإعدادات">
+              <SidebarMenuButton asChild isActive={pathname === '/settings'} tooltip={t('settings')}>
                 <NextLink href="/settings">
                   <Settings />
-                  <span>الإعدادات</span>
+                  <span>{t('settings')}</span>
                 </NextLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild tooltip="تسجيل الخروج">
+               <SidebarMenuButton asChild tooltip={t('logout')}>
                   <a href="#" onClick={handleLogout}>
                     <LogOut />
-                    <span>تسجيل الخروج</span>
+                    <span>{t('logout')}</span>
                   </a>
                 </SidebarMenuButton>
             </SidebarMenuItem>

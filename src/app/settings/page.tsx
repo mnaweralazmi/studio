@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { useLanguage, Language } from '@/context/language-context';
 
 const profileFormSchema = z.object({
     name: z.string().min(3, "يجب أن يتكون الاسم من 3 أحرف على الأقل."),
@@ -41,15 +42,13 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 type Theme = "theme-green" | "theme-blue" | "theme-orange";
 type Mode = "light" | "dark";
-type Language = "ar" | "en";
 
 export default function SettingsPage() {
     const { toast } = useToast();
     const [user, setUser] = React.useState<any>(null);
     const [theme, setTheme] = React.useState<Theme>('theme-green');
     const [mode, setMode] = React.useState<Mode>('dark');
-    const [language, setLanguage] = React.useState<Language>('ar');
-
+    const { language, setLanguage, t } = useLanguage();
 
     const profileForm = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -86,11 +85,9 @@ export default function SettingsPage() {
         // Load theme and mode
         const savedTheme = localStorage.getItem('theme') as Theme || 'theme-green';
         const savedMode = localStorage.getItem('mode') as Mode || 'dark';
-        const savedLanguage = localStorage.getItem('language') as Language || 'ar';
         
         setTheme(savedTheme);
         setMode(savedMode);
-        setLanguage(savedLanguage);
 
         document.body.classList.remove('theme-green', 'theme-blue', 'theme-orange');
         document.body.classList.add(savedTheme);
@@ -98,9 +95,6 @@ export default function SettingsPage() {
         const html = document.documentElement;
         html.classList.remove('light', 'dark');
         html.classList.add(savedMode);
-        html.lang = savedLanguage;
-        html.dir = savedLanguage === 'ar' ? 'rtl' : 'ltr';
-
 
     }, [profileForm]);
     
@@ -121,10 +115,10 @@ export default function SettingsPage() {
             localStorage.setItem('users', JSON.stringify(allUsers));
             localStorage.setItem('user', JSON.stringify({ username: updatedUser.username, name: updatedUser.name, role: updatedUser.role }));
             setUser(updatedUser);
-            toast({ title: "تم تحديث الملف الشخصي!", description: "تم حفظ بياناتك الجديدة بنجاح." });
+            toast({ title: t('profileUpdated'), description: t('profileUpdatedSuccess') });
             profileForm.reset({ ...profileForm.getValues(), password: '', confirmPassword: '' });
         } catch (error) {
-             toast({ variant: "destructive", title: "خطأ!", description: "لم نتمكن من تحديث ملفك الشخصي." });
+             toast({ variant: "destructive", title: t('error'), description: t('profileUpdateFailed') });
         }
     }
 
@@ -133,7 +127,7 @@ export default function SettingsPage() {
         document.body.classList.remove('theme-green', 'theme-blue', 'theme-orange');
         document.body.classList.add(newTheme);
         localStorage.setItem('theme', newTheme);
-        toast({ title: "تم تغيير اللون الأساسي!" });
+        toast({ title: t('themeChanged') });
     };
 
     const handleModeChange = (newMode: Mode) => {
@@ -141,15 +135,12 @@ export default function SettingsPage() {
         document.documentElement.classList.remove('light', 'dark');
         document.documentElement.classList.add(newMode);
         localStorage.setItem('mode', newMode);
-        toast({ title: newMode === 'dark' ? "تم تفعيل الوضع الداكن!" : "تم تفعيل الوضع الفاتح!" });
+        toast({ title: newMode === 'dark' ? t('darkModeActivated') : t('lightModeActivated') });
     };
 
     const handleLanguageChange = (newLang: Language) => {
         setLanguage(newLang);
-        localStorage.setItem('language', newLang);
-        document.documentElement.lang = newLang;
-        document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
-        toast({ title: "تم تغيير اللغة!", description: "سيتم تطبيق اللغة الجديدة عند تحديث الصفحة." });
+        toast({ title: t('languageChanged'), description: t('languageChangedSuccess') });
     }
 
   return (
@@ -159,8 +150,8 @@ export default function SettingsPage() {
             <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)}>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"> <User /> ملف المستخدم </CardTitle>
-                        <CardDescription> عرض وتعديل بيانات ملفك الشخصي. </CardDescription>
+                        <CardTitle className="flex items-center gap-2"> <User /> {t('userProfile')} </CardTitle>
+                        <CardDescription> {t('userProfileDesc')} </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
                         <div className="flex items-center gap-6">
@@ -169,25 +160,25 @@ export default function SettingsPage() {
                                 <AvatarFallback>{user?.name?.[0].toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
-                                <FormField control={profileForm.control} name="avatarUrl" render={({ field }) => ( <FormItem><FormLabel>رابط الصورة الرمزية</FormLabel><FormControl><Input placeholder="https://example.com/avatar.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={profileForm.control} name="avatarUrl" render={({ field }) => ( <FormItem><FormLabel>{t('avatarUrl')}</FormLabel><FormControl><Input placeholder="https://example.com/avatar.png" {...field} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField control={profileForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="أدخل اسمك الكامل" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                             <FormField control={profileForm.control} name="username" render={({ field }) => ( <FormItem><FormLabel>اسم المستخدم (لا يمكن تغييره)</FormLabel><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem> )} />
-                             <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={profileForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>{t('fullName')}</FormLabel><FormControl><Input placeholder={t('enterFullName')} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                             <FormField control={profileForm.control} name="username" render={({ field }) => ( <FormItem><FormLabel>{t('username')} ({t('cannotChange')})</FormLabel><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem> )} />
+                             <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem><FormLabel>{t('email')}</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl><FormMessage /></FormItem> )} />
                         </div>
                          <div>
-                            <h3 className="text-lg font-medium mb-4">تغيير كلمة المرور</h3>
+                            <h3 className="text-lg font-medium mb-4">{t('changePassword')}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={profileForm.control} name="password" render={({ field }) => ( <FormItem><FormLabel>كلمة المرور الجديدة</FormLabel><FormControl><Input type="password" placeholder="اتركها فارغة لعدم التغيير" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={profileForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>تأكيد كلمة المرور الجديدة</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={profileForm.control} name="password" render={({ field }) => ( <FormItem><FormLabel>{t('newPassword')}</FormLabel><FormControl><Input type="password" placeholder={t('leaveBlank')} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={profileForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>{t('confirmNewPassword')}</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         </div>
-                        <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>الملف التعريفي</FormLabel><FormControl><Textarea placeholder="نبذة مختصرة عنك..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>{t('bio')}</FormLabel><FormControl><Textarea placeholder={t('bioPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </CardContent>
                     <CardFooter className="border-t pt-6 flex justify-end">
-                        <Button type="submit"> <Save className="ml-2 h-4 w-4" /> حفظ التغييرات </Button>
+                        <Button type="submit"> <Save className="ml-2 h-4 w-4" /> {t('saveChanges')} </Button>
                     </CardFooter>
                 </form>
             </Form>
@@ -195,15 +186,15 @@ export default function SettingsPage() {
           
           <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Palette /> العرض واللغة</CardTitle>
-                <CardDescription>قم بتخصيص مظهر التطبيق واللغة.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><Palette /> {t('displayAndLanguage')}</CardTitle>
+                <CardDescription>{t('displayAndLanguageDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2"><Languages /> اللغة</Label>
+                      <Label className="flex items-center gap-2"><Languages /> {t('language')}</Label>
                       <Select value={language} onValueChange={(value: Language) => handleLanguageChange(value)}>
                           <SelectTrigger>
-                              <SelectValue placeholder="اختر لغة..." />
+                              <SelectValue placeholder={t('selectLanguage')} />
                           </SelectTrigger>
                           <SelectContent>
                               <SelectItem value="ar">العربية</SelectItem>
@@ -215,15 +206,15 @@ export default function SettingsPage() {
                    <Separator />
 
                   <div className="space-y-4">
-                        <Label>مظهر التطبيق</Label>
+                        <Label>{t('appAppearance')}</Label>
                         <RadioGroup value={mode} onValueChange={(value: any) => handleModeChange(value)} className="flex gap-4">
                             <Label htmlFor="light-mode" className="flex items-center gap-2 cursor-pointer rounded-md border p-3 flex-1 justify-center data-[state=checked]:border-primary">
                                <RadioGroupItem value="light" id="light-mode" />
-                               فاتح
+                               {t('light')}
                             </Label>
                              <Label htmlFor="dark-mode" className="flex items-center gap-2 cursor-pointer rounded-md border p-3 flex-1 justify-center data-[state=checked]:border-primary">
                                <RadioGroupItem value="dark" id="dark-mode" />
-                               داكن
+                               {t('dark')}
                             </Label>
                         </RadioGroup>
                   </div>
@@ -231,11 +222,11 @@ export default function SettingsPage() {
                   <Separator />
 
                   <div className="space-y-4">
-                      <Label>اللون الأساسي</Label>
+                      <Label>{t('primaryColor')}</Label>
                       <div className="flex gap-3">
-                          <Button variant={theme === 'theme-green' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-green')} className="bg-[#5A9A58] hover:bg-[#5A9A58]/90 border-[#5A9A58]">أخضر</Button>
-                          <Button variant={theme === 'theme-blue' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-blue')} className="bg-[#3B82F6] hover:bg-[#3B82F6]/90 border-[#3B82F6]">أزرق</Button>
-                          <Button variant={theme === 'theme-orange' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-orange')} className="bg-[#F97316] hover:bg-[#F97316]/90 border-[#F97316]">برتقالي</Button>
+                          <Button variant={theme === 'theme-green' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-green')} className="bg-[#5A9A58] hover:bg-[#5A9A58]/90 border-[#5A9A58]">{t('green')}</Button>
+                          <Button variant={theme === 'theme-blue' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-blue')} className="bg-[#3B82F6] hover:bg-[#3B82F6]/90 border-[#3B82F6]">{t('blue')}</Button>
+                          <Button variant={theme === 'theme-orange' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-orange')} className="bg-[#F97316] hover:bg-[#F97316]/90 border-[#F97316]">{t('orange')}</Button>
                       </div>
                   </div>
               </CardContent>
@@ -243,21 +234,21 @@ export default function SettingsPage() {
 
           <Card>
               <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Bell /> الإشعارات</CardTitle>
-                  <CardDescription>إدارة تفضيلات الإشعارات الخاصة بك.</CardDescription>
+                  <CardTitle className="flex items-center gap-2"><Bell /> {t('notifications')}</CardTitle>
+                  <CardDescription>{t('notificationsDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                   <div className="flex items-center justify-between rounded-lg border p-4">
                       <div>
-                          <Label htmlFor="general-notifications">الإشعارات العامة</Label>
-                          <p className="text-sm text-muted-foreground">استقبال التحديثات العامة والإعلانات.</p>
+                          <Label htmlFor="general-notifications">{t('generalNotifications')}</Label>
+                          <p className="text-sm text-muted-foreground">{t('generalNotificationsDesc')}</p>
                       </div>
                       <Switch id="general-notifications" defaultChecked />
                   </div>
                    <div className="flex items-center justify-between rounded-lg border p-4">
                       <div>
-                          <Label htmlFor="task-notifications">إشعارات المهام</Label>
-                          <p className="text-sm text-muted-foreground">تلقي تذكيرات للمهام القادمة والمكتملة.</p>
+                          <Label htmlFor="task-notifications">{t('taskNotifications')}</Label>
+                          <p className="text-sm text-muted-foreground">{t('taskNotificationsDesc')}</p>
                       </div>
                       <Switch id="task-notifications" defaultChecked />
                   </div>
@@ -268,5 +259,3 @@ export default function SettingsPage() {
     </main>
   );
 }
-
-    
