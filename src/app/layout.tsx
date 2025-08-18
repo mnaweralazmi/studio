@@ -11,6 +11,7 @@ import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { TopicsProvider } from '@/context/topics-context';
 import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -18,8 +19,7 @@ const cairo = Cairo({
   display: 'swap',
 });
 
-function AppBody({ children }: { children: React.ReactNode }) {
-  const { language } = useLanguage();
+function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAuthPage = pathname === '/login' || pathname === '/register';
@@ -43,47 +43,62 @@ function AppBody({ children }: { children: React.ReactNode }) {
     } else {
         setIsClientLoaded(true);
     }
-    
   }, [pathname, isAuthPage, router]);
 
-  const renderContent = () => {
-    if (!isClientLoaded && !isAuthPage) {
-        return null; // Or a loading spinner covering the whole page
-    }
-    if (isAuthPage) {
-        return <>{children}<Toaster /></>;
-    }
+  if (isAuthPage) {
+    return <>{children}<Toaster /></>;
+  }
+
+  if (!isClientLoaded) {
     return (
-        <SidebarProvider>
-            <AppLayout>
-                {children}
-            </AppLayout>
-            <Toaster />
-        </SidebarProvider>
+        <div className="flex h-screen w-full bg-background">
+            <div className="hidden md:flex h-full">
+               <Skeleton className="h-full w-[256px]" />
+            </div>
+            <div className="flex-1 p-4">
+                <Skeleton className="h-full w-full" />
+            </div>
+        </div>
     );
   }
 
   return (
-    <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className={`dark ${cairo.className}`}>
-      <head>
-      </head>
-      <body className="antialiased theme-green">
-        {renderContent()}
-      </body>
-    </html>
+    <SidebarProvider>
+        <AppLayout>
+            {children}
+        </AppLayout>
+        <Toaster />
+    </SidebarProvider>
   );
 }
+
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [language, setLanguage] = useState<string>('ar');
+
+  useEffect(() => {
+    const storedLang = localStorage.getItem('language');
+    if (storedLang) {
+      setLanguage(storedLang);
+      document.documentElement.lang = storedLang;
+      document.documentElement.dir = storedLang === 'ar' ? 'rtl' : 'ltr';
+    }
+  }, []);
+
   return (
-    <LanguageProvider>
-        <TopicsProvider>
-            <AppBody>{children}</AppBody>
-        </TopicsProvider>
-    </LanguageProvider>
+    <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className={`dark ${cairo.className}`}>
+      <head />
+      <body className="antialiased theme-green">
+        <LanguageProvider>
+          <TopicsProvider>
+            <RootLayoutContent>{children}</RootLayoutContent>
+          </TopicsProvider>
+        </LanguageProvider>
+      </body>
+    </html>
   );
 }
