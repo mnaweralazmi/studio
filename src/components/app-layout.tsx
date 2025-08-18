@@ -21,7 +21,7 @@ import { useLanguage } from '@/context/language-context';
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated');
@@ -49,11 +49,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-full">
-      <Sidebar side="right" collapsible="icon">
+      <Sidebar side={language === 'ar' ? 'right' : 'left'} collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2 justify-center">
             <Leaf className="w-6 h-6 text-primary" />
-            <h2 className="text-lg font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
+            <h2 className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               {t('kuwaitiFarmer')}
             </h2>
           </div>

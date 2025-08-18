@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/context/language-context';
 
 const workerFormSchema = z.object({
   name: z.string().min(3, "اسم العامل يجب أن يكون 3 أحرف على الأقل."),
@@ -161,7 +162,7 @@ function SalaryPaymentDialog({ worker, onConfirm }: { worker: Worker; onConfirm:
                         <SelectTrigger>
                             <SelectValue placeholder="اختر الشهر..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent side="bottom" position="popper">
                             {months.map(m => {
                                 const paid = isMonthPaid(m.value);
                                 return (
@@ -187,6 +188,7 @@ type TransactionFormValues = z.infer<typeof transactionFormSchema>;
 
 function FinancialRecordDialog({ worker, onAddTransaction }: { worker: Worker, onAddTransaction: (workerId: string, transaction: TransactionFormValues) => void }) {
     const [isOpen, setIsOpen] = React.useState(false);
+    const { language } = useLanguage();
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionFormSchema),
         defaultValues: { type: 'bonus', amount: 10, description: "" },
@@ -223,13 +225,13 @@ function FinancialRecordDialog({ worker, onAddTransaction }: { worker: Worker, o
                     <div className="max-h-96 overflow-y-auto pr-2">
                         <h4 className="font-semibold mb-2">سجل المعاملات</h4>
                         <Table>
-                            <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>الوصف</TableHead><TableHead className="text-left">المبلغ</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>الوصف</TableHead><TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>المبلغ</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {worker.transactions.length > 0 ? worker.transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
                                     <TableRow key={t.id}>
                                         <TableCell>{format(new Date(t.date), 'yyyy/MM/dd')}</TableCell>
                                         <TableCell>{t.description}</TableCell>
-                                        <TableCell className={`text-left font-mono ${t.type === 'bonus' ? 'text-green-500' : 'text-red-500'}`}>
+                                        <TableCell className={`${language === 'ar' ? 'text-left' : 'text-right'} font-mono ${t.type === 'bonus' ? 'text-green-500' : 'text-red-500'}`}>
                                             {t.type === 'bonus' ? '+' : '-'}{t.amount.toFixed(2)}
                                         </TableCell>
                                     </TableRow>
@@ -275,6 +277,7 @@ export default function WorkersPage() {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const { toast } = useToast();
     const [user, setUser] = React.useState<any>(null);
+    const { language } = useLanguage();
 
     React.useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -461,7 +464,7 @@ export default function WorkersPage() {
                       <TableHead>الراتب الأساسي</TableHead>
                        <TableHead>حالة راتب الشهر الحالي</TableHead>
                        <TableHead>الرصيد الإجمالي</TableHead>
-                      <TableHead className="text-left">الإجراءات</TableHead>
+                      <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -481,7 +484,7 @@ export default function WorkersPage() {
                         <TableCell className={`font-mono ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {balance.toFixed(2)} دينار
                         </TableCell>
-                        <TableCell className="text-left flex gap-2 justify-end">
+                        <TableCell className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                             <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
                             <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
                            <AlertDialog>

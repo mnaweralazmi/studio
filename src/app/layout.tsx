@@ -7,13 +7,10 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppLayout } from '@/components/app-layout';
 import { usePathname } from 'next/navigation';
 import React, { useEffect } from 'react';
-import { LanguageProvider } from '@/context/language-context';
+import { LanguageProvider, useLanguage } from '@/context/language-context';
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function AppBody({ children }: { children: React.ReactNode }) {
+  const { language } = useLanguage();
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
@@ -32,29 +29,39 @@ export default function RootLayout({
   }, []);
 
   return (
+    <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className="dark">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-body antialiased theme-green">
+        {isAuthPage ? (
+          <>
+            {children}
+            <Toaster />
+          </>
+        ) : (
+          <SidebarProvider>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </SidebarProvider>
+        )}
+        {!isAuthPage && <Toaster />}
+      </body>
+    </html>
+  );
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
     <LanguageProvider>
-        <html lang="ar" dir="rtl" className="dark">
-          <head>
-            <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet" />
-          </head>
-          <body className="font-body antialiased theme-green">
-            {isAuthPage ? (
-              <>
-                {children}
-                <Toaster />
-              </>
-            ) : (
-              <SidebarProvider>
-                <AppLayout>
-                  {children}
-                </AppLayout>
-              </SidebarProvider>
-            )}
-            {!isAuthPage && <Toaster />}
-          </body>
-        </html>
+      <AppBody>{children}</AppBody>
     </LanguageProvider>
   );
 }

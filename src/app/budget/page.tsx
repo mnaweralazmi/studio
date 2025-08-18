@@ -13,6 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { PlusCircle, Trash2, Wallet } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLanguage } from '@/context/language-context';
 
 const vegetableList = [
   "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء"
@@ -40,6 +41,7 @@ export default function SalesPage() {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
   const [user, setUser] = React.useState<any>(null);
+  const { language } = useLanguage();
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -214,7 +216,7 @@ export default function SalesPage() {
                       <TableHead>سعر الكرتون</TableHead>
                       <TableHead>سعر الكيلو</TableHead>
                       <TableHead>الإجمالي</TableHead>
-                      <TableHead className="text-left">الإجراءات</TableHead>
+                      <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -227,7 +229,7 @@ export default function SalesPage() {
                         <TableCell>{item.price.toFixed(2)} دينار</TableCell>
                         <TableCell>{item.pricePerKilo.toFixed(2)} دينار</TableCell>
                         <TableCell>{item.total.toFixed(2)} دينار</TableCell>
-                        <TableCell className="text-left">
+                        <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}>
                           <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title="حذف البند">
                             <Trash2 className="h-4 w-4" />
                           </Button>
