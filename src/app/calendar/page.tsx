@@ -11,6 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, Trash2, CalendarDays, CheckCircle, ListTodo, ListChecks, Forward } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export interface Task {
   id: string;
@@ -175,36 +176,39 @@ export default function CalendarPage() {
                             </div>
                         )}
                     </div>
-                    <div>
-                        <h3 className="flex items-center gap-2 text-lg font-semibold mb-3 text-green-600">
-                            <ListChecks />
-                            المهام المنجزة
-                        </h3>
-                        {completedTasksForSelectedDate.length > 0 ? (
-                            <ul className="space-y-3">
-                            {completedTasksForSelectedDate.map(task => (
-                                <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50 transition-all">
-                                <div className="flex-1 space-y-1">
-                                    <p className="font-medium line-through text-muted-foreground">{task.title}</p>
-                                    {task.description && <p className="text-sm line-through text-muted-foreground/80">{task.description}</p>}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button variant='secondary' size="icon" onClick={() => toggleTaskCompletion(task.id)} title='إلغاء الإنجاز'>
-                                        <CheckCircle className="h-5 w-5" />
-                                    </Button>
-                                    <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)} title="حذف المهمة">
-                                        <Trash2 className="h-5 w-5" />
-                                    </Button>
-                                </div>
-                                </li>
-                            ))}
-                            </ul>
-                        ) : (
-                            <div className="text-center text-muted-foreground py-4">
-                                <p>لا توجد مهام منجزة لهذا اليوم.</p>
-                            </div>
-                        )}
-                    </div>
+                    
+                    {completedTasksForSelectedDate.length > 0 && (
+                        <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="completed-tasks">
+                                <AccordionTrigger>
+                                    <h3 className="flex items-center gap-2 text-lg font-semibold text-green-600">
+                                        <ListChecks />
+                                        المهام المنجزة ({completedTasksForSelectedDate.length})
+                                    </h3>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <ul className="space-y-3 pt-4">
+                                        {completedTasksForSelectedDate.map(task => (
+                                            <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50 transition-all">
+                                            <div className="flex-1 space-y-1">
+                                                <p className="font-medium line-through text-muted-foreground">{task.title}</p>
+                                                {task.description && <p className="text-sm line-through text-muted-foreground/80">{task.description}</p>}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant='secondary' size="icon" onClick={() => toggleTaskCompletion(task.id)} title='إلغاء الإنجاز'>
+                                                    <CheckCircle className="h-5 w-5" />
+                                                </Button>
+                                                <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)} title="حذف المهمة">
+                                                    <Trash2 className="h-5 w-5" />
+                                                </Button>
+                                            </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    )}
                 </CardContent>
             </Card>
             <Card>
