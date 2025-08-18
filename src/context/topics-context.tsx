@@ -40,12 +40,7 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [topics, isLoaded]);
 
-  const value = useMemo(() => ({ topics, setTopics }), [topics]);
-
-  // Render children only once topics are loaded to avoid hydration issues
-  if (!isLoaded) {
-    return null;
-  }
+  const value = useMemo(() => ({ topics, setTopics }), [topics, setTopics]);
 
   return (
     <TopicsContext.Provider value={value}>
