@@ -283,5 +283,14 @@
     "uploadImage": "Upload Image",
     "readMore": "Read More",
     "noSubTopics": "No sub-topics available.",
-    "custom": ""
+    "custom": "",
+    "addContent": "Add New Content",
+    "editContent": "Edit Content",
+    "contentType": "Content Type",
+    "subTopic": "Sub-Topic",
+    "video": "Video",
+    "videoUrl": "Video URL",
+    "thumbnail": "Thumbnail",
+    "confirmDeleteTopicDesc": "Are you sure you want to delete the topic '{topicName}'? This action cannot be undone.",
+    "confirmDeleteVideoDesc": "Are you sure you want to delete the video '{videoName}'? This action cannot be undone."
 }

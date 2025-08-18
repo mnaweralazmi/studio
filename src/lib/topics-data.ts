@@ -1,8 +1,21 @@
 
+export interface VideoSection {
+  id: string;
+  titleKey: string;
+  title?: string;
+  durationKey: string;
+  duration?: string;
+  image: string;
+  videoUrl: string;
+  hint?: string;
+}
+
 export interface SubTopic {
     id: string;
     titleKey: string;
+    title?: string;
     descriptionKey: string;
+    description?: string;
     image: string;
     hint?: string;
 }
@@ -10,11 +23,14 @@ export interface SubTopic {
 export interface AgriculturalSection {
     id: string;
     titleKey: string;
+    title?: string;
     descriptionKey: string;
+    description?: string;
     iconName: string;
     image: string;
     hint?: string;
     subTopics: SubTopic[];
+    videos: VideoSection[];
 }
   
 export const initialAgriculturalSections: AgriculturalSection[] = [
@@ -28,9 +44,10 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       subTopics: [
         { id: '1-1', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'drip irrigation' },
         { id: '1-2', titleKey: 'subTopicSprinklerIrrigation', descriptionKey: 'subTopicSprinklerIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'sprinkler irrigation' },
-        { id: '1-3', titleKey: 'subTopicTraditionalIrrigation', descriptionKey: 'subTopicTraditionalIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'flood irrigation' },
-        { id: '1-4', titleKey: 'subTopicModernIrrigation', descriptionKey: 'subTopicModernIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'smart farming' },
       ],
+      videos: [
+        { id: 'v-1', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://placehold.co/600x400.png', videoUrl: '#', hint: 'gardening basics' }
+      ]
     },
     {
       id: '2',
@@ -42,8 +59,8 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       subTopics: [
         { id: '2-1', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://placehold.co/600x400.png', hint: 'ladybug pests' },
         { id: '2-2', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://placehold.co/600x400.png', hint: 'spraying pesticides' },
-        { id: '2-3', titleKey: 'subTopicPestPrevention', descriptionKey: 'subTopicPestPreventionDesc', image: 'https://placehold.co/600x400.png', hint: 'healthy plant' },
       ],
+      videos: []
     },
     {
       id: '3',
@@ -54,9 +71,8 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       hint: 'pruning shears',
       subTopics: [
         { id: '3-1', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://placehold.co/600x400.png', hint: 'young tree' },
-        { id: '3-2', titleKey: 'subTopicFruitingPruning', descriptionKey: 'subTopicFruitingPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'fruit tree' },
-        { id: '3-3', titleKey: 'subTopicRenewalPruning', descriptionKey: 'subTopicRenewalPruningDesc', image: 'https://placehold.co/600x400.png', hint: 'old branch' },
       ],
+      videos: []
     },
     {
       id: '4',
@@ -67,8 +83,7 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       hint: 'rich soil',
       subTopics: [
          { id: '4-1', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://placehold.co/600x400.png', hint: 'soil test' },
-         { id: '4-2', titleKey: 'subTopicSoilImprovement', descriptionKey: 'subTopicSoilImprovementDesc', image: 'https://placehold.co/600x400.png', hint: 'adding compost' },
-         { id: '4-3', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://placehold.co/600x400.png', hint: 'fertilizer bags' },
       ],
+      videos: []
     },
 ];

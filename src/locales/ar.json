@@ -283,5 +283,14 @@
     "uploadImage": "رفع صورة",
     "readMore": "اقرأ المزيد",
     "noSubTopics": "لا توجد مواضيع فرعية متاحة.",
-    "custom": ""
+    "custom": "",
+    "addContent": "إضافة محتوى جديد",
+    "editContent": "تعديل المحتوى",
+    "contentType": "نوع المحتوى",
+    "subTopic": "موضوع فرعي",
+    "video": "فيديو",
+    "videoUrl": "رابط الفيديو",
+    "thumbnail": "صورة مصغرة",
+    "confirmDeleteTopicDesc": "هل أنت متأكد من حذف موضوع '{topicName}'؟ لا يمكن التراجع عن هذا الإجراء.",
+    "confirmDeleteVideoDesc": "هل أنت متأكد من حذف فيديو '{videoName}'؟ لا يمكن التراجع عن هذا الإجراء."
 }
