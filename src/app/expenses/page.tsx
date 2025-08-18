@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, DollarSign, Trash2, PlusCircle, ArrowDownCircle, Repeat, TrendingUp } from 'lucide-react';
+import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp } from 'lucide-react';
 
 const initialExpenseCategories: Record<string, string[]> = {
   "فواتير": ["فاتورة كهرباء", "فاتورة ماء", "فاتورة انترنت", "فاتورة هاتف"],
@@ -20,7 +20,7 @@ const initialExpenseCategories: Record<string, string[]> = {
   "وقود": ["بنزين", "ديزل"],
   "صيانة": ["صيانة سيارة", "صيانة منزل", "أدوات"],
   "بذور وأسمدة": ["بذور", "أسمدة", "تربة"],
-  "عمالة": ["راتب عامل", "أعمال يومية"],
+  "عمالة": ["أعمال يومية"],
   "أخرى": ["مصروفات شخصية", "ترفيه", "طوارئ"],
 };
 
@@ -34,19 +34,6 @@ const expenseFormSchema = z.object({
   item: z.string({ required_error: "الرجاء اختيار البند." }),
   newItemName: z.string().optional(),
   amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ إيجابياً."),
-  workerName: z.string().optional(),
-  newWorkerName: z.string().optional(),
-}).refine(data => {
-    if (data.item === "راتب عامل" && data.workerName === 'add_new_worker') {
-        return !!data.newWorkerName && data.newWorkerName.length > 2;
-    }
-    if (data.item === "راتب عامل") {
-        return !!data.workerName;
-    }
-    return true;
-}, {
-    message: "الرجاء تحديد عامل أو إضافة عامل جديد (3 أحرف على الأقل).",
-    path: ['workerName'],
 }).refine(data => {
     if (data.item === 'add_new_item') {
         return !!data.newItemName && data.newItemName.length > 2;
@@ -59,14 +46,13 @@ const expenseFormSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-type ExpenseItem = Omit<ExpenseFormValues, 'newWorkerName' | 'newItemName'> & {
+type ExpenseItem = Omit<ExpenseFormValues, 'newItemName'> & {
   id: number;
   date: Date;
 };
 
 function ExpensesContent() {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
-    const [workers, setWorkers] = React.useState<string[]>([]);
     const [expenseCategories, setExpenseCategories] = React.useState(initialExpenseCategories);
     const { toast } = useToast();
     const [user, setUser] = React.useState<any>(null);
@@ -83,12 +69,6 @@ function ExpensesContent() {
                 setExpenses(JSON.parse(storedExpenses).map((e: any) => ({...e, date: new Date(e.date)})));
             }
 
-            const workersKey = `workers_${parsedUser.username}`;
-            const storedWorkers = localStorage.getItem(workersKey);
-            if (storedWorkers) {
-                setWorkers(JSON.parse(storedWorkers));
-            }
-
             const categoriesKey = `expenseCategories_${parsedUser.username}`;
             const storedCategories = localStorage.getItem(categoriesKey);
             if (storedCategories) {
@@ -100,17 +80,14 @@ function ExpensesContent() {
     React.useEffect(() => {
         if (user) {
             localStorage.setItem(`expenses_${user.username}`, JSON.stringify(expenses));
-            localStorage.setItem(`workers_${user.username}`, JSON.stringify(workers));
             localStorage.setItem(`expenseCategories_${user.username}`, JSON.stringify(expenseCategories));
         }
-    }, [expenses, workers, expenseCategories, user]);
+    }, [expenses, expenseCategories, user]);
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
         defaultValues: {
             amount: 0.01,
-            workerName: '',
-            newWorkerName: '',
             newItemName: '',
             type: undefined,
             category: undefined,
@@ -120,22 +97,9 @@ function ExpensesContent() {
 
     const selectedCategory = form.watch("category");
     const selectedItem = form.watch("item");
-    const selectedWorker = form.watch("workerName");
 
     function onSubmit(data: ExpenseFormValues) {
-        let finalWorkerName = data.workerName;
         let finalItemName = data.item;
-
-        if (data.item === 'راتب عامل') {
-            if (data.workerName === 'add_new_worker' && data.newWorkerName) {
-                finalWorkerName = data.newWorkerName;
-                if (!workers.includes(data.newWorkerName)) {
-                    setWorkers(prev => [...prev, data.newWorkerName]);
-                }
-            }
-        } else {
-            finalWorkerName = undefined;
-        }
 
         if (data.item === 'add_new_item' && data.newItemName) {
             finalItemName = data.newItemName;
@@ -148,7 +112,6 @@ function ExpensesContent() {
             });
         }
 
-
         const newExpense: ExpenseItem = {
             id: Date.now(),
             date: new Date(),
@@ -156,7 +119,6 @@ function ExpensesContent() {
             category: data.category,
             item: finalItemName,
             amount: data.amount,
-            workerName: finalWorkerName,
         };
 
         setExpenses(prev => [...prev, newExpense]);
@@ -165,8 +127,6 @@ function ExpensesContent() {
              category: undefined,
              item: undefined,
              amount: 0.01,
-             workerName: '',
-             newWorkerName: '',
              newItemName: '',
         });
         form.clearErrors();
@@ -249,8 +209,7 @@ function ExpensesContent() {
                                         <FormLabel>الفئة</FormLabel>
                                         <Select onValueChange={(value: Category) => {
                                             field.onChange(value);
-                                            form.setValue("item", "");
-                                            form.setValue("workerName", "");
+                                            form.setValue("item", undefined);
                                         }} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger><SelectValue placeholder="اختر فئة..." /></SelectTrigger>
@@ -290,36 +249,7 @@ function ExpensesContent() {
                                     </FormItem>
                                 )} />
                             )}
-
-                            {selectedItem === 'راتب عامل' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="workerName" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>اسم العامل</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger><SelectValue placeholder="اختر عاملاً أو أضف جديدًا..." /></SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {workers.map(worker => <SelectItem key={worker} value={worker}>{worker}</SelectItem>)}
-                                                    <SelectItem value="add_new_worker">إضافة عامل جديد...</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                    {selectedWorker === 'add_new_worker' && (
-                                         <FormField control={form.control} name="newWorkerName" render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>اسم العامل الجديد</FormLabel>
-                                                <FormControl><Input placeholder="أدخل اسم العامل هنا" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                    )}
-                                </div>
-                            )}
-
+                            
                              <FormField control={form.control} name="amount" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>المبلغ (دينار)</FormLabel>
@@ -348,9 +278,6 @@ function ExpensesContent() {
                                     <TableCell>{item.category}</TableCell>
                                     <TableCell className="font-medium">
                                         {item.item}
-                                        {item.workerName && item.item === 'راتب عامل' && (
-                                            <span className="text-muted-foreground text-xs mr-2">({item.workerName})</span>
-                                        )}
                                     </TableCell>
                                     <TableCell>{item.amount.toFixed(2)} دينار</TableCell>
                                     <TableCell>
@@ -378,9 +305,6 @@ function ExpensesContent() {
                                     <TableCell>{item.category}</TableCell>
                                     <TableCell className="font-medium">
                                         {item.item}
-                                        {item.workerName && item.item === 'راتب عامل' && (
-                                            <span className="text-muted-foreground text-xs mr-2">({item.workerName})</span>
-                                        )}
                                     </TableCell>
                                     <TableCell>{item.amount.toFixed(2)} دينار</TableCell>
                                     <TableCell>{new Date(item.date).toLocaleDateString('ar-EG')}</TableCell>
