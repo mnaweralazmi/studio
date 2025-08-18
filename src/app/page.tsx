@@ -3,20 +3,18 @@
 
 import * as React from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, PlusCircle, Trash2, Edit, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Leaf, PlusCircle, Trash2, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import Link from 'next/link';
 import type arTranslations from '@/locales/ar.json';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TopicDialog, TopicFormValues } from '@/components/topic-dialog';
 import { VideoDialog, VideoFormValues } from '@/components/video-dialog';
 import { iconComponents, IconName } from '@/components/icons';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import { cn } from '@/lib/utils';
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 type TranslationKeys = keyof typeof arTranslations;
 
@@ -291,86 +289,91 @@ export default function Home() {
                     />
                  )}
             </div>
-
-             <Tabs defaultValue={agriculturalSections[0].id} className="w-full" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1.5">
+            
+            {agriculturalSections.length > 0 && (
+                 <Tabs defaultValue={agriculturalSections[0].id} className="w-full" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1.5">
+                        {agriculturalSections.map(section => {
+                           const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
+                           const title = section.titleKey === 'custom' ? section.title : t(section.titleKey);
+                           return (
+                             <TabsTrigger key={section.id} value={section.id} className="flex flex-col items-center justify-center gap-2 h-24 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:text-primary">
+                                <Icon className="h-8 w-8" />
+                                <span className="text-center">{title}</span>
+                             </TabsTrigger>
+                           )
+                        })}
+                    </TabsList>
                     {agriculturalSections.map(section => {
-                       const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
-                       const title = section.titleKey === 'custom' ? section.title : t(section.titleKey);
-                       return (
-                         <TabsTrigger key={section.id} value={section.id} className="flex flex-col items-center gap-2 h-20 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:text-primary">
-                            <Icon className="h-6 w-6" />
-                            <span>{title}</span>
-                         </TabsTrigger>
-                       )
-                    })}
-                </TabsList>
-                {agriculturalSections.map(section => {
-                    const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
-                    const title = section.titleKey === 'custom' ? section.title : t(section.titleKey);
-                    const description = section.descriptionKey === 'custom' ? section.description : t(section.descriptionKey);
+                        const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
+                        const title = section.titleKey === 'custom' ? section.title : t(section.titleKey);
+                        const description = section.descriptionKey === 'custom' ? section.description : t(section.descriptionKey);
 
-                    return (
-                        <TabsContent key={section.id} value={section.id} className="mt-6">
-                            <Card className="border-none shadow-none">
-                                <CardContent className="p-2">
-                                     <Carousel
-                                        opts={{
-                                            align: "start",
-                                            loop: true,
-                                            direction: language === 'ar' ? 'rtl' : 'ltr',
-                                        }}
-                                        className="w-full"
-                                    >
-                                        <div className="flex justify-between items-center mb-4 px-2">
-                                            <div className="flex items-center gap-4">
-                                                <Icon className="h-8 w-8 text-primary" />
-                                                <div>
-                                                    <h3 className="text-2xl font-bold">{title}</h3>
-                                                    <p className="text-muted-foreground">{description}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <CarouselPrevious className="relative -left-0 -right-0 top-0 -translate-y-0" />
-                                                <CarouselNext className="relative -left-0 -right-0 top-0 -translate-y-0" />
-                                            </div>
-                                        </div>
-                                        <CarouselContent>
-                                            {section.subTopics.map((subTopic) => {
-                                                const subTopicTitle = t(subTopic.titleKey);
-                                                const subTopicDescription = t(subTopic.descriptionKey);
-                                                return (
-                                                <CarouselItem key={subTopic.id} className="md:basis-1/2 lg:basis-1/3">
-                                                    <div className="p-1">
-                                                    <Link href={`/topics/${section.id}/${subTopic.id}`} className="group">
-                                                        <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
-                                                            <CardHeader className="p-0 relative">
-                                                                <Image src={subTopic.image} alt={subTopicTitle} width={600} height={400} className="w-full h-40 object-cover" data-ai-hint={subTopic.hint} />
-                                                            </CardHeader>
-                                                            <CardContent className="p-6 flex-1 flex flex-col">
-                                                                <CardTitle className="mb-2 text-lg">
-                                                                    {subTopicTitle}
-                                                                </CardTitle>
-                                                                <p className="text-muted-foreground text-sm flex-1">{subTopicDescription.substring(0, 120)}...</p>
-                                                            </CardContent>
-                                                        </Card>
-                                                    </Link>
+                        return (
+                            <TabsContent key={section.id} value={section.id} className="mt-6">
+                                <Card className="border-none shadow-none">
+                                    <CardContent className="p-2">
+                                         <Carousel
+                                            opts={{
+                                                align: "start",
+                                                loop: true,
+                                                direction: language === 'ar' ? 'rtl' : 'ltr',
+                                            }}
+                                            className="w-full"
+                                        >
+                                            <div className="flex justify-between items-center mb-6 px-2">
+                                                <div className="flex items-center gap-4">
+                                                    <Icon className="h-8 w-8 text-primary" />
+                                                    <div>
+                                                        <h3 className="text-2xl font-bold">{title}</h3>
+                                                        <p className="text-muted-foreground">{description}</p>
                                                     </div>
-                                                </CarouselItem>
-                                            )})}
-                                             {section.subTopics.length === 0 && (
-                                                <div className="w-full text-center py-12 text-muted-foreground">
-                                                   لا توجد مواضيع فرعية متاحة حاليًا.
                                                 </div>
-                                            )}
-                                        </CarouselContent>
-                                    </Carousel>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    )
-                })}
-            </Tabs>
+                                                <div className="flex items-center gap-2">
+                                                    <CarouselPrevious className="relative translate-y-0" />
+                                                    <CarouselNext className="relative translate-y-0" />
+                                                </div>
+                                            </div>
+                                            <CarouselContent>
+                                                {section.subTopics.map((subTopic) => {
+                                                    const subTopicTitle = t(subTopic.titleKey);
+                                                    const subTopicDescription = t(subTopic.descriptionKey);
+                                                    return (
+                                                    <CarouselItem key={subTopic.id} className="md:basis-1/2 lg:basis-1/3">
+                                                        <div className="p-1">
+                                                        <Link href={`/topics/${section.id}/${subTopic.id}`} className="group block">
+                                                            <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
+                                                                <CardHeader className="p-0 relative">
+                                                                    <Image src={subTopic.image} alt={subTopicTitle} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={subTopic.hint} />
+                                                                </CardHeader>
+                                                                <CardContent className="p-6 flex-1 flex flex-col">
+                                                                    <CardTitle className="mb-2 text-lg group-hover:text-primary">
+                                                                        {subTopicTitle}
+                                                                    </CardTitle>
+                                                                    <p className="text-muted-foreground text-sm flex-1">{subTopicDescription.substring(0, 120)}...</p>
+                                                                     <Button variant="link" className="p-0 h-auto self-start mt-4">
+                                                                        {t('readMore') || 'Read More'}
+                                                                    </Button>
+                                                                </CardContent>
+                                                            </Card>
+                                                        </Link>
+                                                        </div>
+                                                    </CarouselItem>
+                                                )})}
+                                                 {section.subTopics.length === 0 && (
+                                                    <div className="w-full text-center py-12 text-muted-foreground">
+                                                       {t('noSubTopics') || 'No sub-topics available.'}
+                                                    </div>
+                                                )}
+                                            </CarouselContent>
+                                        </Carousel>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )
+                    })}
+                </Tabs>
+            )}
         </section>
 
         <section className="w-full">
@@ -394,6 +397,9 @@ export default function Home() {
                 <Card key={video.id} className="overflow-hidden group cursor-pointer shadow-lg relative">
                     <div className="relative">
                         <Image src={video.image} alt={title!} width={1600} height={900} className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={video.hint} />
+                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <PlayCircle className="h-16 w-16 text-white" />
+                        </div>
                     </div>
                     <CardContent className="p-4 bg-card">
                         <h3 className="font-semibold text-lg">{title}</h3>

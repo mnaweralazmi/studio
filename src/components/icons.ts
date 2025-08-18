@@ -1,5 +1,5 @@
 
-import { Droplets, Bug, Scissors, Sprout, Wheat, Wind, Leaf, Carrot, Sun, Cloudy } from 'lucide-react';
+import { Droplets, Bug, Scissors, Sprout, Wheat, Wind, Leaf, Carrot, Sun, Cloudy, PlayCircle } from 'lucide-react';
 
 export const iconComponents = {
   Droplets,
@@ -12,8 +12,7 @@ export const iconComponents = {
   Carrot,
   Sun,
   Cloudy,
+  PlayCircle,
 };
 
 export type IconName = keyof typeof iconComponents;
-
-    
