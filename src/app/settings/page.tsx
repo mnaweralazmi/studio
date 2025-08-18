@@ -41,12 +41,14 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 type Theme = "theme-green" | "theme-blue" | "theme-orange";
 type Mode = "light" | "dark";
+type Language = "ar" | "en";
 
 export default function SettingsPage() {
     const { toast } = useToast();
     const [user, setUser] = React.useState<any>(null);
     const [theme, setTheme] = React.useState<Theme>('theme-green');
     const [mode, setMode] = React.useState<Mode>('dark');
+    const [language, setLanguage] = React.useState<Language>('ar');
 
 
     const profileForm = useForm<ProfileFormValues>({
@@ -84,12 +86,21 @@ export default function SettingsPage() {
         // Load theme and mode
         const savedTheme = localStorage.getItem('theme') as Theme || 'theme-green';
         const savedMode = localStorage.getItem('mode') as Mode || 'dark';
+        const savedLanguage = localStorage.getItem('language') as Language || 'ar';
+        
         setTheme(savedTheme);
         setMode(savedMode);
+        setLanguage(savedLanguage);
+
         document.body.classList.remove('theme-green', 'theme-blue', 'theme-orange');
         document.body.classList.add(savedTheme);
-        document.documentElement.classList.remove('light', 'dark');
-        document.documentElement.classList.add(savedMode);
+        
+        const html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(savedMode);
+        html.lang = savedLanguage;
+        html.dir = savedLanguage === 'ar' ? 'rtl' : 'ltr';
+
 
     }, [profileForm]);
     
@@ -132,6 +143,14 @@ export default function SettingsPage() {
         localStorage.setItem('mode', newMode);
         toast({ title: newMode === 'dark' ? "تم تفعيل الوضع الداكن!" : "تم تفعيل الوضع الفاتح!" });
     };
+
+    const handleLanguageChange = (newLang: Language) => {
+        setLanguage(newLang);
+        localStorage.setItem('language', newLang);
+        document.documentElement.lang = newLang;
+        document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+        toast({ title: "تم تغيير اللغة!", description: "سيتم تطبيق اللغة الجديدة عند تحديث الصفحة." });
+    }
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
@@ -182,12 +201,13 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                    <div className="space-y-2">
                       <Label className="flex items-center gap-2"><Languages /> اللغة</Label>
-                      <Select defaultValue="ar" disabled>
+                      <Select value={language} onValueChange={(value: Language) => handleLanguageChange(value)}>
                           <SelectTrigger>
                               <SelectValue placeholder="اختر لغة..." />
                           </SelectTrigger>
                           <SelectContent>
                               <SelectItem value="ar">العربية</SelectItem>
+                              <SelectItem value="en">English</SelectItem>
                           </SelectContent>
                       </Select>
                   </div>
@@ -248,3 +268,5 @@ export default function SettingsPage() {
     </main>
   );
 }
+
+    

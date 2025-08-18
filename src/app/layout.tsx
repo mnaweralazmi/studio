@@ -19,6 +19,7 @@ export default function RootLayout({
   useEffect(() => {
     const theme = localStorage.getItem("theme") || "theme-green";
     const mode = localStorage.getItem("mode") || "dark";
+    const language = localStorage.getItem("language") || "ar";
     
     const body = document.body;
     body.classList.remove("theme-green", "theme-blue", "theme-orange");
@@ -27,6 +28,8 @@ export default function RootLayout({
     const html = document.documentElement;
     html.classList.remove("light", "dark");
     html.classList.add(mode);
+    html.lang = language;
+    html.dir = language === 'ar' ? 'rtl' : 'ltr';
     
   }, []);
 
@@ -55,3 +58,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
