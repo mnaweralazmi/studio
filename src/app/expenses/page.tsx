@@ -279,61 +279,67 @@ function ExpensesContent() {
                     </Form>
                 </CardContent>
             </Card>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+                {fixedExpenses.length > 0 && (
+                <Card>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</CardTitle></CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {fixedExpenses.map((item) => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>{item.category}</TableCell>
+                                            <TableCell className="font-medium">
+                                                {item.item}
+                                            </TableCell>
+                                            <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+                )}
 
-            {fixedExpenses.length > 0 && (
-            <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</CardTitle></CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableAmount')}</TableHead><TableHead>{t('tableAction')}</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {fixedExpenses.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell>{item.category}</TableCell>
-                                    <TableCell className="font-medium">
-                                        {item.item}
-                                    </TableCell>
-                                    <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                    <TableCell>
-                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            )}
-
-            {variableExpenses.length > 0 && (
-            <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</CardTitle></CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableAmount')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead>{t('tableAction')}</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {variableExpenses.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell>{item.category}</TableCell>
-                                    <TableCell className="font-medium">
-                                        {item.item}
-                                    </TableCell>
-                                    <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                    <TableCell>{new Date(item.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</TableCell>
-                                    <TableCell>
-                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            )}
+                {variableExpenses.length > 0 && (
+                <Card>
+                    <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</CardTitle></CardHeader>
+                    <CardContent>
+                         <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableAmount')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {variableExpenses.map((item) => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>{item.category}</TableCell>
+                                            <TableCell className="font-medium">
+                                                {item.item}
+                                            </TableCell>
+                                            <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                            <TableCell>{new Date(item.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+                )}
+            </div>
         </div>
     );
 }

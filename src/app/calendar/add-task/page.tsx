@@ -230,17 +230,17 @@ export default function AddTaskPage() {
                                     <Button
                                         variant={"outline"}
                                         className={cn(
-                                        "pl-3 text-left font-normal",
+                                        "w-full justify-start text-left font-normal",
                                         !field.value && "text-muted-foreground",
                                         language === 'ar' ? 'pr-3' : 'pl-3'
                                         )}
                                     >
+                                        <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
                                         {field.value ? (
                                         format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS })
                                         ) : (
                                         <span>{t('pickDate')}</span>
                                         )}
-                                        <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
                                     </Button>
                                     </FormControl>
                                 </PopoverTrigger>

@@ -127,9 +127,9 @@ function DebtsContent() {
                             )} />
                             <FormField control={form.control} name="dueDate" render={({ field }) => (
                                 <FormItem className="flex flex-col"><FormLabel>{t('dueDateOptional')}</FormLabel><Popover>
-                                    <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground", language === 'ar' ? 'pr-3' : 'pl-3')}>
+                                    <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                        <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
                                         {field.value ? format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS }) : <span>{t('pickDate')}</span>}
-                                        <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
                                     </Button></FormControl></PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={language === 'ar' ? arSA : enUS} /></PopoverContent>
                                 </Popover><FormMessage /></FormItem>
@@ -144,29 +144,31 @@ function DebtsContent() {
             <Card>
                 <CardHeader><CardTitle>{t('debtList')}</CardTitle></CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader><TableRow>
-                            <TableHead>{t('tableCreditor')}</TableHead>
-                            <TableHead>{t('tableAmount')}</TableHead>
-                            <TableHead>{t('tableDueDate')}</TableHead>
-                            <TableHead>{t('tableStatus')}</TableHead>
-                            <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
-                        </TableRow></TableHeader>
-                        <TableBody>
-                            {debts.map((item) => (
-                                <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50' : ''}>
-                                    <TableCell className="font-medium">{item.creditor}</TableCell>
-                                    <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                    <TableCell>{item.dueDate ? format(item.dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
-                                    <TableCell><Badge variant={item.status === 'paid' ? 'default' : 'destructive'} className={item.status === 'paid' ? 'bg-green-600' : ''}>{item.status === 'paid' ? t('statusPaid') : t('statusUnpaid')}</Badge></TableCell>
-                                    <TableCell className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                                        {item.status === 'unpaid' && <Button size="sm" onClick={() => settleDebt(item.id)}><CheckCircle className="h-4 w-4 mr-1" />{t('settleDebt')}</Button>}
-                                        <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow>
+                                <TableHead>{t('tableCreditor')}</TableHead>
+                                <TableHead>{t('tableAmount')}</TableHead>
+                                <TableHead>{t('tableDueDate')}</TableHead>
+                                <TableHead>{t('tableStatus')}</TableHead>
+                                <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
+                            </TableRow></TableHeader>
+                            <TableBody>
+                                {debts.map((item) => (
+                                    <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50' : ''}>
+                                        <TableCell className="font-medium">{item.creditor}</TableCell>
+                                        <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                        <TableCell>{item.dueDate ? format(item.dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
+                                        <TableCell><Badge variant={item.status === 'paid' ? 'default' : 'destructive'} className={item.status === 'paid' ? 'bg-green-600' : ''}>{item.status === 'paid' ? t('statusPaid') : t('statusUnpaid')}</Badge></TableCell>
+                                        <TableCell className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                            {item.status === 'unpaid' && <Button size="sm" onClick={() => settleDebt(item.id)}><CheckCircle className="h-4 w-4 mr-1" />{t('settleDebt')}</Button>}
+                                            <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
             )}

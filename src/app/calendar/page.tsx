@@ -116,7 +116,7 @@ export default function CalendarPage() {
           <div className="flex-1 w-full space-y-8">
             <Card className="min-h-[405px]">
                 <CardHeader>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <CardTitle className="flex items-center gap-2">
                             <CalendarDays />
