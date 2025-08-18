@@ -292,7 +292,7 @@ export default function Home() {
                  )}
             </div>
 
-             <Tabs defaultValue={agriculturalSections[0].id} className="w-full">
+             <Tabs defaultValue={agriculturalSections[0].id} className="w-full" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1.5">
                     {agriculturalSections.map(section => {
                        const Icon = iconComponents[section.iconName] || iconComponents['Sprout'];
@@ -344,7 +344,7 @@ export default function Home() {
                                                     <div className="p-1">
                                                     <Link href={`/topics/${section.id}/${subTopic.id}`} className="group">
                                                         <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
-                                                            <CardHeader className="p-0">
+                                                            <CardHeader className="p-0 relative">
                                                                 <Image src={subTopic.image} alt={subTopicTitle} width={600} height={400} className="w-full h-40 object-cover" data-ai-hint={subTopic.hint} />
                                                             </CardHeader>
                                                             <CardContent className="p-6 flex-1 flex flex-col">
@@ -421,5 +421,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
