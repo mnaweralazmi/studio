@@ -73,14 +73,22 @@ export default function LoginPage() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
+        const isAdmin = user.email === 'mnaweralazmi88@gmail.com';
+
         if (!userDocSnap.exists()) {
-            const isAdmin = user.email === 'mnaweralazmi88@gmail.com';
+            // If user doesn't exist, create them.
             await setDoc(userDocRef, {
                 name: user.displayName,
                 email: user.email,
-                role: isAdmin ? 'admin' : 'user', // Set role to admin if email matches
+                role: isAdmin ? 'admin' : 'user',
                 createdAt: new Date()
             });
+        } else {
+            // If user exists, check if their role needs to be updated to admin.
+            const userData = userDocSnap.data();
+            if (isAdmin && userData.role !== 'admin') {
+                 await setDoc(userDocRef, { role: 'admin' }, { merge: true });
+            }
         }
         
         toast({ title: "تم تسجيل الدخول بنجاح!" });
@@ -179,3 +187,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
