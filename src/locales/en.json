@@ -187,6 +187,7 @@
     "noDueDate": "N/A",
     "statusPaid": "Paid",
     "statusUnpaid": "Unpaid",
+    "statusPartially-paid": "Partially Paid",
     "settleDebt": "Settle",
     "workersAndSalaries": "Workers & Payroll",
     "workersAndSalariesDesc": "Add workers, track their salaries, and manage bonuses and deductions efficiently.",
@@ -293,5 +294,16 @@
     "thumbnail": "Thumbnail",
     "confirmDeleteTopicDesc": "Are you sure you want to delete the topic '{topicName}'? This action cannot be undone.",
     "confirmDeleteVideoDesc": "Are you sure you want to delete the video '{videoName}'? This action cannot be undone.",
-    "salaryForMonth": "Salary for"
+    "salaryForMonth": "Salary for",
+    "remainingAmount": "Remaining Amount",
+    "recordPayment": "Record Payment",
+    "recordPaymentFor": "Record a payment for",
+    "totalDebtAmount": "Total Debt",
+    "newPayment": "New Payment",
+    "paymentAmount": "Payment Amount",
+    "paymentHistory": "Payment History",
+    "noPaymentsYet": "No payments yet.",
+    "paymentRecordedSuccess": "Payment recorded successfully!",
+    "amountMustBePositive": "Amount must be positive.",
+    "paymentExceedsRemaining": "Payment amount exceeds remaining debt."
 }

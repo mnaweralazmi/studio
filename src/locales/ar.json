@@ -187,6 +187,7 @@
     "noDueDate": "لا يوجد",
     "statusPaid": "مدفوع",
     "statusUnpaid": "غير مدفوع",
+    "statusPartially-paid": "مدفوع جزئياً",
     "settleDebt": "تسديد",
     "workersAndSalaries": "إدارة العمالة والرواتب",
     "workersAndSalariesDesc": "أضف العمال، تتبع رواتبهم، وقم بإدارة المكافآت والخصومات بكفاءة.",
@@ -293,5 +294,16 @@
     "thumbnail": "صورة مصغرة",
     "confirmDeleteTopicDesc": "هل أنت متأكد من حذف موضوع '{topicName}'؟ لا يمكن التراجع عن هذا الإجراء.",
     "confirmDeleteVideoDesc": "هل أنت متأكد من حذف فيديو '{videoName}'؟ لا يمكن التراجع عن هذا الإجراء.",
-    "salaryForMonth": "راتب شهر"
+    "salaryForMonth": "راتب شهر",
+    "remainingAmount": "المبلغ المتبقي",
+    "recordPayment": "تسجيل دفعة",
+    "recordPaymentFor": "تسجيل دفعة لـ",
+    "totalDebtAmount": "إجمالي الدين",
+    "newPayment": "دفعة جديدة",
+    "paymentAmount": "مبلغ الدفعة",
+    "paymentHistory": "سجل الدفعات",
+    "noPaymentsYet": "لا توجد دفعات بعد.",
+    "paymentRecordedSuccess": "تم تسجيل الدفعة بنجاح!",
+    "amountMustBePositive": "المبلغ يجب أن يكون إيجابياً.",
+    "paymentExceedsRemaining": "مبلغ الدفعة أكبر من المبلغ المتبقي."
 }

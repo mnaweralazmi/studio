@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-
+import { PaymentDialog } from './debts/payment-dialog';
 
 const debtFormSchema = z.object({
   creditor: z.string().min(2, "اسم الدائن مطلوب."),
@@ -30,9 +30,16 @@ const debtFormSchema = z.object({
 
 type DebtFormValues = z.infer<typeof debtFormSchema>;
 
-type DebtItem = DebtFormValues & {
+export type Payment = {
+  id: string;
+  amount: number;
+  date: string;
+};
+
+export type DebtItem = DebtFormValues & {
   id: number;
-  status: 'unpaid' | 'paid';
+  status: 'unpaid' | 'paid' | 'partially-paid';
+  payments: Payment[];
 };
 
 export function DebtsContent() {
@@ -49,6 +56,7 @@ export function DebtsContent() {
                 const parsedDebts = JSON.parse(storedDebts).map((debt: any) => ({
                     ...debt,
                     dueDate: debt.dueDate ? new Date(debt.dueDate) : undefined,
+                    payments: debt.payments || [],
                 }));
                 setDebts(parsedDebts);
             }
@@ -76,6 +84,7 @@ export function DebtsContent() {
             ...data,
             id: Date.now(),
             status: 'unpaid',
+            payments: [],
         };
         setDebts(prev => [...prev, newDebt]);
         form.reset();
@@ -87,15 +96,41 @@ export function DebtsContent() {
         toast({ variant: "destructive", title: t('debtDeleted') });
     }
 
-    function settleDebt(id: number) {
-        setDebts(prev => prev.map(item => item.id === id ? { ...item, status: 'paid' } : item));
-        toast({ title: t('debtSettledSuccess'), className: "bg-green-100 text-green-800" });
+    function handlePayment(debtId: number, paymentAmount: number) {
+        setDebts(prevDebts => prevDebts.map(debt => {
+            if (debt.id === debtId) {
+                const newPayment: Payment = {
+                    id: crypto.randomUUID(),
+                    amount: paymentAmount,
+                    date: new Date().toISOString(),
+                };
+                const updatedPayments = [...debt.payments, newPayment];
+                const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
+                
+                let newStatus: DebtItem['status'] = 'partially-paid';
+                if (totalPaid >= debt.amount) {
+                    newStatus = 'paid';
+                }
+
+                return { ...debt, payments: updatedPayments, status: newStatus };
+            }
+            return debt;
+        }));
+        toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 text-green-800" });
     }
     
-    const totalUnpaidDebts = debts.filter(d => d.status === 'unpaid').reduce((sum, item) => sum + item.amount, 0);
+    const totalUnpaidDebts = debts.filter(d => d.status !== 'paid').reduce((sum, item) => {
+        const totalPaid = item.payments.reduce((s, p) => s + p.amount, 0);
+        return sum + (item.amount - totalPaid);
+    }, 0);
 
     if (loading) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    }
+
+    const getRemainingAmount = (debt: DebtItem) => {
+        const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0);
+        return debt.amount - totalPaid;
     }
 
     return (
@@ -152,19 +187,25 @@ export function DebtsContent() {
                             <TableHeader><TableRow>
                                 <TableHead>{t('tableCreditor')}</TableHead>
                                 <TableHead>{t('tableAmount')}</TableHead>
+                                <TableHead>{t('remainingAmount')}</TableHead>
                                 <TableHead>{t('tableDueDate')}</TableHead>
                                 <TableHead>{t('tableStatus')}</TableHead>
                                 <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
                             </TableRow></TableHeader>
                             <TableBody>
                                 {debts.map((item) => (
-                                    <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50' : ''}>
+                                    <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50 dark:bg-green-900/20' : ''}>
                                         <TableCell className="font-medium">{item.creditor}</TableCell>
                                         <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                        <TableCell className="font-mono">{getRemainingAmount(item).toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell>{item.dueDate ? format(item.dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
-                                        <TableCell><Badge variant={item.status === 'paid' ? 'default' : 'destructive'} className={item.status === 'paid' ? 'bg-green-600' : ''}>{item.status === 'paid' ? t('statusPaid') : t('statusUnpaid')}</Badge></TableCell>
+                                        <TableCell>
+                                            <Badge variant={item.status === 'paid' ? 'default' : (item.status === 'partially-paid' ? 'secondary' : 'destructive')} className={item.status === 'paid' ? 'bg-green-600' : ''}>
+                                                {t(`status${item.status.charAt(0).toUpperCase() + item.status.slice(1)}` as any)}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                                            {item.status === 'unpaid' && <Button size="sm" onClick={() => settleDebt(item.id)}><CheckCircle className="h-4 w-4 mr-1" />{t('settleDebt')}</Button>}
+                                            {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
                                             <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                         </TableCell>
                                     </TableRow>
