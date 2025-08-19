@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
@@ -411,4 +411,3 @@ export function ExpensesContent() {
         </>
     );
 }
-
