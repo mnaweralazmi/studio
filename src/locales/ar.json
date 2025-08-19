@@ -193,6 +193,8 @@
     "workersAndSalariesDesc": "أضف العمال، تتبع رواتبهم، وقم بإدارة المكافآت والخصومات بكفاءة.",
     "totalWorkers": "إجمالي عدد العمال",
     "totalWorkersDesc": "عدد العمال المسجلين حالياً",
+    "totalAnnualSalaries": "إجمالي الرواتب السنوية",
+    "totalAnnualSalariesDesc": "التكلفة الإجمالية لرواتب كل العمال سنوياً",
     "totalSalariesPaidThisYear": "إجمالي الرواتب المدفوعة (هذا العام)",
     "totalSalariesPaidThisYearDesc": "مجموع الرواتب المدفوعة في",
     "unpaidSalariesThisMonth": "الرواتب غير المدفوعة (هذا الشهر)",

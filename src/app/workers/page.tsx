@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { Users, BadgeCheck, Banknote } from 'lucide-react';
+import { Users, BadgeCheck, Banknote, FileText } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
@@ -221,6 +221,8 @@ export default function WorkersPage() {
             .reduce((sum, t) => sum + t.amount, 0);
         return total + yearSalaries;
     }, 0);
+    
+    const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
 
     if (!user) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
@@ -241,7 +243,7 @@ export default function WorkersPage() {
             </CardHeader>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{t('totalWorkers')}</CardTitle>
@@ -250,6 +252,16 @@ export default function WorkersPage() {
                 <CardContent>
                     <div className="text-2xl font-bold">{workers.length}</div>
                     <p className="text-xs text-muted-foreground">{t('totalWorkersDesc')}</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('totalAnnualSalaries')}</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{totalAnnualBaseSalaries.toFixed(2)} {t('dinar')}</div>
+                    <p className="text-xs text-muted-foreground">{t('totalAnnualSalariesDesc')}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -329,4 +341,3 @@ export default function WorkersPage() {
     </main>
   );
 }
-

@@ -193,6 +193,8 @@
     "workersAndSalariesDesc": "Add workers, track their salaries, and manage bonuses and deductions efficiently.",
     "totalWorkers": "Total Workers",
     "totalWorkersDesc": "Number of currently registered workers",
+    "totalAnnualSalaries": "Total Annual Salaries",
+    "totalAnnualSalariesDesc": "Total base salary cost for all workers per year",
     "totalSalariesPaidThisYear": "Total Salaries Paid (This Year)",
     "totalSalariesPaidThisYearDesc": "Total salaries paid in",
     "unpaidSalariesThisMonth": "Unpaid Salaries (This Month)",
