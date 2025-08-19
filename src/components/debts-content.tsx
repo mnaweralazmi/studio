@@ -116,7 +116,7 @@ export function DebtsContent() {
             }
             return debt;
         }));
-        toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 text-green-800" });
+        toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" });
     }
     
     const totalUnpaidDebts = debts.filter(d => d.status !== 'paid').reduce((sum, item) => {
@@ -165,14 +165,14 @@ export function DebtsContent() {
                             )} />
                             <FormField control={form.control} name="dueDate" render={({ field }) => (
                                 <FormItem className="flex flex-col"><FormLabel>{t('dueDateOptional')}</FormLabel><Popover>
-                                    <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground", language === 'ar' ? 'pr-3' : 'pl-3')}>
                                         <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
                                         {field.value ? format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS }) : <span>{t('pickDate')}</span>}
                                     </Button></FormControl></PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={language === 'ar' ? arSA : enUS} /></PopoverContent>
                                 </Popover><FormMessage /></FormItem>
                             )} />
-                            <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" />{t('addDebt')}</Button>
+                            <Button type="submit"><PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />{t('addDebt')}</Button>
                         </form>
                     </Form>
                 </CardContent>
@@ -194,13 +194,13 @@ export function DebtsContent() {
                             </TableRow></TableHeader>
                             <TableBody>
                                 {debts.map((item) => (
-                                    <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50 dark:bg-green-900/20' : ''}>
+                                    <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50/50 dark:bg-green-900/20' : ''}>
                                         <TableCell className="font-medium">{item.creditor}</TableCell>
                                         <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell className="font-mono">{getRemainingAmount(item).toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell>{item.dueDate ? format(item.dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
                                         <TableCell>
-                                            <Badge variant={item.status === 'paid' ? 'default' : (item.status === 'partially-paid' ? 'secondary' : 'destructive')} className={item.status === 'paid' ? 'bg-green-600' : ''}>
+                                            <Badge variant={item.status === 'paid' ? 'default' : (item.status === 'partially-paid' ? 'secondary' : 'destructive')} className={item.status === 'paid' ? 'bg-green-600 hover:bg-green-600/80' : ''}>
                                                 {t(`status${item.status.charAt(0).toUpperCase() + item.status.slice(1)}` as any)}
                                             </Badge>
                                         </TableCell>

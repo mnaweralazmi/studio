@@ -21,7 +21,7 @@ interface PaymentDialogProps {
 }
 
 export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
-    const { language, t } = useLanguage();
+    const { t } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
 
     const remainingAmount = debt.amount - debt.payments.reduce((sum, p) => sum + p.amount, 0);
@@ -40,7 +40,9 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
     });
     
     React.useEffect(() => {
-        form.reset({ amount: Number(remainingAmount.toFixed(2)) });
+        if(isOpen) {
+            form.reset({ amount: Number(remainingAmount.toFixed(2)) });
+        }
     }, [isOpen, remainingAmount, form]);
 
 
@@ -57,11 +59,11 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
                     {t('recordPayment')}
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>{t('recordPaymentFor')} {debt.creditor}</DialogTitle>
                     <DialogDescription>
-                        {t('totalDebtAmount')}: {debt.amount.toFixed(2)} {t('dinar')} | {t('remainingAmount')}: {remainingAmount.toFixed(2)} {t('dinar')}
+                        {t('totalDebtAmount')}: {debt.amount.toFixed(2)} {t('dinar')} | {t('remainingAmount')}: <span className="font-bold">{remainingAmount.toFixed(2)} {t('dinar')}</span>
                     </DialogDescription>
                 </DialogHeader>
 
