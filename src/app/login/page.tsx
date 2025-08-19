@@ -73,7 +73,7 @@ export default function LoginPage() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
-        const isAdmin = user.email === 'mnaweralazmi88@gmail.com';
+        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
 
         if (!userDocSnap.exists()) {
             // If user doesn't exist, create them.

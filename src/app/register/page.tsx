@@ -66,7 +66,7 @@ export default function RegisterPage() {
             displayName: data.name
         });
 
-        const isAdmin = data.email.toLowerCase() === 'mnaweralazmi88@gmail.com';
+        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
 
         await setDoc(doc(db, "users", user.uid), {
             name: data.name,
@@ -107,7 +107,7 @@ export default function RegisterPage() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
         
-        const isAdmin = user.email === 'mnaweralazmi88@gmail.com';
+        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
 
         if (!userDocSnap.exists()) {
             await setDoc(userDocRef, {
