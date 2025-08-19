@@ -118,15 +118,6 @@ export function DebtsContent() {
         }));
         toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" });
     }
-    
-    const totalUnpaidDebts = debts.filter(d => d.status !== 'paid').reduce((sum, item) => {
-        const totalPaid = item.payments.reduce((s, p) => s + p.amount, 0);
-        return sum + (item.amount - totalPaid);
-    }, 0);
-
-    if (loading) {
-      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
-    }
 
     const getPaidAmount = (debt: DebtItem) => {
         return debt.payments.reduce((sum, p) => sum + p.amount, 0);
@@ -135,6 +126,14 @@ export function DebtsContent() {
     const getRemainingAmount = (debt: DebtItem) => {
         const totalPaid = getPaidAmount(debt);
         return debt.amount - totalPaid;
+    }
+    
+    const totalUnpaidDebts = debts.filter(d => d.status !== 'paid').reduce((sum, item) => {
+        return sum + getRemainingAmount(item);
+    }, 0);
+
+    if (loading) {
+      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
     }
 
     return (
