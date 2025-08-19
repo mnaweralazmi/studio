@@ -15,6 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
+import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
 
 const initialExpenseCategoriesAr: Record<string, string[]> = {
   "فواتير": ["كهرباء", "ماء", "انترنت", "هاتف"],
@@ -33,9 +36,6 @@ const initialExpenseCategoriesEn: Record<string, string[]> = {
     "Labor": ["Salaries", "Daily Wages"],
     "Miscellaneous": ["Admin", "Food & Drink", "Emergencies"],
 };
-
-type CategoryAr = keyof typeof initialExpenseCategoriesAr;
-type CategoryEn = keyof typeof initialExpenseCategoriesEn;
 
 const expenseFormSchema = z.object({
   type: z.enum(['fixed', 'variable'], { required_error: "الرجاء تحديد نوع المصروف." }),
@@ -58,7 +58,7 @@ const expenseFormSchema = z.object({
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 type ExpenseItem = Omit<ExpenseFormValues, 'newItemName'> & {
-  id: number;
+  id: string;
   date: Date;
 };
 
@@ -66,33 +66,53 @@ export function ExpensesContent() {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
-
+    const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
-    const { user, loading } = useAuth();
+    const { user } = useAuth();
+
+    const getCategoriesKey = React.useCallback(() => {
+        return user ? `expenseCategories_${user.uid}_${language}` : `expenseCategories_guest_${language}`;
+    }, [user, language]);
 
     React.useEffect(() => {
-        const initialCategories = language === 'ar' ? initialExpenseCategoriesAr : initialExpenseCategoriesEn;
-        if (user && !loading) {
-            const expensesKey = `expenses_${user.uid}`;
-            const storedExpenses = localStorage.getItem(expensesKey);
-            if (storedExpenses) {
-                setExpenses(JSON.parse(storedExpenses).map((e: any) => ({...e, date: new Date(e.date)})));
+        const fetchExpensesAndCategories = async () => {
+            if (user) {
+                setIsDataLoading(true);
+                try {
+                    // Fetch expenses
+                    const expensesCollectionRef = collection(db, 'users', user.uid, 'expenses');
+                    const expensesSnapshot = await getDocs(expensesCollectionRef);
+                    const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        date: (doc.data().date as Timestamp).toDate()
+                    })) as ExpenseItem[];
+                    setExpenses(fetchedExpenses);
+
+                    // Fetch categories
+                    const categoriesDocRef = doc(db, 'users', user.uid, 'appData', `expenseCategories_${language}`);
+                    const categoriesSnapshot = await getDocs(collection(db, 'users', user.uid, 'expenseCategories'));
+                     const categoriesDoc = await getDoc(categoriesDocRef);
+                     if (categoriesDoc.exists()) {
+                         setExpenseCategories(categoriesDoc.data().categories);
+                     } else {
+                         setExpenseCategories(language === 'ar' ? initialExpenseCategoriesAr : initialExpenseCategoriesEn);
+                     }
+
+                } catch (e) {
+                    console.error("Error fetching data: ", e);
+                    toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
+                } finally {
+                    setIsDataLoading(false);
+                }
+            } else {
+                setExpenses([]);
+                setExpenseCategories(language === 'ar' ? initialExpenseCategoriesAr : initialExpenseCategoriesEn);
+                setIsDataLoading(false);
             }
-
-            const categoriesKey = `expenseCategories_${user.uid}_${language}`;
-            const storedCategories = localStorage.getItem(categoriesKey);
-            setExpenseCategories(storedCategories ? JSON.parse(storedCategories) : initialCategories);
-        } else {
-             setExpenseCategories(initialCategories);
-        }
-    }, [language, user, loading]);
-
-    React.useEffect(() => {
-        if (user && !loading) {
-            localStorage.setItem(`expenses_${user.uid}`, JSON.stringify(expenses));
-            localStorage.setItem(`expenseCategories_${user.uid}_${language}`, JSON.stringify(expenseCategories));
-        }
-    }, [expenses, expenseCategories, user, language, loading]);
+        };
+        fetchExpensesAndCategories();
+    }, [user, language, toast, t]);
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
@@ -108,44 +128,85 @@ export function ExpensesContent() {
     const selectedCategory = form.watch("category");
     const selectedItem = form.watch("item");
 
-    function onSubmit(data: ExpenseFormValues) {
+    async function updateCategoriesInDb(newCategories: Record<string, string[]>) {
+        if (!user) return;
+        try {
+            const categoriesDocRef = doc(db, 'users', user.uid, 'appData', `expenseCategories_${language}`);
+            await setDoc(categoriesDocRef, { categories: newCategories });
+        } catch (e) {
+            console.error("Error updating categories: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to save new category."});
+        }
+    }
+
+    async function onSubmit(data: ExpenseFormValues) {
+        if (!user) {
+             toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add expenses."});
+            return;
+        }
+
         let finalItemName = data.item;
+        let finalCategories = expenseCategories;
 
         if (data.item === 'add_new_item' && data.newItemName) {
             finalItemName = data.newItemName;
-            setExpenseCategories(prev => {
-                const newCategories: Record<string, string[]> = { ...prev };
-                if (data.category && !newCategories[data.category].includes(data.newItemName!)) {
-                    newCategories[data.category] = [...newCategories[data.category], data.newItemName!];
-                }
-                return newCategories;
-            });
+            const newCategories = { ...expenseCategories };
+            if (data.category && !newCategories[data.category].includes(data.newItemName!)) {
+                newCategories[data.category] = [...newCategories[data.category], data.newItemName!];
+                finalCategories = newCategories;
+                setExpenseCategories(finalCategories);
+                await updateCategoriesInDb(finalCategories);
+            }
         }
 
-        const newExpense: ExpenseItem = {
-            id: Date.now(),
-            date: new Date(),
+        const newExpenseData = {
+            id: Date.now().toString(),
+            date: Timestamp.fromDate(new Date()),
             type: data.type,
             category: data.category,
             item: finalItemName,
             amount: data.amount,
         };
 
-        setExpenses(prev => [...prev, newExpense]);
-        form.reset({
-             type: undefined,
-             category: undefined,
-             item: undefined,
-             amount: 0.01,
-             newItemName: '',
-        });
-        form.clearErrors();
-        toast({ title: t('expenseAddedSuccess') });
+        try {
+            const expensesCollectionRef = collection(db, 'users', user.uid, 'expenses');
+            const docRef = await addDoc(expensesCollectionRef, newExpenseData);
+            
+            const newExpense: ExpenseItem = {
+              id: docRef.id,
+              date: new Date(),
+              type: data.type,
+              category: data.category,
+              item: finalItemName,
+              amount: data.amount,
+            };
+
+            setExpenses(prev => [...prev, newExpense]);
+            form.reset({
+                 type: undefined,
+                 category: undefined,
+                 item: undefined,
+                 amount: 0.01,
+                 newItemName: '',
+            });
+            form.clearErrors();
+            toast({ title: t('expenseAddedSuccess') });
+        } catch(e) {
+            console.error("Error adding expense: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to save expense." });
+        }
     }
 
-    function deleteExpense(id: number) {
-        setExpenses(prev => prev.filter(item => item.id !== id));
-        toast({ variant: "destructive", title: t('expenseDeleted') });
+    async function deleteExpense(id: string) {
+        if (!user) return;
+        try {
+            await deleteDoc(doc(db, 'users', user.uid, 'expenses', id));
+            setExpenses(prev => prev.filter(item => item.id !== id));
+            toast({ variant: "destructive", title: t('expenseDeleted') });
+        } catch(e) {
+            console.error("Error deleting expense: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to delete expense." });
+        }
     }
 
     const fixedExpenses = expenses.filter(e => e.type === 'fixed');
@@ -154,7 +215,7 @@ export function ExpensesContent() {
     const totalFixedExpenses = fixedExpenses.reduce((sum, item) => sum + item.amount, 0);
     const totalVariableExpenses = variableExpenses.reduce((sum, item) => sum + item.amount, 0);
 
-    if (loading) {
+    if (!user) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
     }
 
@@ -280,7 +341,14 @@ export function ExpensesContent() {
                 </CardContent>
             </Card>
             
-            {(fixedExpenses.length > 0 || variableExpenses.length > 0) && (
+            {isDataLoading ? (
+                 <Card>
+                    <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-40 w-full" />
+                    </CardContent>
+                </Card>
+            ) : (fixedExpenses.length > 0 || variableExpenses.length > 0) && (
                  <Card>
                     <CardHeader>
                         <CardTitle className="text-xl sm:text-2xl">{t('expensesList')}</CardTitle>
@@ -343,3 +411,4 @@ export function ExpensesContent() {
         </>
     );
 }
+

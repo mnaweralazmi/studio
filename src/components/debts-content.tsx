@@ -21,6 +21,9 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
 
 const debtFormSchema = z.object({
   creditor: z.string().min(2, "اسم الدائن مطلوب."),
@@ -36,8 +39,9 @@ export type Payment = {
   date: string;
 };
 
-export type DebtItem = DebtFormValues & {
-  id: number;
+export type DebtItem = Omit<DebtFormValues, 'dueDate'> & {
+  id: string;
+  dueDate?: Date;
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
 };
@@ -45,30 +49,52 @@ export type DebtItem = DebtFormValues & {
 export function DebtsContent() {
     const [debts, setDebts] = React.useState<DebtItem[]>([]);
     const { toast } = useToast();
-    const { user, loading } = useAuth();
+    const { user } = useAuth();
+    const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { language, t } = useLanguage();
 
     React.useEffect(() => {
-        if (user && !loading) {
-            const userDebtsKey = `debts_${user.uid}`;
-            const storedDebts = localStorage.getItem(userDebtsKey);
-            if (storedDebts) {
-                const parsedDebts = JSON.parse(storedDebts).map((debt: any) => ({
-                    ...debt,
-                    dueDate: debt.dueDate ? new Date(debt.dueDate) : undefined,
-                    payments: debt.payments || [],
-                }));
-                setDebts(parsedDebts);
-            }
-        }
-    }, [user, loading]);
+        const fetchDebts = async () => {
+          if (user) {
+            setIsDataLoading(true);
+            try {
+              const debtsCollectionRef = collection(db, 'users', user.uid, 'debts');
+              const querySnapshot = await getDocs(debtsCollectionRef);
+              const fetchedDebts: DebtItem[] = [];
 
-    React.useEffect(() => {
-        if (user && !loading) {
-            const userDebtsKey = `debts_${user.uid}`;
-            localStorage.setItem(userDebtsKey, JSON.stringify(debts));
-        }
-    }, [debts, user, loading]);
+              for (const doc of querySnapshot.docs) {
+                const data = doc.data();
+                const paymentsCollectionRef = collection(db, 'users', user.uid, 'debts', doc.id, 'payments');
+                const paymentsSnapshot = await getDocs(paymentsCollectionRef);
+                const payments: Payment[] = paymentsSnapshot.docs.map(pDoc => ({
+                  id: pDoc.id,
+                  ...pDoc.data(),
+                })) as Payment[];
+                
+                fetchedDebts.push({
+                  id: doc.id,
+                  creditor: data.creditor,
+                  amount: data.amount,
+                  dueDate: data.dueDate ? (data.dueDate as Timestamp).toDate() : undefined,
+                  status: data.status,
+                  payments: payments,
+                });
+              }
+              setDebts(fetchedDebts);
+            } catch (e) {
+                console.error("Error fetching debts: ", e);
+                toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
+            } finally {
+                setIsDataLoading(false);
+            }
+          } else {
+            setDebts([]);
+            setIsDataLoading(false);
+          }
+        };
+
+        fetchDebts();
+    }, [user, toast, t]);
 
     const form = useForm<DebtFormValues>({
         resolver: zodResolver(debtFormSchema),
@@ -79,44 +105,99 @@ export function DebtsContent() {
         },
     });
 
-    function onSubmit(data: DebtFormValues) {
-        const newDebt: DebtItem = {
+    async function onSubmit(data: DebtFormValues) {
+        if (!user) {
+            toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add debts." });
+            return;
+        }
+
+        const newDebtData = {
             ...data,
-            id: Date.now(),
             status: 'unpaid',
             payments: [],
+            dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
         };
-        setDebts(prev => [...prev, newDebt]);
-        form.reset();
-        toast({ title: t('debtAddedSuccess') });
+
+        try {
+            const debtsCollectionRef = collection(db, 'users', user.uid, 'debts');
+            const docRef = await addDoc(debtsCollectionRef, {
+                creditor: newDebtData.creditor,
+                amount: newDebtData.amount,
+                status: newDebtData.status,
+                dueDate: newDebtData.dueDate,
+            });
+
+            const newDebt: DebtItem = {
+              ...data,
+              id: docRef.id,
+              dueDate: data.dueDate,
+              status: 'unpaid',
+              payments: [],
+            };
+
+            setDebts(prev => [...prev, newDebt]);
+            form.reset();
+            toast({ title: t('debtAddedSuccess') });
+
+        } catch (e) {
+            console.error("Error adding document: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to save debt." });
+        }
     }
 
-    function deleteDebt(id: number) {
-        setDebts(prev => prev.filter(item => item.id !== id));
-        toast({ variant: "destructive", title: t('debtDeleted') });
+    async function deleteDebt(id: string) {
+        if (!user) return;
+        try {
+            const debtDocRef = doc(db, 'users', user.uid, 'debts', id);
+            await deleteDoc(debtDocRef);
+            setDebts(prev => prev.filter(item => item.id !== id));
+            toast({ variant: "destructive", title: t('debtDeleted') });
+        } catch (e) {
+            console.error("Error deleting document: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to delete debt." });
+        }
     }
 
-    function handlePayment(debtId: number, paymentAmount: number) {
-        setDebts(prevDebts => prevDebts.map(debt => {
-            if (debt.id === debtId) {
-                const newPayment: Payment = {
-                    id: crypto.randomUUID(),
-                    amount: paymentAmount,
-                    date: new Date().toISOString(),
-                };
-                const updatedPayments = [...debt.payments, newPayment];
-                const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
-                
-                let newStatus: DebtItem['status'] = 'partially-paid';
-                if (totalPaid >= debt.amount) {
-                    newStatus = 'paid';
+    async function handlePayment(debtId: string, paymentAmount: number) {
+        if (!user) return;
+        
+        const debt = debts.find(d => d.id === debtId);
+        if (!debt) return;
+        
+        try {
+            const batch = writeBatch(db);
+            
+            const newPaymentRef = doc(collection(db, 'users', user.uid, 'debts', debtId, 'payments'));
+            batch.set(newPaymentRef, {
+                amount: paymentAmount,
+                date: Timestamp.fromDate(new Date()),
+            });
+
+            const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
+            let newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
+
+            const debtDocRef = doc(db, 'users', user.uid, 'debts', debtId);
+            batch.update(debtDocRef, { status: newStatus });
+            
+            await batch.commit();
+            
+            setDebts(prevDebts => prevDebts.map(d => {
+                if (d.id === debtId) {
+                    const newPayment: Payment = {
+                        id: newPaymentRef.id,
+                        amount: paymentAmount,
+                        date: new Date().toISOString(),
+                    };
+                    return { ...d, payments: [...d.payments, newPayment], status: newStatus };
                 }
-
-                return { ...debt, payments: updatedPayments, status: newStatus };
-            }
-            return debt;
-        }));
-        toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" });
+                return d;
+            }));
+            
+            toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" });
+        } catch(e) {
+            console.error("Error processing payment: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to record payment." });
+        }
     }
 
     const getPaidAmount = (debt: DebtItem) => {
@@ -132,7 +213,7 @@ export function DebtsContent() {
         return sum + getRemainingAmount(item);
     }, 0);
 
-    if (loading) {
+    if (!user) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
     }
 
@@ -181,7 +262,14 @@ export function DebtsContent() {
                 </CardContent>
             </Card>
 
-            {debts.length > 0 && (
+            {isDataLoading ? (
+                 <Card>
+                    <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-40 w-full" />
+                    </CardContent>
+                </Card>
+            ) : debts.length > 0 && (
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
                 <CardContent>
@@ -224,3 +312,4 @@ export function DebtsContent() {
         </div>
     );
 }
+

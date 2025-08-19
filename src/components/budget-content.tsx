@@ -15,6 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -32,36 +35,59 @@ const salesFormSchema = z.object({
 type SalesFormValues = z.infer<typeof salesFormSchema>;
 
 type SalesItem = SalesFormValues & {
-  id: number;
+  id: string;
   total: number;
   pricePerKilo: number;
   totalWeight: number;
+  date: Date;
 };
 
 export function BudgetContent() {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
   const { language, t } = useLanguage();
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
 
 
   React.useEffect(() => {
-    if (user && !loading) {
-      const userSalesKey = `salesItems_${user.uid}`;
-      const storedSales = localStorage.getItem(userSalesKey);
-      if (storedSales) {
-        setSalesItems(JSON.parse(storedSales));
+    const fetchSales = async () => {
+      if (user) {
+        setIsDataLoading(true);
+        try {
+            const salesCollectionRef = collection(db, 'users', user.uid, 'sales');
+            const querySnapshot = await getDocs(salesCollectionRef);
+            const sales: SalesItem[] = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                sales.push({
+                    id: doc.id,
+                    vegetable: data.vegetable,
+                    quantity: data.quantity,
+                    weightPerCarton: data.weightPerCarton,
+                    price: data.price,
+                    total: data.total,
+                    pricePerKilo: data.pricePerKilo,
+                    totalWeight: data.totalWeight,
+                    date: (data.date as Timestamp).toDate(),
+                });
+            });
+            setSalesItems(sales);
+        } catch(e) {
+            console.error("Error fetching sales: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+        } finally {
+            setIsDataLoading(false);
+        }
+      } else {
+          setSalesItems([]);
+          setIsDataLoading(false);
       }
-    }
-  }, [user, loading]);
+    };
 
-  React.useEffect(() => {
-    if (user && !loading) {
-      const userSalesKey = `salesItems_${user.uid}`;
-      localStorage.setItem(userSalesKey, JSON.stringify(salesItems));
-    }
-  }, [salesItems, user, loading]);
+    fetchSales();
+  }, [user, toast, t]);
 
   const form = useForm<SalesFormValues>({
     resolver: zodResolver(salesFormSchema),
@@ -73,40 +99,74 @@ export function BudgetContent() {
     },
   });
 
-  function onSubmit(data: SalesFormValues) {
-    const newItem: SalesItem = {
-      ...data,
-      id: Date.now(),
-      total: data.quantity * data.price,
-      totalWeight: data.quantity * data.weightPerCarton,
-      pricePerKilo: data.price / data.weightPerCarton,
-    };
-    setSalesItems(prevItems => [...prevItems, newItem]);
+  async function onSubmit(data: SalesFormValues) {
+    if (!user) {
+        toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add sales."});
+        return;
+    }
     
-    form.reset({
-      vegetable: undefined,
-      quantity: 1,
-      weightPerCarton: 1,
-      price: 0.1,
-    });
-    
-    toast({
-      title: t('salesAddedSuccess'),
-      description: `${t('salesAddedDesc')} "${data.vegetable}"`,
-    });
+    const total = data.quantity * data.price;
+    const totalWeight = data.quantity * data.weightPerCarton;
+    const pricePerKilo = data.price / data.weightPerCarton;
+
+    try {
+        const salesCollectionRef = collection(db, 'users', user.uid, 'sales');
+        const docRef = await addDoc(salesCollectionRef, {
+            ...data,
+            total,
+            totalWeight,
+            pricePerKilo,
+            date: Timestamp.fromDate(new Date()),
+        });
+        
+        const newItem: SalesItem = {
+          ...data,
+          id: docRef.id,
+          total,
+          totalWeight,
+          pricePerKilo,
+          date: new Date(),
+        };
+
+        setSalesItems(prevItems => [...prevItems, newItem]);
+        
+        form.reset({
+          vegetable: undefined,
+          quantity: 1,
+          weightPerCarton: 1,
+          price: 0.1,
+        });
+        
+        toast({
+          title: t('salesAddedSuccess'),
+          description: `${t('salesAddedDesc')} "${data.vegetable}"`,
+        });
+
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to save sale."});
+    }
   }
   
-  function deleteItem(id: number) {
-    setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
-    toast({
-      variant: "destructive",
-      title: t('itemDeleted'),
-    });
+  async function deleteItem(id: string) {
+    if (!user) return;
+    try {
+        const saleDocRef = doc(db, 'users', user.uid, 'sales', id);
+        await deleteDoc(saleDocRef);
+        setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
+        toast({
+            variant: "destructive",
+            title: t('itemDeleted'),
+        });
+    } catch(e) {
+        console.error("Error deleting document: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to delete sale."});
+    }
   }
 
   const totalSales = salesItems.reduce((sum, item) => sum + item.total, 0);
   
-  if (loading) {
+  if (!user) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
@@ -202,7 +262,14 @@ export function BudgetContent() {
           </CardContent>
         </Card>
 
-        {salesItems.length > 0 && (
+        {isDataLoading ? (
+            <Card>
+                <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+                <CardContent>
+                    <Skeleton className="h-40 w-full" />
+                </CardContent>
+            </Card>
+        ) : salesItems.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-xl sm:text-2xl">{t('salesList')}</CardTitle>
@@ -252,3 +319,4 @@ export function BudgetContent() {
     </>
   );
 }
+

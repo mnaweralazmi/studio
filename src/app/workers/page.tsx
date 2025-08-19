@@ -11,45 +11,70 @@ import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
 import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
-import type { Worker, Transaction, TransactionFormValues } from '@/components/workers/types';
+import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
+import { collection, getDocs, doc, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, label: 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
 export default function WorkersPage() {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
+    const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
-    const { user, loading } = useAuth();
+    const { user } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
 
 
     React.useEffect(() => {
-        if (user && !loading) {
-            const workersKey = `workers_${user.uid}`;
-            const storedWorkers = localStorage.getItem(workersKey);
-            if (storedWorkers) {
-                const parsedWorkers = JSON.parse(storedWorkers).map((w: any) => ({
-                    ...w,
-                    baseSalary: w.baseSalary || 0,
-                    paidMonths: w.paidMonths || [],
-                    transactions: w.transactions || [],
-                }));
-                setWorkers(parsedWorkers);
-            }
-        }
-    }, [user, loading]);
+        const fetchWorkers = async () => {
+            if (user) {
+                setIsDataLoading(true);
+                try {
+                    const workersColRef = collection(db, 'users', user.uid, 'workers');
+                    const workersSnapshot = await getDocs(workersColRef);
+                    const fetchedWorkers: Worker[] = [];
 
-    React.useEffect(() => {
-        if (user && !loading) {
-            const workersKey = `workers_${user.uid}`;
-            localStorage.setItem(workersKey, JSON.stringify(workers));
-        }
-    }, [workers, user, loading]);
+                    for (const workerDoc of workersSnapshot.docs) {
+                        const transactionsColRef = collection(db, 'users', user.uid, 'workers', workerDoc.id, 'transactions');
+                        const transactionsSnapshot = await getDocs(transactionsColRef);
+                        const transactions = transactionsSnapshot.docs.map(tDoc => ({ id: tDoc.id, ...tDoc.data() })) as Transaction[];
+                        
+                        const workerData = workerDoc.data();
+                        fetchedWorkers.push({
+                            id: workerDoc.id,
+                            name: workerData.name,
+                            baseSalary: workerData.baseSalary,
+                            transactions: transactions,
+                            paidMonths: workerData.paidMonths || [], // Keep this for now for status check
+                        });
+                    }
+                    setWorkers(fetchedWorkers);
+                } catch (e) {
+                    console.error("Error fetching workers: ", e);
+                    toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
+                } finally {
+                    setIsDataLoading(false);
+                }
+            } else {
+                setWorkers([]);
+                setIsDataLoading(false);
+            }
+        };
+
+        fetchWorkers();
+    }, [user, t, toast]);
     
 
-    function addWorker(data: Omit<Worker, 'id' | 'paidMonths' | 'transactions'>) {
+    async function addWorker(data: WorkerFormValues) {
+        if (!user) {
+             toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add workers." });
+            return;
+        }
+
         const workerExists = workers.some(w => w.name.toLowerCase() === data.name.toLowerCase());
         if (workerExists) {
             toast({
@@ -60,63 +85,115 @@ export default function WorkersPage() {
             return;
         }
 
-        const newWorker: Worker = {
-            id: crypto.randomUUID(),
-            name: data.name,
-            baseSalary: data.baseSalary,
-            paidMonths: [],
-            transactions: [],
-        };
-        setWorkers(prev => [...prev, newWorker]);
-        toast({ title: t('workerAddedSuccess') });
+        try {
+            const workersColRef = collection(db, 'users', user.uid, 'workers');
+            const docRef = await addDoc(workersColRef, {
+                name: data.name,
+                baseSalary: data.baseSalary,
+                paidMonths: [],
+            });
+
+            const newWorker: Worker = {
+                id: docRef.id,
+                name: data.name,
+                baseSalary: data.baseSalary,
+                paidMonths: [],
+                transactions: [],
+            };
+
+            setWorkers(prev => [...prev, newWorker]);
+            toast({ title: t('workerAddedSuccess') });
+
+        } catch (e) {
+            console.error("Error adding worker: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
+        }
     }
 
-    function deleteWorker(workerId: string) {
-        setWorkers(prev => prev.filter(w => w.id !== workerId));
-        toast({ variant: "destructive", title: t('workerDeleted') });
+    async function deleteWorker(workerId: string) {
+        if (!user) return;
+        try {
+            await deleteDoc(doc(db, 'users', user.uid, 'workers', workerId));
+            setWorkers(prev => prev.filter(w => w.id !== workerId));
+            toast({ variant: "destructive", title: t('workerDeleted') });
+        } catch (e) {
+            console.error("Error deleting worker: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker data." });
+        }
     }
 
-    function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
-        setWorkers(prev => prev.map(w => {
-            if (w.id === workerId) {
-                const newTransaction: Transaction = {
-                    id: crypto.randomUUID(),
-                    type: 'salary',
-                    amount: amount,
-                    date: new Date().toISOString(),
-                    month,
-                    year,
-                    description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label} ${year}`
-                };
-                return {
-                    ...w,
-                    paidMonths: [...w.paidMonths, { year, month }],
-                    transactions: [...w.transactions, newTransaction],
-                };
-            }
-            return w;
-        }));
-        toast({ title: t('salaryPaidSuccess') });
+    async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
+        if (!user) return;
+        const worker = workers.find(w => w.id === workerId);
+        if (!worker) return;
+
+        try {
+            const batch = writeBatch(db);
+
+            const newTransactionData: Omit<Transaction, 'id'> = {
+                type: 'salary',
+                amount: amount,
+                date: new Date().toISOString(),
+                month,
+                year,
+                description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label} ${year}`
+            };
+
+            const transactionRef = doc(collection(db, 'users', user.uid, 'workers', workerId, 'transactions'));
+            batch.set(transactionRef, newTransactionData);
+            
+            const workerRef = doc(db, 'users', user.uid, 'workers', workerId);
+            const updatedPaidMonths = [...worker.paidMonths, { year, month }];
+            batch.update(workerRef, { paidMonths: updatedPaidMonths });
+
+            await batch.commit();
+
+            setWorkers(prev => prev.map(w => {
+                if (w.id === workerId) {
+                    return {
+                        ...w,
+                        paidMonths: updatedPaidMonths,
+                        transactions: [...w.transactions, { id: transactionRef.id, ...newTransactionData }],
+                    };
+                }
+                return w;
+            }));
+            toast({ title: t('salaryPaidSuccess') });
+
+        } catch (e) {
+            console.error("Error paying salary: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to record salary payment." });
+        }
     }
 
-    function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
-         setWorkers(prev => prev.map(w => {
-            if (w.id === workerId) {
-                const newTransaction: Transaction = {
-                    id: crypto.randomUUID(),
-                    type: transaction.type,
-                    amount: transaction.amount,
-                    date: new Date().toISOString(),
-                    description: transaction.description,
-                };
-                return {
-                    ...w,
-                    transactions: [...w.transactions, newTransaction],
-                };
-            }
-            return w;
-        }));
-        toast({ title: t('transactionAddedSuccess') });
+    async function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
+        if (!user) return;
+        
+        try {
+            const newTransactionData: Omit<Transaction, 'id'> = {
+                type: transaction.type,
+                amount: transaction.amount,
+                date: new Date().toISOString(),
+                description: transaction.description,
+            };
+
+            const transactionRef = await addDoc(collection(db, 'users', user.uid, 'workers', workerId, 'transactions'), newTransactionData);
+            
+            setWorkers(prev => prev.map(w => {
+                if (w.id === workerId) {
+                    return {
+                        ...w,
+                        transactions: [...w.transactions, { id: transactionRef.id, ...newTransactionData }],
+                    };
+                }
+                return w;
+            }));
+            toast({ title: t('transactionAddedSuccess') });
+
+        } catch (e) {
+            console.error("Error adding transaction: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to add transaction." });
+        }
     }
   
     const getWorkerBalance = (worker: Worker) => {
@@ -145,7 +222,7 @@ export default function WorkersPage() {
         return total + yearSalaries;
     }, 0);
 
-    if (loading) {
+    if (!user) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
     }
 
@@ -215,7 +292,9 @@ export default function WorkersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {workers.length > 0 ? workers.map((worker) => {
+                    {isDataLoading ? (
+                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Skeleton className="w-full h-8" /></TableCell></TableRow>
+                    ) : workers.length > 0 ? workers.map((worker) => {
                       const isPaidThisMonth = getMonthStatus(worker, currentMonth, currentYear);
                       const balance = getWorkerBalance(worker);
                       return (
@@ -250,3 +329,4 @@ export default function WorkersPage() {
     </main>
   );
 }
+

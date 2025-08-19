@@ -17,7 +17,7 @@ import type { DebtItem } from '../debts-content';
 
 interface PaymentDialogProps {
     debt: DebtItem;
-    onConfirm: (debtId: number, amount: number) => void;
+    onConfirm: (debtId: string, amount: number) => void;
 }
 
 export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
@@ -123,3 +123,4 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
         </Dialog>
     );
 }
+
