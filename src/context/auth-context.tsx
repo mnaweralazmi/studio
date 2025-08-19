@@ -56,8 +56,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
       };
 
-      fetchUserData();
-  }, [user?.uid]); // Rerun when user.uid changes
+      if (!loading) {
+        fetchUserData();
+      }
+  }, [user, loading]); 
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
