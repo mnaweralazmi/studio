@@ -45,24 +45,22 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     if (!loading && !user && !isAuthPage) {
       router.replace('/login');
     }
-  }, [user, loading, isAuthPage, pathname, router]);
+  }, [user, loading, isAuthPage, router]); // Removed pathname as it's redundant here
 
 
-  if (loading) {
+  if (loading && !isAuthPage) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
             <Skeleton className="h-20 w-20" />
         </div>
     );
   }
-
+  
   if (isAuthPage) {
     return <>{children}<Toaster /></>;
   }
-  
+
   if (!user) {
-    // This case should be handled by the redirect effect,
-    // but as a fallback we can show a loader or null.
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
             <Skeleton className="h-20 w-20" />
