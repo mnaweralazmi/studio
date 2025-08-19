@@ -128,8 +128,12 @@ export function DebtsContent() {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
     }
 
+    const getPaidAmount = (debt: DebtItem) => {
+        return debt.payments.reduce((sum, p) => sum + p.amount, 0);
+    }
+    
     const getRemainingAmount = (debt: DebtItem) => {
-        const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0);
+        const totalPaid = getPaidAmount(debt);
         return debt.amount - totalPaid;
     }
 
@@ -187,6 +191,7 @@ export function DebtsContent() {
                             <TableHeader><TableRow>
                                 <TableHead>{t('tableCreditor')}</TableHead>
                                 <TableHead>{t('tableAmount')}</TableHead>
+                                <TableHead>{t('paidAmount')}</TableHead>
                                 <TableHead>{t('remainingAmount')}</TableHead>
                                 <TableHead>{t('tableDueDate')}</TableHead>
                                 <TableHead>{t('tableStatus')}</TableHead>
@@ -197,6 +202,7 @@ export function DebtsContent() {
                                     <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50/50 dark:bg-green-900/20' : ''}>
                                         <TableCell className="font-medium">{item.creditor}</TableCell>
                                         <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                        <TableCell className="font-mono text-green-600">{getPaidAmount(item).toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell className="font-mono">{getRemainingAmount(item).toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell>{item.dueDate ? format(item.dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
                                         <TableCell>

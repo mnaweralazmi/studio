@@ -296,6 +296,7 @@
     "confirmDeleteVideoDesc": "هل أنت متأكد من حذف فيديو '{videoName}'؟ لا يمكن التراجع عن هذا الإجراء.",
     "salaryForMonth": "راتب شهر",
     "remainingAmount": "المبلغ المتبقي",
+    "paidAmount": "المبلغ المدفوع",
     "recordPayment": "تسجيل دفعة",
     "recordPaymentFor": "تسجيل دفعة لـ",
     "totalDebtAmount": "إجمالي الدين",

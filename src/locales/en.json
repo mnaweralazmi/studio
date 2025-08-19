@@ -296,6 +296,7 @@
     "confirmDeleteVideoDesc": "Are you sure you want to delete the video '{videoName}'? This action cannot be undone.",
     "salaryForMonth": "Salary for",
     "remainingAmount": "Remaining Amount",
+    "paidAmount": "Paid Amount",
     "recordPayment": "Record Payment",
     "recordPaymentFor": "Record a payment for",
     "totalDebtAmount": "Total Debt",
