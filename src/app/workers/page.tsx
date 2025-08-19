@@ -20,13 +20,13 @@ const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February'
 export default function WorkersPage() {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
 
 
     React.useEffect(() => {
-        if (user) {
+        if (user && !loading) {
             const workersKey = `workers_${user.uid}`;
             const storedWorkers = localStorage.getItem(workersKey);
             if (storedWorkers) {
@@ -39,14 +39,14 @@ export default function WorkersPage() {
                 setWorkers(parsedWorkers);
             }
         }
-    }, [user]);
+    }, [user, loading]);
 
     React.useEffect(() => {
-        if (user) {
+        if (user && !loading) {
             const workersKey = `workers_${user.uid}`;
             localStorage.setItem(workersKey, JSON.stringify(workers));
         }
-    }, [workers, user]);
+    }, [workers, user, loading]);
     
 
     function addWorker(data: Omit<Worker, 'id' | 'paidMonths' | 'transactions'>) {
@@ -144,6 +144,10 @@ export default function WorkersPage() {
             .reduce((sum, t) => sum + t.amount, 0);
         return total + yearSalaries;
     }, 0);
+
+    if (loading) {
+      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    }
 
     return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">

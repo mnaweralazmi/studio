@@ -38,11 +38,11 @@ type DebtItem = DebtFormValues & {
 export function DebtsContent() {
     const [debts, setDebts] = React.useState<DebtItem[]>([]);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const { language, t } = useLanguage();
 
     React.useEffect(() => {
-        if (user) {
+        if (user && !loading) {
             const userDebtsKey = `debts_${user.uid}`;
             const storedDebts = localStorage.getItem(userDebtsKey);
             if (storedDebts) {
@@ -53,14 +53,14 @@ export function DebtsContent() {
                 setDebts(parsedDebts);
             }
         }
-    }, [user]);
+    }, [user, loading]);
 
     React.useEffect(() => {
-        if (user) {
+        if (user && !loading) {
             const userDebtsKey = `debts_${user.uid}`;
             localStorage.setItem(userDebtsKey, JSON.stringify(debts));
         }
-    }, [debts, user]);
+    }, [debts, user, loading]);
 
     const form = useForm<DebtFormValues>({
         resolver: zodResolver(debtFormSchema),
@@ -93,6 +93,10 @@ export function DebtsContent() {
     }
     
     const totalUnpaidDebts = debts.filter(d => d.status === 'unpaid').reduce((sum, item) => sum + item.amount, 0);
+
+    if (loading) {
+      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    }
 
     return (
         <div className="space-y-6">

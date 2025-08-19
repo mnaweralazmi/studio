@@ -68,11 +68,11 @@ export function ExpensesContent() {
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
 
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
 
     React.useEffect(() => {
         const initialCategories = language === 'ar' ? initialExpenseCategoriesAr : initialExpenseCategoriesEn;
-        if (user) {
+        if (user && !loading) {
             const expensesKey = `expenses_${user.uid}`;
             const storedExpenses = localStorage.getItem(expensesKey);
             if (storedExpenses) {
@@ -85,14 +85,14 @@ export function ExpensesContent() {
         } else {
              setExpenseCategories(initialCategories);
         }
-    }, [language, user]);
+    }, [language, user, loading]);
 
     React.useEffect(() => {
-        if (user) {
+        if (user && !loading) {
             localStorage.setItem(`expenses_${user.uid}`, JSON.stringify(expenses));
             localStorage.setItem(`expenseCategories_${user.uid}_${language}`, JSON.stringify(expenseCategories));
         }
-    }, [expenses, expenseCategories, user, language]);
+    }, [expenses, expenseCategories, user, language, loading]);
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
@@ -153,6 +153,10 @@ export function ExpensesContent() {
 
     const totalFixedExpenses = fixedExpenses.reduce((sum, item) => sum + item.amount, 0);
     const totalVariableExpenses = variableExpenses.reduce((sum, item) => sum + item.amount, 0);
+
+    if (loading) {
+      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    }
 
     return (
         <>

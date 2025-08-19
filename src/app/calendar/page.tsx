@@ -26,11 +26,11 @@ export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { language, t } = useLanguage();
 
   React.useEffect(() => {
-    if (user) {
+    if (user && !loading) {
       const userTasksKey = `calendarTasks_${user.uid}`;
       const storedTasks = localStorage.getItem(userTasksKey);
       if (storedTasks) {
@@ -42,14 +42,14 @@ export default function CalendarPage() {
           }
       }
     }
-  }, [user]);
+  }, [user, loading]);
 
   React.useEffect(() => {
-    if (user) {
+    if (user && !loading) {
         const userTasksKey = `calendarTasks_${user.uid}`;
         localStorage.setItem(userTasksKey, JSON.stringify(tasks));
     }
-  }, [tasks, user]);
+  }, [tasks, user, loading]);
 
   const deleteTask = (taskId: string) => {
     const updatedTasks = tasks.filter(task => task.id !== taskId);
@@ -89,6 +89,10 @@ export default function CalendarPage() {
   const allCompletedTasks = tasks
     .filter(task => task.isCompleted)
     .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+  }
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">

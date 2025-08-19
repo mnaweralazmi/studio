@@ -47,7 +47,7 @@ export default function AddTaskPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { language, t } = useLanguage();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   
   const taskTitles = language === 'ar' ? taskTitlesAr : taskTitlesEn;
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
@@ -83,7 +83,7 @@ export default function AddTaskPage() {
 
 
   function onSubmit(data: TaskFormValues) {
-    if (!user) {
+    if (loading || !user) {
         toast({ variant: "destructive", title: t('error'), description: "يجب تسجيل الدخول لحفظ المهام." });
         return;
     }
@@ -118,6 +118,10 @@ export default function AddTaskPage() {
             description: t('taskSaveFailed'),
         });
     }
+  }
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
   return (

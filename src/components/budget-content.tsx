@@ -41,27 +41,27 @@ type SalesItem = SalesFormValues & {
 export function BudgetContent() {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { language, t } = useLanguage();
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
 
 
   React.useEffect(() => {
-    if (user) {
+    if (user && !loading) {
       const userSalesKey = `salesItems_${user.uid}`;
       const storedSales = localStorage.getItem(userSalesKey);
       if (storedSales) {
         setSalesItems(JSON.parse(storedSales));
       }
     }
-  }, [user]);
+  }, [user, loading]);
 
   React.useEffect(() => {
-    if (user) {
+    if (user && !loading) {
       const userSalesKey = `salesItems_${user.uid}`;
       localStorage.setItem(userSalesKey, JSON.stringify(salesItems));
     }
-  }, [salesItems, user]);
+  }, [salesItems, user, loading]);
 
   const form = useForm<SalesFormValues>({
     resolver: zodResolver(salesFormSchema),
@@ -105,6 +105,10 @@ export function BudgetContent() {
   }
 
   const totalSales = salesItems.reduce((sum, item) => sum + item.total, 0);
+  
+  if (loading) {
+      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+  }
 
   return (
     <>
