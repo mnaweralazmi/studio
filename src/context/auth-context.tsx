@@ -26,29 +26,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          setUser({
-            ...firebaseUser,
-            role: userData.role,
-            name: userData.name,
-          });
-        } else {
-            // Handle case where user exists in Auth but not in Firestore
-            setUser(firebaseUser);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        setUser(firebaseUser as AppUser | null);
+        setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+      const fetchUserData = async () => {
+          if (user && !user.role) { // Fetch only if user exists and role is not yet set
+              const userDocRef = doc(db, 'users', user.uid);
+              try {
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    setUser(currentUser => currentUser ? {
+                        ...currentUser,
+                        role: userData.role,
+                        name: userData.name || currentUser.displayName,
+                    } : null);
+                }
+              } catch (error) {
+                  console.error("Failed to fetch user document:", error);
+                  // Handle cases where firestore might be offline initially
+                  // We don't want to block the app, role can be fetched later.
+              }
+          }
+      };
+
+      fetchUserData();
+  }, [user?.uid]); // Rerun when user.uid changes
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
