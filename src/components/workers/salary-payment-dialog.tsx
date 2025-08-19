@@ -25,7 +25,7 @@ function SalaryPaymentDialogComponent({ worker, onConfirm }: SalaryPaymentDialog
     const currentYear = new Date().getFullYear();
 
     const isMonthPaid = (monthValue: number) => {
-        return worker.paidMonths.some(pm => pm.month === monthValue && pm.year === currentYear);
+        return (worker.paidMonths || []).some(pm => pm.month === monthValue && pm.year === currentYear);
     }
 
     const unpaidMonths = months.filter(m => !isMonthPaid(m.value));

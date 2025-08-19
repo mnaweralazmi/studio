@@ -292,5 +292,6 @@
     "videoUrl": "رابط الفيديو",
     "thumbnail": "صورة مصغرة",
     "confirmDeleteTopicDesc": "هل أنت متأكد من حذف موضوع '{topicName}'؟ لا يمكن التراجع عن هذا الإجراء.",
-    "confirmDeleteVideoDesc": "هل أنت متأكد من حذف فيديو '{videoName}'؟ لا يمكن التراجع عن هذا الإجراء."
+    "confirmDeleteVideoDesc": "هل أنت متأكد من حذف فيديو '{videoName}'؟ لا يمكن التراجع عن هذا الإجراء.",
+    "salaryForMonth": "راتب شهر"
 }

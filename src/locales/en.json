@@ -292,5 +292,6 @@
     "videoUrl": "Video URL",
     "thumbnail": "Thumbnail",
     "confirmDeleteTopicDesc": "Are you sure you want to delete the topic '{topicName}'? This action cannot be undone.",
-    "confirmDeleteVideoDesc": "Are you sure you want to delete the video '{videoName}'? This action cannot be undone."
+    "confirmDeleteVideoDesc": "Are you sure you want to delete the video '{videoName}'? This action cannot be undone.",
+    "salaryForMonth": "Salary for"
 }

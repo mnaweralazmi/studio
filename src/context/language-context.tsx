@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useLayoutEffect } from 'react';
 import ar from '@/locales/ar.json';
 import en from '@/locales/en.json';
 
@@ -12,35 +12,50 @@ type Translations = typeof ar;
 interface LanguageContextType {
   language: Language;
   setLanguage: (language: Language) => void;
-  t: (key: keyof Translations) => string;
+  t: (key: keyof Translations, params?: Record<string, string>) => string;
 }
 
 const translations = { ar, en };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+// Use useLayoutEffect to prevent flash of untranslated content
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('ar');
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const savedLanguage = localStorage.getItem('language') as Language;
     if (savedLanguage && (savedLanguage === 'ar' || savedLanguage === 'en')) {
       setLanguage(savedLanguage);
+      document.documentElement.lang = savedLanguage;
+      document.documentElement.dir = savedLanguage === 'ar' ? 'rtl' : 'ltr';
+    } else {
+        document.documentElement.lang = 'ar';
+        document.documentElement.dir = 'rtl';
     }
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('language', language);
-    document.documentElement.lang = language;
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-  }, [language]);
+  const setLanguageWrapper = (lang: Language) => {
+      setLanguage(lang);
+      localStorage.setItem('language', lang);
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  }
 
-  const t = (key: keyof Translations): string => {
-    return translations[language][key] || translations['en'][key] || key;
+  const t = (key: keyof Translations, params?: Record<string, string>): string => {
+    let translation = translations[language][key] || translations['en'][key] || key;
+    if (params) {
+        Object.keys(params).forEach(pKey => {
+            translation = translation.replace(`{${pKey}}`, params[pKey]);
+        });
+    }
+    return translation;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: setLanguageWrapper, t }}>
       {children}
     </LanguageContext.Provider>
   );

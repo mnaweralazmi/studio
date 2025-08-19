@@ -45,7 +45,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     if (!loading && !user && !isAuthPage) {
       router.replace('/login');
     }
-  }, [user, loading, isAuthPage, router]); // Removed pathname as it's redundant here
+  }, [user, loading, isAuthPage, router]);
 
 
   if (loading && !isAuthPage) {
@@ -85,19 +85,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [language, setLanguage] = useState<string>('ar');
-
-  useEffect(() => {
-    const storedLang = localStorage.getItem('language');
-    if (storedLang) {
-      setLanguage(storedLang);
-      document.documentElement.lang = storedLang;
-      document.documentElement.dir = storedLang === 'ar' ? 'rtl' : 'ltr';
-    }
-  }, []);
-
   return (
-    <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className={`dark ${cairo.className}`}>
+    // The dir and lang attributes are now managed by the LanguageProvider
+    <html lang="ar" dir="rtl" className={`dark ${cairo.className}`}>
       <head />
       <body className="antialiased theme-green">
         <AuthProvider>
