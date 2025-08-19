@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useState, useContext, useMemo } from 'react';
 import { initialAgriculturalSections, type AgriculturalSection } from '@/lib/topics-data';
 
 interface TopicsContextType {
