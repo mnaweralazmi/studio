@@ -70,14 +70,18 @@ export default function AddTaskPage() {
   React.useEffect(() => {
     if (selectedVegetable) {
         form.setValue('fruit', '');
-        form.setValue('description', selectedVegetable);
+        if (!form.getValues('description')) {
+            form.setValue('description', selectedVegetable);
+        }
     }
   }, [selectedVegetable, form]);
 
   React.useEffect(() => {
     if (selectedFruit) {
         form.setValue('vegetable', '');
-        form.setValue('description', selectedFruit);
+        if (!form.getValues('description')) {
+            form.setValue('description', selectedFruit);
+        }
     }
   }, [selectedFruit, form]);
 
@@ -120,7 +124,7 @@ export default function AddTaskPage() {
     }
   }
   
-  if (loading) {
+  if (loading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
