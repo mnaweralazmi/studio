@@ -15,15 +15,16 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Landmark, Trash2, PlusCircle, CalendarIcon, CheckCircle } from 'lucide-react';
+import { Landmark, Trash2, PlusCircle, CalendarIcon, CheckCircle, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
-import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
+import { EditDebtDialog } from './debts/edit-debt-dialog';
 
 const debtFormSchema = z.object({
   creditor: z.string().min(2, "اسم الدائن مطلوب."),
@@ -31,7 +32,7 @@ const debtFormSchema = z.object({
   dueDate: z.date().optional(),
 });
 
-type DebtFormValues = z.infer<typeof debtFormSchema>;
+export type DebtFormValues = z.infer<typeof debtFormSchema>;
 
 export type Payment = {
   id: string;
@@ -52,6 +53,7 @@ export function DebtsContent() {
     const { user } = useAuth();
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { language, t } = useLanguage();
+    const [editingDebt, setEditingDebt] = React.useState<DebtItem | null>(null);
 
     React.useEffect(() => {
         const fetchDebts = async () => {
@@ -144,6 +146,26 @@ export function DebtsContent() {
             toast({ variant: "destructive", title: t('error'), description: "Failed to save debt." });
         }
     }
+
+    async function handleUpdateDebt(id: string, data: DebtFormValues) {
+        if (!user) return;
+        try {
+            const debtDocRef = doc(db, 'users', user.uid, 'debts', id);
+            await updateDoc(debtDocRef, {
+                creditor: data.creditor,
+                amount: data.amount,
+                dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
+            });
+
+            setDebts(prev => prev.map(d => d.id === id ? { ...d, ...data, dueDate: data.dueDate } : d));
+            setEditingDebt(null);
+            toast({ title: t('debtUpdatedSuccess') });
+        } catch (e) {
+            console.error("Error updating debt:", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to update debt." });
+        }
+    }
+
 
     async function deleteDebt(id: string) {
         if (!user) return;
@@ -297,9 +319,12 @@ export function DebtsContent() {
                                                 {t(`status${item.status.charAt(0).toUpperCase() + item.status.slice(1)}` as any)}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                                            {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
-                                            <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                        <TableCell>
+                                            <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                                {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
+                                                <Button variant="ghost" size="icon" onClick={() => setEditingDebt(item)} title={t('edit')}><Pencil className="h-4 w-4" /></Button>
+                                                <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -309,7 +334,15 @@ export function DebtsContent() {
                 </CardContent>
             </Card>
             )}
+
+            {editingDebt && (
+                <EditDebtDialog 
+                    isOpen={!!editingDebt}
+                    onClose={() => setEditingDebt(null)}
+                    debt={editingDebt}
+                    onSave={handleUpdateDebt}
+                />
+            )}
         </div>
     );
 }
-

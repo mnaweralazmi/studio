@@ -12,12 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp } from 'lucide-react';
+import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp, Pencil } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
+import { EditExpenseDialog } from './expenses/edit-expense-dialog';
+
 
 const initialExpenseCategoriesAr: Record<string, string[]> = {
   "فواتير": ["كهرباء", "ماء", "انترنت", "هاتف"],
@@ -55,9 +57,9 @@ const expenseFormSchema = z.object({
     path: ['newItemName'],
 });
 
-type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
+export type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-type ExpenseItem = Omit<ExpenseFormValues, 'newItemName'> & {
+export type ExpenseItem = Omit<ExpenseFormValues, 'newItemName'> & {
   id: string;
   date: Date;
 };
@@ -69,6 +71,7 @@ export function ExpensesContent() {
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
     const { user } = useAuth();
+    const [editingExpense, setEditingExpense] = React.useState<ExpenseItem | null>(null);
 
     const getCategoriesKey = React.useCallback(() => {
         return user ? `expenseCategories_${user.uid}_${language}` : `expenseCategories_guest_${language}`;
@@ -91,8 +94,7 @@ export function ExpensesContent() {
 
                     // Fetch categories
                     const categoriesDocRef = doc(db, 'users', user.uid, 'appData', `expenseCategories_${language}`);
-                    const categoriesSnapshot = await getDocs(collection(db, 'users', user.uid, 'expenseCategories'));
-                     const categoriesDoc = await getDoc(categoriesDocRef);
+                    const categoriesDoc = await getDoc(categoriesDocRef);
                      if (categoriesDoc.exists()) {
                          setExpenseCategories(categoriesDoc.data().categories);
                      } else {
@@ -138,6 +140,53 @@ export function ExpensesContent() {
             toast({ variant: "destructive", title: t('error'), description: "Failed to save new category."});
         }
     }
+
+    async function handleUpdateExpense(id: string, data: ExpenseFormValues) {
+        if (!user) return;
+
+        let finalItemName = data.item;
+        let finalCategories = expenseCategories;
+        let categoriesChanged = false;
+
+        if (data.item === 'add_new_item' && data.newItemName) {
+            finalItemName = data.newItemName;
+            const newCategories = { ...expenseCategories };
+            if (data.category && !newCategories[data.category].includes(data.newItemName!)) {
+                newCategories[data.category] = [...newCategories[data.category], data.newItemName!];
+                finalCategories = newCategories;
+                setExpenseCategories(finalCategories);
+                categoriesChanged = true;
+            }
+        }
+        
+        const expenseToUpdate = expenses.find(e => e.id === id);
+        if (!expenseToUpdate) return;
+        
+        try {
+            const expenseDocRef = doc(db, 'users', user.uid, 'expenses', id);
+            const updatedData = {
+                type: data.type,
+                category: data.category,
+                item: finalItemName,
+                amount: data.amount,
+                date: Timestamp.fromDate(expenseToUpdate.date),
+            };
+            await updateDoc(expenseDocRef, updatedData);
+            
+            if (categoriesChanged) {
+                await updateCategoriesInDb(finalCategories);
+            }
+
+            setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updatedData, date: expenseToUpdate.date } : e));
+            setEditingExpense(null);
+            toast({ title: t('expenseUpdatedSuccess') });
+        } catch(e) {
+             console.error("Error updating expense: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to update expense." });
+        }
+
+    }
+
 
     async function onSubmit(data: ExpenseFormValues) {
         if (!user) {
@@ -367,9 +416,10 @@ export function ExpensesContent() {
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                     <div className="flex gap-2 justify-end">
+                                                        <Button variant="ghost" size="icon" onClick={() => setEditingExpense(item)} title={t('edit')}><Pencil className="h-4 w-4" /></Button>
+                                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -393,9 +443,10 @@ export function ExpensesContent() {
                                                 <TableCell>{new Date(item.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    <div className="flex gap-2 justify-end">
+                                                        <Button variant="ghost" size="icon" onClick={() => setEditingExpense(item)} title={t('edit')}><Pencil className="h-4 w-4" /></Button>
+                                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -407,7 +458,15 @@ export function ExpensesContent() {
                     </CardContent>
                 </Card>
             )}
-           
+            {editingExpense && (
+                <EditExpenseDialog
+                    isOpen={!!editingExpense}
+                    onClose={() => setEditingExpense(null)}
+                    expense={editingExpense}
+                    onSave={handleUpdateExpense}
+                    expenseCategories={expenseCategories}
+                />
+            )}
         </>
     );
 }

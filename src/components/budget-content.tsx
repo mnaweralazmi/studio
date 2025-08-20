@@ -10,14 +10,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { PlusCircle, Trash2, Wallet } from 'lucide-react';
+import { PlusCircle, Trash2, Wallet, Pencil } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
+import { EditSaleDialog } from './budget/edit-sale-dialog';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -32,9 +33,9 @@ const salesFormSchema = z.object({
   price: z.coerce.number().min(0.01, 'يجب أن يكون السعر إيجابياً.'),
 });
 
-type SalesFormValues = z.infer<typeof salesFormSchema>;
+export type SalesFormValues = z.infer<typeof salesFormSchema>;
 
-type SalesItem = SalesFormValues & {
+export type SalesItem = SalesFormValues & {
   id: string;
   total: number;
   pricePerKilo: number;
@@ -49,6 +50,7 @@ export function BudgetContent() {
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const { language, t } = useLanguage();
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
+  const [editingSale, setEditingSale] = React.useState<SalesItem | null>(null);
 
 
   React.useEffect(() => {
@@ -73,7 +75,7 @@ export function BudgetContent() {
                     date: (data.date as Timestamp).toDate(),
                 });
             });
-            setSalesItems(sales);
+            setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
         } catch(e) {
             console.error("Error fetching sales: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
@@ -98,6 +100,44 @@ export function BudgetContent() {
       vegetable: undefined,
     },
   });
+
+  const handleUpdateItem = async (id: string, data: SalesFormValues) => {
+    if (!user) return;
+
+    const total = data.quantity * data.price;
+    const totalWeight = data.quantity * data.weightPerCarton;
+    const pricePerKilo = data.price / data.weightPerCarton;
+    
+    try {
+        const saleDocRef = doc(db, 'users', user.uid, 'sales', id);
+        const saleToUpdate = salesItems.find(s => s.id === id);
+        if (!saleToUpdate) return;
+        
+        await setDoc(saleDocRef, {
+            ...data,
+            total,
+            totalWeight,
+            pricePerKilo,
+            date: Timestamp.fromDate(saleToUpdate.date),
+        });
+
+        setSalesItems(prevItems => prevItems.map(item => item.id === id ? {
+            ...item,
+            ...data,
+            total,
+            totalWeight,
+            pricePerKilo,
+        } : item));
+        
+        toast({ title: t('salesUpdatedSuccess') });
+        setEditingSale(null);
+
+    } catch (e) {
+        console.error("Error updating document: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to update sale."});
+    }
+  };
+
 
   async function onSubmit(data: SalesFormValues) {
     if (!user) {
@@ -128,7 +168,7 @@ export function BudgetContent() {
           date: new Date(),
         };
 
-        setSalesItems(prevItems => [...prevItems, newItem]);
+        setSalesItems(prevItems => [newItem, ...prevItems]);
         
         form.reset({
           vegetable: undefined,
@@ -300,9 +340,14 @@ export function BudgetContent() {
                         <TableCell>{item.pricePerKilo.toFixed(2)} {t('dinar')}</TableCell>
                         <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
                         <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}>
-                          <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title={t('deleteItem')}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="ghost" size="icon" onClick={() => setEditingSale(item)} title={t('edit')}>
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title={t('deleteItem')}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -316,7 +361,14 @@ export function BudgetContent() {
             </CardContent>
           </Card>
         )}
+        {editingSale && (
+            <EditSaleDialog
+                isOpen={!!editingSale}
+                onClose={() => setEditingSale(null)}
+                sale={editingSale}
+                onSave={handleUpdateItem}
+            />
+        )}
     </>
   );
 }
-

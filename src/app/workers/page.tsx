@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { Users, BadgeCheck, Banknote, FileText } from 'lucide-react';
+import { Users, BadgeCheck, Banknote, FileText, PlusCircle, Pencil } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
@@ -13,11 +13,12 @@ import { FinancialRecordDialog } from '@/components/workers/financial-record-dia
 import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
 import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
-import { collection, getDocs, doc, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
-const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, label: 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
+const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
 export default function WorkersPage() {
@@ -49,7 +50,7 @@ export default function WorkersPage() {
                             name: workerData.name,
                             baseSalary: workerData.baseSalary,
                             transactions: transactions,
-                            paidMonths: workerData.paidMonths || [], // Keep this for now for status check
+                            paidMonths: workerData.paidMonths || [],
                         });
                     }
                     setWorkers(fetchedWorkers);
@@ -69,13 +70,13 @@ export default function WorkersPage() {
     }, [user, t, toast]);
     
 
-    async function addWorker(data: WorkerFormValues) {
+    async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
         if (!user) {
              toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add workers." });
             return;
         }
 
-        const workerExists = workers.some(w => w.name.toLowerCase() === data.name.toLowerCase());
+        const workerExists = workers.some(w => w.name.toLowerCase() === data.name.toLowerCase() && w.id !== workerId);
         if (workerExists) {
             toast({
                 variant: "destructive",
@@ -85,28 +86,40 @@ export default function WorkersPage() {
             return;
         }
 
-        try {
-            const workersColRef = collection(db, 'users', user.uid, 'workers');
-            const docRef = await addDoc(workersColRef, {
-                name: data.name,
-                baseSalary: data.baseSalary,
-                paidMonths: [],
-            });
-
-            const newWorker: Worker = {
-                id: docRef.id,
-                name: data.name,
-                baseSalary: data.baseSalary,
-                paidMonths: [],
-                transactions: [],
-            };
-
-            setWorkers(prev => [...prev, newWorker]);
-            toast({ title: t('workerAddedSuccess') });
-
-        } catch (e) {
-            console.error("Error adding worker: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
+        if (workerId) {
+            // Update existing worker
+            try {
+                const workerDocRef = doc(db, 'users', user.uid, 'workers', workerId);
+                await updateDoc(workerDocRef, data);
+                setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, ...data } : w));
+                toast({ title: t('workerUpdatedSuccess') });
+            } catch(e) {
+                 console.error("Error updating worker: ", e);
+                toast({ variant: "destructive", title: t('error'), description: "Failed to update worker data." });
+            }
+        } else {
+            // Add new worker
+            try {
+                const workersColRef = collection(db, 'users', user.uid, 'workers');
+                const docRef = await addDoc(workersColRef, {
+                    ...data,
+                    paidMonths: [],
+                });
+    
+                const newWorker: Worker = {
+                    id: docRef.id,
+                    ...data,
+                    paidMonths: [],
+                    transactions: [],
+                };
+    
+                setWorkers(prev => [...prev, newWorker]);
+                toast({ title: t('workerAddedSuccess') });
+    
+            } catch (e) {
+                console.error("Error adding worker: ", e);
+                toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
+            }
         }
     }
 
@@ -289,7 +302,12 @@ export default function WorkersPage() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl sm:text-2xl">{t('workersList')}</CardTitle>
-                <AddWorkerDialog onAdd={addWorker} />
+                <AddWorkerDialog onSave={handleSaveWorker}>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {t('addNewWorker')}
+                    </Button>
+                </AddWorkerDialog>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -319,10 +337,15 @@ export default function WorkersPage() {
                         <TableCell className={`font-mono ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {balance.toFixed(2)} {t('dinar')}
                         </TableCell>
-                        <TableCell className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                            <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
-                            <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
-                            <DeleteWorkerAlert workerName={worker.name} onConfirm={() => deleteWorker(worker.id)} />
+                        <TableCell>
+                            <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
+                                <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
+                                <AddWorkerDialog onSave={handleSaveWorker} worker={worker}>
+                                    <Button variant="ghost" size="icon" title={t('editWorker')}><Pencil className="h-4 w-4" /></Button>
+                                </AddWorkerDialog>
+                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => deleteWorker(worker.id)} />
+                            </div>
                         </TableCell>
                       </TableRow>
                     )}) : (

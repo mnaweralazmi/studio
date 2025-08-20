@@ -308,5 +308,16 @@
     "noPaymentsYet": "No payments yet.",
     "paymentRecordedSuccess": "Payment recorded successfully!",
     "amountMustBePositive": "Amount must be positive.",
-    "paymentExceedsRemaining": "Payment amount exceeds remaining debt."
+    "paymentExceedsRemaining": "Payment amount exceeds remaining debt.",
+    "edit": "Edit",
+    "editSale": "Edit Sale",
+    "editSaleDesc": "Update the details of this sale entry.",
+    "salesUpdatedSuccess": "Sale updated successfully!",
+    "editExpense": "Edit Expense",
+    "expenseUpdatedSuccess": "Expense updated successfully!",
+    "editDebt": "Edit Debt",
+    "debtUpdatedSuccess": "Debt updated successfully!",
+    "editWorker": "Edit Worker",
+    "editWorkerDesc": "Update the worker's name and base salary.",
+    "workerUpdatedSuccess": "Worker data updated successfully!"
 }

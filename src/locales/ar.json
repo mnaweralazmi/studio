@@ -308,5 +308,16 @@
     "noPaymentsYet": "لا توجد دفعات بعد.",
     "paymentRecordedSuccess": "تم تسجيل الدفعة بنجاح!",
     "amountMustBePositive": "المبلغ يجب أن يكون إيجابياً.",
-    "paymentExceedsRemaining": "مبلغ الدفعة أكبر من المبلغ المتبقي."
+    "paymentExceedsRemaining": "مبلغ الدفعة أكبر من المبلغ المتبقي.",
+    "edit": "تعديل",
+    "editSale": "تعديل عملية بيع",
+    "editSaleDesc": "قم بتحديث تفاصيل عملية البيع.",
+    "salesUpdatedSuccess": "تم تحديث المبيع بنجاح!",
+    "editExpense": "تعديل المصروف",
+    "expenseUpdatedSuccess": "تم تحديث المصروف بنجاح!",
+    "editDebt": "تعديل الدين",
+    "debtUpdatedSuccess": "تم تحديث الدين بنجاح!",
+    "editWorker": "تعديل بيانات العامل",
+    "editWorkerDesc": "قم بتحديث اسم العامل وراتبه الأساسي.",
+    "workerUpdatedSuccess": "تم تحديث بيانات العامل بنجاح!"
 }
