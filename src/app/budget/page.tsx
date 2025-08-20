@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from 'react';
-import { BudgetContent } from '@/components/budget/budget-content';
+import { BudgetContent } from '@/components/budget-content';
 
 export default function SalesPage() {
   return (
