@@ -224,26 +224,14 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         validationSchema: poultrySalesSchema,
         getCalculations: (data: PoultrySalesForm) => ({ total: data.quantity * data.price }),
         formFields: (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField control={form.control} name="poultryType" render={({ field }) => ( <FormItem> <FormLabel>{t('poultryType')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectPoultryType')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.poultry.poultryType.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="purpose" render={({ field }) => ( <FormItem> <FormLabel>{t('purposeOfSale')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectPurpose')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.poultry.purpose.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="unit" render={({ field }) => ( <FormItem> <FormLabel>{t('unit')}</FormLabel> <Select onValueChange={(val) => { field.onChange(val); if(val === 'tray') form.setValue('weight', undefined);}} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectUnit')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.poultry.unit.map(u => ( <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem> <FormLabel>{t('quantity')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel>{t('unitPrice')}</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
                 {selectedPoultryUnit === 'piece' && (
-                    <FormField
-                        control={form.control}
-                        name="weight"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>{t('animalWeight')}</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.1" {...field} value={field.value ?? ''} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    <FormField control={form.control} name="weight" render={({ field }) => ( <FormItem> <FormLabel>{t('animalWeight')}</FormLabel> <FormControl> <Input type="number" step="0.1" {...field} value={field.value ?? ''} /> </FormControl> <FormMessage /> </FormItem>)} />
                 )}
             </div>
         ),
@@ -470,7 +458,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   }
 
   return (
-    <>
+    <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -485,7 +473,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {currentConfig.formFields}
-                <div className="flex justify-end">
+                <div className="flex justify-end pt-4">
                     <Button type="submit" className="">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('add')}
@@ -537,8 +525,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 onSave={handleUpdateItem}
             />
         )}
-    </>
+    </div>
   );
 }
-
-    

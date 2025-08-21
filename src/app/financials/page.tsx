@@ -31,11 +31,11 @@ export default function FinancialsPage() {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
             <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
-                <Tabs defaultValue="agriculture" onValueChange={(value) => setActiveDepartment(value as Department)}>
+                <Tabs defaultValue="agriculture" onValueChange={(value) => setActiveDepartment(value as Department)} className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
                         {departments.map(dept => (
-                            <TabsTrigger key={dept.id} value={dept.id}>
-                                <dept.icon className="mr-2 h-4 w-4" />
+                            <TabsTrigger key={dept.id} value={dept.id} className="text-base py-2">
+                                <dept.icon className="mr-2 h-5 w-5" />
                                 {dept.name}
                             </TabsTrigger>
                         ))}
@@ -51,17 +51,17 @@ export default function FinancialsPage() {
                                     <TabsTrigger value="workers"><Users className="mr-2 h-4 w-4" />{t('workers')}</TabsTrigger>
                                 </TabsList>
                                 
-                                <div className="space-y-6">
-                                    <TabsContent value="sales" className="mt-6">
+                                <div className="mt-6 space-y-6">
+                                    <TabsContent value="sales">
                                         <BudgetContent departmentId={dept.id} />
                                     </TabsContent>
-                                    <TabsContent value="expenses" className="mt-6">
+                                    <TabsContent value="expenses">
                                         <ExpensesContent departmentId={dept.id} />
                                     </TabsContent>
-                                    <TabsContent value="debts" className="mt-6">
+                                    <TabsContent value="debts">
                                         <DebtsContent departmentId={dept.id} />
                                     </TabsContent>
-                                    <TabsContent value="workers" className="mt-6">
+                                    <TabsContent value="workers">
                                         <WorkersContent departmentId={dept.id} />
                                     </TabsContent>
                                 </div>
