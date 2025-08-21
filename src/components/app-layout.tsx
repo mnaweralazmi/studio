@@ -105,12 +105,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <SidebarMenuSub>
                         {financialNavItems.map(item => (
                              <SidebarMenuItem key={item.href}>
-                                <NextLink href={item.href}>
-                                    <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
+                                <SidebarMenuSubButton asChild isActive={pathname.startsWith(item.href)}>
+                                    <NextLink href={item.href}>
                                         <item.icon />
                                         <span>{item.label}</span>
-                                    </SidebarMenuSubButton>
-                                </NextLink>
+                                    </NextLink>
+                                </SidebarMenuSubButton>
                             </SidebarMenuItem>
                         ))}
                     </SidebarMenuSub>
