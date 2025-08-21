@@ -14,16 +14,13 @@ import {
   SidebarTrigger,
   SidebarFooter,
   SidebarInset,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
-import { Home, ClipboardPen, CalendarDays, Settings, LogOut, Leaf, Wallet, CreditCard, Landmark, Users, Briefcase, ChevronDown } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, LogOut, Leaf, Wallet, CreditCard, Landmark, Users, Briefcase } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -31,8 +28,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { language, t } = useLanguage();
   const { user, loading } = useAuth();
-  
-  const isFinancialOpen = React.useState(pathname.startsWith('/sales') || pathname.startsWith('/expenses') || pathname.startsWith('/debts') || pathname.startsWith('/workers'));
 
   const handleLogout = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -44,15 +39,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/', label: t('home'), icon: Home, startsWith: '/' },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
     { href: '/budget', label: t('budget'), icon: Briefcase, startsWith: '/budget'},
+    { href: '/sales', label: t('sales'), icon: Wallet, startsWith: '/sales' },
+    { href: '/expenses', label: t('expenses'), icon: CreditCard, startsWith: '/expenses' },
+    { href: '/debts', label: t('debts'), icon: Landmark, startsWith: '/debts' },
+    { href: '/workers', label: t('workers'), icon: Users, startsWith: '/workers' },
   ];
   
-  const financialNavItems = [
-     { href: '/sales', label: t('sales'), icon: Wallet },
-     { href: '/expenses', label: t('expenses'), icon: CreditCard },
-     { href: '/debts', label: t('debts'), icon: Landmark },
-     { href: '/workers', label: t('workers'), icon: Users },
-  ]
-
   if (loading || !user) {
     return (
         <div className="flex h-screen w-full bg-background">
@@ -89,33 +81,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
-             <Collapsible open={isFinancialOpen[0]} onOpenChange={isFinancialOpen[1]}>
-                <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                        <SidebarMenuButton className="justify-between" isActive={isFinancialOpen[0]} tooltip={t('financialManagement')}>
-                            <div className="flex items-center gap-2">
-                                <ClipboardPen/>
-                                <span>{t('financialManagement')}</span>
-                            </div>
-                            <ChevronDown className={`transform transition-transform duration-200 ${isFinancialOpen[0] ? 'rotate-180' : ''}`} />
-                        </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                </SidebarMenuItem>
-                 <CollapsibleContent>
-                    <SidebarMenuSub>
-                        {financialNavItems.map(item => (
-                             <SidebarMenuItem key={item.href}>
-                                <SidebarMenuSubButton asChild isActive={pathname.startsWith(item.href)}>
-                                    <NextLink href={item.href}>
-                                        <item.icon />
-                                        <span>{item.label}</span>
-                                    </NextLink>
-                                </SidebarMenuSubButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenuSub>
-                 </CollapsibleContent>
-             </Collapsible>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
