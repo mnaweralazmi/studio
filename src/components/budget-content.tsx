@@ -58,7 +58,7 @@ const salesFormSchema = z.discriminatedUnion("departmentId", [
     z.object({ departmentId: z.literal('agriculture'), ...agricultureSalesSchema.shape }),
     z.object({ departmentId: z.literal('livestock'), ...livestockSalesSchema.shape }),
     z.object({ departmentId: z.literal('poultry'), ...poultrySalesSchema.shape }),
-    z_object({ departmentId: z.literal('fish'), ...fishSalesSchema.shape }),
+    z.object({ departmentId: z.literal('fish'), ...fishSalesSchema.shape }),
 ]);
 
 type AgricultureSalesForm = z.infer<typeof agricultureSalesSchema>;
@@ -523,4 +523,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </>
   );
 }
-
