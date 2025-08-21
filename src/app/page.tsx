@@ -42,7 +42,7 @@ export default function Home() {
                 {topics.map((topic) => {
                     const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
                     const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey as any);
-                    const video = topic.videos && topic.videos[0];
+                    const video = topic.videos && topic.videos.length > 0 ? topic.videos[0] : null;
                     return (
                         <Card key={topic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
                             <div className="relative w-full h-48">
