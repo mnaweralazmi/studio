@@ -11,7 +11,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, BookOpen } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { PlantingPlanGenerator } from '@/components/planting-plan-generator';
 
 const getIcon = (name: string) => {
     const Icon = Lucide[name as keyof typeof Lucide] as React.ElementType;
@@ -38,12 +37,6 @@ export default function Home() {
           </p>
         </header>
         
-        <section className="w-full">
-            <PlantingPlanGenerator />
-        </section>
-
-        <Separator className="my-8" />
-
         <section className="w-full border-t pt-8">
             <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
