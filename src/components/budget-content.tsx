@@ -228,7 +228,27 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 <FormField control={form.control} name="unit" render={({ field }) => ( <FormItem> <FormLabel>{t('unit')}</FormLabel> <Select onValueChange={(val) => { field.onChange(val); if(val === 'tray') form.setValue('weight', undefined);}} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectUnit')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.poultry.unit.map(u => ( <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem> <FormLabel>{t('quantity')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel>{t('unitPrice')}</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <Controller name="unit" control={form.control} render={({field}) => field.value === 'piece' ? ( <FormField control={form.control} name="weight" render={({ field }) => ( <FormItem> <FormLabel>{t('animalWeight')}</FormLabel> <FormControl> <Input type="number" step="0.1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />) : null }/>
+                <Controller
+                  name="unit"
+                  control={form.control}
+                  render={({ field }) =>
+                    field.value === 'piece' ? (
+                      <FormField
+                        control={form.control}
+                        name="weight"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('animalWeight')}</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.1" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : null
+                  }
+                />
             </div>
         ),
         tableHeaders: [t('poultryType'), t('purposeOfSale'), t('quantity'), t('unit'), t('unitPrice'), t('animalWeight'), t('tableTotal'), t('tableActions')],
