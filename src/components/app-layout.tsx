@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, Wallet, CreditCard, CalendarDays, Settings, LogOut, Leaf } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, LogOut, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { signOut } from 'firebase/auth';
@@ -37,8 +37,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/', label: t('home'), icon: Home, startsWith: '/' },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
-    { href: '/budget', label: t('sales'), icon: Wallet, startsWith: '/budget' },
-    { href: '/expenses', label: t('expenses'), icon: CreditCard, startsWith: '/expenses' },
+    { href: '/budget', label: t('financialManagement'), icon: ClipboardPen, startsWith: '/budget' },
   ];
   
   if (loading || !user) {
