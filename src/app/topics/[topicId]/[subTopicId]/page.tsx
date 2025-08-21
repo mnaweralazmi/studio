@@ -10,14 +10,21 @@ import { useTopics } from '@/context/topics-context';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { useAuth } from '@/context/auth-context';
+import { doc, runTransaction } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SubTopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
   const { topics } = useTopics();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   const [subTopic, setSubTopic] = React.useState<SubTopic | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (topics.length > 0 && params.topicId && params.subTopicId) {
@@ -30,7 +37,60 @@ export default function SubTopicDetailsPage() {
     }
   }, [params.topicId, params.subTopicId, topics]);
 
-  if (!topic || !subTopic) {
+  React.useEffect(() => {
+    const awardPoints = async () => {
+      if (!user || !subTopic) return;
+      
+      const viewedTopicKey = `viewed-${subTopic.id}`;
+      if (sessionStorage.getItem(viewedTopicKey)) {
+        setIsLoading(false);
+        return; // Already awarded points this session
+      }
+
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await runTransaction(db, async (transaction) => {
+          const userDoc = await transaction.get(userRef);
+          if (!userDoc.exists()) {
+            throw "User document does not exist!";
+          }
+          
+          const currentBadges = userDoc.data().badges || [];
+          let newPoints = userDoc.data().points || 0;
+          let newBadges = [...currentBadges];
+          let badgeAwarded = false;
+          
+          if (!currentBadges.includes('explorer')) {
+            newPoints += 15; // Points for first article read
+            newBadges.push('explorer');
+            badgeAwarded = true;
+          } else {
+            newPoints += 5; // Points for subsequent article reads
+          }
+          
+          const newLevel = Math.floor(newPoints / 100) + 1;
+          transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+
+          if (badgeAwarded) {
+             toast({ title: t('badgeEarned'), description: t('badgeExplorerDesc') });
+          }
+        });
+        sessionStorage.setItem(viewedTopicKey, 'true');
+      } catch (error) {
+        console.error("Failed to award points:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user && subTopic) {
+      awardPoints();
+    } else if (!user) {
+      setIsLoading(false);
+    }
+  }, [user, subTopic, toast, t]);
+
+  if (isLoading || !topic || !subTopic) {
     return <div>{t('loading')}</div>; 
   }
 

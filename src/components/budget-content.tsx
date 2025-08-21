@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, setDoc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { EditSaleDialog } from './budget/edit-sale-dialog';
@@ -46,7 +46,7 @@ export type SalesItem = SalesFormValues & {
 export function BudgetContent() {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: isAuthLoading } = useAuth();
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const { language, t } = useLanguage();
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
@@ -82,14 +82,14 @@ export function BudgetContent() {
         } finally {
             setIsDataLoading(false);
         }
-      } else {
+      } else if (!isAuthLoading) {
           setSalesItems([]);
           setIsDataLoading(false);
       }
     };
 
     fetchSales();
-  }, [user, toast, t]);
+  }, [user, toast, t, isAuthLoading]);
 
   const form = useForm<SalesFormValues>({
     resolver: zodResolver(salesFormSchema),
@@ -150,25 +150,55 @@ export function BudgetContent() {
     const pricePerKilo = data.price / data.weightPerCarton;
 
     try {
-        const salesCollectionRef = collection(db, 'users', user.uid, 'sales');
-        const docRef = await addDoc(salesCollectionRef, {
-            ...data,
-            total,
-            totalWeight,
-            pricePerKilo,
-            date: Timestamp.fromDate(new Date()),
-        });
-        
-        const newItem: SalesItem = {
-          ...data,
-          id: docRef.id,
-          total,
-          totalWeight,
-          pricePerKilo,
-          date: new Date(),
-        };
+        const userRef = doc(db, 'users', user.uid);
+        const salesCollectionRef = collection(userRef, 'sales');
 
-        setSalesItems(prevItems => [newItem, ...prevItems]);
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) {
+                throw "User document does not exist!";
+            }
+            
+            const currentBadges = userDoc.data().badges || [];
+            let newPoints = userDoc.data().points || 0;
+            let newBadges = [...currentBadges];
+            let badgeAwarded = false;
+
+            if (!currentBadges.includes('trader')) {
+                newPoints += 25; // Points for first sale
+                newBadges.push('trader');
+                badgeAwarded = true;
+            } else {
+                newPoints += 5; // Points for subsequent sales
+            }
+            
+            const newLevel = Math.floor(newPoints / 100) + 1;
+            transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+
+            const docRef = doc(salesCollectionRef);
+             transaction.set(docRef, {
+                ...data,
+                total,
+                totalWeight,
+                pricePerKilo,
+                date: Timestamp.fromDate(new Date()),
+            });
+
+            const newItem: SalesItem = {
+              ...data,
+              id: docRef.id,
+              total,
+              totalWeight,
+              pricePerKilo,
+              date: new Date(),
+            };
+
+            setSalesItems(prevItems => [newItem, ...prevItems]);
+            
+            if(badgeAwarded) {
+                toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });
+            }
+        });
         
         form.reset({
           vegetable: undefined,
@@ -206,7 +236,7 @@ export function BudgetContent() {
 
   const totalSales = salesItems.reduce((sum, item) => sum + item.total, 0);
   
-  if (!user) {
+  if (isAuthLoading) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 

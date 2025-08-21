@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, Wallet, CreditCard, CalendarDays, Settings, LogOut, Leaf } from 'lucide-react';
+import { Home, Wallet, CreditCard, CalendarDays, Settings, LogOut, Leaf, User } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { signOut } from 'firebase/auth';
@@ -39,6 +39,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
     { href: '/budget', label: t('sales'), icon: Wallet, startsWith: '/budget' },
     { href: '/expenses', label: t('expenses'), icon: CreditCard, startsWith: '/expenses' },
+    { href: '/profile', label: t('profile'), icon: User, startsWith: '/profile' },
   ];
   
   if (loading || !user) {
@@ -59,7 +60,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar side={language === 'ar' ? 'right' : 'left'} collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2 justify-center">
-            <Leaf className="w-6 h-6 text-primary" />
+            <Leaf className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               {t('kuwaitiFarmer')}
             </h2>

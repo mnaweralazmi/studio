@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import type { Task } from '../page';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
+import { doc, runTransaction } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -86,12 +88,42 @@ export default function AddTaskPage() {
   }, [selectedFruit, form]);
 
 
-  function onSubmit(data: TaskFormValues) {
+  async function onSubmit(data: TaskFormValues) {
     if (loading || !user) {
         toast({ variant: "destructive", title: t('error'), description: "يجب تسجيل الدخول لحفظ المهام." });
         return;
     }
     try {
+        const userRef = doc(db, 'users', user.uid);
+
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) {
+                throw "User document does not exist!";
+            }
+
+            const currentBadges = userDoc.data().badges || [];
+            let newPoints = userDoc.data().points || 0;
+            let newBadges = [...currentBadges];
+            let badgeAwarded = false;
+
+            if (!currentBadges.includes('planner')) {
+                newPoints += 20; // Points for first task
+                newBadges.push('planner');
+                badgeAwarded = true;
+            } else {
+                newPoints += 2; // Points for subsequent tasks
+            }
+
+            const newLevel = Math.floor(newPoints / 100) + 1;
+            transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+
+            if (badgeAwarded) {
+                toast({ title: t('badgeEarned'), description: t('badgePlannerDesc') });
+            }
+        });
+
+
         const userTasksKey = `calendarTasks_${user.uid}`;
         
         const storedTasks = localStorage.getItem(userTasksKey);
@@ -115,7 +147,7 @@ export default function AddTaskPage() {
 
         router.push('/calendar');
     } catch (error) {
-        console.error("Failed to save task to localStorage", error);
+        console.error("Failed to save task", error);
         toast({
             variant: "destructive",
             title: t('error'),

@@ -56,6 +56,24 @@ export default function RegisterPage() {
     },
   });
 
+  const createNewUserDocument = async (user: any, name: string | null) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
+        await setDoc(userDocRef, {
+            name: name,
+            email: user.email,
+            role: isAdmin ? 'admin' : 'user',
+            createdAt: new Date(),
+            points: 0,
+            level: 1,
+            badges: [],
+        });
+    }
+  }
+
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     try {
@@ -66,14 +84,7 @@ export default function RegisterPage() {
             displayName: data.name
         });
 
-        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
-
-        await setDoc(doc(db, "users", user.uid), {
-            name: data.name,
-            email: data.email,
-            role: isAdmin ? 'admin' : 'user', // Set role based on email
-            createdAt: new Date()
-        });
+        await createNewUserDocument(user, data.name);
         
         toast({
             title: "تم إنشاء الحساب بنجاح!",
@@ -103,25 +114,8 @@ export default function RegisterPage() {
     try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
-
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
         
-        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
-
-        if (!userDocSnap.exists()) {
-            await setDoc(userDocRef, {
-                name: user.displayName,
-                email: user.email,
-                role: isAdmin ? 'admin' : 'user',
-                createdAt: new Date()
-            });
-        } else {
-            const userData = userDocSnap.data();
-            if (isAdmin && userData.role !== 'admin') {
-                 await setDoc(userDocRef, { role: 'admin' }, { merge: true });
-            }
-        }
+        await createNewUserDocument(user, user.displayName);
         
         toast({ title: "تم تسجيل الدخول بنجاح!" });
         router.push('/');
