@@ -379,5 +379,6 @@
     "fishSalesDesc": "Track sales from your aquaculture operations.",
     "fishType": "Fish Type",
     "selectFishType": "Select fish type...",
-    "kg": "Kg"
+    "kg": "Kg",
+    "optional": "Optional"
 }
