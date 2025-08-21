@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, Wallet, CreditCard, CalendarDays, Settings, LogOut, Leaf, User } from 'lucide-react';
+import { Home, Wallet, CreditCard, CalendarDays, Settings, LogOut, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { signOut } from 'firebase/auth';
@@ -39,7 +39,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
     { href: '/budget', label: t('sales'), icon: Wallet, startsWith: '/budget' },
     { href: '/expenses', label: t('expenses'), icon: CreditCard, startsWith: '/expenses' },
-    { href: '/profile', label: t('profile'), icon: User, startsWith: '/profile' },
   ];
   
   if (loading || !user) {
@@ -83,7 +82,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/settings'} tooltip={t('settings')}>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')} tooltip={t('settings')}>
                 <NextLink href="/settings">
                   <Settings />
                   <span>{t('settings')}</span>
