@@ -18,6 +18,7 @@ export function BudgetSummary() {
     const { user } = useAuth();
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = React.useState(true);
+    const [departmentId, setDepartmentId] = React.useState<string>('agriculture');
     const [summary, setSummary] = React.useState({
         totalSales: 0,
         totalExpenses: 0,
@@ -26,26 +27,34 @@ export function BudgetSummary() {
     });
 
     React.useEffect(() => {
+        const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
+        setDepartmentId(lastSelectedDept);
+    }, []);
+
+
+    React.useEffect(() => {
         const fetchAllData = async () => {
-            if (!user) {
+            if (!user || !departmentId) {
                 setIsLoading(false);
                 return;
             }
 
+            setIsLoading(true);
+
             try {
                 // Fetch Sales
-                const salesSnapshot = await getDocs(collection(db, 'users', user.uid, 'sales'));
+                const salesSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'sales'));
                 const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().total, 0);
 
                 // Fetch Expenses
-                const expensesSnapshot = await getDocs(collection(db, 'users', user.uid, 'expenses'));
+                const expensesSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'expenses'));
                 const totalExpensesItems = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
                 
                 // Fetch Workers and Transactions to calculate salaries paid
-                const workersSnapshot = await getDocs(collection(db, 'users', user.uid, 'workers'));
+                const workersSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'workers'));
                 let totalSalariesPaid = 0;
                 for (const workerDoc of workersSnapshot.docs) {
-                    const transactionsSnapshot = await getDocs(collection(db, 'users', user.uid, 'workers', workerDoc.id, 'transactions'));
+                    const transactionsSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'workers', workerDoc.id, 'transactions'));
                     const salaries = transactionsSnapshot.docs
                         .map(doc => doc.data() as Transaction)
                         .filter(t => t.type === 'salary')
@@ -54,13 +63,13 @@ export function BudgetSummary() {
                 }
                 
                 // Fetch Debts and Debt Payments
-                const debtsSnapshot = await getDocs(collection(db, 'users', user.uid, 'debts'));
+                const debtsSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'debts'));
                 let totalDebts = 0;
                 let totalDebtPayments = 0;
 
                 for(const debtDoc of debtsSnapshot.docs) {
                     const debtData = debtDoc.data();
-                    const paymentsSnapshot = await getDocs(collection(db, 'users', user.uid, 'debts', debtDoc.id, 'payments'));
+                    const paymentsSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'debts', debtDoc.id, 'payments'));
                     const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
 
                     const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
@@ -85,7 +94,7 @@ export function BudgetSummary() {
         };
 
         fetchAllData();
-    }, [user]);
+    }, [user, departmentId]);
 
     if (isLoading) {
         return (
@@ -102,7 +111,7 @@ export function BudgetSummary() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>{t('financialSummary')}</CardTitle>
+                    <CardTitle>{t('financialSummary')} - {departmentId}</CardTitle>
                     <CardContent className="pt-6">
                          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                             <Card>

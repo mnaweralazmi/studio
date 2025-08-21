@@ -47,7 +47,11 @@ export type DebtItem = Omit<DebtFormValues, 'dueDate'> & {
   payments: Payment[];
 };
 
-export function DebtsContent() {
+interface DebtsContentProps {
+    departmentId: string;
+}
+
+export function DebtsContent({ departmentId }: DebtsContentProps) {
     const [debts, setDebts] = React.useState<DebtItem[]>([]);
     const { toast } = useToast();
     const { user } = useAuth();
@@ -60,13 +64,13 @@ export function DebtsContent() {
           if (user) {
             setIsDataLoading(true);
             try {
-              const debtsCollectionRef = collection(db, 'users', user.uid, 'debts');
+              const debtsCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'debts');
               const querySnapshot = await getDocs(debtsCollectionRef);
               const fetchedDebts: DebtItem[] = [];
 
               for (const doc of querySnapshot.docs) {
                 const data = doc.data();
-                const paymentsCollectionRef = collection(db, 'users', user.uid, 'debts', doc.id, 'payments');
+                const paymentsCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'debts', doc.id, 'payments');
                 const paymentsSnapshot = await getDocs(paymentsCollectionRef);
                 const payments: Payment[] = paymentsSnapshot.docs.map(pDoc => ({
                   id: pDoc.id,
@@ -96,7 +100,7 @@ export function DebtsContent() {
         };
 
         fetchDebts();
-    }, [user, toast, t]);
+    }, [user, toast, t, departmentId]);
 
     const form = useForm<DebtFormValues>({
         resolver: zodResolver(debtFormSchema),
@@ -121,7 +125,7 @@ export function DebtsContent() {
         };
 
         try {
-            const debtsCollectionRef = collection(db, 'users', user.uid, 'debts');
+            const debtsCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'debts');
             const docRef = await addDoc(debtsCollectionRef, {
                 creditor: newDebtData.creditor,
                 amount: newDebtData.amount,
@@ -150,7 +154,7 @@ export function DebtsContent() {
     async function handleUpdateDebt(id: string, data: DebtFormValues) {
         if (!user) return;
         try {
-            const debtDocRef = doc(db, 'users', user.uid, 'debts', id);
+            const debtDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'debts', id);
             await updateDoc(debtDocRef, {
                 creditor: data.creditor,
                 amount: data.amount,
@@ -170,7 +174,7 @@ export function DebtsContent() {
     async function deleteDebt(id: string) {
         if (!user) return;
         try {
-            const debtDocRef = doc(db, 'users', user.uid, 'debts', id);
+            const debtDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'debts', id);
             await deleteDoc(debtDocRef);
             setDebts(prev => prev.filter(item => item.id !== id));
             toast({ variant: "destructive", title: t('debtDeleted') });
@@ -189,7 +193,7 @@ export function DebtsContent() {
         try {
             const batch = writeBatch(db);
             
-            const newPaymentRef = doc(collection(db, 'users', user.uid, 'debts', debtId, 'payments'));
+            const newPaymentRef = doc(collection(db, 'users', user.uid, 'departments', departmentId, 'debts', debtId, 'payments'));
             batch.set(newPaymentRef, {
                 amount: paymentAmount,
                 date: Timestamp.fromDate(new Date()),
@@ -198,7 +202,7 @@ export function DebtsContent() {
             const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             let newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
 
-            const debtDocRef = doc(db, 'users', user.uid, 'debts', debtId);
+            const debtDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'debts', debtId);
             batch.update(debtDocRef, { status: newStatus });
             
             await batch.commit();

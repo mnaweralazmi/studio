@@ -43,7 +43,11 @@ export type SalesItem = SalesFormValues & {
   date: Date;
 };
 
-export function BudgetContent() {
+interface BudgetContentProps {
+    departmentId: string;
+}
+
+export function BudgetContent({ departmentId }: BudgetContentProps) {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
   const { user, loading: isAuthLoading } = useAuth();
@@ -58,7 +62,7 @@ export function BudgetContent() {
       if (user) {
         setIsDataLoading(true);
         try {
-            const salesCollectionRef = collection(db, 'users', user.uid, 'sales');
+            const salesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'sales');
             const querySnapshot = await getDocs(salesCollectionRef);
             const sales: SalesItem[] = [];
             querySnapshot.forEach((doc) => {
@@ -89,7 +93,7 @@ export function BudgetContent() {
     };
 
     fetchSales();
-  }, [user, toast, t, isAuthLoading]);
+  }, [user, toast, t, isAuthLoading, departmentId]);
 
   const form = useForm<SalesFormValues>({
     resolver: zodResolver(salesFormSchema),
@@ -109,7 +113,7 @@ export function BudgetContent() {
     const pricePerKilo = data.price / data.weightPerCarton;
     
     try {
-        const saleDocRef = doc(db, 'users', user.uid, 'sales', id);
+        const saleDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'sales', id);
         const saleToUpdate = salesItems.find(s => s.id === id);
         if (!saleToUpdate) return;
         
@@ -151,7 +155,7 @@ export function BudgetContent() {
 
     try {
         const userRef = doc(db, 'users', user.uid);
-        const salesCollectionRef = collection(userRef, 'sales');
+        const salesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'sales');
 
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -221,7 +225,7 @@ export function BudgetContent() {
   async function deleteItem(id: string) {
     if (!user) return;
     try {
-        const saleDocRef = doc(db, 'users', user.uid, 'sales', id);
+        const saleDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'sales', id);
         await deleteDoc(saleDocRef);
         setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
         toast({

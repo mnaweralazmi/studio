@@ -64,7 +64,11 @@ export type ExpenseItem = Omit<ExpenseFormValues, 'newItemName'> & {
   date: Date;
 };
 
-export function ExpensesContent() {
+interface ExpensesContentProps {
+    departmentId: string;
+}
+
+export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
@@ -83,7 +87,7 @@ export function ExpensesContent() {
                 setIsDataLoading(true);
                 try {
                     // Fetch expenses
-                    const expensesCollectionRef = collection(db, 'users', user.uid, 'expenses');
+                    const expensesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'expenses');
                     const expensesSnapshot = await getDocs(expensesCollectionRef);
                     const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
                         id: doc.id,
@@ -114,7 +118,7 @@ export function ExpensesContent() {
             }
         };
         fetchExpensesAndCategories();
-    }, [user, language, toast, t]);
+    }, [user, language, toast, t, departmentId]);
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
@@ -163,7 +167,7 @@ export function ExpensesContent() {
         if (!expenseToUpdate) return;
         
         try {
-            const expenseDocRef = doc(db, 'users', user.uid, 'expenses', id);
+            const expenseDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'expenses', id);
             const updatedData = {
                 type: data.type,
                 category: data.category,
@@ -218,7 +222,7 @@ export function ExpensesContent() {
         };
 
         try {
-            const expensesCollectionRef = collection(db, 'users', user.uid, 'expenses');
+            const expensesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'expenses');
             const docRef = await addDoc(expensesCollectionRef, newExpenseData);
             
             const newExpense: ExpenseItem = {
@@ -249,7 +253,7 @@ export function ExpensesContent() {
     async function deleteExpense(id: string) {
         if (!user) return;
         try {
-            await deleteDoc(doc(db, 'users', user.uid, 'expenses', id));
+            await deleteDoc(doc(db, 'users', user.uid, 'departments', departmentId, 'expenses', id));
             setExpenses(prev => prev.filter(item => item.id !== id));
             toast({ variant: "destructive", title: t('expenseDeleted') });
         } catch(e) {
