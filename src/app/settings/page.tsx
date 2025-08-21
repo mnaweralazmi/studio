@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { User, Save, Palette, Bell, Languages, Upload, Award, BookOpen, CalendarCheck, HandCoins } from 'lucide-react';
+import { User, Save, Palette, Bell, Languages, Upload, Award, BookOpen, CalendarCheck, HandCoins, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useLanguage, Language } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
@@ -28,6 +28,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useRouter } from 'next/navigation';
+
 
 const profileFormSchema = z.object({
     name: z.string().min(3, "يجب أن يتكون الاسم من 3 أحرف على الأقل."),
@@ -71,6 +73,7 @@ type BadgeId = keyof typeof badgeList;
 
 export default function SettingsPage() {
     const { toast } = useToast();
+    const router = useRouter();
     const { user, loading } = useAuth();
     const [theme, setTheme] = React.useState<Theme>('theme-green');
     const [mode, setMode] = React.useState<Mode>('dark');
@@ -198,6 +201,11 @@ export default function SettingsPage() {
         setLanguage(newLang);
         toast({ title: t('languageChanged'), description: t('languageChangedSuccess') });
     }
+
+    const handleLogout = async () => {
+        await signOut(auth);
+        router.replace('/login');
+    };
     
     if (loading || !user) {
         return <div>{t('loading')}</div>;
@@ -421,9 +429,13 @@ export default function SettingsPage() {
                 </Card>
             </TabsContent>
         </Tabs>
+        <div className="mt-8">
+            <Button variant="destructive" className="w-full" onClick={handleLogout}>
+                <LogOut className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+                {t('logout')}
+            </Button>
+        </div>
       </div>
     </main>
   );
 }
-
-    

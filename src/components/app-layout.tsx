@@ -34,17 +34,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [isFinancialMenuOpen, setIsFinancialMenuOpen] = React.useState(false);
 
-
-  const handleLogout = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    await signOut(auth);
-    router.replace('/login');
-  };
-
   const navItems = [
     { href: '/', label: t('home'), icon: Home, startsWith: '/' },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
-    { href: '/financials', label: t('financialManagement'), icon: ClipboardPen, startsWith: '/financials' },
+    { href: '/financials', label: t('financialManagementTitle'), icon: ClipboardPen, startsWith: '/financials' },
     { href: '/budget', label: t('budget'), icon: Briefcase, startsWith: '/budget' },
   ];
 
@@ -102,14 +95,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <span>{t('settings')}</span>
                 </NextLink>
               </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-               <SidebarMenuButton asChild tooltip={t('logout')}>
-                  <a href="#" onClick={handleLogout}>
-                    <LogOut />
-                    <span>{t('logout')}</span>
-                  </a>
-                </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
