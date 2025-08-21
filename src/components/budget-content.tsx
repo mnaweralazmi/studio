@@ -20,81 +20,31 @@ import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { EditSaleDialog } from './budget/edit-sale-dialog';
 
-// --- Start of schemas and types ---
 
-const baseSalesSchema = z.object({
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1.'),
-  price: z.coerce.number().min(0.01, 'Price must be positive.'),
+const salesFormSchema = z.object({
+  product: z.string({ required_error: 'الرجاء اختيار نوع الخضار.' }),
+  quantity: z.coerce.number().min(1, 'يجب أن تكون الكمية 1 على الأقل.'),
+  weightPerUnit: z.coerce.number().min(0.1, 'يجب أن يكون الوزن 0.1 كيلو على الأقل.'),
+  price: z.coerce.number().min(0.01, 'يجب أن يكون السعر إيجابياً.'),
 });
-
-const agricultureSalesSchema = baseSalesSchema.extend({
-  product: z.string({ required_error: 'Product selection is required.' }),
-  weightPerUnit: z.coerce.number().min(0.1, 'Weight must be at least 0.1 kg.'),
-  unit: z.literal('carton'),
-});
-
-const livestockSalesSchema = baseSalesSchema.extend({
-  animalType: z.string({ required_error: "Animal type is required." }),
-  purpose: z.string({ required_error: "Purpose is required." }),
-  age: z.coerce.number().min(0, "Age cannot be negative."),
-  weight: z.coerce.number().min(1, "Weight must be positive."),
-  gender: z.enum(['male', 'female']),
-  unit: z.literal('head'),
-});
-
-const poultrySalesSchema = baseSalesSchema.extend({
-  poultryType: z.string({ required_error: "Poultry type is required." }),
-  purpose: z.string({ required_error: "Purpose is required." }),
-  unit: z.enum(['piece', 'tray']),
-  weight: z.coerce.number().optional(), // Optional for eggs
-});
-
-const fishSalesSchema = baseSalesSchema.extend({
-  fishType: z.string({ required_error: "Fish type is required." }),
-  unit: z.enum(['kg', 'piece']),
-});
-
-const salesFormSchema = z.discriminatedUnion("departmentId", [
-    z.object({ departmentId: z.literal('agriculture'), ...agricultureSalesSchema.shape }),
-    z.object({ departmentId: z.literal('livestock'), ...livestockSalesSchema.shape }),
-    z.object({ departmentId: z.literal('poultry'), ...poultrySalesSchema.shape }),
-    z.object({ departmentId: z.literal('fish'), ...fishSalesSchema.shape }),
-]);
-
-type AgricultureSalesForm = z.infer<typeof agricultureSalesSchema>;
-type LivestockSalesForm = z.infer<typeof livestockSalesSchema>;
-type PoultrySalesForm = z.infer<typeof poultrySalesSchema>;
-type FishSalesForm = z.infer<typeof fishSalesSchema>;
 
 export type SalesFormValues = z.infer<typeof salesFormSchema>;
 
-export type SalesItem = {
+export type SalesItem = SalesFormValues & {
   id: string;
   total: number;
   date: Date;
-} & (
-  | AgricultureSalesForm & { departmentId: 'agriculture', pricePerKilo?: number, totalWeight?: number, }
-  | LivestockSalesForm & { departmentId: 'livestock' }
-  | PoultrySalesForm & { departmentId: 'poultry' }
-  | FishSalesForm & { departmentId: 'fish' }
-);
+  pricePerKilo: number;
+  totalWeight: number;
+};
 
 
-interface DepartmentConfig {
-  titleKey: string;
-  descriptionKey: string;
-  formFields: React.ReactNode;
-  tableHeaders: string[];
-  renderRow: (item: SalesItem) => React.ReactNode;
-  getCalculations: (data: any) => Partial<SalesItem>;
-  validationSchema: z.ZodObject<any, any, any>;
-}
-
-// --- End of schemas and types ---
+const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
+const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
 
 
 interface BudgetContentProps {
-    departmentId: 'agriculture' | 'livestock' | 'poultry' | 'fish';
+    departmentId: string;
 }
 
 export function BudgetContent({ departmentId }: BudgetContentProps) {
@@ -104,187 +54,18 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const { language, t } = useLanguage();
   const [editingSale, setEditingSale] = React.useState<SalesItem | null>(null);
+  const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
 
-  // --- Start of Department Specific Data ---
-
-  const departmentLists = {
-    agriculture: {
-      product: language === 'ar' ? ["طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل", "ورود"] : ["Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish", "Roses"],
-    },
-    livestock: {
-      animalType: language === 'ar' ? ["خروف", "بقرة", "ناقة"] : ["Sheep", "Cow", "Camel"],
-      purpose: language === 'ar' ? ["للذبح", "للتكاثر", "للحليب"] : ["For Slaughter", "For Breeding", "For Milk"],
-      gender: language === 'ar' ? [{label: "ذكر", value: "male"}, {label: "أنثى", value: "female"}] : [{label: "Male", value: "male"}, {label: "Female", value: "female"}],
-    },
-    poultry: {
-        poultryType: language === 'ar' ? ["دجاج", "بط", "حمام", "رومي", "نعام"] : ["Chicken", "Duck", "Pigeon", "Turkey", "Ostrich"],
-        purpose: language === 'ar' ? ["للحم", "للبيض", "للتكاثر"] : ["For Meat", "For Eggs", "For Breeding"],
-        unit: language === 'ar' ? [{label: "حبة", value: 'piece'}, {label: "طبق", value: 'tray'}] : [{label: "Piece", value: 'piece'}, {label: "Tray", value: 'tray'}],
-    },
-    fish: {
-        fishType: language === 'ar' ? ["بلطي", "سيباس", "روبيان"] : ["Tilapia", "Sea Bass", "Shrimp"],
-        unit: language === 'ar' ? [{label: "كيلو", value: 'kg'}, {label: "حبة", value: 'piece'}] : [{label: "Kg", value: 'kg'}, {label: "Piece", value: 'piece'}],
-    }
-  };
 
   const form = useForm<SalesFormValues>({
     resolver: zodResolver(salesFormSchema),
     defaultValues: {
-        departmentId: departmentId,
-        // @ts-ignore
-        quantity: 1,
-        price: 0.1,
-    }
+      product: undefined,
+      quantity: 1,
+      weightPerUnit: 5,
+      price: 0.5,
+    },
   });
-  
-  const selectedPoultryUnit = form.watch('unit', 'piece');
-
-  React.useEffect(() => {
-    form.reset({
-        departmentId: departmentId,
-        // @ts-ignore
-        quantity: 1,
-        price: 0.1,
-    });
-  }, [departmentId, form]);
-
-  const departmentConfig: Record<typeof departmentId, DepartmentConfig> = {
-    agriculture: {
-        titleKey: "vegetableSalesTracker",
-        descriptionKey: "vegetableSalesTrackerDesc",
-        validationSchema: agricultureSalesSchema,
-        getCalculations: (data: AgricultureSalesForm) => {
-            const total = data.quantity * data.price;
-            const totalWeight = data.quantity * data.weightPerUnit;
-            const pricePerKilo = totalWeight > 0 ? data.price / data.weightPerUnit : 0;
-            return { total, totalWeight, pricePerKilo };
-        },
-        formFields: (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="product" render={({ field }) => ( <FormItem> <FormLabel>{t('product')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger> <SelectValue placeholder={t('selectProduct')} /> </SelectTrigger> </FormControl> <SelectContent> {departmentLists.agriculture.product.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem> <FormLabel>{t('quantityInCartons')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="weightPerUnit" render={({ field }) => ( <FormItem> <FormLabel>{t('weightPerCartonInKg')}</FormLabel> <FormControl> <Input type="number" step="0.1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel>{t('pricePerCartonInDinar')}</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-            </div>
-        ),
-        tableHeaders: [t('tableProduct'), t('tableQuantityCarton'), t('tableCartonWeightKg'), t('tableTotalWeightKg'), t('tableCartonPrice'), t('tableKiloPrice'), t('tableTotal'), t('tableActions')],
-        renderRow: (item) => {
-            if (item.departmentId !== 'agriculture') return null;
-            return (
-                <TableRow key={item.id}>
-                    <TableCell>{item.product}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.weightPerUnit.toFixed(1)}</TableCell>
-                    <TableCell>{(item.totalWeight ?? 0).toFixed(1)}</TableCell>
-                    <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell>{(item.pricePerKilo ?? 0).toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}> {renderActions(item)} </TableCell>
-                </TableRow>
-            );
-        }
-    },
-    livestock: {
-        titleKey: "livestockSales",
-        descriptionKey: "livestockSalesDesc",
-        validationSchema: livestockSalesSchema,
-        getCalculations: (data: LivestockSalesForm) => ({ total: data.quantity * data.price }),
-        formFields: (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <FormField control={form.control} name="animalType" render={({ field }) => ( <FormItem> <FormLabel>{t('animalType')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectAnimalType')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.livestock.animalType.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="purpose" render={({ field }) => ( <FormItem> <FormLabel>{t('purposeOfSale')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectPurpose')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.livestock.purpose.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem> <FormLabel>{t('quantityInHead')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel>{t('pricePerHead')}</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="age" render={({ field }) => ( <FormItem> <FormLabel>{t('animalAge')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="weight" render={({ field }) => ( <FormItem> <FormLabel>{t('animalWeight')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="gender" render={({ field }) => ( <FormItem> <FormLabel>{t('animalGender')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectGender')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.livestock.gender.map(g => ( <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-            </div>
-        ),
-        tableHeaders: [t('animalType'), t('purposeOfSale'), t('quantity'), t('pricePerHead'), t('animalAge'), t('animalWeight'), t('animalGender'), t('tableTotal'), t('tableActions')],
-        renderRow: (item) => {
-            if (item.departmentId !== 'livestock') return null;
-            return (
-                <TableRow key={item.id}>
-                    <TableCell>{item.animalType}</TableCell>
-                    <TableCell>{item.purpose}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell>{item.age}</TableCell>
-                    <TableCell>{item.weight} kg</TableCell>
-                    <TableCell>{t(item.gender as any)}</TableCell>
-                    <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}> {renderActions(item)} </TableCell>
-                </TableRow>
-            )
-        }
-    },
-    poultry: {
-        titleKey: "poultrySales",
-        descriptionKey: "poultrySalesDesc",
-        validationSchema: poultrySalesSchema,
-        getCalculations: (data: PoultrySalesForm) => ({ total: data.quantity * data.price }),
-        formFields: (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <FormField control={form.control} name="poultryType" render={({ field }) => ( <FormItem> <FormLabel>{t('poultryType')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectPoultryType')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.poultry.poultryType.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="purpose" render={({ field }) => ( <FormItem> <FormLabel>{t('purposeOfSale')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectPurpose')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.poultry.purpose.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="unit" render={({ field }) => ( <FormItem> <FormLabel>{t('unit')}</FormLabel> <Select onValueChange={(val) => { field.onChange(val); if(val === 'tray') form.setValue('weight', undefined);}} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectUnit')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.poultry.unit.map(u => ( <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem> <FormLabel>{t('quantity')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel>{t('unitPrice')}</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                {selectedPoultryUnit === 'piece' && (
-                    <FormField control={form.control} name="weight" render={({ field }) => ( <FormItem> <FormLabel>{t('animalWeight')}</FormLabel> <FormControl> <Input type="number" step="0.1" {...field} value={field.value ?? ''} /> </FormControl> <FormMessage /> </FormItem>)} />
-                )}
-            </div>
-        ),
-        tableHeaders: [t('poultryType'), t('purposeOfSale'), t('quantity'), t('unit'), t('unitPrice'), t('animalWeight'), t('tableTotal'), t('tableActions')],
-        renderRow: (item) => {
-            if (item.departmentId !== 'poultry') return null;
-            return (
-                <TableRow key={item.id}>
-                    <TableCell>{item.poultryType}</TableCell>
-                    <TableCell>{item.purpose}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{t(item.unit as any)}</TableCell>
-                    <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell>{item.weight ? `${item.weight} kg` : 'N/A'}</TableCell>
-                    <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}> {renderActions(item)} </TableCell>
-                </TableRow>
-            )
-        }
-    },
-    fish: {
-        titleKey: "fishSales",
-        descriptionKey: "fishSalesDesc",
-        validationSchema: fishSalesSchema,
-        getCalculations: (data: FishSalesForm) => ({ total: data.quantity * data.price }),
-        formFields: (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <FormField control={form.control} name="fishType" render={({ field }) => ( <FormItem> <FormLabel>{t('fishType')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectFishType')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.fish.fishType.map(f => ( <SelectItem key={f} value={f}>{f}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="unit" render={({ field }) => ( <FormItem> <FormLabel>{t('unit')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger><SelectValue placeholder={t('selectUnit')} /></SelectTrigger> </FormControl> <SelectContent> {departmentLists.fish.unit.map(u => ( <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem> <FormLabel>{t('quantity')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel>{t('unitPrice')}</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-            </div>
-        ),
-        tableHeaders: [t('fishType'), t('quantity'), t('unit'), t('unitPrice'), t('tableTotal'), t('tableActions')],
-        renderRow: (item) => {
-            if (item.departmentId !== 'fish') return null;
-            return (
-                <TableRow key={item.id}>
-                    <TableCell>{item.fishType}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{t(item.unit as any)}</TableCell>
-                    <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
-                    <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}> {renderActions(item)} </TableCell>
-                </TableRow>
-            )
-        }
-    },
-  };
-  
-  const currentConfig = departmentConfig[departmentId];
-
-  // --- End of Department Specific Data ---
 
   React.useEffect(() => {
     const fetchSales = async () => {
@@ -297,7 +78,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
                 sales.push({
-                    departmentId: departmentId,
                     ...data,
                     id: doc.id,
                     date: (data.date as Timestamp).toDate(),
@@ -319,10 +99,12 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     fetchSales();
   }, [user, toast, t, isAuthLoading, departmentId]);
 
-  const handleUpdateItem = async (id: string, data: any) => {
+  const handleUpdateItem = async (id: string, data: SalesFormValues) => {
     if (!user) return;
-
-    const calculations = currentConfig.getCalculations(data);
+    
+    const total = data.quantity * data.price;
+    const totalWeight = data.quantity * data.weightPerUnit;
+    const pricePerKilo = totalWeight > 0 ? total / totalWeight : 0;
     
     try {
         const saleDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'sales', id);
@@ -331,15 +113,19 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         
         await setDoc(saleDocRef, {
             ...data,
-            ...calculations,
+            total,
+            totalWeight,
+            pricePerKilo,
             date: Timestamp.fromDate(saleToUpdate.date),
         });
 
         setSalesItems(prevItems => prevItems.map(item => item.id === id ? {
             ...item,
             ...data,
-            ...calculations,
-        } as SalesItem : item));
+            total,
+            totalWeight,
+            pricePerKilo,
+        } : item));
         
         toast({ title: t('salesUpdatedSuccess') });
         setEditingSale(null);
@@ -351,13 +137,15 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   };
 
 
-  async function onSubmit(data: any) {
+  async function onSubmit(data: SalesFormValues) {
     if (!user) {
         toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add sales."});
         return;
     }
     
-    const calculations = currentConfig.getCalculations(data);
+    const total = data.quantity * data.price;
+    const totalWeight = data.quantity * data.weightPerUnit;
+    const pricePerKilo = totalWeight > 0 ? total / totalWeight : 0;
 
     try {
         const userRef = doc(db, 'users', user.uid);
@@ -388,17 +176,20 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             const docRef = doc(salesCollectionRef);
              transaction.set(docRef, {
                 ...data,
-                ...calculations,
+                total,
+                totalWeight,
+                pricePerKilo,
                 date: Timestamp.fromDate(new Date()),
             });
 
             const newItem: SalesItem = {
               ...data,
-              ...calculations,
               id: docRef.id,
               date: new Date(),
-              departmentId: departmentId,
-            } as SalesItem;
+              total,
+              totalWeight,
+              pricePerKilo,
+            };
 
             setSalesItems(prevItems => [newItem, ...prevItems]);
             
@@ -407,12 +198,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             }
         });
         
-        form.reset({
-            departmentId: departmentId,
-            // @ts-ignore
-            quantity: 1,
-            price: 0.1,
-        });
+        form.reset();
         
         toast({
           title: t('salesAddedSuccess'),
@@ -463,16 +249,78 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
               <Wallet className="h-5 w-5 sm:h-6 sm:w-6"/>
-              {t(currentConfig.titleKey as any)}
+              {t('vegetableSalesTracker')}
             </CardTitle>
             <CardDescription>
-             {t(currentConfig.descriptionKey as any)}
+             {t('vegetableSalesTrackerDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {currentConfig.formFields}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="product"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>{t('vegetableType')}</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder={t('selectVegetable')} />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {vegetableList.map(veg => (
+                                <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="quantity"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>{t('quantityInCartons')}</FormLabel>
+                            <FormControl>
+                                <Input type="number" step="1" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="weightPerUnit"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>{t('weightPerCartonInKg')}</FormLabel>
+                            <FormControl>
+                                <Input type="number" step="0.1" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>{t('pricePerCartonInDinar')}</FormLabel>
+                            <FormControl>
+                                <Input type="number" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
                 <div className="flex justify-end pt-4">
                     <Button type="submit" className="">
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -501,11 +349,29 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {currentConfig.tableHeaders.map(header => <TableHead key={header}>{header}</TableHead>)}
+                        <TableHead>{t('tableProduct')}</TableHead>
+                        <TableHead>{t('tableQuantityCarton')}</TableHead>
+                        <TableHead>{t('tableCartonWeightKg')}</TableHead>
+                        <TableHead>{t('tableTotalWeightKg')}</TableHead>
+                        <TableHead>{t('tableCartonPrice')}</TableHead>
+                        <TableHead>{t('tableKiloPrice')}</TableHead>
+                        <TableHead>{t('tableTotal')}</TableHead>
+                        <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {salesItems.map(item => currentConfig.renderRow(item))}
+                    {salesItems.map((item) => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.product}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{item.weightPerUnit.toFixed(1)}</TableCell>
+                            <TableCell>{(item.totalWeight ?? 0).toFixed(1)}</TableCell>
+                            <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
+                            <TableCell>{(item.pricePerKilo ?? 0).toFixed(2)} {t('dinar')}</TableCell>
+                            <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
+                            <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}> {renderActions(item)} </TableCell>
+                        </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
@@ -520,7 +386,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             <EditSaleDialog
                 isOpen={!!editingSale}
                 onClose={() => setEditingSale(null)}
-                // @ts-ignore
                 sale={editingSale}
                 onSave={handleUpdateItem}
             />
@@ -528,3 +393,4 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
+
