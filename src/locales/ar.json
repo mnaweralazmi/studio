@@ -175,7 +175,7 @@
     "delete": "حذف",
     "debtManagement": "إدارة الديون",
     "debtManagementDesc": "أضف ديونك وتتبعها وقم بتسديدها.",
-    "totalUnpaidDebts": "إجمالي الديون غير المسددة",
+    "totalUnpaidDebts": "إجمالي الديون القائمة",
     "addNewDebt": "إضافة دين جديد",
     "creditorName": "اسم الدائن",
     "creditorNamePlaceholder": "مثال: شركة الأسمدة",
@@ -340,5 +340,14 @@
     "badgeTrader": "التاجر",
     "badgeTraderDesc": "تسجيل أول عملية بيع لك.",
     "badgeEarned": "شارة جديدة!",
-    "financialManagement": "الإدارة المالية"
+    "financialManagement": "الإدارة المالية",
+    "budget": "الميزانية",
+    "financialSummary": "الملخص المالي",
+    "totalIncome": "إجمالي الدخل",
+    "fromSales": "من المبيعات",
+    "totalExpenditure": "إجمالي المصروفات",
+    "expensesAndSalaries": "المصروفات والرواتب",
+    "netProfit": "صافي الربح",
+    "incomeVsExpenses": "الدخل مقابل المصروفات",
+    "outstandingDebts": "الديون القائمة"
 }

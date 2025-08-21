@@ -175,7 +175,7 @@
     "delete": "Delete",
     "debtManagement": "Debt Management",
     "debtManagementDesc": "Add, track, and settle your debts.",
-    "totalUnpaidDebts": "Total Unpaid Debts",
+    "totalUnpaidDebts": "Total Outstanding Debts",
     "addNewDebt": "Add New Debt",
     "creditorName": "Creditor's Name",
     "creditorNamePlaceholder": "e.g., Fertilizer Company",
@@ -340,5 +340,14 @@
     "badgeTrader": "Trader",
     "badgeTraderDesc": "Log your first sale.",
     "badgeEarned": "New Badge Unlocked!",
-    "financialManagement": "Financial Mgmt"
+    "financialManagement": "Financial Mgmt",
+    "budget": "Budget",
+    "financialSummary": "Financial Summary",
+    "totalIncome": "Total Income",
+    "fromSales": "From sales",
+    "totalExpenditure": "Total Expenditure",
+    "expensesAndSalaries": "Expenses & salaries",
+    "netProfit": "Net Profit",
+    "incomeVsExpenses": "Income vs. Expenses",
+    "outstandingDebts": "Outstanding Debts"
 }

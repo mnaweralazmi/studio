@@ -8,7 +8,8 @@ import { DebtsContent } from '@/components/debts-content';
 import { WorkersContent } from '@/components/workers-content';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/context/language-context';
-import { Wallet, CreditCard, Landmark, Users } from 'lucide-react';
+import { Wallet, CreditCard, Landmark, Users, Briefcase } from 'lucide-react';
+import { BudgetSummary } from '@/components/budget/budget-summary';
 
 export default function BudgetPage() {
     const { t } = useLanguage();
@@ -16,8 +17,12 @@ export default function BudgetPage() {
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
-        <Tabs defaultValue="sales" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="budget" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="budget">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    {t('budget')}
+                </TabsTrigger>
                 <TabsTrigger value="sales">
                     <Wallet className="mr-2 h-4 w-4" />
                     {t('sales')}
@@ -35,6 +40,9 @@ export default function BudgetPage() {
                     {t('workers')}
                 </TabsTrigger>
             </TabsList>
+            <TabsContent value="budget" className="mt-6">
+                <BudgetSummary />
+            </TabsContent>
             <TabsContent value="sales" className="mt-6">
                 <BudgetContent />
             </TabsContent>
