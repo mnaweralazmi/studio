@@ -158,12 +158,12 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             return { total, totalWeight, pricePerKilo };
         },
         formFields: (
-            <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="product" render={({ field }) => ( <FormItem> <FormLabel>{t('product')}</FormLabel> <Select onValueChange={field.onChange} value={field.value}> <FormControl> <SelectTrigger> <SelectValue placeholder={t('selectProduct')} /> </SelectTrigger> </FormControl> <SelectContent> {departmentLists.agriculture.product.map(p => ( <SelectItem key={p} value={p}>{p}</SelectItem> ))} </SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem> <FormLabel>{t('quantityInCartons')}</FormLabel> <FormControl> <Input type="number" step="1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="weightPerUnit" render={({ field }) => ( <FormItem> <FormLabel>{t('weightPerCartonInKg')}</FormLabel> <FormControl> <Input type="number" step="0.1" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel>{t('pricePerCartonInDinar')}</FormLabel> <FormControl> <Input type="number" step="0.01" {...field} /> </FormControl> <FormMessage /> </FormItem> )} />
-            </>
+            </div>
         ),
         tableHeaders: [t('tableProduct'), t('tableQuantityCarton'), t('tableCartonWeightKg'), t('tableTotalWeightKg'), t('tableCartonPrice'), t('tableKiloPrice'), t('tableTotal'), t('tableActions')],
         renderRow: (item) => {
