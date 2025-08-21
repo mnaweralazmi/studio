@@ -44,8 +44,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/', label: t('home'), icon: Home, startsWith: '/' },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
-    { href: '/budget', label: t('budget'), icon: Briefcase, startsWith: '/budget' },
     { href: '/financials', label: t('financialManagement'), icon: ClipboardPen, startsWith: '/financials' },
+    { href: '/budget', label: t('budget'), icon: Briefcase, startsWith: '/budget' },
   ];
 
   
