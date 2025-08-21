@@ -15,8 +15,7 @@ import {
   SidebarFooter,
   SidebarInset,
   SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem
+  SidebarMenuSubButton
 } from '@/components/ui/sidebar';
 import { Home, ClipboardPen, CalendarDays, Settings, LogOut, Leaf, Wallet, CreditCard, Landmark, Users, Briefcase } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
@@ -45,18 +44,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/', label: t('home'), icon: Home, startsWith: '/' },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
-    { href: '/budget', label: t('budget'), icon: Briefcase, startsWith: '/budget'},
+    { href: '/budget', label: t('budget'), icon: Briefcase, startsWith: '/budget' },
+    { href: '/financials', label: t('financialManagement'), icon: ClipboardPen, startsWith: '/financials' },
   ];
 
-  const financialItems = [
-      { href: '/sales', label: t('sales'), icon: Wallet, startsWith: '/sales' },
-      { href: '/expenses', label: t('expenses'), icon: CreditCard, startsWith: '/expenses' },
-      { href: '/debts', label: t('debts'), icon: Landmark, startsWith: '/debts' },
-      { href: '/workers', label: t('workers'), icon: Users, startsWith: '/workers' },
-  ];
   
   React.useEffect(() => {
-    if (financialItems.some(item => pathname.startsWith(item.startsWith))) {
+    if (pathname.startsWith('/financials')) {
       setIsFinancialMenuOpen(true);
     }
   }, [pathname]);
@@ -97,36 +91,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
-             <SidebarMenuItem>
-                <Collapsible open={isFinancialMenuOpen} onOpenChange={setIsFinancialMenuOpen}>
-                    <CollapsibleTrigger asChild>
-                         <SidebarMenuButton
-                            className="w-full justify-between"
-                            tooltip={t('financialManagement')}
-                        >
-                            <div className="flex items-center gap-2">
-                                <ClipboardPen />
-                                <span>{t('financialManagement')}</span>
-                            </div>
-                            <ChevronDown className={`h-4 w-4 transition-transform group-data-[collapsible=icon]:hidden ${isFinancialMenuOpen ? 'rotate-180' : ''}`} />
-                        </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <SidebarMenuSub>
-                             {financialItems.map((item) => (
-                                <SidebarMenuSubItem key={item.href}>
-                                     <NextLink href={item.href} legacyBehavior passHref>
-                                        <SidebarMenuSubButton isActive={pathname.startsWith(item.startsWith)}>
-                                            <item.icon />
-                                            <span>{item.label}</span>
-                                        </SidebarMenuSubButton>
-                                     </NextLink>
-                                </SidebarMenuSubItem>
-                            ))}
-                        </SidebarMenuSub>
-                    </CollapsibleContent>
-                </Collapsible>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
