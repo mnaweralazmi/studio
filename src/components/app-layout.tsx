@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, Wallet, CreditCard, Landmark, CalendarDays, Users, Settings, LogOut, Leaf } from 'lucide-react';
+import { Home, Wallet, CreditCard, CalendarDays, Settings, LogOut, Leaf } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { signOut } from 'firebase/auth';
@@ -39,8 +39,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
     { href: '/budget', label: t('sales'), icon: Wallet, startsWith: '/budget' },
     { href: '/expenses', label: t('expenses'), icon: CreditCard, startsWith: '/expenses' },
-    { href: '/debts', label: t('debts'), icon: Landmark, startsWith: '/debts' },
-    { href: '/workers', label: t('workers'), icon: Users, startsWith: '/workers' },
   ];
   
   if (loading || !user) {

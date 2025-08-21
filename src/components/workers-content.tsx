@@ -21,13 +21,14 @@ import { Button } from '@/components/ui/button';
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
-export default function WorkersPage() {
+export function WorkersContent() {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
     const { user } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
+    const [editingWorker, setEditingWorker] = React.useState<Worker | null>(null);
 
 
     React.useEffect(() => {
@@ -93,6 +94,7 @@ export default function WorkersPage() {
                 await updateDoc(workerDocRef, data);
                 setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, ...data } : w));
                 toast({ title: t('workerUpdatedSuccess') });
+                setEditingWorker(null);
             } catch(e) {
                  console.error("Error updating worker: ", e);
                 toast({ variant: "destructive", title: t('error'), description: "Failed to update worker data." });
@@ -242,8 +244,7 @@ export default function WorkersPage() {
     }
 
     return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
-      <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
+    <div className="space-y-6">
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -302,7 +303,7 @@ export default function WorkersPage() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl sm:text-2xl">{t('workersList')}</CardTitle>
-                <AddWorkerDialog onSave={handleSaveWorker} >
+                <AddWorkerDialog onSave={handleSaveWorker}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('addNewWorker')}
@@ -361,6 +362,5 @@ export default function WorkersPage() {
             </CardContent>
           </Card>
       </div>
-    </main>
-  );
+    );
 }
