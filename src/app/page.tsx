@@ -4,14 +4,12 @@
 import * as React from 'react';
 import * as Lucide from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
-
-const quickAccessTopics = [
-    { id: '1', titleKey: 'topicIrrigation', iconName: 'Droplets' },
-    { id: '2', titleKey: 'topicPests', iconName: 'Bug' },
-    { id: '3', titleKey: 'topicPruning', iconName: 'Scissors' },
-    { id: '4', titleKey: 'topicSoil', iconName: 'Sprout' }
-];
+import { useTopics } from '@/context/topics-context';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PlayCircle, BookOpen } from 'lucide-react';
 
 const getIcon = (name: string) => {
     const Icon = Lucide[name as keyof typeof Lucide] as React.ElementType;
@@ -19,7 +17,8 @@ const getIcon = (name: string) => {
 };
 
 export default function Home() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { topics } = useTopics();
   
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -39,16 +38,43 @@ export default function Home() {
         
         <section className="w-full border-t pt-8">
             <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
-                {quickAccessTopics.map((topic) => {
-                    const title = t(topic.titleKey as any);
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {topics.map((topic) => {
+                    const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
+                    const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey as any);
+                    const video = topic.videos && topic.videos[0];
                     return (
-                        <Link key={topic.id} href={`/topics/${topic.id}`} className="flex flex-col items-center gap-3 text-center group">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:bg-primary/20 group-hover:scale-110">
-                                {getIcon(topic.iconName)}
+                        <Card key={topic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
+                            <div className="relative w-full h-48">
+                                <Image 
+                                    src={topic.image} 
+                                    alt={title!} 
+                                    fill 
+                                    style={{objectFit: 'cover'}}
+                                    data-ai-hint={topic.hint}
+                                />
                             </div>
-                            <p className="font-semibold text-sm text-foreground">{title}</p>
-                        </Link>
+                            <CardContent className="p-6 flex flex-col flex-1">
+                                <h3 className="text-xl font-bold mb-2">{title}</h3>
+                                <p className="text-muted-foreground text-sm flex-1">{description}</p>
+                                <div className="flex gap-4 mt-6">
+                                    <Button asChild className="flex-1">
+                                        <Link href={`/topics/${topic.id}`}>
+                                            <BookOpen className="mr-2 h-4 w-4" />
+                                            {t('readMore')}
+                                        </Link>
+                                    </Button>
+                                    {video && (
+                                        <Button asChild variant="secondary" className="flex-1">
+                                            <a href={video.videoUrl} target="_blank" rel="noopener noreferrer">
+                                                <PlayCircle className="mr-2 h-4 w-4" />
+                                                {t('watchVideo')}
+                                            </a>
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
                     )
                 })}
             </div>

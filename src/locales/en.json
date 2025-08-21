@@ -319,5 +319,6 @@
     "debtUpdatedSuccess": "Debt updated successfully!",
     "editWorker": "Edit Worker",
     "editWorkerDesc": "Update the worker's name and base salary.",
-    "workerUpdatedSuccess": "Worker data updated successfully!"
+    "workerUpdatedSuccess": "Worker data updated successfully!",
+    "watchVideo": "Watch Video"
 }

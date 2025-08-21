@@ -319,5 +319,6 @@
     "debtUpdatedSuccess": "تم تحديث الدين بنجاح!",
     "editWorker": "تعديل بيانات العامل",
     "editWorkerDesc": "قم بتحديث اسم العامل وراتبه الأساسي.",
-    "workerUpdatedSuccess": "تم تحديث بيانات العامل بنجاح!"
+    "workerUpdatedSuccess": "تم تحديث بيانات العامل بنجاح!",
+    "watchVideo": "شاهد الفيديو"
 }
