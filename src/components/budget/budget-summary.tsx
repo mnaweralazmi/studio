@@ -61,7 +61,7 @@ export function BudgetSummary() {
                     .map(doc => ({...doc.data(), id: doc.id} as DebtItem))
                     .filter(d => d.status !== 'paid')
                     .reduce((sum, debt) => {
-                        const paidAmount = debt.payments.reduce((pSum, p) => pSum + p.amount, 0);
+                        const paidAmount = (debt.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
                         return sum + (debt.amount - paidAmount);
                     }, 0);
 
