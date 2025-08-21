@@ -51,18 +51,20 @@ export default function FinancialsPage() {
                                     <TabsTrigger value="workers"><Users className="mr-2 h-4 w-4" />{t('workers')}</TabsTrigger>
                                 </TabsList>
                                 
-                                <TabsContent value="sales" className="mt-6">
-                                    <BudgetContent departmentId={dept.id} />
-                                </TabsContent>
-                                <TabsContent value="expenses" className="mt-6">
-                                    <ExpensesContent departmentId={dept.id} />
-                                </TabsContent>
-                                <TabsContent value="debts" className="mt-6">
-                                    <DebtsContent departmentId={dept.id} />
-                                </TabsContent>
-                                <TabsContent value="workers" className="mt-6">
-                                    <WorkersContent departmentId={dept.id} />
-                                </TabsContent>
+                                <div className="space-y-6">
+                                    <TabsContent value="sales" className="mt-6">
+                                        <BudgetContent departmentId={dept.id} />
+                                    </TabsContent>
+                                    <TabsContent value="expenses" className="mt-6">
+                                        <ExpensesContent departmentId={dept.id} />
+                                    </TabsContent>
+                                    <TabsContent value="debts" className="mt-6">
+                                        <DebtsContent departmentId={dept.id} />
+                                    </TabsContent>
+                                    <TabsContent value="workers" className="mt-6">
+                                        <WorkersContent departmentId={dept.id} />
+                                    </TabsContent>
+                                </div>
                             </Tabs>
                         </TabsContent>
                     ))}
