@@ -8,15 +8,68 @@ import { BudgetContent } from '@/components/budget-content';
 import { ExpensesContent } from '@/components/expenses-content';
 import { DebtsContent } from '@/components/debts-content';
 import { WorkersContent } from '@/components/workers-content';
-import { Wallet, CreditCard, Landmark, Users } from 'lucide-react';
+import { Wallet, CreditCard, Landmark, Users, Leaf, PawPrint, Bird, Fish } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+
+type Department = 'agriculture' | 'livestock' | 'poultry' | 'fish';
 
 export default function FinancialsPage() {
     const { t } = useLanguage();
-    const [activeDepartment, setActiveDepartment] = React.useState('agriculture');
+    const [activeDepartment, setActiveDepartment] = React.useState<Department>('agriculture');
+
+    React.useEffect(() => {
+        const savedDepartment = localStorage.getItem('selectedDepartment') as Department;
+        if (savedDepartment) {
+            setActiveDepartment(savedDepartment);
+        }
+    }, []);
+
+    const handleDepartmentChange = (value: string) => {
+        const department = value as Department;
+        setActiveDepartment(department);
+        localStorage.setItem('selectedDepartment', department);
+    }
+    
+    const departmentIcons: Record<Department, React.ElementType> = {
+        agriculture: Leaf,
+        livestock: PawPrint,
+        poultry: Bird,
+        fish: Fish,
+    };
+    
+    const departmentTitles: Record<Department, string> = {
+        agriculture: t('topicSoil'), // Using 'Soil' as a proxy for Agriculture
+        livestock: t('livestockSales'), // Proxy for Livestock
+        poultry: t('poultrySales'), // Proxy for Poultry
+        fish: t('fishSales'), // Proxy for Fish
+    };
+
 
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
             <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('financialManagement')}</CardTitle>
+                        <CardDescription>{t('financialManagementDesc')}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs value={activeDepartment} onValueChange={handleDepartmentChange} className="w-full">
+                            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+                                {(Object.keys(departmentIcons) as Department[]).map(dept => {
+                                    const Icon = departmentIcons[dept];
+                                    return (
+                                        <TabsTrigger key={dept} value={dept} className="flex-col h-16 gap-1">
+                                            <Icon className="h-5 w-5" />
+                                            <span>{departmentTitles[dept]}</span>
+                                        </TabsTrigger>
+                                    )
+                                })}
+                            </TabsList>
+                        </Tabs>
+                    </CardContent>
+                </Card>
+
                 <Tabs defaultValue="sales" className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="sales"><Wallet className="mr-2 h-4 w-4" />{t('sales')}</TabsTrigger>
