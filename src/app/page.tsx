@@ -38,6 +38,12 @@ export default function Home() {
           </p>
         </header>
         
+        <section className="w-full">
+            <PlantingPlanGenerator />
+        </section>
+
+        <Separator className="my-8" />
+
         <section className="w-full border-t pt-8">
             <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -81,14 +87,6 @@ export default function Home() {
                 })}
             </div>
         </section>
-
-        <Separator className="my-8" />
-
-        <section className="w-full">
-            <h2 className="text-3xl font-bold text-center mb-8">{t('customPlantingPlan')}</h2>
-            <PlantingPlanGenerator />
-        </section>
-
 
         <footer className="text-center mt-16 text-sm text-muted-foreground font-body">
             <p>&copy; {new Date().getFullYear()} {t('footerText')}</p>

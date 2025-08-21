@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -16,10 +17,10 @@ import { PlantLoader } from '@/components/plant-loader';
 import { getPlantingPlan } from '@/app/actions';
 import { useLanguage } from '@/context/language-context';
 
-const formSchema = z.object({
-  landArea: z.coerce.number().min(1, { message: 'يجب أن تكون المساحة 1 متر مربع على الأقل.' }),
-  budget: z.coerce.number().min(1, { message: 'يجب أن تكون الميزانية 1 دينار على الأقل.' }),
-  plantTypes: z.string().min(5, { message: 'الرجاء وصف النباتات التي ترغب بزراعتها.' }),
+const getFormSchema = (t: (key: any) => string) => z.object({
+  landArea: z.coerce.number().min(1, { message: t('landAreaMin') }),
+  budget: z.coerce.number().min(1, { message: t('budgetMin') }),
+  plantTypes: z.string().min(5, { message: t('plantTypesMin') }),
 });
 
 type PlantingPlan = {
@@ -34,6 +35,8 @@ export function PlantingPlanGenerator() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  const formSchema = getFormSchema(t);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

@@ -71,8 +71,6 @@
     "topicFertilizationDesc": "Best methods to fertilize your plants for healthy growth.",
     "topicPests": "Pests",
     "topicPestsDesc": "Discover how to identify common pests.",
-    "topicPruning": "Pruning",
-    "topicPruningDesc": "Master the art of pruning to improve plant health.",
     "topicSoil": "Soil",
     "topicSoilDesc": "Understand the different types of soil.",
     "topicSeeds": "Seeds",
@@ -342,12 +340,6 @@
     "badgeTrader": "Trader",
     "badgeTraderDesc": "Log your first sale.",
     "badgeEarned": "New Badge Unlocked!",
-    "topicDiseases": "Diseases",
-    "topicDiseasesDesc": "Diagnose and treat common plant diseases.",
-    "subTopicFungalDiseases": "Fungal Diseases",
-    "subTopicFungalDiseasesDesc": "Such as powdery mildew and rust, and how to prevent them.",
-    "subTopicViralDiseases": "Viral Diseases",
-    "subTopicViralDiseasesDesc": "Recognize the symptoms of viruses and how to limit their spread.",
     "customPlantingPlan": "Your Custom Planting Plan",
     "customPlantingPlanGenerator": "Planting Plan Generator",
     "customPlantingPlanDesc": "Enter your land and budget details to get a custom AI-powered planting plan.",
@@ -365,5 +357,8 @@
     "planCopySuccess": "You can now paste the plan anywhere.",
     "plantingSchedule": "Planting Schedule",
     "costEstimation": "Cost Estimation",
-    "cropForecast": "Crop Forecast"
+    "cropForecast": "Crop Forecast",
+    "landAreaMin": "Land area must be at least 1 square meter.",
+    "budgetMin": "Budget must be at least 1 KWD.",
+    "plantTypesMin": "Please describe the plants you wish to grow."
 }
