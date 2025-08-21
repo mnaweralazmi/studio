@@ -8,66 +8,37 @@ import { BudgetContent } from '@/components/budget-content';
 import { ExpensesContent } from '@/components/expenses-content';
 import { DebtsContent } from '@/components/debts-content';
 import { WorkersContent } from '@/components/workers-content';
-import { Wallet, CreditCard, Landmark, Users, Car, Fish, Bird, Beef } from 'lucide-react';
-
-type Department = 'agriculture' | 'livestock' | 'poultry' | 'fish';
+import { Wallet, CreditCard, Landmark, Users } from 'lucide-react';
 
 export default function FinancialsPage() {
     const { t } = useLanguage();
-    const [activeDepartment, setActiveDepartment] = React.useState<Department>('agriculture');
-
-    React.useEffect(() => {
-        // Persist the last selected department for the budget summary page
-        localStorage.setItem('selectedDepartment', activeDepartment);
-    }, [activeDepartment]);
-
-    const departments: { id: Department; name: string; icon: React.ElementType }[] = [
-        { id: 'agriculture', name: "الزراعة", icon: Car },
-        { id: 'livestock', name: "المواشي", icon: Beef },
-        { id: 'poultry', name: "الدواجن", icon: Bird },
-        { id: 'fish', name: "الأسماك", icon: Fish },
-    ];
+    const [activeDepartment, setActiveDepartment] = React.useState('agriculture');
 
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
             <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
-                <Tabs defaultValue="agriculture" onValueChange={(value) => setActiveDepartment(value as Department)} className="w-full">
+                <Tabs defaultValue="sales" className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
-                        {departments.map(dept => (
-                            <TabsTrigger key={dept.id} value={dept.id} className="text-base py-2">
-                                <dept.icon className="mr-2 h-5 w-5" />
-                                {dept.name}
-                            </TabsTrigger>
-                        ))}
+                        <TabsTrigger value="sales"><Wallet className="mr-2 h-4 w-4" />{t('sales')}</TabsTrigger>
+                        <TabsTrigger value="expenses"><CreditCard className="mr-2 h-4 w-4" />{t('expenses')}</TabsTrigger>
+                        <TabsTrigger value="debts"><Landmark className="mr-2 h-4 w-4" />{t('debts')}</TabsTrigger>
+                        <TabsTrigger value="workers"><Users className="mr-2 h-4 w-4" />{t('workers')}</TabsTrigger>
                     </TabsList>
-
-                    {departments.map(dept => (
-                        <TabsContent key={dept.id} value={dept.id} className="mt-6">
-                            <Tabs defaultValue="sales" className="w-full">
-                                <TabsList className="grid w-full grid-cols-4">
-                                    <TabsTrigger value="sales"><Wallet className="mr-2 h-4 w-4" />{t('sales')}</TabsTrigger>
-                                    <TabsTrigger value="expenses"><CreditCard className="mr-2 h-4 w-4" />{t('expenses')}</TabsTrigger>
-                                    <TabsTrigger value="debts"><Landmark className="mr-2 h-4 w-4" />{t('debts')}</TabsTrigger>
-                                    <TabsTrigger value="workers"><Users className="mr-2 h-4 w-4" />{t('workers')}</TabsTrigger>
-                                </TabsList>
-                                
-                                <div className="mt-6 space-y-6">
-                                    <TabsContent value="sales">
-                                        <BudgetContent departmentId={dept.id} />
-                                    </TabsContent>
-                                    <TabsContent value="expenses">
-                                        <ExpensesContent departmentId={dept.id} />
-                                    </TabsContent>
-                                    <TabsContent value="debts">
-                                        <DebtsContent departmentId={dept.id} />
-                                    </TabsContent>
-                                    <TabsContent value="workers">
-                                        <WorkersContent departmentId={dept.id} />
-                                    </TabsContent>
-                                </div>
-                            </Tabs>
+                    
+                    <div className="mt-6 space-y-6">
+                        <TabsContent value="sales">
+                            <BudgetContent departmentId={activeDepartment} />
                         </TabsContent>
-                    ))}
+                        <TabsContent value="expenses">
+                            <ExpensesContent departmentId={activeDepartment} />
+                        </TabsContent>
+                        <TabsContent value="debts">
+                            <DebtsContent departmentId={activeDepartment} />
+                        </TabsContent>
+                        <TabsContent value="workers">
+                            <WorkersContent departmentId={activeDepartment} />
+                        </TabsContent>
+                    </div>
                 </Tabs>
             </div>
         </main>
