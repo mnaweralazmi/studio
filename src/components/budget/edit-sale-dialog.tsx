@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/context/language-context';
-import type { SalesItem, SalesFormValues } from './budget-content';
+import type { SalesItem, SalesFormValues } from '../budget-content';
 
 const salesFormSchema = z.object({
   vegetable: z.string({ required_error: 'الرجاء اختيار نوع الخضار.' }),
