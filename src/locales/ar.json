@@ -339,7 +339,7 @@
     "badgeTrader": "التاجر",
     "badgeTraderDesc": "تسجيل أول عملية بيع لك.",
     "badgeEarned": "شارة جديدة!",
-    "financialManagement": "الادارة المالية للمزرعة",
+    "financialManagement": "الادارة المالية",
     "financialManagementDesc": "اختر قسماً لإدارة شؤونه المالية",
     "budget": "الميزانية",
     "financialSummary": "الملخص المالي",
@@ -380,5 +380,9 @@
     "fishType": "نوع السمك",
     "selectFishType": "اختر نوع السمك...",
     "kg": "كيلو",
-    "optional": "اختياري"
+    "optional": "اختياري",
+    "financialManagementTitle": "الادارة المالية للمزرعة",
+    "addNewCategory": "إضافة فئة جديدة...",
+    "newCategoryName": "اسم الفئة الجديدة",
+    "newCategoryNamePlaceholder": "أدخل اسم الفئة هنا"
 }

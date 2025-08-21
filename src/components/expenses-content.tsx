@@ -20,33 +20,42 @@ import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { EditExpenseDialog } from './expenses/edit-expense-dialog';
 
-
-const initialExpenseCategoriesAr: Record<string, string[]> = {
-  "فواتير": ["كهرباء", "ماء", "انترنت", "هاتف"],
-  "مستلزمات زراعية": ["بذور", "أسمدة", "تربة", "مبيدات", "أدوات"],
-  "صيانة": ["معدات", "مباني"],
-  "وقود ومركبات": ["بنزين", "ديزل", "صيانة مركبة"],
-  "عمالة": ["رواتب", "أعمال يومية"],
-  "نثريات": ["إدارية", "طعام وشراب", "طوارئ"],
+const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
+    if (language === 'ar') {
+        switch (departmentId) {
+            case 'agriculture': return { "مستلزمات زراعية": ["بذور", "أسمدة", "تربة", "مبيدات", "أدوات"], "خدمات": ["كهرباء", "ماء"], "صيانة": ["معدات", "مباني"] };
+            case 'livestock': return { "تغذية": ["أعلاف", "ماء"], "رعاية صحية": ["أدوية", "فيتامينات", "تطعيمات"], "بنية تحتية": ["صيانة حظائر"] };
+            case 'poultry': return { "تغذية": ["أعلاف", "ماء"], "رعاية صحية": ["أدوية", "تحصينات"], "بنية تحتية": ["صيانة حظائر"] };
+            case 'fish': return { "تغذية": ["أعلاف أسماك"], "صيانة": ["صيانة أحواض", "أنظمة ترشيح"], "خدمات": ["كهرباء", "أكسجين"] };
+            default: return {};
+        }
+    } else {
+         switch (departmentId) {
+            case 'agriculture': return { "Farming Supplies": ["Seeds", "Fertilizers", "Soil", "Pesticides", "Tools"], "Utilities": ["Electricity", "Water"], "Maintenance": ["Equipment", "Buildings"] };
+            case 'livestock': return { "Feed": ["Fodder", "Water"], "Healthcare": ["Medicine", "Vitamins", "Vaccinations"], "Infrastructure": ["Barn Maintenance"] };
+            case 'poultry': return { "Feed": ["Fodder", "Water"], "Healthcare": ["Medicine", "Vaccinations"], "Infrastructure": ["Coop Maintenance"] };
+            case 'fish': return { "Feed": ["Fish Feed"], "Maintenance": ["Tank Maintenance", "Filtration Systems"], "Utilities": ["Electricity", "Oxygen"] };
+            default: return {};
+        }
+    }
 };
 
-const initialExpenseCategoriesEn: Record<string, string[]> = {
-    "Bills": ["Electricity", "Water", "Internet", "Phone"],
-    "Farming Supplies": ["Seeds", "Fertilizers", "Soil", "Pesticides", "Tools"],
-    "Maintenance": ["Equipment", "Buildings"],
-    "Fuel & Vehicles": ["Gasoline", "Diesel", "Vehicle Maintenance"],
-    "Labor": ["Salaries", "Daily Wages"],
-    "Miscellaneous": ["Admin", "Food & Drink", "Emergencies"],
-};
 
 const expenseFormSchema = z.object({
   type: z.enum(['fixed', 'variable'], { required_error: "الرجاء تحديد نوع المصروف." }),
-  category: z.string({
-    required_error: "الرجاء اختيار الفئة.",
-  }),
+  category: z.string({ required_error: "الرجاء اختيار الفئة." }),
+  newCategoryName: z.string().optional(),
   item: z.string({ required_error: "الرجاء اختيار البند." }),
   newItemName: z.string().optional(),
   amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ إيجابياً."),
+}).refine(data => {
+    if (data.category === 'add_new_category') {
+        return !!data.newCategoryName && data.newCategoryName.length > 2;
+    }
+    return true;
+}, {
+    message: "الرجاء إدخال اسم فئة جديد (3 أحرف على الأقل).",
+    path: ['newCategoryName'],
 }).refine(data => {
     if (data.item === 'add_new_item') {
         return !!data.newItemName && data.newItemName.length > 2;
@@ -59,7 +68,7 @@ const expenseFormSchema = z.object({
 
 export type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-export type ExpenseItem = Omit<ExpenseFormValues, 'newItemName'> & {
+export type ExpenseItem = Omit<ExpenseFormValues, 'newItemName' | 'newCategoryName'> & {
   id: string;
   date: Date;
 };
@@ -77,13 +86,9 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const { user } = useAuth();
     const [editingExpense, setEditingExpense] = React.useState<ExpenseItem | null>(null);
 
-    const getCategoriesKey = React.useCallback(() => {
-        return user ? `expenseCategories_${user.uid}_${language}` : `expenseCategories_guest_${language}`;
-    }, [user, language]);
-
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
-            if (user) {
+            if (user && departmentId) {
                 setIsDataLoading(true);
                 try {
                     // Fetch expenses
@@ -97,12 +102,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     setExpenses(fetchedExpenses);
 
                     // Fetch categories
-                    const categoriesDocRef = doc(db, 'users', user.uid, 'appData', `expenseCategories_${language}`);
+                    const categoriesDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
                     const categoriesDoc = await getDoc(categoriesDocRef);
                      if (categoriesDoc.exists()) {
                          setExpenseCategories(categoriesDoc.data().categories);
                      } else {
-                         setExpenseCategories(language === 'ar' ? initialExpenseCategoriesAr : initialExpenseCategoriesEn);
+                         setExpenseCategories(getInitialCategories(language, departmentId));
                      }
 
                 } catch (e) {
@@ -113,7 +118,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 }
             } else {
                 setExpenses([]);
-                setExpenseCategories(language === 'ar' ? initialExpenseCategoriesAr : initialExpenseCategoriesEn);
+                setExpenseCategories(getInitialCategories(language, departmentId));
                 setIsDataLoading(false);
             }
         };
@@ -125,6 +130,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         defaultValues: {
             amount: 0.01,
             newItemName: '',
+            newCategoryName: '',
             type: undefined,
             category: undefined,
             item: undefined,
@@ -135,9 +141,9 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const selectedItem = form.watch("item");
 
     async function updateCategoriesInDb(newCategories: Record<string, string[]>) {
-        if (!user) return;
+        if (!user || !departmentId) return;
         try {
-            const categoriesDocRef = doc(db, 'users', user.uid, 'appData', `expenseCategories_${language}`);
+            const categoriesDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
             await setDoc(categoriesDocRef, { categories: newCategories });
         } catch (e) {
             console.error("Error updating categories: ", e);
@@ -148,21 +154,33 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     async function handleUpdateExpense(id: string, data: ExpenseFormValues) {
         if (!user) return;
 
+        let finalCategoryName = data.category;
         let finalItemName = data.item;
-        let finalCategories = expenseCategories;
+        let finalCategories = { ...expenseCategories };
         let categoriesChanged = false;
 
-        if (data.item === 'add_new_item' && data.newItemName) {
-            finalItemName = data.newItemName;
-            const newCategories = { ...expenseCategories };
-            if (data.category && !newCategories[data.category].includes(data.newItemName!)) {
-                newCategories[data.category] = [...newCategories[data.category], data.newItemName!];
-                finalCategories = newCategories;
-                setExpenseCategories(finalCategories);
+        // Handle new category
+        if (data.category === 'add_new_category' && data.newCategoryName) {
+            finalCategoryName = data.newCategoryName;
+            if (!finalCategories[finalCategoryName]) {
+                finalCategories[finalCategoryName] = [];
                 categoriesChanged = true;
             }
         }
         
+        // Handle new item
+        if (data.item === 'add_new_item' && data.newItemName) {
+            finalItemName = data.newItemName;
+            if (finalCategoryName && finalCategories[finalCategoryName] && !finalCategories[finalCategoryName].includes(finalItemName)) {
+                finalCategories[finalCategoryName] = [...finalCategories[finalCategoryName], finalItemName];
+                categoriesChanged = true;
+            }
+        }
+
+        if (categoriesChanged) {
+            setExpenseCategories(finalCategories);
+        }
+
         const expenseToUpdate = expenses.find(e => e.id === id);
         if (!expenseToUpdate) return;
         
@@ -170,7 +188,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             const expenseDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'expenses', id);
             const updatedData = {
                 type: data.type,
-                category: data.category,
+                category: finalCategoryName,
                 item: finalItemName,
                 amount: data.amount,
                 date: Timestamp.fromDate(expenseToUpdate.date),
@@ -188,7 +206,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
              console.error("Error updating expense: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to update expense." });
         }
-
     }
 
 
@@ -198,25 +215,39 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             return;
         }
 
+        let finalCategoryName = data.category;
         let finalItemName = data.item;
-        let finalCategories = expenseCategories;
+        let finalCategories = { ...expenseCategories };
+        let categoriesChanged = false;
 
+        // Handle new category
+        if (data.category === 'add_new_category' && data.newCategoryName) {
+            finalCategoryName = data.newCategoryName;
+            if (!finalCategories[finalCategoryName]) {
+                finalCategories[finalCategoryName] = [];
+                categoriesChanged = true;
+            }
+        }
+        
+        // Handle new item
         if (data.item === 'add_new_item' && data.newItemName) {
             finalItemName = data.newItemName;
-            const newCategories = { ...expenseCategories };
-            if (data.category && !newCategories[data.category].includes(data.newItemName!)) {
-                newCategories[data.category] = [...newCategories[data.category], data.newItemName!];
-                finalCategories = newCategories;
-                setExpenseCategories(finalCategories);
-                await updateCategoriesInDb(finalCategories);
+            if (finalCategoryName && finalCategories[finalCategoryName] && !finalCategories[finalCategoryName].includes(finalItemName)) {
+                finalCategories[finalCategoryName] = [...finalCategories[finalCategoryName], finalItemName];
+                categoriesChanged = true;
             }
         }
 
+        if (categoriesChanged) {
+            setExpenseCategories(finalCategories);
+            await updateCategoriesInDb(finalCategories);
+        }
+        
         const newExpenseData = {
             id: Date.now().toString(),
             date: Timestamp.fromDate(new Date()),
             type: data.type,
-            category: data.category,
+            category: finalCategoryName,
             item: finalItemName,
             amount: data.amount,
         };
@@ -229,7 +260,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
               id: docRef.id,
               date: new Date(),
               type: data.type,
-              category: data.category,
+              category: finalCategoryName,
               item: finalItemName,
               amount: data.amount,
             };
@@ -241,6 +272,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                  item: undefined,
                  amount: 0.01,
                  newItemName: '',
+                 newCategoryName: '',
             });
             form.clearErrors();
             toast({ title: t('expenseAddedSuccess') });
@@ -316,7 +348,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <FormField control={form.control} name="type" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>{t('expenseType')}</FormLabel>
@@ -344,12 +376,25 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                             </FormControl>
                                             <SelectContent>
                                                 {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                                <SelectItem value="add_new_category">{t('addNewCategory')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
-                                {selectedCategory && (
+                            </div>
+
+                             {selectedCategory === 'add_new_category' && (
+                                <FormField control={form.control} name="newCategoryName" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{t('newCategoryName')}</FormLabel>
+                                        <FormControl><Input placeholder={t('newCategoryNamePlaceholder')} {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            )}
+
+                            {selectedCategory && selectedCategory !== 'add_new_category' && (
                                 <FormField control={form.control} name="item" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>{t('item')}</FormLabel>
@@ -365,9 +410,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                         <FormMessage />
                                     </FormItem>
                                 )} />
-                                )}
-                            </div>
-
+                            )}
+                            
                             {selectedItem === 'add_new_item' && (
                                 <FormField control={form.control} name="newItemName" render={({ field }) => (
                                     <FormItem>

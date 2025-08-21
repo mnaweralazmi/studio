@@ -339,7 +339,7 @@
     "badgeTrader": "Trader",
     "badgeTraderDesc": "Log your first sale.",
     "badgeEarned": "New Badge Unlocked!",
-    "financialManagement": "Farm Financial Management",
+    "financialManagement": "Financial Management",
     "financialManagementDesc": "Select a department to manage its finances",
     "budget": "Budget",
     "financialSummary": "Financial Summary",
@@ -380,5 +380,9 @@
     "fishType": "Fish Type",
     "selectFishType": "Select fish type...",
     "kg": "Kg",
-    "optional": "Optional"
+    "optional": "Optional",
+    "financialManagementTitle": "Farm Financial Management",
+    "addNewCategory": "Add new category...",
+    "newCategoryName": "New Category Name",
+    "newCategoryNamePlaceholder": "Enter category name here"
 }

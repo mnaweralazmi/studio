@@ -16,9 +16,18 @@ import type { ExpenseItem, ExpenseFormValues } from '../expenses-content';
 const expenseFormSchema = z.object({
   type: z.enum(['fixed', 'variable'], { required_error: "الرجاء تحديد نوع المصروف." }),
   category: z.string({ required_error: "الرجاء اختيار الفئة." }),
+  newCategoryName: z.string().optional(),
   item: z.string({ required_error: "الرجاء اختيار البند." }),
   newItemName: z.string().optional(),
   amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ إيجابياً."),
+}).refine(data => {
+    if (data.category === 'add_new_category') {
+        return !!data.newCategoryName && data.newCategoryName.length > 2;
+    }
+    return true;
+}, {
+    message: "الرجاء إدخال اسم فئة جديد (3 أحرف على الأقل).",
+    path: ['newCategoryName'],
 }).refine(data => {
     if (data.item === 'add_new_item') {
         return !!data.newItemName && data.newItemName.length > 2;
@@ -53,6 +62,7 @@ export function EditExpenseDialog({ isOpen, onClose, expense, onSave, expenseCat
 
     const handleSubmit = (data: ExpenseFormValues) => {
         onSave(expense.id, data);
+        onClose();
     };
 
     const selectedCategory = form.watch("category");
@@ -94,13 +104,23 @@ export function EditExpenseDialog({ isOpen, onClose, expense, onSave, expenseCat
                                         </FormControl>
                                         <SelectContent>
                                             {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                            <SelectItem value="add_new_category">{t('addNewCategory')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
                                 </FormItem>
                             )} />
                         </div>
-                        {selectedCategory && (
+                         {selectedCategory === 'add_new_category' && (
+                            <FormField control={form.control} name="newCategoryName" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t('newCategoryName')}</FormLabel>
+                                    <FormControl><Input placeholder={t('newCategoryNamePlaceholder')} {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        )}
+                        {selectedCategory && selectedCategory !== 'add_new_category' && (
                             <FormField control={form.control} name="item" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>{t('item')}</FormLabel>
