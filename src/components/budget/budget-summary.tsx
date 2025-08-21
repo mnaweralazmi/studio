@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
 import type { SalesItem } from '../budget-content';
 import type { ExpenseItem } from '../expenses-content';
-import type { DebtItem } from '../debts-content';
+import type { DebtItem, Payment } from '../debts-content';
 import type { Worker, Transaction } from '../workers/types';
 
 export function BudgetSummary() {
@@ -52,19 +52,27 @@ export function BudgetSummary() {
                         .reduce((sum, t) => sum + t.amount, 0);
                     totalSalariesPaid += salaries;
                 }
-
-                const totalExpenses = totalExpensesItems + totalSalariesPaid;
-
-                // Fetch Debts
+                
+                // Fetch Debts and Debt Payments
                 const debtsSnapshot = await getDocs(collection(db, 'users', user.uid, 'debts'));
-                const totalDebts = debtsSnapshot.docs
-                    .map(doc => ({...doc.data(), id: doc.id} as DebtItem))
-                    .filter(d => d.status !== 'paid')
-                    .reduce((sum, debt) => {
-                        const paidAmount = (debt.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-                        return sum + (debt.amount - paidAmount);
-                    }, 0);
+                let totalDebts = 0;
+                let totalDebtPayments = 0;
 
+                for(const debtDoc of debtsSnapshot.docs) {
+                    const debtData = debtDoc.data();
+                    const paymentsSnapshot = await getDocs(collection(db, 'users', user.uid, 'debts', debtDoc.id, 'payments'));
+                    const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
+
+                    const paidAmount = payments.reduce((pSum, p) => pSum + p.amount, 0);
+                    totalDebtPayments += paidAmount;
+                    
+                    if (debtData.status !== 'paid') {
+                        totalDebts += (debtData.amount - paidAmount);
+                    }
+                }
+
+
+                const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPayments;
                 const netProfit = totalSales - totalExpenses;
 
                 setSummary({ totalSales, totalExpenses, totalDebts, netProfit });

@@ -14,19 +14,25 @@ import {
   SidebarTrigger,
   SidebarFooter,
   SidebarInset,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
-import { Home, ClipboardPen, CalendarDays, Settings, LogOut, Leaf } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, LogOut, Leaf, Wallet, CreditCard, Landmark, Users, Briefcase, ChevronDown } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { language, t } = useLanguage();
   const { user, loading } = useAuth();
+  
+  const [isFinancialOpen, setIsFinancialOpen] = React.useState(pathname.startsWith('/financials') || pathname.startsWith('/budget') || pathname.startsWith('/sales') || pathname.startsWith('/expenses') || pathname.startsWith('/debts') || pathname.startsWith('/workers'));
 
   const handleLogout = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -37,9 +43,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/', label: t('home'), icon: Home, startsWith: '/' },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
-    { href: '/budget', label: t('financialManagement'), icon: ClipboardPen, startsWith: '/budget' },
   ];
   
+  const financialNavItems = [
+     { href: '/budget', label: t('budget'), icon: Briefcase },
+     { href: '/sales', label: t('sales'), icon: Wallet },
+     { href: '/expenses', label: t('expenses'), icon: CreditCard },
+     { href: '/debts', label: t('debts'), icon: Landmark },
+     { href: '/workers', label: t('workers'), icon: Users },
+  ]
+
   if (loading || !user) {
     return (
         <div className="flex h-screen w-full bg-background">
@@ -76,6 +89,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
+             <Collapsible open={isFinancialOpen} onOpenChange={setIsFinancialOpen}>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton className="justify-between" isActive={isFinancialOpen} tooltip={t('financialManagement')}>
+                            <div className="flex items-center gap-2">
+                                <ClipboardPen/>
+                                <span>{t('financialManagement')}</span>
+                            </div>
+                            <ChevronDown className={`transform transition-transform duration-200 ${isFinancialOpen ? 'rotate-180' : ''}`} />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                </SidebarMenuItem>
+                 <CollapsibleContent>
+                    <SidebarMenuSub>
+                        {financialNavItems.map(item => (
+                             <SidebarMenuItem key={item.href}>
+                                <NextLink href={item.href}>
+                                    <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
+                                        <item.icon />
+                                        <span>{item.label}</span>
+                                    </SidebarMenuSubButton>
+                                </NextLink>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenuSub>
+                 </CollapsibleContent>
+             </Collapsible>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
