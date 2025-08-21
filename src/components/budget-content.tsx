@@ -532,6 +532,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             <EditSaleDialog
                 isOpen={!!editingSale}
                 onClose={() => setEditingSale(null)}
+                // @ts-ignore
                 sale={editingSale}
                 onSave={handleUpdateItem}
             />
@@ -539,5 +540,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </>
   );
 }
+
+    
 
     

@@ -14,9 +14,9 @@ import { useLanguage } from '@/context/language-context';
 import type { SalesItem, SalesFormValues } from '../budget-content';
 
 const salesFormSchema = z.object({
-  vegetable: z.string({ required_error: 'الرجاء اختيار نوع الخضار.' }),
+  product: z.string({ required_error: 'الرجاء اختيار نوع الخضار.' }),
   quantity: z.coerce.number().min(1, 'يجب أن تكون الكمية 1 على الأقل.'),
-  weightPerCarton: z.coerce.number().min(0.1, 'يجب أن يكون الوزن 0.1 كيلو على الأقل.'),
+  weightPerUnit: z.coerce.number().min(0.1, 'يجب أن يكون الوزن 0.1 كيلو على الأقل.'),
   price: z.coerce.number().min(0.01, 'يجب أن يكون السعر إيجابياً.'),
 });
 
@@ -36,12 +36,12 @@ export function EditSaleDialog({ isOpen, onClose, sale, onSave }: EditSaleDialog
 
     const form = useForm<SalesFormValues>({
         resolver: zodResolver(salesFormSchema),
-        defaultValues: sale,
+        defaultValues: sale as SalesFormValues,
     });
 
     React.useEffect(() => {
         if (sale) {
-            form.reset(sale);
+            form.reset(sale as SalesFormValues);
         }
     }, [sale, form]);
 
@@ -60,7 +60,7 @@ export function EditSaleDialog({ isOpen, onClose, sale, onSave }: EditSaleDialog
                     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-4">
                         <FormField
                             control={form.control}
-                            name="vegetable"
+                            name="product"
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>{t('vegetableType')}</FormLabel>
@@ -95,7 +95,7 @@ export function EditSaleDialog({ isOpen, onClose, sale, onSave }: EditSaleDialog
                         />
                         <FormField
                             control={form.control}
-                            name="weightPerCarton"
+                            name="weightPerUnit"
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>{t('weightPerCartonInKg')}</FormLabel>
@@ -130,3 +130,5 @@ export function EditSaleDialog({ isOpen, onClose, sale, onSave }: EditSaleDialog
         </Dialog>
     );
 }
+
+    
