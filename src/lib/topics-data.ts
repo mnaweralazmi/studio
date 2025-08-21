@@ -79,16 +79,6 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       ]
     },
     {
-      id: '6',
-      titleKey: "topicDiseases",
-      descriptionKey: "topicDiseasesDesc",
-      iconName: 'Virus',
-      image: 'https://placehold.co/400x200.png',
-      hint: 'plant disease',
-      subTopics: [],
-      videos: []
-    },
-    {
       id: '3',
       titleKey: "topicPruning",
       descriptionKey: "topicPruningDesc",
@@ -101,16 +91,6 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       videos: [
         { id: 'v-3', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://placehold.co/400x200.png', videoUrl: 'https://www.youtube.com/watch?v=example3', hint: 'tomato plant' }
       ]
-    },
-    {
-      id: '7',
-      titleKey: "topicTrimming",
-      descriptionKey: "topicTrimmingDesc",
-      iconName: 'Scissors',
-      image: 'https://placehold.co/400x200.png',
-      hint: 'trimming hedge',
-      subTopics: [],
-      videos: []
     },
     {
       id: '4',
