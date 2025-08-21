@@ -38,14 +38,14 @@ export default function Home() {
         
         <section className="w-full border-t pt-8">
             <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {topics.map((topic) => {
                     const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
                     const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey as any);
                     const video = topic.videos && topic.videos.length > 0 ? topic.videos[0] : null;
                     return (
                         <Card key={topic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
-                            <div className="relative w-full h-48">
+                            <div className="relative w-full h-40">
                                 <Image 
                                     src={topic.image} 
                                     alt={title!} 
@@ -54,18 +54,18 @@ export default function Home() {
                                     data-ai-hint={topic.hint}
                                 />
                             </div>
-                            <CardContent className="p-6 flex flex-col flex-1">
-                                <h3 className="text-xl font-bold mb-2">{title}</h3>
+                            <CardContent className="p-4 flex flex-col flex-1">
+                                <h3 className="text-lg font-bold mb-2">{title}</h3>
                                 <p className="text-muted-foreground text-sm flex-1">{description}</p>
-                                <div className="flex gap-4 mt-6">
-                                    <Button asChild className="flex-1">
+                                <div className="flex flex-col gap-2 mt-4">
+                                    <Button asChild size="sm">
                                         <Link href={`/topics/${topic.id}`}>
                                             <BookOpen className="mr-2 h-4 w-4" />
                                             {t('readMore')}
                                         </Link>
                                     </Button>
                                     {video && (
-                                        <Button asChild variant="secondary" className="flex-1">
+                                        <Button asChild variant="secondary" size="sm">
                                             <a href={video.videoUrl} target="_blank" rel="noopener noreferrer">
                                                 <PlayCircle className="mr-2 h-4 w-4" />
                                                 {t('watchVideo')}

@@ -39,7 +39,7 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       titleKey: "topicIrrigation",
       descriptionKey: "topicIrrigationDesc",
       iconName: 'Droplets',
-      image: 'https://placehold.co/800x400.png',
+      image: 'https://placehold.co/600x400.png',
       hint: 'watering plants',
       subTopics: [
         { id: '1-1', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://placehold.co/600x400.png', hint: 'drip irrigation' },
@@ -50,26 +50,50 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       ]
     },
     {
+      id: '5',
+      titleKey: "topicFertilization",
+      descriptionKey: "topicFertilizationDesc",
+      iconName: 'FlaskConical',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'fertilizer',
+      subTopics: [
+         { id: '5-1', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://placehold.co/600x400.png', hint: 'fertilizer types' },
+      ],
+      videos: [
+        { id: 'v-2', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/600x400.png', videoUrl: 'https://www.youtube.com/watch?v=example2', hint: 'compost bin' }
+      ]
+    },
+    {
       id: '2',
       titleKey: "topicPests",
       descriptionKey: "topicPestsDesc",
       iconName: 'Bug',
-      image: 'https://placehold.co/800x400.png',
+      image: 'https://placehold.co/600x400.png',
       hint: 'insect pest',
       subTopics: [
         { id: '2-1', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://placehold.co/600x400.png', hint: 'ladybug pests' },
         { id: '2-2', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://placehold.co/600x400.png', hint: 'spraying pesticides' },
       ],
-      videos: [
-         { id: 'v-2', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://placehold.co/600x400.png', videoUrl: 'https://www.youtube.com/watch?v=example2', hint: 'compost bin' }
+       videos: [
+        { id: 'v-5', titleKey: 'videoPestControl', durationKey: 'videoDuration18', image: 'https://placehold.co/600x400.png', videoUrl: 'https://www.youtube.com/watch?v=example5', hint: 'pest control' }
       ]
+    },
+    {
+      id: '6',
+      titleKey: "topicDiseases",
+      descriptionKey: "topicDiseasesDesc",
+      iconName: 'Virus',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'plant disease',
+      subTopics: [],
+      videos: []
     },
     {
       id: '3',
       titleKey: "topicPruning",
       descriptionKey: "topicPruningDesc",
       iconName: 'Scissors',
-      image: 'https://placehold.co/800x400.png',
+      image: 'https://placehold.co/600x400.png',
       hint: 'pruning shears',
       subTopics: [
         { id: '3-1', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://placehold.co/600x400.png', hint: 'young tree' },
@@ -79,17 +103,37 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       ]
     },
     {
+      id: '7',
+      titleKey: "topicTrimming",
+      descriptionKey: "topicTrimmingDesc",
+      iconName: 'Scissors',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'trimming hedge',
+      subTopics: [],
+      videos: []
+    },
+    {
       id: '4',
       titleKey: "topicSoil",
       descriptionKey: "topicSoilDesc",
       iconName: 'Sprout',
-      image: 'https://placehold.co/800x400.png',
+      image: 'https://placehold.co/600x400.png',
       hint: 'rich soil',
       subTopics: [
          { id: '4-1', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://placehold.co/600x400.png', hint: 'soil test' },
       ],
-      videos: [
+       videos: [
         { id: 'v-4', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://placehold.co/600x400.png', videoUrl: 'https://www.youtube.com/watch?v=example4', hint: 'gardening tools' }
       ]
     },
+    {
+      id: '8',
+      titleKey: "topicSeeds",
+      descriptionKey: "topicSeedsDesc",
+      iconName: 'Sprout',
+      image: 'https://placehold.co/600x400.png',
+      hint: 'seeds planting',
+      subTopics: [],
+      videos: []
+    }
 ];
