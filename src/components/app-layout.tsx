@@ -32,7 +32,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { language, t } = useLanguage();
   const { user, loading } = useAuth();
   
-  const [isFinancialOpen, setIsFinancialOpen] = React.useState(pathname.startsWith('/financials') || pathname.startsWith('/budget') || pathname.startsWith('/sales') || pathname.startsWith('/expenses') || pathname.startsWith('/debts') || pathname.startsWith('/workers'));
+  const isFinancialOpen = React.useState(pathname.startsWith('/sales') || pathname.startsWith('/expenses') || pathname.startsWith('/debts') || pathname.startsWith('/workers'));
 
   const handleLogout = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -43,10 +43,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/', label: t('home'), icon: Home, startsWith: '/' },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays, startsWith: '/calendar' },
+    { href: '/budget', label: t('budget'), icon: Briefcase, startsWith: '/budget'},
   ];
   
   const financialNavItems = [
-     { href: '/budget', label: t('budget'), icon: Briefcase },
      { href: '/sales', label: t('sales'), icon: Wallet },
      { href: '/expenses', label: t('expenses'), icon: CreditCard },
      { href: '/debts', label: t('debts'), icon: Landmark },
@@ -89,15 +89,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
-             <Collapsible open={isFinancialOpen} onOpenChange={setIsFinancialOpen}>
+             <Collapsible open={isFinancialOpen[0]} onOpenChange={isFinancialOpen[1]}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton className="justify-between" isActive={isFinancialOpen} tooltip={t('financialManagement')}>
+                        <SidebarMenuButton className="justify-between" isActive={isFinancialOpen[0]} tooltip={t('financialManagement')}>
                             <div className="flex items-center gap-2">
                                 <ClipboardPen/>
                                 <span>{t('financialManagement')}</span>
                             </div>
-                            <ChevronDown className={`transform transition-transform duration-200 ${isFinancialOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`transform transition-transform duration-200 ${isFinancialOpen[0] ? 'rotate-180' : ''}`} />
                         </SidebarMenuButton>
                     </CollapsibleTrigger>
                 </SidebarMenuItem>
