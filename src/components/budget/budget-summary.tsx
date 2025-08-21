@@ -63,7 +63,7 @@ export function BudgetSummary() {
                     const paymentsSnapshot = await getDocs(collection(db, 'users', user.uid, 'debts', debtDoc.id, 'payments'));
                     const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
 
-                    const paidAmount = payments.reduce((pSum, p) => pSum + p.amount, 0);
+                    const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
                     totalDebtPayments += paidAmount;
                     
                     if (debtData.status !== 'paid') {
@@ -73,7 +73,7 @@ export function BudgetSummary() {
 
 
                 const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPayments;
-                const netProfit = totalSales - totalExpenses;
+                const netProfit = totalSales - (totalExpenses + totalDebts);
 
                 setSummary({ totalSales, totalExpenses, totalDebts, netProfit });
 
