@@ -302,7 +302,7 @@ export default function WorkersPage() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl sm:text-2xl">{t('workersList')}</CardTitle>
-                <AddWorkerDialog onSave={handleSaveWorker}>
+                <AddWorkerDialog onSave={handleSaveWorker} >
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('addNewWorker')}

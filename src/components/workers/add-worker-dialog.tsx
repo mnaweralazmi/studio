@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PlusCircle, Pencil } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import type { Worker, WorkerFormValues } from './types';
 
@@ -24,7 +23,7 @@ interface AddWorkerDialogProps {
     children: React.ReactNode;
 }
 
-function AddWorkerDialogComponent({ onSave, worker, children }: AddWorkerDialogProps) {
+export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogProps) {
     const { t } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
     
@@ -34,16 +33,13 @@ function AddWorkerDialogComponent({ onSave, worker, children }: AddWorkerDialogP
     });
 
     React.useEffect(() => {
-        if (worker) {
-            form.reset({ name: worker.name, baseSalary: worker.baseSalary });
-        } else {
-            form.reset({ name: "", baseSalary: 0 });
+        if (!isOpen) {
+            form.reset(worker ? { name: worker.name, baseSalary: worker.baseSalary } : { name: "", baseSalary: 0 });
         }
-    }, [worker, form, isOpen]);
+    }, [isOpen, worker, form]);
 
     const handleSubmit = (data: WorkerFormValues) => {
         onSave(data, worker?.id);
-        form.reset();
         setIsOpen(false);
     };
 
@@ -71,5 +67,3 @@ function AddWorkerDialogComponent({ onSave, worker, children }: AddWorkerDialogP
         </Dialog>
     );
 }
-
-export const AddWorkerDialog = React.memo(AddWorkerDialogComponent);
