@@ -148,7 +148,7 @@ export default function TopicDetailsPage() {
                         <Card key={subTopic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
                             <Link href={`/topics/${topic.id}/${subTopic.id}`}>
                                 <CardHeader className="p-0 relative">
-                                    <Image src={subTopic.image} alt={subTopicTitle!} width={600} height={400} className="w-full h-40 object-cover" data-ai-hint={subTopic.hint} />
+                                    <Image src={subTopic.image} alt={subTopicTitle!} width={400} height={200} className="w-full h-40 object-cover" data-ai-hint={subTopic.hint} />
                                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                                         <FileText className="h-12 w-12 text-white/80" />
                                     </div>
@@ -193,7 +193,7 @@ export default function TopicDetailsPage() {
                                 <Card key={video.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
                                     <a href={video.videoUrl} target="_blank" rel="noopener noreferrer">
                                         <CardHeader className="p-0 relative">
-                                            <Image src={video.image} alt={videoTitle!} width={600} height={400} className="w-full h-40 object-cover" data-ai-hint={video.hint} />
+                                            <Image src={video.image} alt={videoTitle!} width={400} height={200} className="w-full h-40 object-cover" data-ai-hint={video.hint} />
                                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                                                 <PlayCircle className="h-12 w-12 text-white/80" />
                                             </div>
