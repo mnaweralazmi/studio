@@ -27,6 +27,7 @@ import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage"
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const profileFormSchema = z.object({
     name: z.string().min(3, "يجب أن يتكون الاسم من 3 أحرف على الأقل."),
@@ -210,7 +211,6 @@ export default function SettingsPage() {
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
-
         <Card>
             <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar className="h-20 w-20">
@@ -223,189 +223,207 @@ export default function SettingsPage() {
                 </div>
             </CardHeader>
         </Card>
-          
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Award /> {t('achievements')}</CardTitle>
-                <CardDescription>{t('achievementsDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-2">
-                     <div className="flex justify-between items-end">
-                        <h3 className="font-semibold">{t('level')} {level}</h3>
-                        <p className="text-sm text-muted-foreground">{points % 100} / 100 {t('pointsToNextLevel')}</p>
-                    </div>
-                    <Progress value={progress} />
-                    <p className="text-right text-sm text-muted-foreground">{t('points')}: {points}</p>
-                </div>
 
-                <div className="space-y-2">
-                    <h3 className="font-semibold">{t('badges')}</h3>
-                    {userBadges.length > 0 ? (
-                        <TooltipProvider>
-                            <div className="flex flex-wrap gap-4">
-                            {userBadges.map(badgeId => {
-                                const badgeInfo = badgeList[badgeId as BadgeId];
-                                if (!badgeInfo) return null;
-                                const Icon = badgeInfo.icon;
-                                return (
-                                    <Tooltip key={badgeId}>
-                                        <TooltipTrigger asChild>
-                                            <div className="flex flex-col items-center gap-2 p-3 border rounded-lg w-24 h-24 justify-center bg-accent/50 hover:bg-accent transition-colors">
-                                                <Icon className="h-8 w-8 text-primary" />
-                                                <span className="text-xs text-center font-medium">{t(badgeInfo.titleKey as any)}</span>
+        <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="profile"><User className="mr-2 h-4 w-4" />{t('profile')}</TabsTrigger>
+                <TabsTrigger value="achievements"><Award className="mr-2 h-4 w-4" />{t('achievements')}</TabsTrigger>
+                <TabsTrigger value="display"><Palette className="mr-2 h-4 w-4" />{t('displayAndLanguage')}</TabsTrigger>
+                <TabsTrigger value="notifications"><Bell className="mr-2 h-4 w-4" />{t('notifications')}</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="profile" className="mt-6">
+              <Card>
+                <Form {...profileForm}>
+                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)}>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"> <User className="h-5 w-5 sm:h-6 sm:w-6" /> {t('userProfile')} </CardTitle>
+                            <CardDescription> {t('userProfileDesc')} </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-8">
+                            <div className="flex items-center gap-6 flex-wrap">
+                                 <Avatar className="h-24 w-24">
+                                    <AvatarImage src={avatarUrl || 'https://placehold.co/100x100.png'} alt={user?.displayName || ''} data-ai-hint="user avatar" />
+                                    <AvatarFallback>{user?.displayName?.[0].toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-[200px]">
+                                    <FormField
+                                      control={profileForm.control}
+                                      name="avatarUrl"
+                                      render={() => (
+                                        <FormItem>
+                                          <FormLabel>{t('profilePicture')}</FormLabel>
+                                          <FormControl>
+                                            <div className="flex flex-col gap-2">
+                                              <Button asChild variant="outline" className="w-fit">
+                                                <Label className="cursor-pointer">
+                                                  <Upload className="h-4 w-4" />
+                                                  <span>{t('changePicture')}</span>
+                                                  <Input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
+                                                </Label>
+                                              </Button>
+                                              <p className="text-xs text-muted-foreground">
+                                                 {fileName || t('noFileSelected')}
+                                              </p>
                                             </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{t(badgeInfo.descriptionKey as any)}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                );
-                            })}
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                </div>
                             </div>
-                        </TooltipProvider>
-                    ) : (
-                        <div className="text-center text-muted-foreground py-4 border rounded-lg">
-                            <p>{t('noBadgesYet')}</p>
-                        </div>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField control={profileForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>{t('fullName')}</FormLabel><FormControl><Input placeholder={t('enterFullName')} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                 <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem><FormLabel>{t('email')} ({t('cannotChange')})</FormLabel><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem> )} />
+                            </div>
+                             <div>
+                                <h3 className="text-lg font-medium mb-4">{t('changePassword')}</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <FormField control={profileForm.control} name="currentPassword" render={({ field }) => ( <FormItem><FormLabel>كلمة المرور الحالية</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                    <FormField control={profileForm.control} name="newPassword" render={({ field }) => ( <FormItem><FormLabel>{t('newPassword')}</FormLabel><FormControl><Input type="password" placeholder={t('leaveBlank')} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                    <FormField control={profileForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>{t('confirmNewPassword')}</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                </div>
+                            </div>
+                            <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>{t('bio')}</FormLabel><FormControl><Textarea placeholder={t('bioPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        </CardContent>
+                        <CardFooter className="border-t pt-6 flex justify-end">
+                            <Button type="submit"> <Save className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} /> {t('saveChanges')} </Button>
+                        </CardFooter>
+                    </form>
+                </Form>
+              </Card>
+            </TabsContent>
 
-          <Card>
-            <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)}>
+            <TabsContent value="achievements" className="mt-6">
+                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"> <User className="h-5 w-5 sm:h-6 sm:w-6" /> {t('userProfile')} </CardTitle>
-                        <CardDescription> {t('userProfileDesc')} </CardDescription>
+                        <CardTitle className="flex items-center gap-2"><Award /> {t('achievements')}</CardTitle>
+                        <CardDescription>{t('achievementsDesc')}</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-8">
-                        <div className="flex items-center gap-6 flex-wrap">
-                             <Avatar className="h-24 w-24">
-                                <AvatarImage src={avatarUrl || 'https://placehold.co/100x100.png'} alt={user?.displayName || ''} data-ai-hint="user avatar" />
-                                <AvatarFallback>{user?.displayName?.[0].toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-[200px]">
-                                <FormField
-                                  control={profileForm.control}
-                                  name="avatarUrl"
-                                  render={() => (
-                                    <FormItem>
-                                      <FormLabel>{t('profilePicture')}</FormLabel>
-                                      <FormControl>
-                                        <div className="flex flex-col gap-2">
-                                          <Button asChild variant="outline" className="w-fit">
-                                            <Label className="cursor-pointer">
-                                              <Upload className="h-4 w-4" />
-                                              <span>{t('changePicture')}</span>
-                                              <Input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
-                                            </Label>
-                                          </Button>
-                                          <p className="text-xs text-muted-foreground">
-                                             {fileName || t('noFileSelected')}
-                                          </p>
-                                        </div>
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                             <div className="flex justify-between items-end">
+                                <h3 className="font-semibold">{t('level')} {level}</h3>
+                                <p className="text-sm text-muted-foreground">{points % 100} / 100 {t('pointsToNextLevel')}</p>
                             </div>
+                            <Progress value={progress} />
+                            <p className="text-right text-sm text-muted-foreground">{t('points')}: {points}</p>
                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField control={profileForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>{t('fullName')}</FormLabel><FormControl><Input placeholder={t('enterFullName')} {...field} /></FormControl><FormMessage /></FormItem> )} />
-                             <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem><FormLabel>{t('email')} ({t('cannotChange')})</FormLabel><FormControl><Input readOnly disabled {...field} /></FormControl><FormMessage /></FormItem> )} />
+
+                        <div className="space-y-2">
+                            <h3 className="font-semibold">{t('badges')}</h3>
+                            {userBadges.length > 0 ? (
+                                <TooltipProvider>
+                                    <div className="flex flex-wrap gap-4">
+                                    {userBadges.map(badgeId => {
+                                        const badgeInfo = badgeList[badgeId as BadgeId];
+                                        if (!badgeInfo) return null;
+                                        const Icon = badgeInfo.icon;
+                                        return (
+                                            <Tooltip key={badgeId}>
+                                                <TooltipTrigger asChild>
+                                                    <div className="flex flex-col items-center gap-2 p-3 border rounded-lg w-24 h-24 justify-center bg-accent/50 hover:bg-accent transition-colors">
+                                                        <Icon className="h-8 w-8 text-primary" />
+                                                        <span className="text-xs text-center font-medium">{t(badgeInfo.titleKey as any)}</span>
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{t(badgeInfo.descriptionKey as any)}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        );
+                                    })}
+                                    </div>
+                                </TooltipProvider>
+                            ) : (
+                                <div className="text-center text-muted-foreground py-4 border rounded-lg">
+                                    <p>{t('noBadgesYet')}</p>
+                                </div>
+                            )}
                         </div>
-                         <div>
-                            <h3 className="text-lg font-medium mb-4">{t('changePassword')}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <FormField control={profileForm.control} name="currentPassword" render={({ field }) => ( <FormItem><FormLabel>كلمة المرور الحالية</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={profileForm.control} name="newPassword" render={({ field }) => ( <FormItem><FormLabel>{t('newPassword')}</FormLabel><FormControl><Input type="password" placeholder={t('leaveBlank')} {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={profileForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>{t('confirmNewPassword')}</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                            </div>
-                        </div>
-                        <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>{t('bio')}</FormLabel><FormControl><Textarea placeholder={t('bioPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </CardContent>
-                    <CardFooter className="border-t pt-6 flex justify-end">
-                        <Button type="submit"> <Save className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} /> {t('saveChanges')} </Button>
-                    </CardFooter>
-                </form>
-            </Form>
-          </Card>
-          
-          <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Palette className="h-5 w-5 sm:h-6 sm:w-6" /> {t('displayAndLanguage')}</CardTitle>
-                <CardDescription>{t('displayAndLanguageDesc')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                   <div className="space-y-2">
-                      <Label className="flex items-center gap-2"><Languages className="h-4 w-4" /> {t('language')}</Label>
-                      <Select value={language} onValueChange={(value: Language) => handleLanguageChange(value)}>
-                          <SelectTrigger>
-                              <SelectValue placeholder={t('selectLanguage')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="ar">العربية</SelectItem>
-                              <SelectItem value="en">English</SelectItem>
-                          </SelectContent>
-                      </Select>
-                  </div>
-                  
-                   <Separator />
+                </Card>
+            </TabsContent>
 
-                  <div className="space-y-4">
-                        <Label>{t('appAppearance')}</Label>
-                        <RadioGroup value={mode} onValueChange={(value: any) => handleModeChange(value)} className="flex gap-4">
-                            <Label htmlFor="light-mode" className="flex items-center gap-2 cursor-pointer rounded-md border p-3 flex-1 justify-center data-[state=checked]:border-primary">
-                               <RadioGroupItem value="light" id="light-mode" />
-                               {t('light')}
-                            </Label>
-                             <Label htmlFor="dark-mode" className="flex items-center gap-2 cursor-pointer rounded-md border p-3 flex-1 justify-center data-[state=checked]:border-primary">
-                               <RadioGroupItem value="dark" id="dark-mode" />
-                               {t('dark')}
-                            </Label>
-                        </RadioGroup>
-                  </div>
-                  
-                  <Separator />
+            <TabsContent value="display" className="mt-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Palette className="h-5 w-5 sm:h-6 sm:w-6" /> {t('displayAndLanguage')}</CardTitle>
+                        <CardDescription>{t('displayAndLanguageDesc')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                         <div className="space-y-2">
+                            <Label className="flex items-center gap-2"><Languages className="h-4 w-4" /> {t('language')}</Label>
+                            <Select value={language} onValueChange={(value: Language) => handleLanguageChange(value)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('selectLanguage')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ar">العربية</SelectItem>
+                                    <SelectItem value="en">English</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                         <Separator />
 
-                  <div className="space-y-4">
-                      <Label>{t('primaryColor')}</Label>
-                      <div className="flex gap-3">
-                          <Button variant={theme === 'theme-green' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-green')} className="bg-[#5A9A58] hover:bg-[#5A9A58]/90 border-[#5A9A58]">{t('green')}</Button>
-                          <Button variant={theme === 'theme-blue' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-blue')} className="bg-[#3B82F6] hover:bg-[#3B82F6]/90 border-[#3B82F6]">{t('blue')}</Button>
-                          <Button variant={theme === 'theme-orange' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-orange')} className="bg-[#F97316] hover:bg-[#F97316]/90 border-[#F97316]">{t('orange')}</Button>
-                      </div>
-                  </div>
-              </CardContent>
-          </Card>
+                        <div className="space-y-4">
+                                <Label>{t('appAppearance')}</Label>
+                                <RadioGroup value={mode} onValueChange={(value: any) => handleModeChange(value)} className="flex gap-4">
+                                    <Label htmlFor="light-mode" className="flex items-center gap-2 cursor-pointer rounded-md border p-3 flex-1 justify-center data-[state=checked]:border-primary">
+                                       <RadioGroupItem value="light" id="light-mode" />
+                                       {t('light')}
+                                    </Label>
+                                     <Label htmlFor="dark-mode" className="flex items-center gap-2 cursor-pointer rounded-md border p-3 flex-1 justify-center data-[state=checked]:border-primary">
+                                       <RadioGroupItem value="dark" id="dark-mode" />
+                                       {t('dark')}
+                                    </Label>
+                                </RadioGroup>
+                        </div>
+                        
+                        <Separator />
 
-          <Card>
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Bell className="h-5 w-5 sm:h-6 sm:w-6"/> {t('notifications')}</CardTitle>
-                  <CardDescription>{t('notificationsDesc')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                      <div>
-                          <Label htmlFor="general-notifications">{t('generalNotifications')}</Label>
-                          <p className="text-sm text-muted-foreground">{t('generalNotificationsDesc')}</p>
-                      </div>
-                      <Switch id="general-notifications" defaultChecked />
-                  </div>
-                   <div className="flex items-center justify-between rounded-lg border p-4">
-                      <div>
-                          <Label htmlFor="task-notifications">{t('taskNotifications')}</Label>
-                          <p className="text-sm text-muted-foreground">{t('taskNotificationsDesc')}</p>
-                      </div>
-                      <Switch id="task-notifications" defaultChecked />
-                  </div>
-              </CardContent>
-          </Card>
+                        <div className="space-y-4">
+                            <Label>{t('primaryColor')}</Label>
+                            <div className="flex gap-3">
+                                <Button variant={theme === 'theme-green' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-green')} className="bg-[#5A9A58] hover:bg-[#5A9A58]/90 border-[#5A9A58]">{t('green')}</Button>
+                                <Button variant={theme === 'theme-blue' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-blue')} className="bg-[#3B82F6] hover:bg-[#3B82F6]/90 border-[#3B82F6]">{t('blue')}</Button>
+                                <Button variant={theme === 'theme-orange' ? 'default' : 'outline'} onClick={() => handleThemeChange('theme-orange')} className="bg-[#F97316] hover:bg-[#F97316]/90 border-[#F97316]">{t('orange')}</Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
+            <TabsContent value="notifications" className="mt-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Bell className="h-5 w-5 sm:h-6 sm:w-6"/> {t('notifications')}</CardTitle>
+                        <CardDescription>{t('notificationsDesc')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                            <div>
+                                <Label htmlFor="general-notifications">{t('generalNotifications')}</Label>
+                                <p className="text-sm text-muted-foreground">{t('generalNotificationsDesc')}</p>
+                            </div>
+                            <Switch id="general-notifications" defaultChecked />
+                        </div>
+                         <div className="flex items-center justify-between rounded-lg border p-4">
+                            <div>
+                                <Label htmlFor="task-notifications">{t('taskNotifications')}</Label>
+                                <p className="text-sm text-muted-foreground">{t('taskNotificationsDesc')}</p>
+                            </div>
+                            <Switch id="task-notifications" defaultChecked />
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
       </div>
     </main>
   );
 }
+
+    
