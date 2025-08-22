@@ -80,7 +80,7 @@ interface ExpensesContentProps {
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
     const { language, t } = useLanguage();
-    const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
+    const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>(getInitialCategories(language, departmentId));
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
     const { user } = useAuth();
@@ -88,8 +88,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
+            setIsDataLoading(true);
             if (user && departmentId) {
-                setIsDataLoading(true);
                 try {
                     // Fetch expenses
                     const expensesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'expenses');
@@ -109,18 +109,16 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                      } else {
                          setExpenseCategories(getInitialCategories(language, departmentId));
                      }
-
                 } catch (e) {
                     console.error("Error fetching data: ", e);
                     toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-                } finally {
-                    setIsDataLoading(false);
+                    setExpenseCategories(getInitialCategories(language, departmentId));
                 }
             } else {
                 setExpenses([]);
                 setExpenseCategories(getInitialCategories(language, departmentId));
-                setIsDataLoading(false);
             }
+            setIsDataLoading(false);
         };
         fetchExpensesAndCategories();
     }, [user, language, toast, t, departmentId]);
