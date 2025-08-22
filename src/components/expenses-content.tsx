@@ -80,7 +80,7 @@ interface ExpensesContentProps {
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
     const { language, t } = useLanguage();
-    const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>(getInitialCategories(language, departmentId));
+    const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
     const { user } = useAuth();
@@ -88,40 +88,42 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
-            setIsDataLoading(true);
-            if (user && departmentId) {
-                try {
-                    // Fetch expenses
-                    const expensesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'expenses');
-                    const expensesSnapshot = await getDocs(expensesCollectionRef);
-                    const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                        date: (doc.data().date as Timestamp).toDate()
-                    })) as ExpenseItem[];
-                    setExpenses(fetchedExpenses);
-
-                    // Fetch categories
-                    const categoriesDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
-                    const categoriesDoc = await getDoc(categoriesDocRef);
-                     if (categoriesDoc.exists()) {
-                         setExpenseCategories(categoriesDoc.data().categories);
-                     } else {
-                         setExpenseCategories(getInitialCategories(language, departmentId));
-                     }
-                } catch (e) {
-                    console.error("Error fetching data: ", e);
-                    toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-                    setExpenseCategories(getInitialCategories(language, departmentId));
-                }
-            } else {
+            if (!user || !departmentId) {
                 setExpenses([]);
-                setExpenseCategories(getInitialCategories(language, departmentId));
+                setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
+                setIsDataLoading(false);
+                return;
             }
-            setIsDataLoading(false);
+
+            setIsDataLoading(true);
+            try {
+                // Fetch expenses
+                const expensesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'expenses');
+                const expensesSnapshot = await getDocs(expensesCollectionRef);
+                const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    date: (doc.data().date as Timestamp).toDate()
+                })) as ExpenseItem[];
+                setExpenses(fetchedExpenses);
+
+                // Fetch categories
+                const categoriesDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
+                const categoriesDoc = await getDoc(categoriesDocRef);
+                 if (categoriesDoc.exists()) {
+                     setExpenseCategories(categoriesDoc.data().categories);
+                 } else {
+                     setExpenseCategories(getInitialCategories(language, departmentId));
+                 }
+            } catch (e) {
+                console.error("Error fetching data: ", e);
+                setExpenseCategories(getInitialCategories(language, departmentId));
+            } finally {
+                setIsDataLoading(false);
+            }
         };
         fetchExpensesAndCategories();
-    }, [user, language, toast, t, departmentId]);
+    }, [user, language, departmentId]);
     
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
@@ -516,3 +518,5 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
+
+    
