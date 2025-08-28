@@ -12,9 +12,9 @@ import { Button } from '@/components/ui/button';
 import { PlayCircle, BookOpen } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-const getIcon = (name: string) => {
-    const Icon = Lucide[name as keyof typeof Lucide] as React.ElementType;
-    return Icon ? <Icon className="h-8 w-8" /> : <Lucide.Leaf className="h-8 w-8" />;
+const getIcon = (name: string): React.ElementType => {
+    const Icon = (Lucide as Record<string, React.ElementType>)[name];
+    return Icon || Lucide.Leaf;
 };
 
 export default function Home() {
