@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -90,3 +90,5 @@ export function EditDebtDialog({ isOpen, onClose, debt, onSave }: EditDebtDialog
         </Dialog>
     );
 }
+
+    

@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -350,3 +350,5 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
+
+    

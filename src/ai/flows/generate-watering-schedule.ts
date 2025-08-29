@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-watering-schedule.ts
 'use server';
 
@@ -10,7 +11,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const WateringScheduleInputSchema = z.object({
   plantType: z.string().describe('The type of plant (e.g., succulent, fern, orchid).'),
@@ -62,3 +63,5 @@ const generateWateringScheduleFlow = ai.defineFlow(
     return output ?? null;
   }
 );
+
+    
