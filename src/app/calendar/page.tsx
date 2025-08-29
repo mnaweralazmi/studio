@@ -181,24 +181,30 @@ export default function CalendarPage() {
                 </Link>
             </Button>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <Card>
+        
+        <Card>
+            <CardContent className="p-0">
                 <Calendar
                     mode="single"
                     selected={date}
                     onSelect={setDate}
-                    className="p-0"
-                    classNames={{
-                        months: "p-4",
+                    className="w-full"
+                     classNames={{
+                        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-4",
+                        month: "w-full",
+                        table: "w-full border-collapse space-y-1",
+                        head_row: "flex justify-around",
+                        row: "flex w-full mt-2 justify-around",
                         day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
                         day_today: "bg-accent text-accent-foreground",
                     }}
                     locale={language === 'ar' ? arSA : enUS}
                 />
-            </Card>
-            
-            <Card>
+            </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            <Card className="h-full">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary" /> {t('tasksForDay')} ({date ? format(date, 'd MMM', { locale: language === 'ar' ? arSA : enUS }) : ''})</CardTitle>
                 </CardHeader>
@@ -215,7 +221,7 @@ export default function CalendarPage() {
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="h-full">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Forward className="h-5 w-5 text-primary" /> {t('allUpcomingTasks')}</CardTitle>
                 </CardHeader>
@@ -232,7 +238,7 @@ export default function CalendarPage() {
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="h-full">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" /> {t('completedTasksLog')}</CardTitle>
                 </CardHeader>
@@ -253,5 +259,7 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    
 
     
