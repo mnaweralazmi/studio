@@ -2,18 +2,16 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { HandCoins } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import type { DebtItem } from '../debts-content';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '../ui/label';
 
 interface PaymentDialogProps {
     debt: DebtItem;
@@ -22,32 +20,37 @@ interface PaymentDialogProps {
 
 export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
     const { t } = useLanguage();
+    const { toast } = useToast();
     const [isOpen, setIsOpen] = React.useState(false);
+    const [amount, setAmount] = React.useState(0);
+    const [error, setError] = React.useState('');
 
     const remainingAmount = debt.amount - debt.payments.reduce((sum, p) => sum + p.amount, 0);
 
-    const paymentFormSchema = z.object({
-        amount: z.coerce.number()
-            .min(0.01, t('amountMustBePositive'))
-            .max(remainingAmount, t('paymentExceedsRemaining')),
-    });
-    
-    type PaymentFormValues = z.infer<typeof paymentFormSchema>;
-
-    const form = useForm<PaymentFormValues>({
-        resolver: zodResolver(paymentFormSchema),
-        defaultValues: { amount: remainingAmount > 0 ? Number(remainingAmount.toFixed(2)) : 0.01 },
-    });
-    
     React.useEffect(() => {
         if(isOpen) {
-            form.reset({ amount: Number(remainingAmount.toFixed(2)) });
+            const remaining = Number(remainingAmount.toFixed(2));
+            setAmount(remaining > 0 ? remaining : 0.01);
+            setError('');
         }
-    }, [isOpen, remainingAmount, form]);
+    }, [isOpen, remainingAmount]);
 
 
-    const handleConfirm = (data: PaymentFormValues) => {
-        onConfirm(debt.id, data.amount);
+    const handleConfirm = (event: React.FormEvent) => {
+        event.preventDefault();
+        
+        if (amount <= 0) {
+            setError(t('amountMustBePositive'));
+            return;
+        }
+
+        if (amount > remainingAmount) {
+            setError(t('paymentExceedsRemaining'));
+            return;
+        }
+        
+        setError('');
+        onConfirm(debt.id, amount);
         setIsOpen(false);
     };
 
@@ -70,24 +73,20 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                     <div className="space-y-4">
                         <h4 className="font-semibold">{t('newPayment')}</h4>
-                         <Form {...form}>
-                            <form onSubmit={form.handleSubmit(handleConfirm)} className="space-y-4 p-4 border rounded-md">
-                                <FormField
-                                    control={form.control}
-                                    name="amount"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('paymentAmount')}</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" step="0.01" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
+                        <form onSubmit={handleConfirm} className="space-y-4 p-4 border rounded-md">
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">{t('paymentAmount')}</Label>
+                                <Input 
+                                    id="amount"
+                                    type="number" 
+                                    step="0.01" 
+                                    value={amount} 
+                                    onChange={(e) => setAmount(Number(e.target.value))}
                                 />
-                                <Button type="submit" className="w-full">{t('confirmPayment')}</Button>
-                            </form>
-                        </Form>
+                                {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+                            </div>
+                            <Button type="submit" className="w-full">{t('confirmPayment')}</Button>
+                        </form>
                     </div>
                     <div className="space-y-4">
                         <h4 className="font-semibold">{t('paymentHistory')}</h4>
@@ -123,7 +122,3 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
         </Dialog>
     );
 }
-
-
-
-    

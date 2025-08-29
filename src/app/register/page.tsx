@@ -4,12 +4,9 @@
 import * as React from 'react';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { Leaf, UserPlus } from 'lucide-react';
@@ -17,18 +14,6 @@ import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-
-const registerFormSchema = z.object({
-  name: z.string().min(3, "الاسم يجب أن يكون 3 أحرف على الأقل."),
-  email: z.string().email("البريد الإلكتروني غير صالح."),
-  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل."),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "كلمتا المرور غير متطابقتين.",
-  path: ["confirmPassword"],
-});
-
-type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -45,16 +30,12 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
+  
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
 
-  const form = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
 
   const createNewUserDocument = async (user: any, name: string | null) => {
     const userDocRef = doc(db, "users", user.uid);
@@ -74,17 +55,28 @@ export default function RegisterPage() {
     }
   }
 
-  async function onSubmit(data: RegisterFormValues) {
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    
+    if (password !== confirmPassword) {
+        toast({ variant: "destructive", title: "خطأ", description: "كلمتا المرور غير متطابقتين." });
+        return;
+    }
+    if (password.length < 6) {
+        toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
+        return;
+    }
+
     setIsLoading(true);
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
         await updateProfile(user, {
-            displayName: data.name
+            displayName: name
         });
 
-        await createNewUserDocument(user, data.name);
+        await createNewUserDocument(user, name);
         
         toast({
             title: "تم إنشاء الحساب بنجاح!",
@@ -149,65 +141,27 @@ export default function RegisterPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                         <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>الاسم</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="أدخل اسمك..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>البريد الإلكتروني</FormLabel>
-                                <FormControl>
-                                    <Input type="email" placeholder="user@example.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="password"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>كلمة المرور</FormLabel>
-                                <FormControl>
-                                    <Input type="password" placeholder="اختر كلمة مرور قوية..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="confirmPassword"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>تأكيد كلمة المرور</FormLabel>
-                                <FormControl>
-                                    <Input type="password" placeholder="أعد إدخال كلمة المرور..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? "جاري الإنشاء..." : "إنشاء الحساب"}
-                        </Button>
-                    </form>
-                </Form>
+                <form onSubmit={onSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">الاسم</Label>
+                        <Input id="name" placeholder="أدخل اسمك..." value={name} onChange={(e) => setName(e.target.value)} required />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="email">البريد الإلكتروني</Label>
+                        <Input id="email" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="password">كلمة المرور</Label>
+                        <Input id="password" type="password" placeholder="اختر كلمة مرور قوية..." value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
+                        <Input id="confirmPassword" type="password" placeholder="أعد إدخال كلمة المرور..." value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "جاري الإنشاء..." : "إنشاء الحساب"}
+                    </Button>
+                </form>
                 <Separator className="my-6">أو</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
                     {isGoogleLoading ? "جاري..." : <><GoogleIcon/> <span className="mx-2">إنشاء حساب باستخدام Google</span></> }
@@ -227,7 +181,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-
-    
-
-    

@@ -4,12 +4,9 @@
 import * as React from 'react';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { Leaf, LogIn, Eye, EyeOff } from 'lucide-react';
@@ -17,13 +14,6 @@ import { Separator } from '@/components/ui/separator';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-const loginFormSchema = z.object({
-  email: z.string().email("البريد الإلكتروني غير صالح."),
-  password: z.string().min(1, "كلمة المرور مطلوبة."),
-});
-
-type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -40,16 +30,16 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
-    defaultValues: { email: "", password: "" },
-  });
 
-  async function onSubmit(data: LoginFormValues) {
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "تم تسجيل الدخول بنجاح!" });
       router.push('/');
     } catch (error: any) {
@@ -123,51 +113,34 @@ export default function LoginPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                         <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>البريد الإلكتروني</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="user@example.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="password"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>كلمة المرور</FormLabel>
-                                <div className="relative">
-                                    <FormControl>
-                                        <Input 
-                                            type={showPassword ? "text" : "password"} 
-                                            placeholder="" 
-                                            {...field}
-                                            className="pr-10" 
-                                        />
-                                    </FormControl>
-                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-muted-foreground">
-                                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? "جاري التحقق..." : "تسجيل الدخول"}
-                        </Button>
-                    </form>
-                </Form>
+                <form onSubmit={onSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="email">البريد الإلكتروني</Label>
+                        <Input id="email" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="password">كلمة المرور</Label>
+                        <div className="relative">
+                            <Input 
+                                id="password"
+                                type={showPassword ? "text" : "password"} 
+                                placeholder="" 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="pr-10" 
+                                required
+                            />
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-muted-foreground">
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "جاري التحقق..." : "تسجيل الدخول"}
+                    </Button>
+                </form>
                  <Separator className="my-6">أو</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
                     {isGoogleLoading ? "جاري..." : <><GoogleIcon/> <span className="mx-2">تسجيل الدخول باستخدام Google</span></> }
@@ -187,9 +160,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
-
-    
-
-    
