@@ -79,61 +79,72 @@ export default function CalendarPage() {
             </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="lg:col-span-1">
-                 <Card>
-                    <CardContent className="p-0">
-                        <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        className="rounded-md"
-                        locale={language === 'ar' ? arSA : enUS}
-                        classNames={{
-                            day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
-                            day_today: "bg-accent text-accent-foreground",
-                        }}
-                        />
-                    </CardContent>
-                </Card>
-            </div>
-            <div className="lg:col-span-1 grid grid-cols-1 sm:grid-cols-2 gap-6 content-start">
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">{t('tasksForDay')}</CardTitle>
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{tasksForSelectedDate.length}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {date ? format(date, 'd MMM yyyy', { locale: language === 'ar' ? arSA : enUS }) : ''}
-                        </p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">{t('allUpcomingTasks')}</CardTitle>
-                        <Forward className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{allUpcomingTasks.length}</div>
-                        <p className="text-xs text-muted-foreground">{t('allUpcomingTasksDesc')}</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">{t('completedTasksLog')}</CardTitle>
-                        <History className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{allCompletedTasks.length}</div>
-                        <p className="text-xs text-muted-foreground">{t('completedTasksLogDesc')}</p>
-                    </CardContent>
-                </Card>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card className="lg:col-span-2">
+                <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    className="p-0"
+                    classNames={{
+                        months: "p-4",
+                        day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
+                        day_today: "bg-accent text-accent-foreground",
+                    }}
+                    locale={language === 'ar' ? arSA : enUS}
+                />
+            </Card>
+            
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('tasksForDay')}</CardTitle>
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{tasksForSelectedDate.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                        {date ? format(date, 'd MMM yyyy', { locale: language === 'ar' ? arSA : enUS }) : ''}
+                    </p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('allUpcomingTasks')}</CardTitle>
+                    <Forward className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{allUpcomingTasks.length}</div>
+                    <p className="text-xs text-muted-foreground">{t('allUpcomingTasksDesc')}</p>
+                </CardContent>
+            </Card>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+             <Card className="lg:col-span-4">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5" />
+                        {t('completedTasksLog')}
+                    </CardTitle>
+                    <CardDescription>{t('completedTasksLogDesc')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {allCompletedTasks.length > 0 ? (
+                         <ul className="space-y-2">
+                            {allCompletedTasks.slice(0, 5).map(task => (
+                                <li key={task.id} className="text-sm text-muted-foreground line-through">
+                                    {task.title}
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">{t('noCompletedTasks')}</p>
+                    )}
+                </CardContent>
+            </Card>
         </div>
       </div>
     </main>
   );
-}
 
+  
