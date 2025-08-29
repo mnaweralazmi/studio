@@ -88,10 +88,10 @@ export default function SettingsPage() {
     React.useEffect(() => {
         if (user) {
             profileForm.reset({
-                name: user.displayName || user.name || '',
+                name: user.displayName || '',
                 email: user.email || '',
                 bio: user.bio || '',
-                avatarUrl: user.photoURL || user.avatarUrl || '',
+                avatarUrl: user.photoURL || '',
             });
         }
 
@@ -113,21 +113,21 @@ export default function SettingsPage() {
     const avatarUrl = profileForm.watch('avatarUrl');
 
     async function onProfileSubmit(data: ProfileFormValues) {
-        if (!user) return;
+        if (!user || !auth.currentUser) return;
         
         try {
             // Update password if provided
             if (data.newPassword && data.currentPassword) {
-                if(user.email) {
-                    const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
-                    await reauthenticateWithCredential(user, credential);
-                    await updatePassword(user, data.newPassword);
+                if(auth.currentUser.email) {
+                    const credential = EmailAuthProvider.credential(auth.currentUser.email, data.currentPassword);
+                    await reauthenticateWithCredential(auth.currentUser, credential);
+                    await updatePassword(auth.currentUser, data.newPassword);
                     toast({ title: "تم تحديث كلمة المرور بنجاح" });
                 }
             }
 
             // Update profile info
-            await updateProfile(user, { displayName: data.name, photoURL: data.avatarUrl });
+            await updateProfile(auth.currentUser, { displayName: data.name, photoURL: data.avatarUrl });
             
             // Update user data in Firestore
             const userDocRef = doc(db, 'users', user.uid);
@@ -138,7 +138,7 @@ export default function SettingsPage() {
             }, { merge: true });
 
             setFileName(null);
-            refreshUser(); // Refresh user data in context
+            await refreshUser(); // Refresh user data in context to update UI immediately
             toast({ title: t('profileUpdated'), description: t('profileUpdatedSuccess') });
             profileForm.reset({ ...profileForm.getValues(), currentPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error: any) {
@@ -434,5 +434,7 @@ export default function SettingsPage() {
     </main>
   );
 }
+
+    
 
     
