@@ -96,50 +96,47 @@ export default function CalendarPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
-        <div className="flex justify-between items-start gap-8 flex-col lg:flex-row">
-          <div className="w-full lg:w-auto flex justify-center">
-            <Card>
-              <CardContent className="p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="rounded-md"
-                  locale={language === 'ar' ? arSA : enUS}
-                  classNames={{
-                      day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
-                      day_today: "bg-accent text-accent-foreground",
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
-          <div className="flex-1 w-full space-y-8">
-            <Card className="min-h-[405px]">
-                <CardHeader>
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                    <div>
+      <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
+         <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+                <h1 className="text-3xl font-bold">{t('calendarAndTasks')}</h1>
+                <p className="text-muted-foreground">{t('tasksForDayDesc')}</p>
+            </div>
+            <Button asChild>
+                <Link href="/calendar/add-task">
+                    <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+                    {t('addTask')}
+                </Link>
+            </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-1">
+                 <Card>
+                    <CardContent className="p-0">
+                        <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        className="rounded-md"
+                        locale={language === 'ar' ? arSA : enUS}
+                        classNames={{
+                            day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
+                            day_today: "bg-accent text-accent-foreground",
+                        }}
+                        />
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="lg:col-span-3">
+                 <Card>
+                    <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <CalendarDays />
                             {t('tasksForDay')} {date ? format(date, 'd MMMM yyyy', { locale: language === 'ar' ? arSA : enUS }) : t('pleaseSelectDay')}
                         </CardTitle>
-                        <CardDescription>{t('tasksForDayDesc')}</CardDescription>
-                    </div>
-                    <Button asChild>
-                        <Link href="/calendar/add-task">
-                            <PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                            {t('addTask')}
-                        </Link>
-                    </Button>
-                </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div>
-                        <h3 className="flex items-center gap-2 text-lg font-semibold mb-3 text-primary">
-                            <ListTodo />
-                            {t('upcomingTasksForDay')}
-                        </h3>
+                    </CardHeader>
+                    <CardContent>
                         {upcomingTasksForSelectedDate.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {upcomingTasksForSelectedDate.map(task => (
@@ -164,89 +161,88 @@ export default function CalendarPage() {
                                 <p>{t('noUpcomingTasksForDay')}</p>
                             </div>
                         )}
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-              <Card>
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                          <Forward />
-                          {t('allUpcomingTasks')}
-                      </CardTitle>
-                      <CardDescription>{t('allUpcomingTasksDesc')}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                      {allUpcomingTasks.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                          {allUpcomingTasks.map(task => (
-                              <div key={task.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-background transition-all">
-                                  <div className="flex-1 space-y-1">
-                                      <div className="flex justify-between items-center">
-                                          <p className="font-medium">{task.title}</p>
-                                          <Badge variant="outline">{format(new Date(task.dueDate), 'd MMM', { locale: language === 'ar' ? arSA : enUS })}</Badge>
-                                      </div>
-                                      {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
-                                  </div>
-                                  <div className="flex items-center gap-2 self-end mt-2">
-                                      <Button variant='default' size="icon" onClick={() => toggleTaskCompletion(task.id)} title={t('completeTask')}>
-                                          <CheckCircle className="h-5 w-5" />
-                                      </Button>
-                                      <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)} title={t('deleteTask')}>
-                                          <Trash2 className="h-5 w-5" />
-                                      </Button>
-                                  </div>
-                              </div>
-                          ))}
-                          </div>
-                      ) : (
-                          <div className="text-center text-muted-foreground py-4">
-                              <p>{t('noUpcomingTasks')}</p>
-                          </div>
-                      )}
-                  </CardContent>
-              </Card>
-              <Card>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <History />
-                        {t('completedTasksLog')}
+                        <Forward />
+                        {t('allUpcomingTasks')}
                     </CardTitle>
-                    <CardDescription>{t('completedTasksLogDesc')}</CardDescription>
+                    <CardDescription>{t('allUpcomingTasksDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {allCompletedTasks.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                        {allCompletedTasks.map(task => (
-                          <div key={task.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-muted/50 transition-all">
-                            <div className="flex-1 space-y-1">
-                                <div className="flex justify-between items-center">
-                                  <p className="font-medium line-through text-muted-foreground">{task.title}</p>
-                                  <Badge variant="secondary">{format(new Date(task.dueDate), 'd MMM', { locale: language === 'ar' ? arSA : enUS })}</Badge>
+                    {allUpcomingTasks.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                        {allUpcomingTasks.map(task => (
+                            <div key={task.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-background transition-all">
+                                <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-medium">{task.title}</p>
+                                        <Badge variant="outline">{format(new Date(task.dueDate), 'd MMM', { locale: language === 'ar' ? arSA : enUS })}</Badge>
+                                    </div>
+                                    {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
                                 </div>
-                                {task.description && <p className="text-sm line-through text-muted-foreground/80 mt-1">{task.description}</p>}
+                                <div className="flex items-center gap-2 self-end mt-2">
+                                    <Button variant='default' size="icon" onClick={() => toggleTaskCompletion(task.id)} title={t('completeTask')}>
+                                        <CheckCircle className="h-5 w-5" />
+                                    </Button>
+                                    <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)} title={t('deleteTask')}>
+                                        <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 self-end mt-2">
-                                <Button variant='secondary' size="icon" onClick={() => toggleTaskCompletion(task.id)} title={t('uncompleteTask')}>
-                                    <CheckCircle className="h-5 w-5" />
-                                </Button>
-                                <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)} title={t('deleteTask')}>
-                                    <Trash2 className="h-5 w-5" />
-                                </Button>
-                            </div>
-                          </div>
                         ))}
-                      </div>
+                        </div>
                     ) : (
-                      <div className="text-center text-muted-foreground py-4">
-                        <p>{t('noCompletedTasks')}</p>
-                      </div>
+                        <div className="text-center text-muted-foreground py-4">
+                            <p>{t('noUpcomingTasks')}</p>
+                        </div>
                     )}
                 </CardContent>
-              </Card>
-            </div>
-          </div>
+            </Card>
+            <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <History />
+                    {t('completedTasksLog')}
+                </CardTitle>
+                <CardDescription>{t('completedTasksLogDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {allCompletedTasks.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    {allCompletedTasks.map(task => (
+                        <div key={task.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-muted/50 transition-all">
+                        <div className="flex-1 space-y-1">
+                            <div className="flex justify-between items-center">
+                                <p className="font-medium line-through text-muted-foreground">{task.title}</p>
+                                <Badge variant="secondary">{format(new Date(task.dueDate), 'd MMM', { locale: language === 'ar' ? arSA : enUS })}</Badge>
+                            </div>
+                            {task.description && <p className="text-sm line-through text-muted-foreground/80 mt-1">{task.description}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 self-end mt-2">
+                            <Button variant='secondary' size="icon" onClick={() => toggleTaskCompletion(task.id)} title={t('uncompleteTask')}>
+                                <CheckCircle className="h-5 w-5" />
+                            </Button>
+                            <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)} title={t('deleteTask')}>
+                                <Trash2 className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        </div>
+                    ))}
+                    </div>
+                ) : (
+                    <div className="text-center text-muted-foreground py-4">
+                    <p>{t('noCompletedTasks')}</p>
+                    </div>
+                )}
+            </CardContent>
+            </Card>
         </div>
       </div>
     </main>
