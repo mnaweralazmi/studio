@@ -79,8 +79,8 @@ export default function CalendarPage() {
             </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="lg:col-span-1">
                  <Card>
                     <CardContent className="p-0">
                         <Calendar
@@ -97,7 +97,7 @@ export default function CalendarPage() {
                     </CardContent>
                 </Card>
             </div>
-            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 content-start">
+            <div className="lg:col-span-1 grid grid-cols-1 sm:grid-cols-2 gap-6 content-start">
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{t('tasksForDay')}</CardTitle>
@@ -136,3 +136,4 @@ export default function CalendarPage() {
     </main>
   );
 }
+
