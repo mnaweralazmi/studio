@@ -3,14 +3,10 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -37,18 +33,6 @@ const fruitListAr = [ "فراولة", "توت", "تين", "عنب", "بطيخ", 
 const fruitListEn = [ "Strawberry", "Berry", "Fig", "Grape", "Watermelon", "Melon", "Pomegranate", "Mango", "Banana", "Apple", "Orange", "Lemon" ] as const;
 
 
-const taskFormSchema = z.object({
-  title: z.string({ required_error: "الرجاء اختيار عنوان للمهمة." }),
-  vegetable: z.string().optional(),
-  fruit: z.string().optional(),
-  description: z.string().optional(),
-  dueDate: z.date({ required_error: "تاريخ الاستحقاق مطلوب.", }),
-  isRecurring: z.boolean().default(false),
-  reminderDays: z.coerce.number().optional(),
-});
-
-type TaskFormValues = z.infer<typeof taskFormSchema>;
-
 export default function AddTaskPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -59,44 +43,45 @@ export default function AddTaskPage() {
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
   const fruitList = language === 'ar' ? fruitListAr : fruitListEn;
 
-  const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskFormSchema),
-    defaultValues: {
-      title: undefined,
-      description: "",
-      dueDate: new Date(),
-      vegetable: "",
-      fruit: "",
-      isRecurring: false,
-      reminderDays: 0,
-    },
-  });
+  // Simplified state management without React Hook Form
+  const [title, setTitle] = React.useState('');
+  const [description, setDescription] = React.useState('');
+  const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
+  const [vegetable, setVegetable] = React.useState('');
+  const [fruit, setFruit] = React.useState('');
+  const [isRecurring, setIsRecurring] = React.useState(false);
+  const [reminderDays, setReminderDays] = React.useState(0);
 
-  const selectedVegetable = form.watch('vegetable');
-  const selectedFruit = form.watch('fruit');
 
   React.useEffect(() => {
-    if (selectedVegetable) {
-        form.setValue('fruit', '');
-        if (!form.getValues('description')) {
-            form.setValue('description', selectedVegetable);
+    if (vegetable) {
+        setFruit('');
+        if (!description) {
+            setDescription(vegetable);
         }
     }
-  }, [selectedVegetable, form]);
+  }, [vegetable, description]);
 
   React.useEffect(() => {
-    if (selectedFruit) {
-        form.setValue('vegetable', '');
-        if (!form.getValues('description')) {
-            form.setValue('description', selectedFruit);
+    if (fruit) {
+        setVegetable('');
+        if (!description) {
+            setDescription(fruit);
         }
     }
-  }, [selectedFruit, form]);
+  }, [fruit, description]);
 
 
-  async function onSubmit(data: TaskFormValues) {
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (!title || !dueDate) {
+        toast({ variant: "destructive", title: t('error'), description: "Please fill in the required fields." });
+        return;
+    }
+
     if (loading || !user) {
-        toast({ variant: "destructive", title: t('error'), description: "يجب تسجيل الدخول لحفظ المهام." });
+        toast({ variant: "destructive", title: t('error'), description: "You must be logged in to save tasks." });
         return;
     }
     try {
@@ -137,12 +122,12 @@ export default function AddTaskPage() {
         
         const newTask: Task = {
             id: crypto.randomUUID(),
-            title: data.title,
-            description: data.description,
-            dueDate: data.dueDate.toISOString(),
+            title: title,
+            description: description,
+            dueDate: dueDate.toISOString(),
             isCompleted: false,
-            isRecurring: data.isRecurring,
-            reminderDays: data.reminderDays,
+            isRecurring: isRecurring,
+            reminderDays: reminderDays,
         };
 
         tasks.push(newTask);
@@ -171,8 +156,7 @@ export default function AddTaskPage() {
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
       <div className="w-full max-w-2xl mx-auto">
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form onSubmit={onSubmit}>
                 <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -184,178 +168,120 @@ export default function AddTaskPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>{t('taskTitle')}</FormLabel>
-                             <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
+                    <div className="space-y-2">
+                        <Label>{t('taskTitle')}</Label>
+                        <Select onValueChange={setTitle} value={title}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('selectTask')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {taskTitles.map(title => (
+                              <SelectItem key={title} value={title}>{title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label>{t('selectVegetableOptional')}</Label>
+                            <Select onValueChange={setVegetable} value={vegetable}>
                                 <SelectTrigger>
-                                  <SelectValue placeholder={t('selectTask')} />
+                                    <SelectValue placeholder={t('selectVegetable')} />
                                 </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {taskTitles.map(title => (
-                                  <SelectItem key={title} value={title}>{title}</SelectItem>
-                                ))}
-                              </SelectContent>
+                                <SelectContent>
+                                    {vegetableList.map(veg => (
+                                    <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                                    ))}
+                                </SelectContent>
                             </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                            control={form.control}
-                            name="vegetable"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{t('selectVegetableOptional')}</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={t('selectVegetable')} />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {vegetableList.map(veg => (
-                                            <SelectItem key={veg} value={veg}>{veg}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="fruit"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{t('selectFruitOptional')}</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={t('selectFruit')} />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {fruitList.map(fruit => (
-                                            <SelectItem key={fruit} value={fruit}>{fruit}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        </div>
+                         <div className="space-y-2">
+                            <Label>{t('selectFruitOptional')}</Label>
+                            <Select onValueChange={setFruit} value={fruit}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('selectFruit')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {fruitList.map(fruit => (
+                                    <SelectItem key={fruit} value={fruit}>{fruit}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor='description'>{t('description')}</Label>
+                        <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => setDescription(e.target.value)} />
                     </div>
 
-                     <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>{t('description')}</FormLabel>
-                            <FormControl>
-                                <Textarea placeholder={t('taskDescriptionPlaceholder')} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                            control={form.control}
-                            name="dueDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>{t('dueDate')}</FormLabel>
-                                    <Popover>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                            "w-full justify-start text-left font-normal",
-                                            !field.value && "text-muted-foreground",
-                                            language === 'ar' ? 'pr-3' : 'pl-3'
-                                            )}
-                                        >
-                                            <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                                            {field.value ? (
-                                            format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS })
-                                            ) : (
-                                            <span>{t('pickDate')}</span>
-                                            )}
-                                        </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={field.value}
-                                            onSelect={field.onChange}
-                                            initialFocus
-                                            locale={language === 'ar' ? arSA : enUS}
-                                        />
-                                    </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="reminderDays"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{t('remindMeBefore')}</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={t('noReminder')} />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="0">{t('noReminder')}</SelectItem>
-                                            <SelectItem value="1">{t('oneDayBefore')}</SelectItem>
-                                            <SelectItem value="2">{t('twoDaysBefore')}</SelectItem>
-                                            <SelectItem value="3">{t('threeDaysBefore')}</SelectItem>
-                                            <SelectItem value="7">{t('oneWeekBefore')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="space-y-2">
+                            <Label>{t('dueDate')}</Label>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !dueDate && "text-muted-foreground",
+                                    language === 'ar' ? 'pr-3' : 'pl-3'
+                                    )}
+                                >
+                                    <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+                                    {dueDate ? (
+                                    format(dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS })
+                                    ) : (
+                                    <span>{t('pickDate')}</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={dueDate}
+                                    onSelect={setDueDate}
+                                    initialFocus
+                                    locale={language === 'ar' ? arSA : enUS}
+                                />
+                            </PopoverContent>
+                            </Popover>
+                        </div>
+
+                         <div className="space-y-2">
+                            <Label>{t('remindMeBefore')}</Label>
+                            <Select onValueChange={(value) => setReminderDays(Number(value))} defaultValue={String(reminderDays)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('noReminder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">{t('noReminder')}</SelectItem>
+                                    <SelectItem value="1">{t('oneDayBefore')}</SelectItem>
+                                    <SelectItem value="2">{t('twoDaysBefore')}</SelectItem>
+                                    <SelectItem value="3">{t('threeDaysBefore')}</SelectItem>
+                                    <SelectItem value="7">{t('oneWeekBefore')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                     <FormField
-                        control={form.control}
-                        name="isRecurring"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                                <FormLabel className="text-base flex items-center gap-2">
+                    
+                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label className="text-base flex items-center gap-2">
                                 <Repeat />
                                 {t('rememberTask')}
-                                </FormLabel>
-                                <p className="text-sm text-muted-foreground">
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
                                 {t('rememberTaskDesc')}
-                                </p>
-                            </div>
-                            <FormControl>
-                                <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                            </FormItem>
-                        )}
+                            </p>
+                        </div>
+                        <Switch
+                            checked={isRecurring}
+                            onCheckedChange={setIsRecurring}
                         />
+                    </div>
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -368,12 +294,7 @@ export default function AddTaskPage() {
                 </CardFooter>
                 </Card>
             </form>
-        </Form>
       </div>
     </main>
   );
 }
-
-    
-
-    

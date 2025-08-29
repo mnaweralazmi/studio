@@ -2,20 +2,12 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLanguage } from '@/context/language-context';
 import type { Worker, WorkerFormValues } from './types';
-
-const workerFormSchema = z.object({
-  name: z.string().min(3, "اسم العامل يجب أن يكون 3 أحرف على الأقل."),
-  baseSalary: z.coerce.number().min(0, "الراتب الأساسي يجب أن يكون رقمًا إيجابيًا."),
-});
+import { Label } from '../ui/label';
 
 interface AddWorkerDialogProps {
     onSave: (data: WorkerFormValues, workerId?: string) => void;
@@ -26,19 +18,27 @@ interface AddWorkerDialogProps {
 export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogProps) {
     const { t } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
-    
-    const form = useForm<WorkerFormValues>({
-        resolver: zodResolver(workerFormSchema),
-        defaultValues: worker ? { name: worker.name, baseSalary: worker.baseSalary } : { name: "", baseSalary: 0 },
-    });
+    const formRef = React.useRef<HTMLFormElement>(null);
 
     React.useEffect(() => {
         if (!isOpen) {
-            form.reset(worker ? { name: worker.name, baseSalary: worker.baseSalary } : { name: "", baseSalary: 0 });
+            formRef.current?.reset();
         }
-    }, [isOpen, worker, form]);
+    }, [isOpen]);
 
-    const handleSubmit = (data: WorkerFormValues) => {
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const data = {
+            name: formData.get('name') as string,
+            baseSalary: Number(formData.get('baseSalary')),
+        };
+
+        if (data.name.length < 3 || data.baseSalary < 0) {
+            // Basic validation
+            return;
+        }
+
         onSave(data, worker?.id);
         setIsOpen(false);
     };
@@ -53,19 +53,21 @@ export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogPro
                     <DialogTitle>{worker ? t('editWorker') : t('addNewWorker')}</DialogTitle>
                     <DialogDescription>{worker ? t('editWorkerDesc') : t('addNewWorkerDesc')}</DialogDescription>
                 </DialogHeader>
-                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-4">
-                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>{t('workerName')}</FormLabel><FormControl><Input placeholder={t('workerNamePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={form.control} name="baseSalary" render={({ field }) => (<FormItem><FormLabel>{t('baseSalaryInDinar')}</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
-                            <Button type="submit">{worker ? t('saveChanges') : t('addWorker')}</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">{t('workerName')}</Label>
+                        <Input id="name" name="name" placeholder={t('workerNamePlaceholder')} defaultValue={worker?.name} required />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="baseSalary">{t('baseSalaryInDinar')}</Label>
+                        <Input id="baseSalary" name="baseSalary" type="number" step="1" defaultValue={worker?.baseSalary} required />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
+                        <Button type="submit">{worker ? t('saveChanges') : t('addWorker')}</Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     );
 }
-
-    

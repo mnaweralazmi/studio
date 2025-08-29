@@ -2,14 +2,10 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
@@ -24,24 +20,19 @@ import { PaymentDialog } from './debts/payment-dialog';
 import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
-import { EditDebtDialog } from './debts/edit-debt-dialog';
+import { Label } from './ui/label';
 
-const debtFormSchema = z.object({
-  creditor: z.string().min(2, "اسم الدائن مطلوب."),
-  amount: z.coerce.number().min(0.01, "المبلغ يجب أن يكون إيجابياً."),
-  dueDate: z.date().optional(),
-});
-
-export type DebtFormValues = z.infer<typeof debtFormSchema>;
-
+// No Zod
 export type Payment = {
   id: string;
   amount: number;
   date: string;
 };
 
-export type DebtItem = Omit<DebtFormValues, 'dueDate'> & {
+export type DebtItem = {
   id: string;
+  creditor: string;
+  amount: number;
   dueDate?: Date;
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
@@ -57,7 +48,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const { user } = useAuth();
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { language, t } = useLanguage();
-    const [editingDebt, setEditingDebt] = React.useState<DebtItem | null>(null);
+    const formRef = React.useRef<HTMLFormElement>(null);
+    const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
     React.useEffect(() => {
         const fetchDebts = async () => {
@@ -102,18 +94,23 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         fetchDebts();
     }, [user, toast, t, departmentId]);
 
-    const form = useForm<DebtFormValues>({
-        resolver: zodResolver(debtFormSchema),
-        defaultValues: {
-            creditor: "",
-            amount: 0.01,
-            dueDate: undefined,
-        },
-    });
 
-    async function onSubmit(data: DebtFormValues) {
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
         if (!user) {
             toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add debts." });
+            return;
+        }
+
+        const formData = new FormData(event.currentTarget);
+        const data = {
+            creditor: formData.get('creditor') as string,
+            amount: Number(formData.get('amount')),
+            dueDate: dueDate
+        };
+
+        if (!data.creditor || data.amount <= 0) {
+            toast({ variant: "destructive", title: t('error'), description: "Please fill all fields correctly."});
             return;
         }
 
@@ -136,13 +133,13 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             const newDebt: DebtItem = {
               ...data,
               id: docRef.id,
-              dueDate: data.dueDate,
               status: 'unpaid',
               payments: [],
             };
 
             setDebts(prev => [...prev, newDebt]);
-            form.reset();
+            formRef.current?.reset();
+            setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
 
         } catch (e) {
@@ -150,26 +147,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             toast({ variant: "destructive", title: t('error'), description: "Failed to save debt." });
         }
     }
-
-    async function handleUpdateDebt(id: string, data: DebtFormValues) {
-        if (!user) return;
-        try {
-            const debtDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'debts', id);
-            await updateDoc(debtDocRef, {
-                creditor: data.creditor,
-                amount: data.amount,
-                dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
-            });
-
-            setDebts(prev => prev.map(d => d.id === id ? { ...d, ...data, dueDate: data.dueDate } : d));
-            setEditingDebt(null);
-            toast({ title: t('debtUpdatedSuccess') });
-        } catch (e) {
-            console.error("Error updating debt:", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to update debt." });
-        }
-    }
-
 
     async function deleteDebt(id: string) {
         if (!user) return;
@@ -265,26 +242,31 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('addNewDebt')}</CardTitle></CardHeader>
                 <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <FormField control={form.control} name="creditor" render={({ field }) => (
-                                <FormItem><FormLabel>{t('creditorName')}</FormLabel><FormControl><Input placeholder={t('creditorNamePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name="amount" render={({ field }) => (
-                                <FormItem><FormLabel>{t('amountInDinar')}</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name="dueDate" render={({ field }) => (
-                                <FormItem className="flex flex-col"><FormLabel>{t('dueDateOptional')}</FormLabel><Popover>
-                                    <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground", language === 'ar' ? 'pr-3' : 'pl-3')}>
-                                        <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                                        {field.value ? format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS }) : <span>{t('pickDate')}</span>}
-                                    </Button></FormControl></PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={language === 'ar' ? arSA : enUS} /></PopoverContent>
-                                </Popover><FormMessage /></FormItem>
-                            )} />
-                            <Button type="submit"><PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />{t('addDebt')}</Button>
-                        </form>
-                    </Form>
+                    <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label htmlFor="creditor">{t('creditorName')}</Label>
+                            <Input id="creditor" name="creditor" placeholder={t('creditorNamePlaceholder')} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="amount">{t('amountInDinar')}</Label>
+                            <Input id="amount" name="amount" type="number" step="0.01" />
+                        </div>
+                        <div className="flex flex-col space-y-2">
+                            <Label>{t('dueDateOptional')}</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}>
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {dueDate ? format(dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : <span>{t('pickDate')}</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <Button type="submit"><PlusCircle className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />{t('addDebt')}</Button>
+                    </form>
                 </CardContent>
             </Card>
 
@@ -326,7 +308,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                         <TableCell>
                                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
-                                                <Button variant="ghost" size="icon" onClick={() => setEditingDebt(item)} title={t('edit')}><Pencil className="h-4 w-4" /></Button>
                                                 <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                             </div>
                                         </TableCell>
@@ -338,17 +319,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                 </CardContent>
             </Card>
             )}
-
-            {editingDebt && (
-                <EditDebtDialog 
-                    isOpen={!!editingDebt}
-                    onClose={() => setEditingDebt(null)}
-                    debt={editingDebt}
-                    onSave={handleUpdateDebt}
-                />
-            )}
         </div>
     );
 }
-
-    

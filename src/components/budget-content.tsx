@@ -2,41 +2,32 @@
 "use client"
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { PlusCircle, Trash2, Wallet } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-// Simplified Schema for Agriculture only
-const salesFormSchema = z.object({
-  product: z.string({ required_error: 'Please select a vegetable type.' }),
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1.'),
-  weightPerUnit: z.coerce.number().min(0.1, 'Weight must be at least 0.1 kg.'),
-  price: z.coerce.number().min(0.01, 'Price must be positive.'),
-});
-
-export type SalesFormValues = z.infer<typeof salesFormSchema>;
-
-export type SalesItem = SalesFormValues & {
+// Simplified type, no Zod
+export type SalesItem = {
   id: string;
+  product: string;
+  quantity: number;
+  weightPerUnit: number;
+  price: number;
   total: number;
   date: Date;
   departmentId: string;
 };
 
-// Lists of options
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
 
@@ -50,16 +41,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const { user, loading: isAuthLoading } = useAuth();
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const { language, t } = useLanguage();
+  const formRef = React.useRef<HTMLFormElement>(null);
 
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
-
-  const form = useForm<SalesFormValues>({
-    resolver: zodResolver(salesFormSchema),
-  });
-
-  React.useEffect(() => {
-    form.reset();
-  }, [departmentId, form]);
 
   React.useEffect(() => {
     const fetchSales = async () => {
@@ -93,12 +77,26 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     fetchSales();
   }, [user, toast, t, isAuthLoading, departmentId]);
 
-  async function onSubmit(data: SalesFormValues) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!user) {
         toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add sales."});
         return;
     }
     
+    const formData = new FormData(event.currentTarget);
+    const data = {
+        product: formData.get('product') as string,
+        quantity: Number(formData.get('quantity')),
+        weightPerUnit: Number(formData.get('weightPerUnit')),
+        price: Number(formData.get('price')),
+    };
+
+    if (!data.product || data.quantity <= 0 || data.weightPerUnit <= 0 || data.price <= 0) {
+        toast({ variant: "destructive", title: t('error'), description: "Please fill all fields correctly."});
+        return;
+    }
+
     const total = data.quantity * data.price;
     const submissionData = {
         ...data,
@@ -148,7 +146,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             }
         });
         
-        form.reset();
+        formRef.current?.reset();
         
         toast({
           title: t('salesAddedSuccess'),
@@ -191,10 +189,29 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         case 'agriculture':
             return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="product" render={({ field }) => ( <FormItem><FormLabel>{t('vegetableType')}</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder={t('selectVegetable')} /></SelectTrigger></FormControl><SelectContent>{vegetableList.map(veg => <SelectItem key={veg} value={veg}>{veg}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )} />
-                    <FormField control={form.control} name="quantity" render={({ field }) => ( <FormItem><FormLabel>{t('quantityInCartons')}</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                    <FormField control={form.control} name="weightPerUnit" render={({ field }) => ( <FormItem><FormLabel>{t('weightPerCartonInKg')}</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                    <FormField control={form.control} name="price" render={({ field }) => ( <FormItem><FormLabel>{t('pricePerCartonInDinar')}</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    <div className="space-y-2">
+                        <Label htmlFor="product">{t('vegetableType')}</Label>
+                        <Select name="product">
+                            <SelectTrigger id="product">
+                                <SelectValue placeholder={t('selectVegetable')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {vegetableList.map(veg => <SelectItem key={veg} value={veg}>{veg}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="quantity">{t('quantityInCartons')}</Label>
+                        <Input id="quantity" name="quantity" type="number" step="1" />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="weightPerUnit">{t('weightPerCartonInKg')}</Label>
+                        <Input id="weightPerUnit" name="weightPerUnit" type="number" step="0.1" />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="price">{t('pricePerCartonInDinar')}</Label>
+                        <Input id="price" name="price" type="number" step="0.01" />
+                    </div>
                 </div>
             )
         default:
@@ -251,8 +268,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
                  {renderFormFields()}
                  {departmentId === 'agriculture' && 
                     <div className="flex justify-end pt-4">
@@ -263,7 +279,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                     </div>
                  }
               </form>
-            </Form>
           </CardContent>
         </Card>
 
@@ -293,4 +308,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-    

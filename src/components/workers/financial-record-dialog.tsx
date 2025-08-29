@@ -2,25 +2,16 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Eye, PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import type { Worker, TransactionFormValues } from './types';
-
-const transactionFormSchema = z.object({
-  type: z.enum(['bonus', 'deduction']),
-  amount: z.coerce.number().min(0.01, "المبلغ يجب أن يكون إيجابياً."),
-  description: z.string().min(3, "الوصف مطلوب."),
-});
+import { Label } from '../ui/label';
 
 interface FinancialRecordDialogProps {
     worker: Worker;
@@ -30,14 +21,23 @@ interface FinancialRecordDialogProps {
 function FinancialRecordDialogComponent({ worker, onAddTransaction }: FinancialRecordDialogProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const { language, t } = useLanguage();
-    const form = useForm<TransactionFormValues>({
-        resolver: zodResolver(transactionFormSchema),
-        defaultValues: { type: 'bonus', amount: 10, description: "" },
-    });
+    const formRef = React.useRef<HTMLFormElement>(null);
 
-    const handleSubmit = (data: TransactionFormValues) => {
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const data = {
+            type: formData.get('type') as 'bonus' | 'deduction',
+            amount: Number(formData.get('amount')),
+            description: formData.get('description') as string,
+        };
+
+        if (data.amount <= 0 || data.description.length < 3) {
+            return;
+        }
+
         onAddTransaction(worker.id, data);
-        form.reset();
+        formRef.current?.reset();
     };
 
     const workerBalance = (worker.transactions || []).reduce((acc, t) => {
@@ -83,23 +83,30 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction }: FinancialR
 
                     <div>
                         <h4 className="font-semibold mb-2">{t('addNewTransaction')}</h4>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 p-4 border rounded-md">
-                                <FormField control={form.control} name="type" render={({ field }) => (
-                                    <FormItem><FormLabel>{t('transactionType')}</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="bonus">{t('bonus')}</SelectItem><SelectItem value="deduction">{t('deduction')}</SelectItem></SelectContent></Select><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="amount" render={({ field }) => (
-                                    <FormItem><FormLabel>{t('amountInDinar')}</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="description" render={({ field }) => (
-                                    <FormItem><FormLabel>{t('description')}</FormLabel><FormControl><Input placeholder={t('transactionDescPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <Button type="submit" className="w-full">
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    {t('addTransaction')}
-                                </Button>
-                            </form>
-                        </Form>
+                        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-md">
+                            <div className="space-y-2">
+                                <Label>{t('transactionType')}</Label>
+                                <Select name="type" defaultValue="bonus">
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="bonus">{t('bonus')}</SelectItem>
+                                        <SelectItem value="deduction">{t('deduction')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">{t('amountInDinar')}</Label>
+                                <Input id="amount" name="amount" type="number" step="0.01" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="description">{t('description')}</Label>
+                                <Input id="description" name="description" placeholder={t('transactionDescPlaceholder')} required />
+                            </div>
+                            <Button type="submit" className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                {t('addTransaction')}
+                            </Button>
+                        </form>
                     </div>
                 </div>
 
@@ -112,5 +119,3 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction }: FinancialR
 }
 
 export const FinancialRecordDialog = React.memo(FinancialRecordDialogComponent);
-
-    

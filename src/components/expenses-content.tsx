@@ -2,12 +2,8 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -18,7 +14,17 @@ import { useAuth } from '@/context/auth-context';
 import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
-import { EditExpenseDialog } from './expenses/edit-expense-dialog';
+import { Label } from './ui/label';
+
+// No Zod
+export type ExpenseItem = {
+  id: string;
+  date: Date;
+  type: 'fixed' | 'variable';
+  category: string;
+  item: string;
+  amount: number;
+};
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -40,39 +46,6 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
     }
 };
 
-
-const expenseFormSchema = z.object({
-  type: z.enum(['fixed', 'variable'], { required_error: "الرجاء تحديد نوع المصروف." }),
-  category: z.string({ required_error: "الرجاء اختيار الفئة." }),
-  newCategoryName: z.string().optional(),
-  item: z.string({ required_error: "الرجاء اختيار البند." }),
-  newItemName: z.string().optional(),
-  amount: z.coerce.number().min(0.01, "يجب أن يكون المبلغ إيجابياً."),
-}).refine(data => {
-    if (data.category === 'add_new_category') {
-        return !!data.newCategoryName && data.newCategoryName.length > 2;
-    }
-    return true;
-}, {
-    message: "الرجاء إدخال اسم فئة جديد (3 أحرف على الأقل).",
-    path: ['newCategoryName'],
-}).refine(data => {
-    if (data.item === 'add_new_item') {
-        return !!data.newItemName && data.newItemName.length > 2;
-    }
-    return true;
-}, {
-    message: "الرجاء إدخال اسم بند جديد (3 أحرف على الأقل).",
-    path: ['newItemName'],
-});
-
-export type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
-
-export type ExpenseItem = Omit<ExpenseFormValues, 'newItemName' | 'newCategoryName'> & {
-  id: string;
-  date: Date;
-};
-
 interface ExpensesContentProps {
     departmentId: string;
 }
@@ -84,7 +57,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
     const { user } = useAuth();
-    const [editingExpense, setEditingExpense] = React.useState<ExpenseItem | null>(null);
+    const formRef = React.useRef<HTMLFormElement>(null);
+    const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
@@ -125,21 +99,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         fetchExpensesAndCategories();
     }, [user, language, departmentId]);
     
-    const form = useForm<ExpenseFormValues>({
-        resolver: zodResolver(expenseFormSchema),
-        defaultValues: {
-            amount: 0.01,
-            newItemName: '',
-            newCategoryName: '',
-            type: undefined,
-            category: undefined,
-            item: undefined,
-        },
-    });
-
-    const selectedCategory = form.watch("category");
-    const selectedItem = form.watch("item");
-
     async function updateCategoriesInDb(newCategories: Record<string, string[]>) {
         if (!user || !departmentId) return;
         try {
@@ -151,104 +110,32 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
     }
 
-    async function handleUpdateExpense(id: string, data: ExpenseFormValues) {
-        if (!user) return;
-
-        let finalCategoryName = data.category;
-        let finalItemName = data.item;
-        let finalCategories = { ...expenseCategories };
-        let categoriesChanged = false;
-
-        // Handle new category
-        if (data.category === 'add_new_category' && data.newCategoryName) {
-            finalCategoryName = data.newCategoryName;
-            if (!finalCategories[finalCategoryName]) {
-                finalCategories[finalCategoryName] = [];
-                categoriesChanged = true;
-            }
-        }
-        
-        // Handle new item
-        if (data.item === 'add_new_item' && data.newItemName) {
-            finalItemName = data.newItemName;
-            if (finalCategoryName && finalCategories[finalCategoryName] && !finalCategories[finalCategoryName].includes(finalItemName)) {
-                finalCategories[finalCategoryName] = [...finalCategories[finalCategoryName], finalItemName];
-                categoriesChanged = true;
-            }
-        }
-
-        if (categoriesChanged) {
-            setExpenseCategories(finalCategories);
-        }
-
-        const expenseToUpdate = expenses.find(e => e.id === id);
-        if (!expenseToUpdate) return;
-        
-        try {
-            const expenseDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'expenses', id);
-            const updatedData = {
-                type: data.type,
-                category: finalCategoryName,
-                item: finalItemName,
-                amount: data.amount,
-                date: Timestamp.fromDate(expenseToUpdate.date),
-            };
-            await updateDoc(expenseDocRef, updatedData);
-            
-            if (categoriesChanged) {
-                await updateCategoriesInDb(finalCategories);
-            }
-
-            setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updatedData, date: expenseToUpdate.date } : e));
-            setEditingExpense(null);
-            toast({ title: t('expenseUpdatedSuccess') });
-        } catch(e) {
-             console.error("Error updating expense: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to update expense." });
-        }
-    }
-
-
-    async function onSubmit(data: ExpenseFormValues) {
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
         if (!user) {
              toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add expenses."});
             return;
         }
 
-        let finalCategoryName = data.category;
-        let finalItemName = data.item;
-        let finalCategories = { ...expenseCategories };
-        let categoriesChanged = false;
+        const formData = new FormData(event.currentTarget);
+        const data = {
+            type: formData.get('type') as 'fixed' | 'variable',
+            category: formData.get('category') as string,
+            item: formData.get('item') as string,
+            amount: Number(formData.get('amount')),
+        };
 
-        // Handle new category
-        if (data.category === 'add_new_category' && data.newCategoryName) {
-            finalCategoryName = data.newCategoryName;
-            if (!finalCategories[finalCategoryName]) {
-                finalCategories[finalCategoryName] = [];
-                categoriesChanged = true;
-            }
-        }
-        
-        // Handle new item
-        if (data.item === 'add_new_item' && data.newItemName) {
-            finalItemName = data.newItemName;
-            if (finalCategoryName && finalCategories[finalCategoryName] && !finalCategories[finalCategoryName].includes(finalItemName)) {
-                finalCategories[finalCategoryName] = [...finalCategories[finalCategoryName], finalItemName];
-                categoriesChanged = true;
-            }
-        }
-
-        if (categoriesChanged) {
-            setExpenseCategories(finalCategories);
-            await updateCategoriesInDb(finalCategories);
+        if (!data.type || !data.category || !data.item || data.amount <= 0) {
+            toast({ variant: "destructive", title: t('error'), description: "Please fill all fields correctly."});
+            return;
         }
         
         const newExpenseData = {
             id: Date.now().toString(),
             date: Timestamp.fromDate(new Date()),
             type: data.type,
-            category: finalCategoryName,
-            item: finalItemName,
+            category: data.category,
+            item: data.item,
             amount: data.amount,
         };
 
@@ -260,21 +147,14 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
               id: docRef.id,
               date: new Date(),
               type: data.type,
-              category: finalCategoryName,
-              item: finalItemName,
+              category: data.category,
+              item: data.item,
               amount: data.amount,
             };
 
             setExpenses(prev => [...prev, newExpense]);
-            form.reset({
-                 type: undefined,
-                 category: undefined,
-                 item: undefined,
-                 amount: 0.01,
-                 newItemName: '',
-                 newCategoryName: '',
-            });
-            form.clearErrors();
+            formRef.current?.reset();
+            setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
         } catch(e) {
             console.error("Error adding expense: ", e);
@@ -346,95 +226,45 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     <CardTitle className="text-xl sm:text-2xl">{t('addNewExpense')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <FormField control={form.control} name="type" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('expenseType')}</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger><SelectValue placeholder={t('selectType')} /></SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="fixed">{t('expenseTypeFixed')}</SelectItem>
-                                                <SelectItem value="variable">{t('expenseTypeVariable')}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={form.control} name="category" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('category')}</FormLabel>
-                                        <Select onValueChange={(value) => {
-                                            field.onChange(value);
-                                            form.setValue("item", undefined);
-                                        }} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                                <SelectItem value="add_new_category">{t('addNewCategory')}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="type">{t('expenseType')}</Label>
+                                <Select name="type">
+                                    <SelectTrigger id="type"><SelectValue placeholder={t('selectType')} /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="fixed">{t('expenseTypeFixed')}</SelectItem>
+                                        <SelectItem value="variable">{t('expenseTypeVariable')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-
-                             {selectedCategory === 'add_new_category' && (
-                                <FormField control={form.control} name="newCategoryName" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('newCategoryName')}</FormLabel>
-                                        <FormControl><Input placeholder={t('newCategoryNamePlaceholder')} {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            )}
-
-                            {selectedCategory && selectedCategory !== 'add_new_category' && (
-                                <FormField control={form.control} name="item" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('item')}</FormLabel>
-                                         <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger><SelectValue placeholder={t('selectItem')} /></SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {expenseCategories[selectedCategory]?.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                                                <SelectItem value="add_new_item">{t('addNewItem')}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            )}
-                            
-                            {selectedItem === 'add_new_item' && (
-                                <FormField control={form.control} name="newItemName" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('newItemName')}</FormLabel>
-                                        <FormControl><Input placeholder={t('newItemNamePlaceholder')} {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            )}
-                            
-                             <FormField control={form.control} name="amount" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{t('amountInDinar')}</FormLabel>
-                                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            
-                            <div className="flex justify-end pt-4">
-                                <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" />{t('add')}</Button>
+                             <div className="space-y-2">
+                                <Label htmlFor="category">{t('category')}</Label>
+                                <Select name="category" onValueChange={setSelectedCategory}>
+                                    <SelectTrigger id="category"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
+                                    <SelectContent>
+                                        {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                        </form>
-                    </Form>
+                            <div className="space-y-2">
+                                <Label htmlFor="item">{t('item')}</Label>
+                                <Select name="item" disabled={!selectedCategory}>
+                                    <SelectTrigger id="item"><SelectValue placeholder={t('selectItem')} /></SelectTrigger>
+                                    <SelectContent>
+                                        {expenseCategories[selectedCategory]?.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">{t('amountInDinar')}</Label>
+                                <Input id="amount" name="amount" type="number" step="0.01" />
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-4">
+                            <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" />{t('add')}</Button>
+                        </div>
+                    </form>
                 </CardContent>
             </Card>
             
@@ -465,7 +295,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                                 <TableCell className="text-right">
                                                      <div className="flex gap-2 justify-end">
-                                                        <Button variant="ghost" size="icon" onClick={() => setEditingExpense(item)} title={t('edit')}><Pencil className="h-4 w-4" /></Button>
                                                         <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
                                                 </TableCell>
@@ -492,7 +321,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
-                                                        <Button variant="ghost" size="icon" onClick={() => setEditingExpense(item)} title={t('edit')}><Pencil className="h-4 w-4" /></Button>
                                                         <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
                                                 </TableCell>
@@ -506,19 +334,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     </CardContent>
                 </Card>
             )}
-            {editingExpense && (
-                <EditExpenseDialog
-                    isOpen={!!editingExpense}
-                    onClose={() => setEditingExpense(null)}
-                    expense={editingExpense}
-                    onSave={handleUpdateExpense}
-                    expenseCategories={expenseCategories}
-                />
-            )}
         </>
     );
 }
-
-    
-
-    
