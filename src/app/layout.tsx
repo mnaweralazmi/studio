@@ -28,16 +28,15 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const theme = localStorage.getItem("theme") || "theme-green";
-    const mode = localStorage.getItem("mode") || "dark";
-    
     document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
     document.body.classList.add(theme);
 
+    const mode = localStorage.getItem("mode") || "dark";
     const html = document.documentElement;
     html.classList.remove("light", "dark");
     html.classList.add(mode);
-    html.style.fontFamily = cairo.style.fontFamily;
 
+    html.style.fontFamily = cairo.style.fontFamily;
   }, []);
 
   useEffect(() => {
@@ -85,7 +84,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head />
-      <body className="antialiased">
+      <body>
         <AuthProvider>
             <LanguageProvider>
             <TopicsProvider>
