@@ -400,5 +400,8 @@
     "oneWeekBefore": "قبل أسبوع",
     "remindMeBeforeXDays": "تذكير قبل {days} أيام",
     "salesTrackingNotAvailable": "تتبع المبيعات غير متوفر حاليًا لهذا القسم.",
-    "agricultureSalesDesc": "أضف مبيعاتك من الخضروات والورود لتتبع الأرباح وإدارة عملياتك بكفاءة."
+    "agricultureSalesDesc": "أضف مبيعاتك من الخضروات والورود لتتبع الأرباح وإدارة عملياتك بكفاءة.",
+    "tomorrow": "غداً",
+    "thisWeek": "هذا الأسبوع",
+    "later": "لاحقاً"
 }

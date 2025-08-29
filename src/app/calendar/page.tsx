@@ -2,18 +2,20 @@
 "use client";
 
 import * as React from 'react';
-import { format, isValid, isFuture, isToday, addDays, parseISO } from 'date-fns';
+import { format, isValid, isFuture, isToday, addDays, parseISO, isTomorrow, endOfWeek, startOfDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, CalendarDays, CheckCircle, Forward, Repeat, Bell, Trash2 } from 'lucide-react';
+import { PlusCircle, CalendarDays, CheckCircle, Forward, Repeat, Bell, Trash2, ChevronDown } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
 
 export interface Task {
   id: string;
@@ -26,7 +28,7 @@ export interface Task {
 }
 
 const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
-    <li className="flex items-start justify-between p-4 rounded-lg bg-muted/50 transition-all hover:bg-muted/80">
+    <div className="flex items-start justify-between p-4 rounded-lg bg-background hover:bg-muted/50 transition-all">
         <div className="flex-1">
             <div className="flex items-center gap-3">
                 <span className="font-medium">{task.title}</span>
@@ -49,15 +51,14 @@ const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onC
         </div>
         <div className="flex items-center gap-2 ml-4 shrink-0">
              {onComplete && (
-                 <Button onClick={() => onComplete(task.id)} size="sm" variant="outline" className="text-green-600 border-green-600/20 hover:bg-green-500/10 hover:text-green-700">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    {t('completeTask')}
+                 <Button onClick={() => onComplete(task.id)} size="icon" variant="ghost" className="text-green-600 border-green-600/20 hover:bg-green-500/10 hover:text-green-700 h-8 w-8">
+                    <CheckCircle className="h-4 w-4" />
                 </Button>
             )}
             {onDelete && (
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                         <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+                         <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8">
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </AlertDialogTrigger>
@@ -74,8 +75,17 @@ const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onC
                 </AlertDialog>
             )}
         </div>
-    </li>
+    </div>
 );
+
+const TaskList = ({ tasks, ...props }: { tasks: Task[], onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
+    <div className="space-y-2">
+        {tasks.map(task => (
+            <TaskItem key={task.id} task={task} {...props} />
+        ))}
+    </div>
+);
+
 
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
@@ -143,20 +153,26 @@ export default function CalendarPage() {
   }
 
 
-  const selectedDateString = date ? format(date, 'yyyy-MM-dd') : '';
+  const selectedDayStart = startOfDay(date || new Date());
   
-  const tasksForSelectedDate = tasks.filter(task => {
-    const taskDate = new Date(task.dueDate);
-    if (!isValid(taskDate)) return false;
-    return format(taskDate, 'yyyy-MM-dd') === selectedDateString && !task.isCompleted;
+  const upcomingTasks = tasks.filter(task => {
+    const taskDate = parseISO(task.dueDate);
+    return isValid(taskDate) && !task.isCompleted && taskDate >= selectedDayStart;
+  }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+  const tasksForSelectedDate = upcomingTasks.filter(task => format(parseISO(task.dueDate), 'yyyy-MM-dd') === format(selectedDayStart, 'yyyy-MM-dd'));
+  const tasksForTomorrow = upcomingTasks.filter(task => isTomorrow(parseISO(task.dueDate)));
+  
+  const endOfThisWeek = endOfWeek(new Date(), { locale: language === 'ar' ? arSA : enUS });
+  const tasksForThisWeek = upcomingTasks.filter(task => {
+      const taskDate = parseISO(task.dueDate);
+      return !isToday(taskDate) && !isTomorrow(taskDate) && taskDate <= endOfThisWeek;
   });
   
-  const allUpcomingTasks = tasks
-    .filter(task => {
-        const taskDate = new Date(task.dueDate);
-        return isValid(taskDate) && (isFuture(taskDate) || isToday(taskDate)) && !task.isCompleted;
-    })
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  const laterTasks = upcomingTasks.filter(task => {
+      const taskDate = parseISO(task.dueDate);
+      return taskDate > endOfThisWeek;
+  });
 
   const allCompletedTasks = tasks
     .filter(task => task.isCompleted)
@@ -167,9 +183,9 @@ export default function CalendarPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
-         <div className="flex justify-between items-center flex-wrap gap-4">
+    <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
+      <div className="w-full max-w-6xl mx-auto">
+         <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
             <div>
                 <h1 className="text-3xl font-bold">{t('calendarAndTasks')}</h1>
                 <p className="text-muted-foreground">{t('tasksForDayDesc')}</p>
@@ -183,84 +199,79 @@ export default function CalendarPage() {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-1">
-                <Card>
-                    <CardContent className="p-0">
-                        <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={setDate}
-                            className="w-full"
-                             classNames={{
-                                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-4",
-                                month: "w-full",
-                                table: "w-full border-collapse space-y-1",
-                                head_row: "flex justify-around",
-                                row: "flex w-full mt-2 justify-around",
-                                day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
-                                day_today: "bg-accent text-accent-foreground",
-                            }}
-                            locale={language === 'ar' ? arSA : enUS}
-                        />
-                    </CardContent>
-                </Card>
-            </div>
+            <Card className="lg:col-span-1 sticky top-8">
+                <CardContent className="p-0">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        className="w-full"
+                        locale={language === 'ar' ? arSA : enUS}
+                    />
+                </CardContent>
+            </Card>
 
-            <div className="lg:col-span-2 space-y-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5" /> {t('tasksForDay')} ({date ? format(date, 'd MMM', { locale: language === 'ar' ? arSA : enUS }) : ''})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                    {tasksForSelectedDate.length > 0 ? (
-                        <ul className="space-y-4">
-                            {tasksForSelectedDate.map(task => (
-                                <TaskItem key={task.id} task={task} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                            ))}
-                        </ul>
+            <div className="lg:col-span-2 space-y-6">
+                <section>
+                    <h2 className="text-lg font-semibold mb-2">{t('tasksForDay')} ({date ? format(date, 'd MMM', { locale: language === 'ar' ? arSA : enUS }) : ''})</h2>
+                     {tasksForSelectedDate.length > 0 ? (
+                        <TaskList tasks={tasksForSelectedDate} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
                     ) : (
-                        <p className="text-center text-muted-foreground py-4">{t('noUpcomingTasksForDay')}</p>
+                        <p className="text-center text-muted-foreground py-4 border-2 border-dashed rounded-lg">{t('noUpcomingTasksForDay')}</p>
                     )}
-                    </CardContent>
-                </Card>
+                </section>
+                
+                <Separator />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Forward className="h-5 w-5" /> {t('allUpcomingTasks')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                    {allUpcomingTasks.length > 0 ? (
-                        <ul className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                            {allUpcomingTasks.slice(0,10).map(task => (
-                            <TaskItem key={task.id} task={task} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-center text-muted-foreground py-4">{t('noUpcomingTasks')}</p>
-                    )}
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5" /> {t('completedTasksLog')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                <section>
+                    <h2 className="text-lg font-semibold mb-4">{t('allUpcomingTasks')}</h2>
+                    <div className="space-y-4">
+                        {tasksForTomorrow.length > 0 && (
+                             <div>
+                                <h3 className="text-md font-medium text-muted-foreground mb-2">{t('tomorrow')}</h3>
+                                <TaskList tasks={tasksForTomorrow} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
+                            </div>
+                        )}
+                        {tasksForThisWeek.length > 0 && (
+                            <div>
+                                <h3 className="text-md font-medium text-muted-foreground mb-2">{t('thisWeek')}</h3>
+                                <TaskList tasks={tasksForThisWeek} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
+                            </div>
+                        )}
+                        {laterTasks.length > 0 && (
+                            <div>
+                                <h3 className="text-md font-medium text-muted-foreground mb-2">{t('later')}</h3>
+                                <TaskList tasks={laterTasks} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
+                            </div>
+                        )}
+                         {tasksForTomorrow.length === 0 && tasksForThisWeek.length === 0 && laterTasks.length === 0 && tasksForSelectedDate.length === 0 && (
+                             <p className="text-center text-muted-foreground py-4 border-2 border-dashed rounded-lg">{t('noUpcomingTasks')}</p>
+                         )}
+                    </div>
+                </section>
+                
+                <Separator />
+                
+                <Collapsible>
+                    <CollapsibleTrigger className="flex justify-between items-center w-full text-lg font-semibold">
+                       <span>{t('completedTasksLog')} ({allCompletedTasks.length})</span>
+                       <ChevronDown className="h-5 w-5 transition-transform [&[data-state=open]]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-4">
                         {allCompletedTasks.length > 0 ? (
-                             <ul className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                                {allCompletedTasks.slice(0,10).map(task => (
+                             <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                                {allCompletedTasks.slice(0,20).map(task => (
                                 <TaskItem key={task.id} task={task} language={language} t={t} />
                                 ))}
-                            </ul>
+                            </div>
                         ) : (
-                            <p className="text-center text-muted-foreground py-4">{t('noCompletedTasks')}</p>
+                            <p className="text-center text-muted-foreground py-4 border-2 border-dashed rounded-lg">{t('noCompletedTasks')}</p>
                         )}
-                    </CardContent>
-                </Card>
+                    </CollapsibleContent>
+                </Collapsible>
             </div>
         </div>
       </div>
     </main>
   );
 }
-

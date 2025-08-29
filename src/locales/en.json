@@ -400,5 +400,8 @@
     "oneWeekBefore": "1 week before",
     "remindMeBeforeXDays": "Reminder {days} days before",
     "salesTrackingNotAvailable": "Sales tracking is not currently available for this department.",
-    "agricultureSalesDesc": "Add your sales of vegetables and flowers to track profits and efficiently manage your operations."
+    "agricultureSalesDesc": "Add your sales of vegetables and flowers to track profits and efficiently manage your operations.",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This Week",
+    "later": "Later"
 }
