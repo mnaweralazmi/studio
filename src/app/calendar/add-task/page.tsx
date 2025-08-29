@@ -13,7 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, CalendarIcon, Repeat, Bell } from 'lucide-react';
+import { PlusCircle, CalendarIcon, Repeat, Bell, Clock } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Task } from '../page';
 import { useLanguage } from '@/context/language-context';
@@ -47,6 +47,7 @@ export default function AddTaskPage() {
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
+  const [dueTime, setDueTime] = React.useState('09:00');
   const [vegetable, setVegetable] = React.useState('');
   const [fruit, setFruit] = React.useState('');
   const [isRecurring, setIsRecurring] = React.useState(false);
@@ -85,6 +86,12 @@ export default function AddTaskPage() {
         return;
     }
     try {
+        const finalDueDate = new Date(dueDate);
+        if (dueTime) {
+            const [hours, minutes] = dueTime.split(':').map(Number);
+            finalDueDate.setHours(hours, minutes);
+        }
+
         const userRef = doc(db, 'users', user.uid);
 
         await runTransaction(db, async (transaction) => {
@@ -124,7 +131,7 @@ export default function AddTaskPage() {
             id: crypto.randomUUID(),
             title: title,
             description: description,
-            dueDate: dueDate.toISOString(),
+            dueDate: finalDueDate.toISOString(),
             isCompleted: false,
             isRecurring: isRecurring,
             reminderDays: reminderDays,
@@ -220,34 +227,40 @@ export default function AddTaskPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label>{t('dueDate')}</Label>
-                            <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !dueDate && "text-muted-foreground",
-                                    language === 'ar' ? 'pr-3' : 'pl-3'
-                                    )}
-                                >
-                                    <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                                    {dueDate ? (
-                                    format(dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS })
-                                    ) : (
-                                    <span>{t('pickDate')}</span>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={dueDate}
-                                    onSelect={setDueDate}
-                                    initialFocus
-                                    locale={language === 'ar' ? arSA : enUS}
-                                />
-                            </PopoverContent>
-                            </Popover>
+                             <div className="flex gap-2">
+                                <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                        "flex-1 justify-start text-left font-normal",
+                                        !dueDate && "text-muted-foreground",
+                                        language === 'ar' ? 'pr-3' : 'pl-3'
+                                        )}
+                                    >
+                                        <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+                                        {dueDate ? (
+                                        format(dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS })
+                                        ) : (
+                                        <span>{t('pickDate')}</span>
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={dueDate}
+                                        onSelect={setDueDate}
+                                        initialFocus
+                                        locale={language === 'ar' ? arSA : enUS}
+                                    />
+                                </PopoverContent>
+                                </Popover>
+                                <div className="relative">
+                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="pl-10" />
+                                </div>
+                            </div>
                         </div>
 
                          <div className="space-y-2">

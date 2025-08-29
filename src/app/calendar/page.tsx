@@ -27,56 +27,62 @@ export interface Task {
   reminderDays?: number;
 }
 
-const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
-    <div className="flex items-start justify-between p-4 rounded-lg bg-background hover:bg-muted/50 transition-all">
-        <div className="flex-1">
-            <div className="flex items-center gap-3">
-                <span className="font-medium">{task.title}</span>
-                 {task.isCompleted && <Badge variant="default" className="bg-green-600 hover:bg-green-600/80">{t('statusPaid')}</Badge>}
+const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
+    const dueDate = parseISO(task.dueDate);
+    const hasTime = dueDate.getHours() !== 0 || dueDate.getMinutes() !== 0;
+    const dateFormat = hasTime ? "PPP p" : "PPP";
+
+    return (
+        <div className="flex items-start justify-between p-4 rounded-lg bg-background hover:bg-muted/50 transition-all">
+            <div className="flex-1">
+                <div className="flex items-center gap-3">
+                    <span className="font-medium">{task.title}</span>
+                     {task.isCompleted && <Badge variant="default" className="bg-green-600 hover:bg-green-600/80">{t('statusPaid')}</Badge>}
+                </div>
+                {task.description && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                        {task.description}
+                    </p>
+                )}
+                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                     <div className='flex items-center gap-1'><CalendarDays className="h-3 w-3" /><span>{format(dueDate, dateFormat, { locale: language === 'ar' ? arSA : enUS })}</span></div>
+                    {task.isRecurring && 
+                        <div className='flex items-center gap-1'><Repeat className="h-3 w-3" /><span>{t('rememberTask')}</span></div>
+                    }
+                    {task.reminderDays && task.reminderDays > 0 && 
+                        <div className='flex items-center gap-1'><Bell className="h-3 w-3" /><span>{t('remindMeBeforeXDays', {days: task.reminderDays})}</span></div>
+                    }
+                </div>
             </div>
-            {task.description && (
-                <p className="text-sm text-muted-foreground mt-1">
-                    {task.description}
-                </p>
-            )}
-            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                 <div className='flex items-center gap-1'><CalendarDays className="h-3 w-3" /><span>{format(parseISO(task.dueDate), "PPP", { locale: language === 'ar' ? arSA : enUS })}</span></div>
-                {task.isRecurring && 
-                    <div className='flex items-center gap-1'><Repeat className="h-3 w-3" /><span>{t('rememberTask')}</span></div>
-                }
-                {task.reminderDays && task.reminderDays > 0 && 
-                    <div className='flex items-center gap-1'><Bell className="h-3 w-3" /><span>{t('remindMeBeforeXDays', {days: task.reminderDays})}</span></div>
-                }
+            <div className="flex items-center gap-2 ml-4 shrink-0">
+                 {onComplete && (
+                     <Button onClick={() => onComplete(task.id)} size="icon" variant="ghost" className="text-green-600 border-green-600/20 hover:bg-green-500/10 hover:text-green-700 h-8 w-8">
+                        <CheckCircle className="h-4 w-4" />
+                    </Button>
+                )}
+                {onDelete && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                             <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
+                                <AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: task.title })}</AlertDialogDescription>
+                            </AlertDialogHeader>
+                             <AlertDialogFooter>
+                                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onDelete(task.id)}>{t('confirmDelete')}</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </div>
         </div>
-        <div className="flex items-center gap-2 ml-4 shrink-0">
-             {onComplete && (
-                 <Button onClick={() => onComplete(task.id)} size="icon" variant="ghost" className="text-green-600 border-green-600/20 hover:bg-green-500/10 hover:text-green-700 h-8 w-8">
-                    <CheckCircle className="h-4 w-4" />
-                </Button>
-            )}
-            {onDelete && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                         <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                            <AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: task.title })}</AlertDialogDescription>
-                        </AlertDialogHeader>
-                         <AlertDialogFooter>
-                            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDelete(task.id)}>{t('confirmDelete')}</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )}
-        </div>
-    </div>
-);
+    );
+};
 
 const TaskList = ({ tasks, ...props }: { tasks: Task[], onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
     <div className="space-y-2">
@@ -189,8 +195,8 @@ export default function CalendarPage() {
             </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
                 <Card>
                     <Calendar
                         mode="single"
@@ -210,7 +216,7 @@ export default function CalendarPage() {
                 </Card>
             </div>
             
-            <div className="md:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6">
                  <section>
                     <h2 className="text-lg font-semibold mb-2">{t('tasksForDay')} ({date ? format(date, 'd MMM', { locale: language === 'ar' ? arSA : enUS }) : ''})</h2>
                      {tasksForSelectedDate.length > 0 ? (
@@ -244,7 +250,7 @@ export default function CalendarPage() {
                         {allCompletedTasks.length > 0 ? (
                              <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
                                 {allCompletedTasks.slice(0,20).map(task => (
-                                <TaskItem key={task.id} task={task} language={language} t={t} />
+                                <TaskItem key={task.id} task={task} language={language} t={t} onDelete={handleDeleteTask} />
                                 ))}
                             </div>
                         ) : (
@@ -258,4 +264,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
