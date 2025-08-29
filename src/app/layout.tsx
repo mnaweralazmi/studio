@@ -86,7 +86,7 @@ export default function RootLayout({
     // The dir and lang attributes are now managed by the LanguageProvider
     <html lang="ar" dir="rtl" className={cairo.className}>
       <head />
-      <body className="antialiased theme-green">
+      <body className="antialiased">
         <AuthProvider>
             <LanguageProvider>
             <TopicsProvider>
