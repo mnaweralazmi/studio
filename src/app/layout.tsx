@@ -3,11 +3,10 @@
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppLayout } from '@/components/app-layout';
 import { usePathname } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
-import { LanguageProvider, useLanguage } from '@/context/language-context';
+import React, { useEffect } from 'react';
+import { LanguageProvider } from '@/context/language-context';
 import { TopicsProvider } from '@/context/topics-context';
 import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
@@ -70,12 +69,10 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <SidebarProvider>
-        <AppLayout>
-            {children}
-        </AppLayout>
+    <AppLayout>
+        {children}
         <Toaster />
-    </SidebarProvider>
+    </AppLayout>
   );
 }
 
