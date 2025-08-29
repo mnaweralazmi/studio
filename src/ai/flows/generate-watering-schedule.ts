@@ -30,7 +30,7 @@ export type WateringScheduleOutput = z.infer<typeof WateringScheduleOutputSchema
 
 export async function generateWateringSchedule(
   input: WateringScheduleInput
-): Promise<WateringScheduleOutput> {
+): Promise<WateringScheduleOutput | null> {
   return generateWateringScheduleFlow(input);
 }
 
@@ -59,9 +59,6 @@ const generateWateringScheduleFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (!output) {
-      throw new Error("Failed to generate schedule from prompt.");
-    }
-    return output;
+    return output ?? null;
   }
 );
