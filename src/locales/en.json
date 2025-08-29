@@ -398,7 +398,8 @@
     "twoDaysBefore": "2 days before",
     "threeDaysBefore": "3 days before",
     "oneWeekBefore": "1 week before",
-    "remindMeBeforeXDays": "Reminder {days} days before"
+    "remindMeBeforeXDays": "Reminder {days} days before",
+    "salesTrackingNotAvailable": "Sales tracking is not currently available for this department."
 }
 
     

@@ -398,7 +398,8 @@
     "twoDaysBefore": "قبل يومين",
     "threeDaysBefore": "قبل 3 أيام",
     "oneWeekBefore": "قبل أسبوع",
-    "remindMeBeforeXDays": "تذكير قبل {days} أيام"
+    "remindMeBeforeXDays": "تذكير قبل {days} أيام",
+    "salesTrackingNotAvailable": "تتبع المبيعات غير متوفر حاليًا لهذا القسم."
 }
 
     
