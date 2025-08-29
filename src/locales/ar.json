@@ -88,7 +88,7 @@
     "videoDuration15": "15 دقيقة",
     "videoDuration20": "20 دقيقة",
     "videoDuration18": "18 دقيقة",
-    "tasksForDay": "مهام يوم:",
+    "tasksForDay": "مهام لليوم المحدد",
     "pleaseSelectDay": "الرجاء تحديد يوم",
     "tasksForDayDesc": "عرض وإدارة المهام المجدولة لهذا اليوم.",
     "addTask": "إضافة مهمة",
@@ -389,5 +389,9 @@
     "addNewCategory": "إضافة فئة جديدة...",
     "newCategoryName": "اسم الفئة الجديدة",
     "newCategoryNamePlaceholder": "أدخل اسم الفئة هنا",
-    "saving": "جاري الحفظ..."
+    "saving": "جاري الحفظ...",
+    "rememberTask": "تذكير بالمهمة",
+    "rememberTaskDesc": "عند الإنجاز، سيتم إنشاء المهمة مرة أخرى بعد 7 أيام."
 }
+
+    

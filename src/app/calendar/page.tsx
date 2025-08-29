@@ -2,13 +2,13 @@
 "use client";
 
 import * as React from 'react';
-import { format, isValid, isFuture, isToday } from 'date-fns';
+import { format, isValid, isFuture, isToday, addDays } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, CalendarDays, CheckCircle, Forward } from 'lucide-react';
+import { PlusCircle, CalendarDays, CheckCircle, Forward, Repeat } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
@@ -19,6 +19,7 @@ export interface Task {
   description?: string;
   dueDate: string; // ISO string
   isCompleted: boolean;
+  isRecurring: boolean;
 }
 
 export default function CalendarPage() {
@@ -42,6 +43,41 @@ export default function CalendarPage() {
       }
     }
   }, [user, loading]);
+
+  const handleCompleteTask = (taskId: string) => {
+    if (!user) return;
+    
+    let newTasks = [...tasks];
+    const taskIndex = newTasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return;
+
+    const taskToComplete = newTasks[taskIndex];
+
+    if (taskToComplete.isRecurring) {
+        // Deactivate the current task by moving it to completed
+        taskToComplete.isCompleted = true;
+        taskToComplete.isRecurring = false; // So it doesn't get created again
+
+        // Create a new recurring task for the future (e.g., 7 days later)
+        const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
+        const newTask: Task = {
+            ...taskToComplete,
+            id: crypto.randomUUID(),
+            dueDate: nextDueDate.toISOString(),
+            isCompleted: false,
+            isRecurring: true, // The new task is recurring
+        };
+        newTasks.push(newTask);
+    } else {
+        // Just mark as completed
+        taskToComplete.isCompleted = true;
+    }
+    
+    setTasks(newTasks);
+    const userTasksKey = `calendarTasks_${user.uid}`;
+    localStorage.setItem(userTasksKey, JSON.stringify(newTasks));
+    toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });
+  };
 
 
   const selectedDateString = date ? format(date, 'yyyy-MM-dd') : '';
@@ -128,7 +164,33 @@ export default function CalendarPage() {
                 </CardContent>
             </Card>
         </div>
+        
+        {tasksForSelectedDate.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('upcomingTasksForDay')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                {tasksForSelectedDate.map(task => (
+                  <li key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                       {task.isRecurring && <Repeat className="h-4 w-4 text-muted-foreground" />}
+                       <span className="font-medium">{task.title}</span>
+                    </div>
+                    <Button onClick={() => handleCompleteTask(task.id)} size="sm" variant="outline">
+                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                      {t('completeTask')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </main>
   );
 }
+
+    

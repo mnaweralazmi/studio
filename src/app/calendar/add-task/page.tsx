@@ -17,13 +17,15 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, CalendarIcon } from 'lucide-react';
+import { PlusCircle, CalendarIcon, Repeat } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Task } from '../page';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -41,6 +43,7 @@ const taskFormSchema = z.object({
   fruit: z.string().optional(),
   description: z.string().optional(),
   dueDate: z.date({ required_error: "تاريخ الاستحقاق مطلوب.", }),
+  isRecurring: z.boolean().default(false),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -62,7 +65,8 @@ export default function AddTaskPage() {
       description: "",
       dueDate: new Date(),
       vegetable: "",
-      fruit: ""
+      fruit: "",
+      isRecurring: false,
     },
   });
 
@@ -135,6 +139,7 @@ export default function AddTaskPage() {
             description: data.description,
             dueDate: data.dueDate.toISOString(),
             isCompleted: false,
+            isRecurring: data.isRecurring,
         };
 
         tasks.push(newTask);
@@ -299,6 +304,29 @@ export default function AddTaskPage() {
                             </FormItem>
                         )}
                     />
+                     <FormField
+                        control={form.control}
+                        name="isRecurring"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base flex items-center gap-2">
+                                <Repeat />
+                                {t('rememberTask')}
+                                </FormLabel>
+                                <p className="text-sm text-muted-foreground">
+                                {t('rememberTaskDesc')}
+                                </p>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            </FormItem>
+                        )}
+                        />
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -316,3 +344,5 @@ export default function AddTaskPage() {
     </main>
   );
 }
+
+    

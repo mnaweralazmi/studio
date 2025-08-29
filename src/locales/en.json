@@ -88,7 +88,7 @@
     "videoDuration15": "15 minutes",
     "videoDuration20": "20 minutes",
     "videoDuration18": "18 minutes",
-    "tasksForDay": "Tasks for:",
+    "tasksForDay": "Tasks for Selected Day",
     "pleaseSelectDay": "Please select a day",
     "tasksForDayDesc": "View and manage tasks scheduled for this day.",
     "addTask": "Add Task",
@@ -389,5 +389,9 @@
     "addNewCategory": "Add new category...",
     "newCategoryName": "New Category Name",
     "newCategoryNamePlaceholder": "Enter category name here",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "rememberTask": "Remember Task",
+    "rememberTaskDesc": "When completed, the task will be recreated for 7 days later."
 }
+
+    
