@@ -14,6 +14,7 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export interface Task {
   id: string;
@@ -206,60 +207,75 @@ export default function CalendarPage() {
             </Card>
            </div>
 
-           <div className="lg:col-span-2 space-y-8">
-             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary" /> {t('tasksForDay')} ({date ? format(date, 'd MMM', { locale: language === 'ar' ? arSA : enUS }) : ''})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                {tasksForSelectedDate.length > 0 ? (
-                    <ul className="space-y-4">
-                        {tasksForSelectedDate.map(task => (
-                            <TaskItem key={task.id} task={task} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-center text-muted-foreground py-4">{t('noUpcomingTasksForDay')}</p>
-                )}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Forward className="h-5 w-5 text-primary" /> {t('allUpcomingTasks')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                {allUpcomingTasks.length > 0 ? (
-                    <ul className="space-y-4">
-                        {allUpcomingTasks.slice(0,5).map(task => (
-                           <TaskItem key={task.id} task={task} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                        ))}
-                    </ul>
-                ) : (
-                     <p className="text-center text-muted-foreground py-4">{t('noUpcomingTasks')}</p>
-                )}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" /> {t('completedTasksLog')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                {allCompletedTasks.length > 0 ? (
-                    <ul className="space-y-4">
-                        {allCompletedTasks.slice(0,5).map(task => (
-                           <TaskItem key={task.id} task={task} language={language} t={t} />
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-center text-muted-foreground py-4">{t('noCompletedTasks')}</p>
-                )}
-                </CardContent>
-            </Card>
+           <div className="lg:col-span-2">
+                <Tabs defaultValue="today" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="today">
+                           <CalendarDays className="mr-2 h-4 w-4" /> 
+                           {t('tasksForDay')}
+                        </TabsTrigger>
+                        <TabsTrigger value="upcoming">
+                            <Forward className="mr-2 h-4 w-4" />
+                            {t('allUpcomingTasks')}
+                        </TabsTrigger>
+                        <TabsTrigger value="completed">
+                           <CheckCircle className="mr-2 h-4 w-4" /> 
+                           {t('completedTasksLog')}
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="today" className="mt-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('tasksForDay')} ({date ? format(date, 'd MMM', { locale: language === 'ar' ? arSA : enUS }) : ''})</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                            {tasksForSelectedDate.length > 0 ? (
+                                <ul className="space-y-4">
+                                    {tasksForSelectedDate.map(task => (
+                                        <TaskItem key={task.id} task={task} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-center text-muted-foreground py-4">{t('noUpcomingTasksForDay')}</p>
+                            )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="upcoming" className="mt-4">
+                         <Card>
+                            <CardContent className="pt-6">
+                            {allUpcomingTasks.length > 0 ? (
+                                <ul className="space-y-4">
+                                    {allUpcomingTasks.slice(0,10).map(task => (
+                                    <TaskItem key={task.id} task={task} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-center text-muted-foreground py-4">{t('noUpcomingTasks')}</p>
+                            )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="completed" className="mt-4">
+                         <Card>
+                             <CardContent className="pt-6">
+                                {allCompletedTasks.length > 0 ? (
+                                    <ul className="space-y-4">
+                                        {allCompletedTasks.slice(0,10).map(task => (
+                                        <TaskItem key={task.id} task={task} language={language} t={t} />
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-center text-muted-foreground py-4">{t('noCompletedTasks')}</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
            </div>
         </div>
       </div>
     </main>
   );
 }
+
