@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npx next dev",
+    "dev": "npm run clean && npx next dev",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
@@ -13,7 +13,8 @@
     "check": "npm run lint && npm run typecheck",
     "fix": "next lint --fix",
     "format": "npx prettier --write .",
-    "postinstall": "patch-package || true"
+    "postinstall": "patch-package || true",
+    "clean": "rm -rf .next"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
