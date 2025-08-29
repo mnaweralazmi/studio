@@ -388,5 +388,6 @@
     "financialManagementTitle": "الادارة المالية للمزرعة",
     "addNewCategory": "إضافة فئة جديدة...",
     "newCategoryName": "اسم الفئة الجديدة",
-    "newCategoryNamePlaceholder": "أدخل اسم الفئة هنا"
+    "newCategoryNamePlaceholder": "أدخل اسم الفئة هنا",
+    "saving": "جاري الحفظ..."
 }

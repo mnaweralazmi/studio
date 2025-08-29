@@ -388,5 +388,6 @@
     "financialManagementTitle": "Farm Financial Management",
     "addNewCategory": "Add new category...",
     "newCategoryName": "New Category Name",
-    "newCategoryNamePlaceholder": "Enter category name here"
+    "newCategoryNamePlaceholder": "Enter category name here",
+    "saving": "Saving..."
 }

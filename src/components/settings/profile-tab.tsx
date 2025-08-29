@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { User, Save, Upload, Image as ImageIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Label } from "@/components/ui/label";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
@@ -23,11 +22,12 @@ import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage"
 const profileFormSchema = z.object({
     name: z.string().min(3, "يجب أن يتكون الاسم من 3 أحرف على الأقل."),
     email: z.string().email("البريد الإلكتروني غير صالح."),
-    currentPassword: z.string().optional(),
-    newPassword: z.string().min(6, "يجب أن تكون كلمة المرور 6 أحرف على الأقل.").optional().or(z.literal('')),
-    confirmPassword: z.string().optional(),
     avatarUrl: z.string().optional(),
+    currentPassword: z.string().optional(),
+    newPassword: z.string().optional(),
+    confirmPassword: z.string().optional(),
 }).refine(data => {
+    // If newPassword has a value, then confirmPassword must match it.
     if (data.newPassword) {
         return data.newPassword === data.confirmPassword;
     }
@@ -36,8 +36,9 @@ const profileFormSchema = z.object({
     message: "كلمتا المرور غير متطابقتين.",
     path: ["confirmPassword"],
 }).refine(data => {
-    if (data.newPassword) {
-        return !!data.currentPassword;
+    // If newPassword has a value, then currentPassword must also have a value.
+    if (data.newPassword && !data.currentPassword) {
+        return false;
     }
     return true;
 }, {
@@ -53,8 +54,7 @@ export function ProfileTab() {
     const { user, refreshUser } = useAuth();
     const { language, t } = useLanguage();
     const [isSaving, setIsSaving] = React.useState(false);
-    const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
-
+    
     const profileForm = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
         defaultValues: { name: "", email: "", avatarUrl: "", currentPassword: "", newPassword: "", confirmPassword: "" },
@@ -66,8 +66,10 @@ export function ProfileTab() {
                 name: user.displayName || '',
                 email: user.email || '',
                 avatarUrl: user.photoURL || '',
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: "",
             });
-            setAvatarPreview(user.photoURL);
         }
     }, [user, profileForm]);
     
@@ -92,13 +94,15 @@ export function ProfileTab() {
             // Update user data in Firestore
             const userDocRef = doc(db, 'users', user.uid);
             await setDoc(userDocRef, { 
-                name: data.name, 
-                avatarUrl: data.avatarUrl,
+                name: data.name,
+                email: data.email, // email is read-only but good to pass it
+                photoURL: data.avatarUrl,
             }, { merge: true });
             
             await refreshUser(); 
             toast({ title: t('profileUpdated'), description: t('profileUpdatedSuccess') });
-            profileForm.reset({ ...profileForm.getValues(), currentPassword: '', newPassword: '', confirmPassword: '' });
+            profileForm.reset({ ...data, currentPassword: '', newPassword: '', confirmPassword: '' });
+
         } catch (error: any) {
              let description = t('profileUpdateFailed');
              if (error.code === 'auth/wrong-password') {
@@ -117,29 +121,30 @@ export function ProfileTab() {
             const reader = new FileReader();
             reader.onloadend = async () => {
                 const dataUrl = reader.result as string;
-                setAvatarPreview(dataUrl);
+                profileForm.setValue('avatarUrl', dataUrl, { shouldDirty: true }); // Temporarily set to dataURL for preview
                 
-                // Show loading toast
                 const { id } = toast({ title: "جاري رفع الصورة..."});
 
                 const storage = getStorage();
-                const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
+                const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
                 
                 try {
                     await uploadString(storageRef, dataUrl, 'data_url');
                     const downloadUrl = await getDownloadURL(storageRef);
-                    profileForm.setValue('avatarUrl', downloadUrl);
+                    profileForm.setValue('avatarUrl', downloadUrl, { shouldDirty: true });
                     toast({ id, title: "تم رفع الصورة بنجاح!", description: "لا تنس حفظ التغييرات."});
                 } catch(error) {
                     toast({ id, variant: "destructive", title: t('uploadFailed') });
-                    setAvatarPreview(user.photoURL); // Revert preview on failure
+                    profileForm.setValue('avatarUrl', user.photoURL || '', { shouldDirty: false }); // Revert on failure
                 }
             };
             reader.readAsDataURL(file);
         }
     };
 
-    if (!user) return null;
+    if (!user) return <Card><CardContent><Skeleton className="h-96 w-full" /></CardContent></Card>;
+    
+    const avatarPreview = profileForm.watch('avatarUrl');
 
     return (
         <Card>
@@ -164,11 +169,11 @@ export function ProfileTab() {
                                             </AvatarFallback>
                                         </Avatar>
                                         <Button asChild variant="outline">
-                                            <Label className="cursor-pointer">
-                                                <Upload className="h-4 w-4" />
+                                            <label className="cursor-pointer flex items-center">
+                                                <Upload className="h-4 w-4 mr-2" />
                                                 <span>{t('changePicture')}</span>
                                                 <Input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
-                                            </Label>
+                                            </label>
                                         </Button>
                                     </div>
                                     <FormMessage />
@@ -184,16 +189,16 @@ export function ProfileTab() {
                         <div>
                             <h3 className="text-lg font-medium mb-4">{t('changePassword')}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <FormField control={profileForm.control} name="currentPassword" render={({ field }) => ( <FormItem><FormLabel>{t('currentPassword')}</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={profileForm.control} name="newPassword" render={({ field }) => ( <FormItem><FormLabel>{t('newPassword')}</FormLabel><FormControl><Input type="password" placeholder={t('leaveBlank')} {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                <FormField control={profileForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>{t('confirmNewPassword')}</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={profileForm.control} name="currentPassword" render={({ field }) => ( <FormItem><FormLabel>{t('currentPassword')}</FormLabel><FormControl><Input type="password" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={profileForm.control} name="newPassword" render={({ field }) => ( <FormItem><FormLabel>{t('newPassword')}</FormLabel><FormControl><Input type="password" placeholder={t('leaveBlank')} {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={profileForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>{t('confirmNewPassword')}</FormLabel><FormControl><Input type="password" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         </div>
                     </CardContent>
                     <CardFooter className="border-t pt-6 flex justify-end">
-                        <Button type="submit" disabled={isSaving}> 
+                        <Button type="submit" disabled={isSaving || !profileForm.formState.isDirty}> 
                             <Save className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} /> 
-                            {isSaving ? 'جاري الحفظ...' : t('saveChanges')} 
+                            {isSaving ? t('saving') : t('saveChanges')} 
                         </Button>
                     </CardFooter>
                 </form>
