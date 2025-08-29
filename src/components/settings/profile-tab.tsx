@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 export function ProfileTab() {
     const { toast } = useToast();
     const { user, refreshUser } = useAuth();
-    const { t } = useLanguage();
+    const { language, t } = useLanguage();
     const [isSaving, setIsSaving] = React.useState(false);
     
     // State for form fields
