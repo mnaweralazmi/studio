@@ -183,7 +183,7 @@ export default function CalendarPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <Card className="self-stretch">
+            <Card>
                 <Calendar
                     mode="single"
                     selected={date}
@@ -253,3 +253,5 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    
