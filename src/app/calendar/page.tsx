@@ -141,9 +141,9 @@ export default function CalendarPage() {
                             {t('upcomingTasksForDay')}
                         </h3>
                         {upcomingTasksForSelectedDate.length > 0 ? (
-                            <ul className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {upcomingTasksForSelectedDate.map(task => (
-                                <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-background transition-all">
+                                <div key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-background transition-all">
                                 <div className="flex-1 space-y-1">
                                     <p className="font-medium">{task.title}</p>
                                     {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
@@ -156,9 +156,9 @@ export default function CalendarPage() {
                                         <Trash2 className="h-5 w-5" />
                                     </Button>
                                 </div>
-                                </li>
+                                </div>
                             ))}
-                            </ul>
+                            </div>
                         ) : (
                             <div className="text-center text-muted-foreground py-4">
                                 <p>{t('noUpcomingTasksForDay')}</p>
@@ -179,9 +179,9 @@ export default function CalendarPage() {
                   </CardHeader>
                   <CardContent>
                       {allUpcomingTasks.length > 0 ? (
-                          <ul className="space-y-3 max-h-96 overflow-y-auto">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                           {allUpcomingTasks.map(task => (
-                              <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-background transition-all">
+                              <div key={task.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-background transition-all">
                                   <div className="flex-1 space-y-1">
                                       <div className="flex justify-between items-center">
                                           <p className="font-medium">{task.title}</p>
@@ -189,7 +189,7 @@ export default function CalendarPage() {
                                       </div>
                                       {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 self-end mt-2">
                                       <Button variant='default' size="icon" onClick={() => toggleTaskCompletion(task.id)} title={t('completeTask')}>
                                           <CheckCircle className="h-5 w-5" />
                                       </Button>
@@ -197,9 +197,9 @@ export default function CalendarPage() {
                                           <Trash2 className="h-5 w-5" />
                                       </Button>
                                   </div>
-                              </li>
+                              </div>
                           ))}
-                          </ul>
+                          </div>
                       ) : (
                           <div className="text-center text-muted-foreground py-4">
                               <p>{t('noUpcomingTasks')}</p>
@@ -217,9 +217,9 @@ export default function CalendarPage() {
                 </CardHeader>
                 <CardContent>
                     {allCompletedTasks.length > 0 ? (
-                      <ul className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                         {allCompletedTasks.map(task => (
-                          <li key={task.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50 transition-all">
+                          <div key={task.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-muted/50 transition-all">
                             <div className="flex-1 space-y-1">
                                 <div className="flex justify-between items-center">
                                   <p className="font-medium line-through text-muted-foreground">{task.title}</p>
@@ -227,7 +227,7 @@ export default function CalendarPage() {
                                 </div>
                                 {task.description && <p className="text-sm line-through text-muted-foreground/80 mt-1">{task.description}</p>}
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 self-end mt-2">
                                 <Button variant='secondary' size="icon" onClick={() => toggleTaskCompletion(task.id)} title={t('uncompleteTask')}>
                                     <CheckCircle className="h-5 w-5" />
                                 </Button>
@@ -235,9 +235,9 @@ export default function CalendarPage() {
                                     <Trash2 className="h-5 w-5" />
                                 </Button>
                             </div>
-                          </li>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     ) : (
                       <div className="text-center text-muted-foreground py-4">
                         <p>{t('noCompletedTasks')}</p>
