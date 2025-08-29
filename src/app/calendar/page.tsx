@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, CalendarDays, CheckCircle, Forward, Repeat } from 'lucide-react';
+import { PlusCircle, CalendarDays, CheckCircle, Forward, Repeat, Bell } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
@@ -20,6 +20,7 @@ export interface Task {
   dueDate: string; // ISO string
   isCompleted: boolean;
   isRecurring: boolean;
+  reminderDays?: number;
 }
 
 export default function CalendarPage() {
@@ -115,8 +116,8 @@ export default function CalendarPage() {
             </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+            <Card className="lg:col-span-1">
                 <Calendar
                     mode="single"
                     selected={date}
@@ -131,7 +132,7 @@ export default function CalendarPage() {
                 />
             </Card>
             
-            <Card>
+            <Card className="lg:col-span-1">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{t('tasksForDay')}</CardTitle>
                     <CalendarDays className="h-4 w-4 text-muted-foreground" />
@@ -143,7 +144,7 @@ export default function CalendarPage() {
                     </p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="lg:col-span-1">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{t('allUpcomingTasks')}</CardTitle>
                     <Forward className="h-4 w-4 text-muted-foreground" />
@@ -153,7 +154,7 @@ export default function CalendarPage() {
                     <p className="text-xs text-muted-foreground">{t('allUpcomingTasksDesc')}</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="lg:col-span-1">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{t('completedTasksLog')}</CardTitle>
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -175,8 +176,12 @@ export default function CalendarPage() {
                 {tasksForSelectedDate.map(task => (
                   <li key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
-                       {task.isRecurring && <Repeat className="h-4 w-4 text-muted-foreground" />}
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                            {task.isRecurring && <Repeat className="h-4 w-4" />}
+                            {task.reminderDays && task.reminderDays > 0 && <Bell className="h-4 w-4" />}
+                        </div>
                        <span className="font-medium">{task.title}</span>
+                       {task.reminderDays && task.reminderDays > 0 && <span className="text-xs text-muted-foreground">({t('remindMeBeforeXDays', {days: task.reminderDays})})</span>}
                     </div>
                     <Button onClick={() => handleCompleteTask(task.id)} size="sm" variant="outline">
                       <CheckCircle className="h-4 w-4 mr-2 text-green-500" />

@@ -391,7 +391,14 @@
     "newCategoryNamePlaceholder": "أدخل اسم الفئة هنا",
     "saving": "جاري الحفظ...",
     "rememberTask": "تذكير بالمهمة",
-    "rememberTaskDesc": "عند الإنجاز، سيتم إنشاء المهمة مرة أخرى بعد 7 أيام."
+    "rememberTaskDesc": "عند الإنجاز، سيتم إنشاء المهمة مرة أخرى بعد 7 أيام.",
+    "remindMeBefore": "تذكير قبل المهمة",
+    "noReminder": "بدون تذكير",
+    "oneDayBefore": "قبل يوم واحد",
+    "twoDaysBefore": "قبل يومين",
+    "threeDaysBefore": "قبل 3 أيام",
+    "oneWeekBefore": "قبل أسبوع",
+    "remindMeBeforeXDays": "تذكير قبل {days} أيام"
 }
 
     

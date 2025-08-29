@@ -391,7 +391,14 @@
     "newCategoryNamePlaceholder": "Enter category name here",
     "saving": "Saving...",
     "rememberTask": "Remember Task",
-    "rememberTaskDesc": "When completed, the task will be recreated for 7 days later."
+    "rememberTaskDesc": "When completed, the task will be recreated for 7 days later.",
+    "remindMeBefore": "Remind me before",
+    "noReminder": "No reminder",
+    "oneDayBefore": "1 day before",
+    "twoDaysBefore": "2 days before",
+    "threeDaysBefore": "3 days before",
+    "oneWeekBefore": "1 week before",
+    "remindMeBeforeXDays": "Reminder {days} days before"
 }
 
     

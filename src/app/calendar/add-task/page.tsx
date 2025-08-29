@@ -17,7 +17,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, CalendarIcon, Repeat } from 'lucide-react';
+import { PlusCircle, CalendarIcon, Repeat, Bell } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Task } from '../page';
 import { useLanguage } from '@/context/language-context';
@@ -44,6 +44,7 @@ const taskFormSchema = z.object({
   description: z.string().optional(),
   dueDate: z.date({ required_error: "تاريخ الاستحقاق مطلوب.", }),
   isRecurring: z.boolean().default(false),
+  reminderDays: z.coerce.number().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -67,6 +68,7 @@ export default function AddTaskPage() {
       vegetable: "",
       fruit: "",
       isRecurring: false,
+      reminderDays: 0,
     },
   });
 
@@ -140,6 +142,7 @@ export default function AddTaskPage() {
             dueDate: data.dueDate.toISOString(),
             isCompleted: false,
             isRecurring: data.isRecurring,
+            reminderDays: data.reminderDays,
         };
 
         tasks.push(newTask);
@@ -264,46 +267,72 @@ export default function AddTaskPage() {
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={form.control}
-                        name="dueDate"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>{t('dueDate')}</FormLabel>
-                                <Popover>
-                                <PopoverTrigger asChild>
-                                    <FormControl>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !field.value && "text-muted-foreground",
-                                        language === 'ar' ? 'pr-3' : 'pl-3'
-                                        )}
-                                    >
-                                        <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                                        {field.value ? (
-                                        format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS })
-                                        ) : (
-                                        <span>{t('pickDate')}</span>
-                                        )}
-                                    </Button>
-                                    </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        initialFocus
-                                        locale={language === 'ar' ? arSA : enUS}
-                                    />
-                                </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="dueDate"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>{t('dueDate')}</FormLabel>
+                                    <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !field.value && "text-muted-foreground",
+                                            language === 'ar' ? 'pr-3' : 'pl-3'
+                                            )}
+                                        >
+                                            <CalendarIcon className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
+                                            {field.value ? (
+                                            format(field.value, "PPP", { locale: language === 'ar' ? arSA : enUS })
+                                            ) : (
+                                            <span>{t('pickDate')}</span>
+                                            )}
+                                        </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            initialFocus
+                                            locale={language === 'ar' ? arSA : enUS}
+                                        />
+                                    </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="reminderDays"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t('remindMeBefore')}</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={t('noReminder')} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="0">{t('noReminder')}</SelectItem>
+                                            <SelectItem value="1">{t('oneDayBefore')}</SelectItem>
+                                            <SelectItem value="2">{t('twoDaysBefore')}</SelectItem>
+                                            <SelectItem value="3">{t('threeDaysBefore')}</SelectItem>
+                                            <SelectItem value="7">{t('oneWeekBefore')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                      <FormField
                         control={form.control}
                         name="isRecurring"
