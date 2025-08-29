@@ -166,7 +166,7 @@ export default function CalendarPage() {
             </Card>
         </div>
         
-        {tasksForSelectedDate.length > 0 && (
+        {tasksForSelectedDate.length > 0 ? (
           <Card>
             <CardHeader>
               <CardTitle>{t('upcomingTasksForDay')}</CardTitle>
@@ -177,22 +177,21 @@ export default function CalendarPage() {
                   <li key={task.id} className="flex items-start justify-between p-4 rounded-lg bg-muted/50">
                     <div className="flex-1">
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                                {task.isRecurring && <Repeat className="h-4 w-4" title={t('rememberTask')} />}
-                                {task.reminderDays && task.reminderDays > 0 && <Bell className="h-4 w-4" title={t('remindMeBefore')} />}
-                            </div>
                            <span className="font-medium">{task.title}</span>
                         </div>
                         {task.description && (
-                            <p className="text-sm text-muted-foreground mt-1 pl-9">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 {task.description}
                             </p>
                         )}
-                        {task.reminderDays && task.reminderDays > 0 && (
-                            <p className="text-xs text-muted-foreground mt-2 pl-9">
-                                ({t('remindMeBeforeXDays', {days: task.reminderDays})})
-                            </p>
-                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            {task.isRecurring && 
+                                <div className='flex items-center gap-1'><Repeat className="h-3 w-3" /><span>{t('rememberTask')}</span></div>
+                            }
+                            {task.reminderDays && task.reminderDays > 0 && 
+                                <div className='flex items-center gap-1'><Bell className="h-3 w-3" /><span>{t('remindMeBeforeXDays', {days: task.reminderDays})}</span></div>
+                            }
+                        </div>
                     </div>
                     <Button onClick={() => handleCompleteTask(task.id)} size="sm" variant="outline" className="ml-4 shrink-0">
                       <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
@@ -203,10 +202,16 @@ export default function CalendarPage() {
               </ul>
             </CardContent>
           </Card>
+        ) : (
+            date && (
+                <Card>
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                        {t('noUpcomingTasksForDay')}
+                    </CardContent>
+                </Card>
+            )
         )}
       </div>
     </main>
   );
 }
-
-    
