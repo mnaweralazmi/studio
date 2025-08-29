@@ -39,8 +39,9 @@ export function DisplayTab() {
 
     const handleModeChange = (newMode: Mode) => {
         setMode(newMode);
-        document.documentElement.classList.remove('light', 'dark');
-        document.documentElement.classList.add(newMode);
+        const html = document.documentElement;
+        html.classList.remove('light', 'dark');
+        html.classList.add(newMode);
         localStorage.setItem('mode', newMode);
         toast({ title: newMode === 'dark' ? t('darkModeActivated') : t('lightModeActivated') });
     };

@@ -30,13 +30,13 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     const theme = localStorage.getItem("theme") || "theme-green";
     const mode = localStorage.getItem("mode") || "dark";
     
-    const body = document.body;
-    body.classList.remove("theme-green", "theme-blue", "theme-orange");
-    body.classList.add(theme);
+    document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
+    document.body.classList.add(theme);
 
     const html = document.documentElement;
     html.classList.remove("light", "dark");
     html.classList.add(mode);
+    html.style.fontFamily = cairo.style.fontFamily;
 
   }, []);
 
@@ -83,8 +83,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // The dir and lang attributes are now managed by the LanguageProvider
-    <html lang="ar" dir="rtl" className={cairo.className}>
+    <html lang="ar" dir="rtl">
       <head />
       <body className="antialiased">
         <AuthProvider>
