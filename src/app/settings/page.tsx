@@ -74,7 +74,7 @@ type BadgeId = keyof typeof badgeList;
 export default function SettingsPage() {
     const { toast } = useToast();
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading, refreshUser } = useAuth();
     const [theme, setTheme] = React.useState<Theme>('theme-green');
     const [mode, setMode] = React.useState<Mode>('dark');
     const { language, setLanguage, t } = useLanguage();
@@ -87,20 +87,12 @@ export default function SettingsPage() {
     
     React.useEffect(() => {
         if (user) {
-            const fetchUserData = async () => {
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
-                if (userDocSnap.exists()) {
-                    const userData = userDocSnap.data();
-                    profileForm.reset({
-                        name: user.displayName || userData.name || '',
-                        email: user.email || '',
-                        bio: userData.bio || '',
-                        avatarUrl: user.photoURL || userData.avatarUrl || '',
-                    });
-                }
-            };
-            fetchUserData();
+            profileForm.reset({
+                name: user.displayName || user.name || '',
+                email: user.email || '',
+                bio: user.bio || '',
+                avatarUrl: user.photoURL || user.avatarUrl || '',
+            });
         }
 
         const savedTheme = localStorage.getItem('theme') as Theme || 'theme-green';
@@ -126,10 +118,12 @@ export default function SettingsPage() {
         try {
             // Update password if provided
             if (data.newPassword && data.currentPassword) {
-                const credential = EmailAuthProvider.credential(user.email!, data.currentPassword);
-                await reauthenticateWithCredential(user, credential);
-                await updatePassword(user, data.newPassword);
-                toast({ title: "تم تحديث كلمة المرور بنجاح" });
+                if(user.email) {
+                    const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
+                    await reauthenticateWithCredential(user, credential);
+                    await updatePassword(user, data.newPassword);
+                    toast({ title: "تم تحديث كلمة المرور بنجاح" });
+                }
             }
 
             // Update profile info
@@ -144,6 +138,7 @@ export default function SettingsPage() {
             }, { merge: true });
 
             setFileName(null);
+            refreshUser(); // Refresh user data in context
             toast({ title: t('profileUpdated'), description: t('profileUpdatedSuccess') });
             profileForm.reset({ ...profileForm.getValues(), currentPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error: any) {
@@ -222,7 +217,7 @@ export default function SettingsPage() {
         <Card>
             <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar className="h-20 w-20">
-                    <AvatarImage src={user.photoURL || 'https://placehold.co/100x100.png'} alt={user.displayName || ''} data-ai-hint="user avatar" />
+                    <AvatarImage src={user.photoURL || 'https://placehold.co/100x100.png'} alt={t('profilePicture')} />
                     <AvatarFallback>{user.displayName?.[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -251,7 +246,7 @@ export default function SettingsPage() {
                         <CardContent className="space-y-8">
                             <div className="flex items-center gap-6 flex-wrap">
                                  <Avatar className="h-24 w-24">
-                                    <AvatarImage src={avatarUrl || 'https://placehold.co/100x100.png'} alt={user?.displayName || ''} data-ai-hint="user avatar" />
+                                    <AvatarImage src={avatarUrl || 'https://placehold.co/100x100.png'} alt={t('profilePicture')} />
                                     <AvatarFallback>{user?.displayName?.[0].toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-[200px]">
@@ -439,3 +434,5 @@ export default function SettingsPage() {
     </main>
   );
 }
+
+    
