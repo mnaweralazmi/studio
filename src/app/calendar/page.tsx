@@ -161,18 +161,9 @@ export default function CalendarPage() {
   }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   const tasksForSelectedDate = upcomingTasks.filter(task => format(parseISO(task.dueDate), 'yyyy-MM-dd') === format(selectedDayStart, 'yyyy-MM-dd'));
-  const tasksForTomorrow = upcomingTasks.filter(task => isTomorrow(parseISO(task.dueDate)));
   
-  const endOfThisWeek = endOfWeek(new Date(), { locale: language === 'ar' ? arSA : enUS });
-  const tasksForThisWeek = upcomingTasks.filter(task => {
-      const taskDate = parseISO(task.dueDate);
-      return !isToday(taskDate) && !isTomorrow(taskDate) && taskDate <= endOfThisWeek;
-  });
+  const otherUpcomingTasks = upcomingTasks.filter(task => format(parseISO(task.dueDate), 'yyyy-MM-dd') !== format(selectedDayStart, 'yyyy-MM-dd'));
   
-  const laterTasks = upcomingTasks.filter(task => {
-      const taskDate = parseISO(task.dueDate);
-      return taskDate > endOfThisWeek;
-  });
 
   const allCompletedTasks = tasks
     .filter(task => task.isCompleted)
@@ -198,21 +189,29 @@ export default function CalendarPage() {
             </Button>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <Card className="lg:col-span-1 sticky top-8">
-                <CardContent className="p-0">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-1">
+                <Card>
                     <Calendar
                         mode="single"
                         selected={date}
                         onSelect={setDate}
-                        className="w-full"
+                        className="p-0"
+                        classNames={{
+                            root: "w-full",
+                            months: "w-full",
+                            month: "w-full",
+                            table: "w-full",
+                            head_row: "w-full",
+                            row: "w-full",
+                        }}
                         locale={language === 'ar' ? arSA : enUS}
                     />
-                </CardContent>
-            </Card>
-
-            <div className="lg:col-span-2 space-y-6">
-                <section>
+                </Card>
+            </div>
+            
+            <div className="md:col-span-2 space-y-6">
+                 <section>
                     <h2 className="text-lg font-semibold mb-2">{t('tasksForDay')} ({date ? format(date, 'd MMM', { locale: language === 'ar' ? arSA : enUS }) : ''})</h2>
                      {tasksForSelectedDate.length > 0 ? (
                         <TaskList tasks={tasksForSelectedDate} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
@@ -220,34 +219,18 @@ export default function CalendarPage() {
                         <p className="text-center text-muted-foreground py-4 border-2 border-dashed rounded-lg">{t('noUpcomingTasksForDay')}</p>
                     )}
                 </section>
-                
-                <Separator />
 
+                <Separator />
+                
                 <section>
                     <h2 className="text-lg font-semibold mb-4">{t('allUpcomingTasks')}</h2>
-                    <div className="space-y-4">
-                        {tasksForTomorrow.length > 0 && (
-                             <div>
-                                <h3 className="text-md font-medium text-muted-foreground mb-2">{t('tomorrow')}</h3>
-                                <TaskList tasks={tasksForTomorrow} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                            </div>
-                        )}
-                        {tasksForThisWeek.length > 0 && (
-                            <div>
-                                <h3 className="text-md font-medium text-muted-foreground mb-2">{t('thisWeek')}</h3>
-                                <TaskList tasks={tasksForThisWeek} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                            </div>
-                        )}
-                        {laterTasks.length > 0 && (
-                            <div>
-                                <h3 className="text-md font-medium text-muted-foreground mb-2">{t('later')}</h3>
-                                <TaskList tasks={laterTasks} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                            </div>
-                        )}
-                         {tasksForTomorrow.length === 0 && tasksForThisWeek.length === 0 && laterTasks.length === 0 && tasksForSelectedDate.length === 0 && (
-                             <p className="text-center text-muted-foreground py-4 border-2 border-dashed rounded-lg">{t('noUpcomingTasks')}</p>
-                         )}
-                    </div>
+                    {otherUpcomingTasks.length > 0 ? (
+                         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                             <TaskList tasks={otherUpcomingTasks} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
+                         </div>
+                    ) : (
+                         <p className="text-center text-muted-foreground py-4 border-2 border-dashed rounded-lg">{t('noUpcomingTasks')}</p>
+                    )}
                 </section>
                 
                 <Separator />
@@ -275,3 +258,4 @@ export default function CalendarPage() {
     </main>
   );
 }
+
