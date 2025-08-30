@@ -102,7 +102,6 @@ const TaskList = ({ tasks, onComplete, onDelete, language, t }: { tasks: Task[],
     </div>
 );
 
-
 const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[], onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
     <Card className="flex flex-col h-full">
         <CardHeader>
@@ -119,8 +118,6 @@ const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[],
         </CardContent>
     </Card>
 );
-
-
 
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
