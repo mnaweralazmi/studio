@@ -40,10 +40,9 @@ export type DebtItem = {
 
 interface DebtsContentProps {
     departmentId: string;
-    userId?: string;
 }
 
-export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
+export function DebtsContent({ departmentId }: DebtsContentProps) {
     const [debts, setDebts] = React.useState<DebtItem[]>([]);
     const { toast } = useToast();
     const { user: authUser } = useAuth();
@@ -52,8 +51,7 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
     const formRef = React.useRef<HTMLFormElement>(null);
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
-    const targetUserId = userId || authUser?.uid;
-    const isReadOnly = !!userId;
+    const targetUserId = authUser?.uid;
 
     React.useEffect(() => {
         const fetchDebts = async () => {
@@ -101,7 +99,7 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!targetUserId || isReadOnly) {
+        if (!targetUserId) {
             toast({ variant: "destructive", title: t('error'), description: "You cannot add debts for this user." });
             return;
         }
@@ -153,7 +151,7 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
     }
 
     async function deleteDebt(id: string) {
-        if (!targetUserId || isReadOnly) return;
+        if (!targetUserId) return;
         try {
             const debtDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'debts', id);
             await deleteDoc(debtDocRef);
@@ -166,7 +164,7 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
     }
 
     async function handlePayment(debtId: string, paymentAmount: number) {
-        if (!targetUserId || isReadOnly) return;
+        if (!targetUserId) return;
         
         const debt = debts.find(d => d.id === debtId);
         if (!debt) return;
@@ -226,14 +224,13 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
 
     return (
         <div className="space-y-6">
-            {!isReadOnly &&
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Landmark className="h-5 w-5 sm:h-6 sm:w-6" />{t('debtManagement')}</CardTitle>
                     <CardDescription>{t('debtManagementDesc')}</CardDescription>
                 </CardHeader>
             </Card>
-            }
+            
              <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{t('totalUnpaidDebts')}</CardTitle>
@@ -243,7 +240,6 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
                     <div className="text-2xl font-bold">{totalUnpaidDebts.toFixed(2)} {t('dinar')}</div>
                 </CardContent>
             </Card>
-            {!isReadOnly &&
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('addNewDebt')}</CardTitle></CardHeader>
                 <CardContent>
@@ -274,7 +270,7 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
                     </form>
                 </CardContent>
             </Card>
-            }
+            
             {isDataLoading ? (
                  <Card>
                     <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
@@ -295,7 +291,7 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
                                 <TableHead>{t('remainingAmount')}</TableHead>
                                 <TableHead>{t('tableDueDate')}</TableHead>
                                 <TableHead>{t('tableStatus')}</TableHead>
-                                {!isReadOnly && <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>}
+                                <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
                             </TableRow></TableHeader>
                             <TableBody>
                                 {debts.map((item) => (
@@ -310,12 +306,12 @@ export function DebtsContent({ departmentId, userId }: DebtsContentProps) {
                                                 {t(`status${item.status.charAt(0).toUpperCase() + item.status.slice(1)}` as any)}
                                             </Badge>
                                         </TableCell>
-                                        {!isReadOnly && <TableCell>
+                                        <TableCell>
                                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
                                                 <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                             </div>
-                                        </TableCell>}
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

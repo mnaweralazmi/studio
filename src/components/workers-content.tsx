@@ -23,10 +23,9 @@ const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February'
 
 interface WorkersContentProps {
     departmentId: string;
-    userId?: string;
 }
 
-export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
+export function WorkersContent({ departmentId }: WorkersContentProps) {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
@@ -35,8 +34,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
     const months = language === 'ar' ? monthsAr : monthsEn;
     const [editingWorker, setEditingWorker] = React.useState<Worker | null>(null);
 
-    const targetUserId = userId || authUser?.uid;
-    const isReadOnly = !!userId;
+    const targetUserId = authUser?.uid;
 
     React.useEffect(() => {
         const fetchWorkers = async () => {
@@ -79,7 +77,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
-        if (!targetUserId || isReadOnly) {
+        if (!targetUserId) {
              toast({ variant: "destructive", title: t('error'), description: "You cannot manage workers for this user." });
             return;
         }
@@ -133,7 +131,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
     }
 
     async function deleteWorker(workerId: string) {
-        if (!targetUserId || isReadOnly) return;
+        if (!targetUserId) return;
         try {
             await deleteDoc(doc(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId));
             setWorkers(prev => prev.filter(w => w.id !== workerId));
@@ -145,7 +143,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
     }
 
     async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
-        if (!targetUserId || isReadOnly) return;
+        if (!targetUserId) return;
         const worker = workers.find(w => w.id === workerId);
         if (!worker) return;
 
@@ -189,7 +187,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
     }
 
     async function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
-        if (!targetUserId || isReadOnly) return;
+        if (!targetUserId) return;
         
         try {
             const newTransactionData: Omit<Transaction, 'id'> = {
@@ -252,7 +250,6 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
 
     return (
     <div className="space-y-6">
-        {!isReadOnly &&
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -264,7 +261,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
                 </CardDescription>
             </CardHeader>
         </Card>
-        }
+        
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -311,12 +308,12 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl sm:text-2xl">{t('workersList')}</CardTitle>
-                {!isReadOnly && <AddWorkerDialog onSave={handleSaveWorker}>
+                <AddWorkerDialog onSave={handleSaveWorker}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('addNewWorker')}
                     </Button>
-                </AddWorkerDialog>}
+                </AddWorkerDialog>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -327,7 +324,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
                       <TableHead>{t('baseSalary')}</TableHead>
                        <TableHead>{t('currentMonthSalaryStatus')}</TableHead>
                        <TableHead>{t('totalBalance')}</TableHead>
-                      {!isReadOnly && <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>}
+                      <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -346,7 +343,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
                         <TableCell className={`font-mono ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {balance.toFixed(2)} {t('dinar')}
                         </TableCell>
-                        {!isReadOnly && <TableCell>
+                        <TableCell>
                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                 <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
                                 <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
@@ -355,7 +352,7 @@ export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
                                 </AddWorkerDialog>
                                 <DeleteWorkerAlert workerName={worker.name} onConfirm={() => deleteWorker(worker.id)} />
                             </div>
-                        </TableCell>}
+                        </TableCell>
                       </TableRow>
                     )}) : (
                         <TableRow>

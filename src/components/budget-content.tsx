@@ -44,10 +44,9 @@ const fishListEn = ["Spgre", "Hamour", "Sheim"];
 
 interface BudgetContentProps {
     departmentId: 'agriculture' | 'livestock' | 'poultry' | 'fish';
-    userId?: string;
 }
 
-export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
+export function BudgetContent({ departmentId }: BudgetContentProps) {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
   const { user: authUser, loading: isAuthLoading } = useAuth();
@@ -55,8 +54,7 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
   const { language, t } = useLanguage();
   const formRef = React.useRef<HTMLFormElement>(null);
   
-  const targetUserId = userId || authUser?.uid;
-  const isReadOnly = !!userId;
+  const targetUserId = authUser?.uid;
 
   // Dynamic lists based on language
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
@@ -98,7 +96,7 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!targetUserId || isReadOnly) {
+    if (!targetUserId) {
         toast({ variant: "destructive", title: t('error'), description: "You cannot add sales for this user."});
         return;
     }
@@ -140,16 +138,16 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
             let newBadges = [...currentBadges];
             let badgeAwarded = false;
 
-            if (!isReadOnly && !currentBadges.includes('trader')) {
+            if (!currentBadges.includes('trader')) {
                 newPoints += 25;
                 newBadges.push('trader');
                 badgeAwarded = true;
-            } else if (!isReadOnly) {
+            } else {
                 newPoints += 5;
             }
             
             const newLevel = Math.floor(newPoints / 100) + 1;
-            if(!isReadOnly) transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+            transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
 
             const docRef = doc(salesCollectionRef);
             transaction.set(docRef, submissionData);
@@ -161,7 +159,7 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
             };
             setSalesItems(prevItems => [newItem, ...prevItems]);
             
-            if(badgeAwarded && !isReadOnly) {
+            if(badgeAwarded) {
                 toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });
             }
         });
@@ -179,7 +177,7 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
   }
   
   async function deleteItem(id: string) {
-    if (!targetUserId || isReadOnly) return;
+    if (!targetUserId) return;
     try {
         const saleDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'sales', id);
         await deleteDoc(saleDocRef);
@@ -309,7 +307,7 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
                 {departmentId === 'agriculture' && <TableHead>{t('tableCartonWeightKg')}</TableHead>}
                 <TableHead>{t('unitPrice')}</TableHead>
                 <TableHead>{t('tableTotal')}</TableHead>
-                {!isReadOnly && <TableHead className="text-right">{t('tableActions')}</TableHead>}
+                <TableHead className="text-right">{t('tableActions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -320,7 +318,7 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
                      {departmentId === 'agriculture' && <TableCell>{item.weightPerUnit || '-'}</TableCell>}
                      <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
                      <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
-                     {!isReadOnly && <TableCell className="text-right">{renderActions(item)}</TableCell>}
+                     <TableCell className="text-right">{renderActions(item)}</TableCell>
                  </TableRow>
              ))}
           </TableBody>
@@ -334,7 +332,6 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
 
   return (
     <div className="space-y-6">
-        {!isReadOnly &&
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -357,8 +354,7 @@ export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
               </form>
           </CardContent>
         </Card>
-        }
-
+        
         {isDataLoading ? (
             <Card>
                 <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>

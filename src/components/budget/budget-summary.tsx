@@ -14,11 +14,7 @@ import type { ExpenseItem } from '../expenses-content';
 import type { DebtItem, Payment } from '../debts-content';
 import type { Worker, Transaction } from '../workers/types';
 
-interface BudgetSummaryProps {
-    userId?: string;
-}
-
-export function BudgetSummary({ userId }: BudgetSummaryProps) {
+export function BudgetSummary() {
     const { user: authUser } = useAuth();
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = React.useState(true);
@@ -30,7 +26,7 @@ export function BudgetSummary({ userId }: BudgetSummaryProps) {
         netProfit: 0,
     });
     
-    const targetUserId = userId || authUser?.uid;
+    const targetUserId = authUser?.uid;
 
     React.useEffect(() => {
         const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';

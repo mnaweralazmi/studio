@@ -48,10 +48,9 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
 
 interface ExpensesContentProps {
     departmentId: string;
-    userId?: string;
 }
 
-export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) {
+export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
@@ -61,8 +60,7 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
     const formRef = React.useRef<HTMLFormElement>(null);
     const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
-    const targetUserId = userId || authUser?.uid;
-    const isReadOnly = !!userId;
+    const targetUserId = authUser?.uid;
 
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
@@ -104,7 +102,7 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
     }, [targetUserId, language, departmentId]);
     
     async function updateCategoriesInDb(newCategories: Record<string, string[]>) {
-        if (!targetUserId || !departmentId || isReadOnly) return;
+        if (!targetUserId || !departmentId) return;
         try {
             const categoriesDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
             await setDoc(categoriesDocRef, { categories: newCategories });
@@ -116,7 +114,7 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!targetUserId || isReadOnly) {
+        if (!targetUserId) {
              toast({ variant: "destructive", title: t('error'), description: "You cannot add expenses for this user."});
             return;
         }
@@ -167,7 +165,7 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
     }
 
     async function deleteExpense(id: string) {
-        if (!targetUserId || isReadOnly) return;
+        if (!targetUserId) return;
         try {
             await deleteDoc(doc(db, 'users', targetUserId, 'departments', departmentId, 'expenses', id));
             setExpenses(prev => prev.filter(item => item.id !== id));
@@ -190,7 +188,6 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
 
     return (
         <>
-            {!isReadOnly &&
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -202,7 +199,7 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
                     </CardDescription>
                 </CardHeader>
             </Card>
-            }
+            
 
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
@@ -227,7 +224,6 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
                 </Card>
             </div>
             
-            {!isReadOnly &&
             <Card>
                 <CardHeader>
                     <CardTitle className="text-xl sm:text-2xl">{t('addNewExpense')}</CardTitle>
@@ -274,7 +270,7 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
                     </form>
                 </CardContent>
             </Card>
-            }
+            
             {isDataLoading ? (
                  <Card>
                     <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
@@ -293,18 +289,18 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</h3>
                             <div className="overflow-x-auto border rounded-lg">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead>{!isReadOnly && <TableHead className="text-right">{t('tableAction')}</TableHead>}</TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {fixedExpenses.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>{item.category}</TableCell>
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                                {!isReadOnly && <TableCell className="text-right">
+                                                <TableCell className="text-right">
                                                      <div className="flex gap-2 justify-end">
                                                         <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
-                                                </TableCell>}
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -318,7 +314,7 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</h3>
                              <div className="overflow-x-auto border rounded-lg">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead>{!isReadOnly && <TableHead className="text-right">{t('tableAction')}</TableHead>}</TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {variableExpenses.map((item) => (
                                             <TableRow key={item.id}>
@@ -326,11 +322,11 @@ export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) 
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell>{new Date(item.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                                {!isReadOnly && <TableCell className="text-right">
+                                                <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
                                                         <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
-                                                </TableCell>}
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
