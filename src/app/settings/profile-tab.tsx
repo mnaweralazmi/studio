@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast"; 
+import { useToast } from "@/hooks/use-toast";
 import { User, Save, Upload, Image as ImageIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
@@ -59,17 +59,15 @@ export function ProfileTab() {
       setIsDirty(true);
     };
 
-  async function onProfileSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function onProfileSubmit(event: React.FormEvent) {
+    event.preventDefault();
     if (!user || !auth.currentUser) return;
 
-    // ملاحظات: نستخدم as any علشان نمرر مفاتيح غير مضافة حالياً لقواميس الترجمة
     if (newPassword && newPassword !== confirmPassword) {
       toast({
         variant: "destructive",
         title: t("error" as any),
-        description:
-          t("passwordsDontMatch" as any) || "كلمتا المرور غير متطابقتين.",
+        description: "كلمتا المرور غير متطابقتين.",
       });
       return;
     }
@@ -77,69 +75,60 @@ export function ProfileTab() {
       toast({
         variant: "destructive",
         title: t("error" as any),
-        description:
-          t("currentPasswordRequired" as any) ||
-          "كلمة المرور الحالية مطلوبة لتغييرها.",
+        description: "كلمة المرور الحالية مطلوبة لتغييرها.",
       });
       return;
     }
 
     setIsSaving(true);
+
     try {
       // تغيير كلمة المرور (إن وُجدت)
       if (newPassword && currentPassword && auth.currentUser.email) {
-        const cred = EmailAuthProvider.credential(
+        const credential = EmailAuthProvider.credential(
           auth.currentUser.email,
           currentPassword
         );
-        await reauthenticateWithCredential(auth.currentUser, cred);
+        await reauthenticateWithCredential(auth.currentUser, credential);
         await updatePassword(auth.currentUser, newPassword);
-        toast({
-          title:
-            t("passwordChangedSuccess" as any) || "تم تغيير كلمة المرور بنجاح",
-        });
+        toast({ title: t("passwordChangedSuccess" as any) });
       }
 
-      // تحديث بروفايل Firebase Auth
+      // تحديث بروفايل Auth
       await updateProfile(auth.currentUser, {
         displayName: name,
         photoURL: avatarUrl,
       });
 
-      // حفظ بيانات المستخدم في Firestore
+      // حفظ في Firestore
       const userDocRef = doc(db, "users", user.uid);
       await setDoc(
         userDocRef,
-        {
-          name,
-          email: user.email ?? "",
-          photoURL: avatarUrl,
-        },
+        { name, email: user.email, photoURL: avatarUrl },
         { merge: true }
       );
 
       await refreshUser();
 
       toast({
-        title: t("profileUpdated" as any) || "تم تحديث الملف الشخصي",
-        description:
-          t("profileUpdatedSuccess" as any) || "تم حفظ بياناتك بنجاح.",
+        title: t("profileUpdated" as any),
+        description: t("profileUpdatedSuccess" as any),
       });
 
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setIsDirty(false);
-    } catch (err: unknown) {
-      const error = err as { code?: string; message?: string };
-      let description =
-        t("profileUpdateFailed" as any) ||
-        "حدث خطأ أثناء تحديث الملف الشخصي.";
+    } catch (error: any) {
+      let description = t("profileUpdateFailed" as any);
       if (error?.code === "auth/wrong-password") {
-        description =
-          t("wrongCurrentPassword" as any) || "كلمة المرور الحالية غير صحيحة.";
+        description = t("wrongCurrentPassword" as any);
       }
-      toast({ variant: "destructive", title: t("error" as any), description });
+      toast({
+        variant: "destructive",
+        title: t("error" as any),
+        description,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -152,17 +141,18 @@ export function ProfileTab() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const previous = avatarUrl;
     const reader = new FileReader();
 
     reader.onloadend = async () => {
       const dataUrl = reader.result as string;
-      setAvatarUrl(dataUrl); // معاينة فورية
+      const prev = avatarUrl;
+
+      // معاينة فورية
+      setAvatarUrl(dataUrl);
       setIsDirty(true);
 
-      toast({
-        title: t("uploading" as any) || "جاري رفع الصورة...",
-      });
+      // Toast إعلامي (بدون id)
+      toast({ title: t("uploading" as any) || "جاري رفع الصورة..." });
 
       const storage = getStorage();
       const storageRef = ref(
@@ -176,16 +166,15 @@ export function ProfileTab() {
         setAvatarUrl(downloadUrl);
 
         toast({
-          title: t("uploadSuccessTitle" as any) || "تم تحديث الصورة",
+          title: t("uploadSuccessTitle" as any) || "تم رفع الصورة بنجاح!",
           description:
-            t("uploadSuccessDesc" as any) || "تم حفظ صورتك الشخصية بنجاح.",
+            t("uploadSuccessDesc" as any) || "لا تنسَ حفظ التغييرات.",
         });
-      } catch (error) {
-        setAvatarUrl(previous || user.photoURL || "");
+      } catch {
+        setAvatarUrl(prev || user.photoURL || "");
         toast({
           variant: "destructive",
           title: t("uploadFailed" as any) || "فشل رفع الصورة",
-          description: t("tryAgain" as any) || "يرجى المحاولة مرة أخرى.",
         });
       }
     };
@@ -280,7 +269,9 @@ export function ProfileTab() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="newPassword">{t("newPassword" as any)}</Label>
+                <Label htmlFor="newPassword">
+                  {t("newPassword" as any)}
+                </Label>
                 <Input
                   id="newPassword"
                   type="password"
