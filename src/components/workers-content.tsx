@@ -23,29 +23,32 @@ const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February'
 
 interface WorkersContentProps {
     departmentId: string;
+    userId?: string;
 }
 
-export function WorkersContent({ departmentId }: WorkersContentProps) {
+export function WorkersContent({ departmentId, userId }: WorkersContentProps) {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user: authUser } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
     const [editingWorker, setEditingWorker] = React.useState<Worker | null>(null);
 
+    const targetUserId = userId || authUser?.uid;
+    const isReadOnly = !!userId;
 
     React.useEffect(() => {
         const fetchWorkers = async () => {
-            if (user) {
+            if (targetUserId) {
                 setIsDataLoading(true);
                 try {
-                    const workersColRef = collection(db, 'users', user.uid, 'departments', departmentId, 'workers');
+                    const workersColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers');
                     const workersSnapshot = await getDocs(workersColRef);
                     const fetchedWorkers: Worker[] = [];
 
                     for (const workerDoc of workersSnapshot.docs) {
-                        const transactionsColRef = collection(db, 'users', user.uid, 'departments', departmentId, 'workers', workerDoc.id, 'transactions');
+                        const transactionsColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerDoc.id, 'transactions');
                         const transactionsSnapshot = await getDocs(transactionsColRef);
                         const transactions = transactionsSnapshot.docs.map(tDoc => ({ id: tDoc.id, ...tDoc.data() })) as Transaction[];
                         
@@ -72,12 +75,12 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         };
 
         fetchWorkers();
-    }, [user, t, toast, departmentId]);
+    }, [targetUserId, t, toast, departmentId]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
-        if (!user) {
-             toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add workers." });
+        if (!targetUserId || isReadOnly) {
+             toast({ variant: "destructive", title: t('error'), description: "You cannot manage workers for this user." });
             return;
         }
 
@@ -94,7 +97,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         if (workerId) {
             // Update existing worker
             try {
-                const workerDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'workers', workerId);
+                const workerDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId);
                 await updateDoc(workerDocRef, data);
                 setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, ...data } : w));
                 toast({ title: t('workerUpdatedSuccess') });
@@ -106,7 +109,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         } else {
             // Add new worker
             try {
-                const workersColRef = collection(db, 'users', user.uid, 'departments', departmentId, 'workers');
+                const workersColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers');
                 const docRef = await addDoc(workersColRef, {
                     ...data,
                     paidMonths: [],
@@ -130,9 +133,9 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
 
     async function deleteWorker(workerId: string) {
-        if (!user) return;
+        if (!targetUserId || isReadOnly) return;
         try {
-            await deleteDoc(doc(db, 'users', user.uid, 'departments', departmentId, 'workers', workerId));
+            await deleteDoc(doc(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId));
             setWorkers(prev => prev.filter(w => w.id !== workerId));
             toast({ variant: "destructive", title: t('workerDeleted') });
         } catch (e) {
@@ -142,7 +145,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
 
     async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
-        if (!user) return;
+        if (!targetUserId || isReadOnly) return;
         const worker = workers.find(w => w.id === workerId);
         if (!worker) return;
 
@@ -158,10 +161,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label} ${year}`
             };
 
-            const transactionRef = doc(collection(db, 'users', user.uid, 'departments', departmentId, 'workers', workerId, 'transactions'));
+            const transactionRef = doc(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId, 'transactions'));
             batch.set(transactionRef, newTransactionData);
             
-            const workerRef = doc(db, 'users', user.uid, 'departments', departmentId, 'workers', workerId);
+            const workerRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId);
             const updatedPaidMonths = [...worker.paidMonths, { year, month }];
             batch.update(workerRef, { paidMonths: updatedPaidMonths });
 
@@ -186,7 +189,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
 
     async function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
-        if (!user) return;
+        if (!targetUserId || isReadOnly) return;
         
         try {
             const newTransactionData: Omit<Transaction, 'id'> = {
@@ -196,7 +199,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            const transactionRef = await addDoc(collection(db, 'users', user.uid, 'departments', departmentId, 'workers', workerId, 'transactions'), newTransactionData);
+            const transactionRef = await addDoc(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId, 'transactions'), newTransactionData);
             
             setWorkers(prev => prev.map(w => {
                 if (w.id === workerId) {
@@ -243,12 +246,13 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     
     const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
 
-    if (!user) {
+    if (!targetUserId) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
     }
 
     return (
     <div className="space-y-6">
+        {!isReadOnly &&
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -260,7 +264,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 </CardDescription>
             </CardHeader>
         </Card>
-
+        }
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -307,12 +311,12 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl sm:text-2xl">{t('workersList')}</CardTitle>
-                <AddWorkerDialog onSave={handleSaveWorker}>
+                {!isReadOnly && <AddWorkerDialog onSave={handleSaveWorker}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('addNewWorker')}
                     </Button>
-                </AddWorkerDialog>
+                </AddWorkerDialog>}
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -323,7 +327,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                       <TableHead>{t('baseSalary')}</TableHead>
                        <TableHead>{t('currentMonthSalaryStatus')}</TableHead>
                        <TableHead>{t('totalBalance')}</TableHead>
-                      <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
+                      {!isReadOnly && <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -342,7 +346,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                         <TableCell className={`font-mono ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {balance.toFixed(2)} {t('dinar')}
                         </TableCell>
-                        <TableCell>
+                        {!isReadOnly && <TableCell>
                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                 <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
                                 <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
@@ -351,7 +355,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                 </AddWorkerDialog>
                                 <DeleteWorkerAlert workerName={worker.name} onConfirm={() => deleteWorker(worker.id)} />
                             </div>
-                        </TableCell>
+                        </TableCell>}
                       </TableRow>
                     )}) : (
                         <TableRow>

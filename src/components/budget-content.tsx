@@ -44,15 +44,19 @@ const fishListEn = ["Spgre", "Hamour", "Sheim"];
 
 interface BudgetContentProps {
     departmentId: 'agriculture' | 'livestock' | 'poultry' | 'fish';
+    userId?: string;
 }
 
-export function BudgetContent({ departmentId }: BudgetContentProps) {
+export function BudgetContent({ departmentId, userId }: BudgetContentProps) {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
-  const { user, loading: isAuthLoading } = useAuth();
+  const { user: authUser, loading: isAuthLoading } = useAuth();
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const { language, t } = useLanguage();
   const formRef = React.useRef<HTMLFormElement>(null);
+  
+  const targetUserId = userId || authUser?.uid;
+  const isReadOnly = !!userId;
 
   // Dynamic lists based on language
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
@@ -62,10 +66,10 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
   React.useEffect(() => {
     const fetchSales = async () => {
-      if (user) {
+      if (targetUserId) {
         setIsDataLoading(true);
         try {
-            const salesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'sales');
+            const salesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'sales');
             const querySnapshot = await getDocs(salesCollectionRef);
             const sales: SalesItem[] = [];
             querySnapshot.forEach((doc) => {
@@ -90,12 +94,12 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     fetchSales();
-  }, [user, toast, t, isAuthLoading, departmentId]);
+  }, [targetUserId, toast, t, isAuthLoading, departmentId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user) {
-        toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add sales."});
+    if (!targetUserId || isReadOnly) {
+        toast({ variant: "destructive", title: t('error'), description: "You cannot add sales for this user."});
         return;
     }
     
@@ -122,8 +126,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        const userRef = doc(db, 'users', user.uid);
-        const salesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'sales');
+        const userRef = doc(db, 'users', targetUserId);
+        const salesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'sales');
 
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -136,16 +140,16 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             let newBadges = [...currentBadges];
             let badgeAwarded = false;
 
-            if (!currentBadges.includes('trader')) {
+            if (!isReadOnly && !currentBadges.includes('trader')) {
                 newPoints += 25;
                 newBadges.push('trader');
                 badgeAwarded = true;
-            } else {
+            } else if (!isReadOnly) {
                 newPoints += 5;
             }
             
             const newLevel = Math.floor(newPoints / 100) + 1;
-            transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+            if(!isReadOnly) transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
 
             const docRef = doc(salesCollectionRef);
             transaction.set(docRef, submissionData);
@@ -157,7 +161,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             };
             setSalesItems(prevItems => [newItem, ...prevItems]);
             
-            if(badgeAwarded) {
+            if(badgeAwarded && !isReadOnly) {
                 toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });
             }
         });
@@ -175,9 +179,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   }
   
   async function deleteItem(id: string) {
-    if (!user) return;
+    if (!targetUserId || isReadOnly) return;
     try {
-        const saleDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'sales', id);
+        const saleDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'sales', id);
         await deleteDoc(saleDocRef);
         setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
         toast({
@@ -305,7 +309,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 {departmentId === 'agriculture' && <TableHead>{t('tableCartonWeightKg')}</TableHead>}
                 <TableHead>{t('unitPrice')}</TableHead>
                 <TableHead>{t('tableTotal')}</TableHead>
-                <TableHead className="text-right">{t('tableActions')}</TableHead>
+                {!isReadOnly && <TableHead className="text-right">{t('tableActions')}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -316,7 +320,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                      {departmentId === 'agriculture' && <TableCell>{item.weightPerUnit || '-'}</TableCell>}
                      <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
                      <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
-                     <TableCell className="text-right">{renderActions(item)}</TableCell>
+                     {!isReadOnly && <TableCell className="text-right">{renderActions(item)}</TableCell>}
                  </TableRow>
              ))}
           </TableBody>
@@ -330,6 +334,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
   return (
     <div className="space-y-6">
+        {!isReadOnly &&
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -352,6 +357,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
               </form>
           </CardContent>
         </Card>
+        }
 
         {isDataLoading ? (
             <Card>
@@ -379,4 +385,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-

@@ -48,21 +48,25 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
 
 interface ExpensesContentProps {
     departmentId: string;
+    userId?: string;
 }
 
-export function ExpensesContent({ departmentId }: ExpensesContentProps) {
+export function ExpensesContent({ departmentId, userId }: ExpensesContentProps) {
     const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user: authUser } = useAuth();
     const formRef = React.useRef<HTMLFormElement>(null);
     const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
+    const targetUserId = userId || authUser?.uid;
+    const isReadOnly = !!userId;
+
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
-            if (!user || !departmentId) {
+            if (!targetUserId || !departmentId) {
                 setExpenses([]);
                 setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
                 setIsDataLoading(false);
@@ -72,7 +76,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             setIsDataLoading(true);
             try {
                 // Fetch expenses
-                const expensesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'expenses');
+                const expensesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'expenses');
                 const expensesSnapshot = await getDocs(expensesCollectionRef);
                 const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
                     id: doc.id,
@@ -82,7 +86,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 setExpenses(fetchedExpenses);
 
                 // Fetch categories
-                const categoriesDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
+                const categoriesDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
                 const categoriesDoc = await getDoc(categoriesDocRef);
                  if (categoriesDoc.exists()) {
                      setExpenseCategories(categoriesDoc.data().categories);
@@ -97,12 +101,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             }
         };
         fetchExpensesAndCategories();
-    }, [user, language, departmentId]);
+    }, [targetUserId, language, departmentId]);
     
     async function updateCategoriesInDb(newCategories: Record<string, string[]>) {
-        if (!user || !departmentId) return;
+        if (!targetUserId || !departmentId || isReadOnly) return;
         try {
-            const categoriesDocRef = doc(db, 'users', user.uid, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
+            const categoriesDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
             await setDoc(categoriesDocRef, { categories: newCategories });
         } catch (e) {
             console.error("Error updating categories: ", e);
@@ -112,8 +116,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!user) {
-             toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add expenses."});
+        if (!targetUserId || isReadOnly) {
+             toast({ variant: "destructive", title: t('error'), description: "You cannot add expenses for this user."});
             return;
         }
 
@@ -140,7 +144,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            const expensesCollectionRef = collection(db, 'users', user.uid, 'departments', departmentId, 'expenses');
+            const expensesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'expenses');
             const docRef = await addDoc(expensesCollectionRef, newExpenseData);
             
             const newExpense: ExpenseItem = {
@@ -163,9 +167,9 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     }
 
     async function deleteExpense(id: string) {
-        if (!user) return;
+        if (!targetUserId || isReadOnly) return;
         try {
-            await deleteDoc(doc(db, 'users', user.uid, 'departments', departmentId, 'expenses', id));
+            await deleteDoc(doc(db, 'users', targetUserId, 'departments', departmentId, 'expenses', id));
             setExpenses(prev => prev.filter(item => item.id !== id));
             toast({ variant: "destructive", title: t('expenseDeleted') });
         } catch(e) {
@@ -180,12 +184,13 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const totalFixedExpenses = fixedExpenses.reduce((sum, item) => sum + item.amount, 0);
     const totalVariableExpenses = variableExpenses.reduce((sum, item) => sum + item.amount, 0);
 
-    if (!user) {
+    if (!targetUserId) {
       return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
     }
 
     return (
         <>
+            {!isReadOnly &&
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -197,6 +202,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     </CardDescription>
                 </CardHeader>
             </Card>
+            }
 
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
@@ -220,7 +226,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     </CardContent>
                 </Card>
             </div>
-
+            
+            {!isReadOnly &&
             <Card>
                 <CardHeader>
                     <CardTitle className="text-xl sm:text-2xl">{t('addNewExpense')}</CardTitle>
@@ -267,7 +274,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     </form>
                 </CardContent>
             </Card>
-            
+            }
             {isDataLoading ? (
                  <Card>
                     <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
@@ -286,18 +293,18 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</h3>
                             <div className="overflow-x-auto border rounded-lg">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead>{!isReadOnly && <TableHead className="text-right">{t('tableAction')}</TableHead>}</TableRow></TableHeader>
                                     <TableBody>
                                         {fixedExpenses.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>{item.category}</TableCell>
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                                <TableCell className="text-right">
+                                                {!isReadOnly && <TableCell className="text-right">
                                                      <div className="flex gap-2 justify-end">
                                                         <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
-                                                </TableCell>
+                                                </TableCell>}
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -311,7 +318,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</h3>
                              <div className="overflow-x-auto border rounded-lg">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead>{!isReadOnly && <TableHead className="text-right">{t('tableAction')}</TableHead>}</TableRow></TableHeader>
                                     <TableBody>
                                         {variableExpenses.map((item) => (
                                             <TableRow key={item.id}>
@@ -319,11 +326,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell>{new Date(item.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                                <TableCell className="text-right">
+                                                {!isReadOnly && <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
                                                         <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
-                                                </TableCell>
+                                                </TableCell>}
                                             </TableRow>
                                         ))}
                                     </TableBody>

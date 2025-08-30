@@ -4,7 +4,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ClipboardPen, CalendarDays, Settings, Briefcase } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, Briefcase, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/budget', label: t('budget'), icon: Briefcase },
     { href: '/settings', label: t('settings'), icon: Settings },
   ];
+  
+  if (user?.role === 'admin') {
+      navItems.splice(4, 0, { href: '/admin/dashboard', label: t('adminDashboard' as any), icon: ShieldCheck });
+  }
+
 
   if (loading || !user) {
     return (
@@ -36,7 +41,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto pb-24">{children}</main>
       
       <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t border-border/20 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto grid h-full max-w-lg grid-cols-5 font-medium">
+        <div className={`mx-auto grid h-full max-w-lg font-medium ${navItems.length === 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
           {navItems.map(item => {
             const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             return (
@@ -49,7 +54,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <item.icon className="mb-1 h-6 w-6" />
-                <span className="text-xs">{item.label}</span>
+                <span className="text-xs text-center">{item.label}</span>
               </NextLink>
             )
           })}

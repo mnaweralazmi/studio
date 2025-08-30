@@ -14,8 +14,12 @@ import type { ExpenseItem } from '../expenses-content';
 import type { DebtItem, Payment } from '../debts-content';
 import type { Worker, Transaction } from '../workers/types';
 
-export function BudgetSummary() {
-    const { user } = useAuth();
+interface BudgetSummaryProps {
+    userId?: string;
+}
+
+export function BudgetSummary({ userId }: BudgetSummaryProps) {
+    const { user: authUser } = useAuth();
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = React.useState(true);
     const [departmentId, setDepartmentId] = React.useState<string>('agriculture');
@@ -25,6 +29,8 @@ export function BudgetSummary() {
         totalDebts: 0,
         netProfit: 0,
     });
+    
+    const targetUserId = userId || authUser?.uid;
 
     React.useEffect(() => {
         const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
@@ -34,7 +40,7 @@ export function BudgetSummary() {
 
     React.useEffect(() => {
         const fetchAllData = async () => {
-            if (!user || !departmentId) {
+            if (!targetUserId || !departmentId) {
                 setIsLoading(false);
                 return;
             }
@@ -43,18 +49,18 @@ export function BudgetSummary() {
 
             try {
                 // Fetch Sales
-                const salesSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'sales'));
+                const salesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'sales'));
                 const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().total, 0);
 
                 // Fetch Expenses
-                const expensesSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'expenses'));
+                const expensesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'expenses'));
                 const totalExpensesItems = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
                 
                 // Fetch Workers and Transactions to calculate salaries paid
-                const workersSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'workers'));
+                const workersSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers'));
                 let totalSalariesPaid = 0;
                 for (const workerDoc of workersSnapshot.docs) {
-                    const transactionsSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'workers', workerDoc.id, 'transactions'));
+                    const transactionsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerDoc.id, 'transactions'));
                     const salaries = transactionsSnapshot.docs
                         .map(doc => doc.data() as Transaction)
                         .filter(t => t.type === 'salary')
@@ -63,13 +69,13 @@ export function BudgetSummary() {
                 }
                 
                 // Fetch Debts and Debt Payments
-                const debtsSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'debts'));
+                const debtsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'debts'));
                 let totalDebts = 0;
                 let totalDebtPayments = 0;
 
                 for(const debtDoc of debtsSnapshot.docs) {
                     const debtData = debtDoc.data();
-                    const paymentsSnapshot = await getDocs(collection(db, 'users', user.uid, 'departments', departmentId, 'debts', debtDoc.id, 'payments'));
+                    const paymentsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'debts', debtDoc.id, 'payments'));
                     const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
 
                     const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
@@ -94,7 +100,7 @@ export function BudgetSummary() {
         };
 
         fetchAllData();
-    }, [user, departmentId]);
+    }, [targetUserId, departmentId]);
 
     if (isLoading) {
         return (

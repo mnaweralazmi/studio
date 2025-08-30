@@ -403,5 +403,9 @@
     "agricultureSalesDesc": "أضف مبيعاتك من الخضروات والورود لتتبع الأرباح وإدارة عملياتك بكفاءة.",
     "tomorrow": "غداً",
     "thisWeek": "هذا الأسبوع",
-    "later": "لاحقاً"
+    "later": "لاحقاً",
+    "adminDashboard": "لوحة تحكم الأدمن",
+    "adminDashboardDesc": "عرض وإدارة بيانات المستخدمين.",
+    "selectUser": "اختر مستخدمًا لعرض بياناته...",
+    "financialManagementFor": "الإدارة المالية للمستخدم:"
 }
