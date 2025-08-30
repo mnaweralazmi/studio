@@ -51,7 +51,7 @@ export function WateringScheduleGenerator() {
     if (result.success && result.data) {
       setSchedule(result.data);
     } else {
-      const errorMessage = result.error || 'حدث خطأ غير معروف.';
+      const errorMessage = 'error' in result ? (result.error ?? 'حدث خطأ غير معروف.') : 'حدث خطأ غير معروف.'
       setError(errorMessage);
       toast({
         variant: 'destructive',
