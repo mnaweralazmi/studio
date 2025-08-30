@@ -170,7 +170,9 @@ export default function TopicDetailsPage() {
                                             <Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
-                                            <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: subTopicTitle })}</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogHeader>
+  <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: subTopicTitle?? "" })} </AlertDialogDescription></AlertDialogHeader>
+
                                             <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete('subtopic', subTopic.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
@@ -215,7 +217,7 @@ export default function TopicDetailsPage() {
                                                     <Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
-                                                    <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteVideoDesc', { videoName: videoTitle })}</AlertDialogDescription></AlertDialogHeader>
+                                                    <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteVideoDesc', { videoName: videoTitle?? "" })}</AlertDialogDescription></AlertDialogHeader>
                                                     <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete('video', video.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>

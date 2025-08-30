@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
+
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -14,15 +15,15 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+
+    /** أهم سطرين يمنعون سحب أنواع عشوائية */
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node", "react", "react-dom"]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", ".next", "dist"],
+  "plugins": [{ "name": "next" }]
 }

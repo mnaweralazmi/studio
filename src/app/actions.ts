@@ -1,18 +1,32 @@
 // src/app/actions.ts
 'use server';
 
-import { generateWateringSchedule, WateringScheduleInput } from '@/ai/flows/generate-watering-schedule';
+import {
+  generateWateringScheduleFlow,
+  WateringScheduleInput,
+  WateringScheduleOutput,
+} from '@/ai/flows/generate-watering-schedule';
 
-export async function getWateringSchedule(input: WateringScheduleInput) {
+type ActionResult =
+  | { success: true; data: WateringScheduleOutput }
+  | { success: false; error: string };
+
+export async function getWateringSchedule(input: WateringScheduleInput): Promise<ActionResult> {
   try {
-    const result = await generateWateringSchedule(input);
-    if (!result) {
-        return { success: false, error: 'Failed to generate schedule. The AI model did not return a valid response.' };
+    const result = await generateWateringScheduleFlow(input);
+
+    // تحقّق أساسي أن النتيجة صحيحة وغير فارغة
+    if (!result || typeof result.wateringSchedule !== 'string' || result.wateringSchedule.trim() === '') {
+      return {
+        success: false,
+        error: 'Failed to generate schedule. The AI model did not return a valid response.',
+      };
     }
+
     return { success: true, data: result };
-  } catch (error) {
-    console.error(error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return { success: false, error: `Failed to generate schedule. ${errorMessage}` };
+  } catch (err) {
+    console.error('[getWateringSchedule] Error:', err);
+    const msg = err instanceof Error ? err.message : 'An unknown error occurred.';
+    return { success: false, error: `Failed to generate schedule. ${msg}` };
   }
 }

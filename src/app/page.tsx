@@ -13,7 +13,7 @@ import { PlayCircle, BookOpen } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const getIcon = (name: string): React.ElementType => {
-    const Icon = (Lucide as Record<string, React.ElementType>)[name];
+    const Icon = (Lucide as unknown as Record<string, React.ElementType>)[name];
     return Icon || Lucide.Leaf;
 };
 
