@@ -28,6 +28,8 @@ export default function FinancialsPage() {
         const department = value as Department;
         setActiveDepartment(department);
         localStorage.setItem('selectedDepartment', department);
+        // Dispatch a custom event to notify other components of the change
+        window.dispatchEvent(new CustomEvent('departmentChanged'));
     }
     
     const departmentIcons: Record<Department, React.ElementType> = {

@@ -9,9 +9,7 @@ import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
-import type { SalesItem } from '../budget-content';
-import type { ExpenseItem } from '../expenses-content';
-import type { DebtItem, Payment } from '../debts-content';
+import type { Payment } from '../debts-content';
 import type { Worker, Transaction } from '../workers/types';
 
 export function BudgetSummary() {
@@ -31,6 +29,14 @@ export function BudgetSummary() {
     React.useEffect(() => {
         const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
         setDepartmentId(lastSelectedDept);
+
+        // Listen for department changes from other components
+        const handleDepartmentChange = () => {
+            const newDept = localStorage.getItem('selectedDepartment') || 'agriculture';
+            setDepartmentId(newDept);
+        };
+        window.addEventListener('departmentChanged', handleDepartmentChange);
+        return () => window.removeEventListener('departmentChanged', handleDepartmentChange);
     }, []);
 
 
@@ -84,7 +90,7 @@ export function BudgetSummary() {
 
 
                 const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPayments;
-                const netProfit = totalSales - (totalExpenses + totalDebts);
+                const netProfit = totalSales - totalExpenses; // Net profit calculation doesn't include outstanding debt principal
 
                 setSummary({ totalSales, totalExpenses, totalDebts, netProfit });
 
@@ -113,7 +119,7 @@ export function BudgetSummary() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>{t('financialSummary')} - {departmentId}</CardTitle>
+                    <CardTitle>{t('financialSummary')}</CardTitle>
                     <CardContent className="pt-6">
                          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                             <Card>
