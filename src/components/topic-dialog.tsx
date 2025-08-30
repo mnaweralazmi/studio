@@ -113,7 +113,7 @@ export function TopicDialog({ isOpen, setIsOpen, onSubmit, topic, setEditingTopi
                         )}
                         </div>
                         <Button asChild variant="outline">
-                            <label>
+                            <label className="cursor-pointer flex items-center">
                                 <Upload className="mr-2 h-4 w-4" />
                                 {t('uploadImage')}
                                 <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
