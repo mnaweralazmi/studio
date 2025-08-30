@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Save, Upload, Image as ImageIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton"; // << تمت الإضافة
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useLanguage } from "@/context/language-context";
 import { useAuth } from "@/context/auth-context";

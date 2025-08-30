@@ -15,18 +15,17 @@ export async function getWateringSchedule(input: WateringScheduleInput): Promise
   try {
     const result = await generateWateringScheduleFlow(input);
 
-    // تحقّق أساسي أن النتيجة صحيحة وغير فارغة
-    if (!result || typeof result.wateringSchedule !== 'string' || result.wateringSchedule.trim() === '') {
+    if (!result?.wateringSchedule) {
       return {
         success: false,
-        error: 'Failed to generate schedule. The AI model did not return a valid response.',
+        error: 'Failed to generate schedule. The AI model returned an empty response.',
       };
     }
 
     return { success: true, data: result };
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[getWateringSchedule] Error:', err);
     const msg = err instanceof Error ? err.message : 'An unknown error occurred.';
-    return { success: false, error: `Failed to generate schedule. ${msg}` };
+    return { success: false, error: `AI Error: ${msg}` };
   }
 }

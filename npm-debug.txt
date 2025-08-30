@@ -1,0 +1,76 @@
+npm verbose cli /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/bin/node /usr/bin/npm
+npm info using npm@10.8.2
+npm info using node@v20.19.1
+npm silly config load:file:/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/npmrc
+npm silly config load:file:/home/user/studio/.npmrc
+npm silly config load:file:/home/user/.npmrc
+npm silly config load:file:/google/idx/.npmrc
+npm verbose title npm ci
+npm verbose argv "ci" "--loglevel" "silly"
+npm verbose logfile logs-max:10 dir:/home/.npm/_logs/2025-08-30T18_11_08_387Z-
+npm verbose logfile /home/.npm/_logs/2025-08-30T18_11_08_387Z-debug-0.log
+npm silly packumentCache heap:2197815296 maxSize:549453824 maxEntrySize:274726912
+npm silly logfile start cleaning logs, removing 1 files
+npm verbose loadVirtual Error: loadVirtual requires existing shrinkwrap file
+npm verbose loadVirtual     at Arborist.loadVirtual (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/load-virtual.js:51:18)
+npm verbose loadVirtual     at async CI.exec (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/commands/ci.js:49:5)
+npm verbose loadVirtual     at async Npm.exec (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/npm.js:207:9)
+npm verbose loadVirtual     at async module.exports (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/cli/entry.js:74:5)
+npm silly logfile done cleaning log files
+npm verbose stack Error: 
+npm verbose stack The `npm ci` command can only install with an existing package-lock.json or
+npm verbose stack npm-shrinkwrap.json with lockfileVersion >= 1. Run an install with npm@5 or
+npm verbose stack later to generate a package-lock.json file, then try again.
+npm verbose stack
+npm verbose stack Clean install a project
+npm verbose stack
+npm verbose stack Usage:
+npm verbose stack npm ci
+npm verbose stack
+npm verbose stack Options:
+npm verbose stack [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+npm verbose stack [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+npm verbose stack [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+npm verbose stack [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+npm verbose stack [--no-bin-links] [--no-fund] [--dry-run]
+npm verbose stack [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+npm verbose stack [-ws|--workspaces] [--include-workspace-root] [--install-links]
+npm verbose stack
+npm verbose stack aliases: clean-install, ic, install-clean, isntall-clean
+npm verbose stack
+npm verbose stack Run "npm help ci" for more info
+npm verbose stack     at CI.usageError (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/base-cmd.js:109:26)
+npm verbose stack     at /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/commands/ci.js:55:18
+npm verbose stack     at async CI.exec (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/commands/ci.js:49:5)
+npm verbose stack     at async Npm.exec (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/npm.js:207:9)
+npm verbose stack     at async module.exports (/nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/lib/node_modules/npm/lib/cli/entry.js:74:5)
+npm error code EUSAGE
+npm error
+npm error The `npm ci` command can only install with an existing package-lock.json or
+npm error npm-shrinkwrap.json with lockfileVersion >= 1. Run an install with npm@5 or
+npm error later to generate a package-lock.json file, then try again.
+npm error
+npm error Clean install a project
+npm error
+npm error Usage:
+npm error npm ci
+npm error
+npm error Options:
+npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+npm error [--no-bin-links] [--no-fund] [--dry-run]
+npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+npm error
+npm error aliases: clean-install, ic, install-clean, isntall-clean
+npm error
+npm error Run "npm help ci" for more info
+npm verbose cwd /home/user/studio
+npm verbose os Linux 6.6.97+
+npm verbose node v20.19.1
+npm verbose npm  v10.8.2
+npm verbose exit 1
+npm verbose code 1
+npm error A complete log of this run can be found in: /home/.npm/_logs/2025-08-30T18_11_08_387Z-debug-0.log
