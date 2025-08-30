@@ -30,8 +30,7 @@ export interface Task {
 const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
     const dueDate = parseISO(task.dueDate);
     const hasTime = !!task.dueDate.match(/T\d{2}:\d{2}/);
-    const dateFormat = hasTime ? "PPP p" : "PPP";
-
+    
     const getIconWithBg = (Icon: React.ElementType, colorClass: string) => (
         <div className={`p-1 rounded-full ${colorClass}`}>
             <Icon className="h-3.5 w-3.5 text-white" />
@@ -105,24 +104,20 @@ const TaskList = ({ tasks, onComplete, onDelete, language, t }: { tasks: Task[],
 
 
 const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[], onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
-     <Collapsible defaultOpen>
-        <CollapsibleTrigger className="flex justify-between items-center w-full text-lg font-semibold mb-2">
-            <div className="flex items-center gap-2">
-                <GripVertical className="h-5 w-5 text-muted-foreground" />
-                <span>{title} ({tasks.length})</span>
-            </div>
-           <ChevronDown className="h-5 w-5 transition-transform [&[data-state=open]]:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="CollapsibleContent">
+    <Card className="flex flex-col h-full">
+        <CardHeader>
+            <CardTitle>{title} ({tasks.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 overflow-y-auto pr-2">
              {tasks.length > 0 ? (
-                <div className="space-y-4 max-h-96 overflow-y-auto pr-2 pl-4 py-2 border-l">
+                <div className="space-y-4">
                     <TaskList tasks={tasks} {...props} />
                 </div>
             ) : (
-                 <p className="text-center text-muted-foreground py-4 border rounded-lg">{props.t('noUpcomingTasksForDay')}</p>
+                 <p className="text-center text-muted-foreground py-4">{props.t('noUpcomingTasksForDay')}</p>
             )}
-        </CollapsibleContent>
-    </Collapsible>
+        </CardContent>
+    </Card>
 );
 
 
@@ -197,21 +192,7 @@ export default function CalendarPage() {
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   const todayTasks = upcomingTasks.filter(task => isToday(parseISO(task.dueDate)));
-  const tomorrowTasks = upcomingTasks.filter(task => isTomorrow(parseISO(task.dueDate)));
   
-  const endOfThisWeek = endOfWeek(today, { locale: language === 'ar' ? arSA : enUS });
-  const thisWeekTasks = upcomingTasks.filter(task => 
-    !isToday(parseISO(task.dueDate)) && 
-    !isTomorrow(parseISO(task.dueDate)) &&
-    isWithinInterval(parseISO(task.dueDate), { start: addDays(today, 2), end: endOfThisWeek })
-  );
-
-  const laterTasks = upcomingTasks.filter(task => 
-    !isToday(parseISO(task.dueDate)) && 
-    !isTomorrow(parseISO(task.dueDate)) &&
-    !isWithinInterval(parseISO(task.dueDate), { start: addDays(today, 2), end: endOfThisWeek })
-  );
-
   const allCompletedTasks = tasks
     .filter(task => task.isCompleted)
     .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
@@ -221,7 +202,7 @@ export default function CalendarPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
+    <main className="flex flex-1 flex-col p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-7xl mx-auto">
          <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
             <div>
@@ -236,62 +217,57 @@ export default function CalendarPage() {
             </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 items-start">
-            <Card className="md:col-span-1 lg:col-span-1">
-                <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    className="p-0"
-                    classNames={{
-                        root: "w-full",
-                        months: "w-full",
-                        month: "w-full",
-                        table: "w-full",
-                        head_row: "w-full",
-                        row: "w-full",
-                    }}
-                    locale={language === 'ar' ? arSA : enUS}
-                />
-            </Card>
-            
-            <div className="md:col-span-2 lg:col-span-3 space-y-8">
-                <Collapsible defaultOpen>
-                     <CollapsibleTrigger className="flex justify-between items-center w-full text-xl font-bold">
-                       <span>{t('allUpcomingTasks')}</span>
-                       <ChevronDown className="h-5 w-5 transition-transform [&[data-state=open]]:rotate-180" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-4 space-y-6">
-                        <TaskSection title={t('today')} tasks={todayTasks} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                        <Separator />
-                        <TaskSection title={t('tomorrow')} tasks={tomorrowTasks} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                         <Separator />
-                        <TaskSection title={t('thisWeek')} tasks={thisWeekTasks} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                         <Separator />
-                        <TaskSection title={t('later')} tasks={laterTasks} onComplete={handleCompleteTask} onDelete={handleDeleteTask} language={language} t={t} />
-                    </CollapsibleContent>
-                </Collapsible>
-                
-                <Separator />
-                
-                <Collapsible>
-                    <CollapsibleTrigger className="flex justify-between items-center w-full text-xl font-bold">
-                       <span>{t('completedTasksLog')} ({allCompletedTasks.length})</span>
-                       <ChevronDown className="h-5 w-5 transition-transform [&[data-state=open]]:rotate-180" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-4">
-                        {allCompletedTasks.length > 0 ? (
-                             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                                {allCompletedTasks.slice(0,20).map(task => (
-                                    <TaskItem key={task.id} task={task} language={language} t={t} onDelete={handleDeleteTask} />
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-center text-muted-foreground py-4 border-2 border-dashed rounded-lg">{t('noCompletedTasks')}</p>
-                        )}
-                    </CollapsibleContent>
-                </Collapsible>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
+          <Card className="row-span-1">
+            <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="p-0"
+                classNames={{
+                    root: "w-full",
+                    months: "w-full",
+                    month: "w-full",
+                    table: "w-full",
+                    head_row: "w-full",
+                    row: "w-full",
+                }}
+                locale={language === 'ar' ? arSA : enUS}
+            />
+          </Card>
+
+          <TaskSection 
+            title={t('upcomingTasksForDay')} 
+            tasks={upcomingTasks} 
+            onComplete={handleCompleteTask} 
+            onDelete={handleDeleteTask} 
+            language={language} t={t} 
+          />
+          
+          <TaskSection 
+            title={t('tasksForDay')} 
+            tasks={todayTasks} 
+            onComplete={handleCompleteTask} 
+            onDelete={handleDeleteTask} 
+            language={language} t={t}
+          />
+
+          <Card>
+            <CardHeader>
+                <CardTitle>{t('completedTasksLog')} ({allCompletedTasks.length})</CardTitle>
+            </CardHeader>
+             <CardContent className="overflow-y-auto max-h-96 pr-2">
+                {allCompletedTasks.length > 0 ? (
+                        <div className="space-y-3">
+                        {allCompletedTasks.slice(0,20).map(task => (
+                            <TaskItem key={task.id} task={task} language={language} t={t} onDelete={handleDeleteTask} />
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-center text-muted-foreground py-4">{t('noCompletedTasks')}</p>
+                )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </main>
