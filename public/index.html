@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدير الديون البسيط</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #1a73e8;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .auth-section, .user-info {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .user-info {
+            background-color: #e8f0fe;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1765c4;
+        }
+        button:disabled {
+            background-color: #9e9e9e;
+            cursor: not-allowed;
+        }
+        #logout-btn {
+            background-color: #d93025;
+        }
+        #logout-btn:hover {
+            background-color: #c5221f;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        label {
+            font-weight: bold;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        li span {
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        .creditor {
+            font-weight: bold;
+        }
+        .amount {
+            color: #d93025;
+        }
+        .date {
+            color: #5f6368;
+            font-size: 0.9em;
+            width: 100%;
+            text-align: left;
+            margin-top: 5px;
+        }
+        [hidden] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>مدير الديون البسيط</h1>
+
+        <!-- قسم المصادقة -->
+        <div id="auth-container" class="auth-section">
+            <p>يرجى تسجيل الدخول باستخدام حساب Google لعرض وإضافة ديونك.</p>
+            <button id="login-btn">تسجيل الدخول بحساب Google</button>
+        </div>
+
+        <!-- قسم معلومات المستخدم والديون (مخفي افتراضيًا) -->
+        <div id="app-container" hidden>
+            <div id="user-info" class="user-info"></div>
+            
+            <h2>إضافة دين جديد</h2>
+            <form id="add-debt-form">
+                <div>
+                    <label for="creditor">اسم الدائن</label>
+                    <input type="text" id="creditor" required placeholder="مثال: شركة الكهرباء">
+                </div>
+                <div>
+                    <label for="amount">المبلغ (بالدينار)</label>
+                    <input type="number" id="amount" required step="0.01" min="0">
+                </div>
+                <div>
+                    <label for="due-date">تاريخ الاستحقاق (اختياري)</label>
+                    <input type="date" id="due-date">
+                </div>
+                <button type="submit">حفظ الدين</button>
+            </form>
+
+            <h2>قائمة الديون</h2>
+            <ul id="debts-list">
+                <p id="loading-debts">جاري تحميل الديون...</p>
+            </ul>
+            
+            <hr style="margin-top: 2rem;">
+            <button id="logout-btn">تسجيل الخروج</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // =================================================================
+        // 1. تهيئة Firebase - الصق إعدادات مشروعك هنا
+        // =================================================================
+        // احصل على هذا الكائن من إعدادات مشروعك في Firebase Console
+        // Project settings > General > Your apps > Web app > Firebase SDK snippet > Config
+        const firebaseConfig = {
+            // الصق إعدادات Firebase الخاصة بك هنا
+            // مثال:
+            // apiKey: "AIza...",
+            // authDomain: "your-project.firebaseapp.com",
+            // projectId: "your-project",
+            // storageBucket: "your-project.appspot.com",
+            // messagingSenderId: "...",
+            // appId: "1:..."
+        };
+
+        // =================================================================
+        // 2. استيراد وتهيئة خدمات Firebase من CDN
+        // =================================================================
+        // هذا الجزء يقوم باستيراد المكتبات الضرورية وتهيئة تطبيق Firebase
+        // لا تقم بتعديل هذا الجزء إلا إذا كنت تعرف ما تفعله.
+        
+        // استيراد الدوال اللازمة
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // تهيئة التطبيق والخدمات
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // =================================================================
+        // 3. إدارة واجهة المستخدم (UI Elements)
+        // =================================================================
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfoDiv = document.getElementById('user-info');
+        const addDebtForm = document.getElementById('add-debt-form');
+        const debtsList = document.getElementById('debts-list');
+        const loadingDebtsP = document.getElementById('loading-debts');
+
+        let unsubscribeFromDebts = null; // متغير لحفظ دالة إلغاء الاشتراك في onSnapshot
+
+        // =================================================================
+        // 4. مراقبة حالة تسجيل الدخول (Authentication State)
+        // =================================================================
+        // onAuthStateChanged هي دالة تراقب تغيرات حالة تسجيل الدخول للمستخدم
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                // المستخدم قام بتسجيل الدخول
+                console.log("المستخدم سجل دخوله:", user);
+
+                // عرض واجهة التطبيق الرئيسية وإخفاء واجهة تسجيل الدخول
+                authContainer.hidden = true;
+                appContainer.hidden = false;
+
+                // عرض معلومات المستخدم
+                userInfoDiv.innerHTML = `<p>مرحباً، <strong>${user.displayName}</strong> (${user.email})</p>`;
+
+                // ابدأ الاستماع لتحديثات الديون الخاصة بهذا المستخدم
+                listenToDebts(user.uid);
+
+            } else {
+                // المستخدم قام بتسجيل الخروج أو لم يسجل دخوله بعد
+                console.log("المستخدم لم يسجل دخوله.");
+                
+                // عرض واجهة تسجيل الدخول وإخفاء واجهة التطبيق
+                authContainer.hidden = false;
+                appContainer.hidden = true;
+
+                // إذا كان هناك اشتراك فعال لتحديثات الديون، قم بإلغائه
+                if (unsubscribeFromDebts) {
+                    console.log("إلغاء الاشتراك في تحديثات الديون.");
+                    unsubscribeFromDebts();
+                    unsubscribeFromDebts = null;
+                }
+                // تفريغ قائمة الديون عند تسجيل الخروج
+                debtsList.innerHTML = '<p id="loading-debts">يرجى تسجيل الدخول لعرض الديون.</p>';
+            }
+        });
+
+        // =================================================================
+        // 5. وظائف تسجيل الدخول والخروج
+        // =================================================================
+        // تسجيل الدخول باستخدام Google
+        loginBtn.addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                console.log("تم تسجيل الدخول بنجاح:", result.user);
+            } catch (error) {
+                console.error("خطأ أثناء تسجيل الدخول:", error);
+                alert("حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.");
+            }
+        });
+
+        // تسجيل الخروج
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                console.log("تم تسجيل الخروج بنجاح.");
+            } catch (error) {
+                console.error("خطأ أثناء تسجيل الخروج:", error);
+            }
+        });
+
+        // =================================================================
+        // 6. إضافة دين جديد
+        // =================================================================
+        addDebtForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // منع الإرسال الافتراضي للنموذج
+
+            const user = auth.currentUser;
+            if (!user) {
+                alert("يجب أن تكون مسجلاً للدخول لإضافة دين.");
+                return;
+            }
+
+            // الحصول على القيم من حقول النموذج
+            const creditor = document.getElementById('creditor').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const dueDateInput = document.getElementById('due-date').value;
+            
+            // إنشاء كائن الدين
+            const newDebt = {
+                creditor: creditor,
+                amount: amount,
+                status: 'unpaid',
+                createdAt: serverTimestamp(), // استخدام وقت الخادم لضمان الدقة
+                uid: user.uid // ربط الدين بالمستخدم الحالي
+            };
+
+            // إضافة تاريخ الاستحقاق إذا تم إدخاله
+            if (dueDateInput) {
+                newDebt.dueDate = new Date(dueDateInput);
+            }
+            
+            try {
+                // إنشاء مرجع لمجموعة الديون الخاصة بالمستخدم
+                const userDebtsCollection = collection(db, 'users', user.uid, 'debts');
+                
+                // إضافة الدين الجديد إلى Firestore
+                const docRef = await addDoc(userDebtsCollection, newDebt);
+                console.log("تمت إضافة الدين بنجاح، رقم الوثيقة:", docRef.id);
+
+                // إعادة تعيين حقول النموذج
+                addDebtForm.reset();
+
+            } catch (error) {
+                console.error("خطأ أثناء إضافة الدين:", error);
+                alert("حدث خطأ أثناء حفظ الدين. يرجى المحاولة مرة أخرى.");
+            }
+        });
+
+        // =================================================================
+        // 7. عرض قائمة الديون في الوقت الفعلي (Realtime)
+        // =================================================================
+        function listenToDebts(uid) {
+            // إنشاء مرجع لمجموعة الديون
+            const debtsCollectionRef = collection(db, 'users', uid, 'debts');
+            
+            // إنشاء استعلام (query) لترتيب الديون حسب تاريخ الإنشاء (من الأحدث إلى الأقدم)
+            const q = query(debtsCollectionRef, orderBy('createdAt', 'desc'));
+
+            // onSnapshot تستمع لأي تغييرات تحدث على نتائج الاستعلام (إضافة، تعديل، حذف)
+            unsubscribeFromDebts = onSnapshot(q, (snapshot) => {
+                console.log("تم استلام تحديث للديون.");
+                
+                // تفريغ القائمة الحالية لعرض البيانات الجديدة
+                debtsList.innerHTML = ''; 
+                
+                if (snapshot.empty) {
+                    debtsList.innerHTML = '<li>لا توجد ديون مسجلة حاليًا.</li>';
+                } else {
+                    // المرور على كل وثيقة في النتائج وعرضها
+                    snapshot.forEach(doc => {
+                        const debt = doc.data();
+                        const li = document.createElement('li');
+                        
+                        const debtInfo = `
+                            <span class="creditor">${debt.creditor}</span>
+                            <span class="amount">${debt.amount.toFixed(2)} دينار</span>
+                        `;
+
+                        // عرض تاريخ الاستحقاق إن وجد
+                        const dueDateInfo = debt.dueDate 
+                            ? `<small class="date">تاريخ الاستحقاق: ${debt.dueDate.toDate().toLocaleDateString('ar-EG')}</small>`
+                            : '';
+
+                        li.innerHTML = debtInfo + dueDateInfo;
+                        debtsList.appendChild(li);
+                    });
+                }
+            }, (error) => {
+                console.error("خطأ في جلب الديون:", error);
+                debtsList.innerHTML = '<li>حدث خطأ أثناء تحميل الديون.</li>';
+            });
+        }
+    </script>
+</body>
+</html>

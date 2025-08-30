@@ -1,40 +1,26 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the user is an admin
-    function isAdmin(userId) {
-      return exists(/databases/$(database)/documents/users/$(userId)) &&
-             get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+    // القاعدة الرئيسية: تطابق أي وثيقة داخل مجموعة users
+    match /users/{uid} {
+      // السماح للمستخدم بقراءة وإنشاء وتحديث وثيقته الشخصية فقط
+      // لا نسمح بحذف وثيقة المستخدم نفسها من خلال الكود
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false; 
     }
-
-    // Rules for the 'users' collection
-    match /users/{userId} {
-      // Any authenticated user can create their own user document
-      allow create: if request.auth != null && request.auth.uid == userId;
-
-      // Users can only read or update their own document. Admins can read any document.
-      allow read, update: if request.auth.uid == userId || isAdmin(request.auth.uid);
-      
-      // Users cannot delete their own profile document
+    
+    // القاعدة الفرعية: تطابق أي وثيقة داخل أي مجموعة فرعية (مثل debts) تابعة لمستخدم
+    // {document=**} تعني أنها تطابق أي مسار فرعي
+    match /users/{uid}/{document=**} {
+      // السماح للمستخدم بقراءة وإنشاء وتحديث وحذف البيانات داخل مجموعاته الفرعية
+      // على سبيل المثال، يمكنه إضافة أو تعديل دين
+      allow read:   if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid;
+      // منع الحذف من الواجهة لضمان عدم فقدان البيانات عن طريق الخطأ
       allow delete: if false;
-
-      // Rules for all subcollections under a user document
-      match /{subcollection}/{docId} {
-        // Users can create, read, update, and delete documents in their own subcollections
-        allow read, write: if request.auth.uid == userId;
-        
-        // Admins can read documents in any user's subcollections
-        allow get, list: if isAdmin(request.auth.uid);
-
-        // Recursive match for any nested subcollections (e.g., payments, transactions)
-        match /{deeperSubcollection}/{deepDocId=**} {
-            allow read, write: if request.auth.uid == userId;
-            allow get, list: if isAdmin(request.auth.uid);
-        }
-      }
     }
   }
 }
