@@ -26,83 +26,81 @@ export function BudgetSummary() {
     
     const targetUserId = authUser?.uid;
 
+    const fetchAllData = React.useCallback(async (deptId: string) => {
+        if (!targetUserId) {
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Fetch Sales
+            const salesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'sales'));
+            const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().total, 0);
+
+            // Fetch Expenses
+            const expensesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'expenses'));
+            const totalExpensesItems = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
+            
+            // Fetch Workers and Transactions to calculate salaries paid
+            const workersSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'workers'));
+            let totalSalariesPaid = 0;
+            for (const workerDoc of workersSnapshot.docs) {
+                const transactionsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'workers', workerDoc.id, 'transactions'));
+                const salaries = transactionsSnapshot.docs
+                    .map(doc => doc.data() as Transaction)
+                    .filter(t => t.type === 'salary')
+                    .reduce((sum, t) => sum + t.amount, 0);
+                totalSalariesPaid += salaries;
+            }
+            
+            // Fetch Debts and Debt Payments
+            const debtsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'debts'));
+            let totalDebts = 0;
+            let totalDebtPayments = 0;
+
+            for(const debtDoc of debtsSnapshot.docs) {
+                const debtData = debtDoc.data();
+                const paymentsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'debts', debtDoc.id, 'payments'));
+                const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
+
+                const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
+                totalDebtPayments += paidAmount;
+                
+                if (debtData.status !== 'paid') {
+                    totalDebts += (debtData.amount - paidAmount);
+                }
+            }
+
+
+            const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPayments;
+            const netProfit = totalSales - totalExpenses; // Net profit calculation doesn't include outstanding debt principal
+
+            setSummary({ totalSales, totalExpenses, totalDebts, netProfit });
+
+        } catch (error) {
+            console.error("Failed to fetch summary data", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [targetUserId]);
+
     React.useEffect(() => {
         const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
         setDepartmentId(lastSelectedDept);
+        fetchAllData(lastSelectedDept);
 
         // Listen for department changes from other components
         const handleDepartmentChange = () => {
             const newDept = localStorage.getItem('selectedDepartment') || 'agriculture';
             setDepartmentId(newDept);
+            fetchAllData(newDept);
         };
         window.addEventListener('departmentChanged', handleDepartmentChange);
         return () => window.removeEventListener('departmentChanged', handleDepartmentChange);
-    }, []);
+    }, [fetchAllData]);
 
-
-    React.useEffect(() => {
-        const fetchAllData = async () => {
-            if (!targetUserId || !departmentId) {
-                setIsLoading(false);
-                return;
-            }
-
-            setIsLoading(true);
-
-            try {
-                // Fetch Sales
-                const salesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'sales'));
-                const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().total, 0);
-
-                // Fetch Expenses
-                const expensesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'expenses'));
-                const totalExpensesItems = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
-                
-                // Fetch Workers and Transactions to calculate salaries paid
-                const workersSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers'));
-                let totalSalariesPaid = 0;
-                for (const workerDoc of workersSnapshot.docs) {
-                    const transactionsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerDoc.id, 'transactions'));
-                    const salaries = transactionsSnapshot.docs
-                        .map(doc => doc.data() as Transaction)
-                        .filter(t => t.type === 'salary')
-                        .reduce((sum, t) => sum + t.amount, 0);
-                    totalSalariesPaid += salaries;
-                }
-                
-                // Fetch Debts and Debt Payments
-                const debtsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'debts'));
-                let totalDebts = 0;
-                let totalDebtPayments = 0;
-
-                for(const debtDoc of debtsSnapshot.docs) {
-                    const debtData = debtDoc.data();
-                    const paymentsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', departmentId, 'debts', debtDoc.id, 'payments'));
-                    const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
-
-                    const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-                    totalDebtPayments += paidAmount;
-                    
-                    if (debtData.status !== 'paid') {
-                        totalDebts += (debtData.amount - paidAmount);
-                    }
-                }
-
-
-                const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPayments;
-                const netProfit = totalSales - totalExpenses; // Net profit calculation doesn't include outstanding debt principal
-
-                setSummary({ totalSales, totalExpenses, totalDebts, netProfit });
-
-            } catch (error) {
-                console.error("Failed to fetch summary data", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchAllData();
-    }, [targetUserId, departmentId]);
 
     if (isLoading) {
         return (
