@@ -64,35 +64,37 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
   React.useEffect(() => {
     const fetchSales = async () => {
-      if (targetUserId) {
-        setIsDataLoading(true);
-        try {
-            const salesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'sales');
-            const querySnapshot = await getDocs(salesCollectionRef);
-            const sales: SalesItem[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                sales.push({
-                    ...data,
-                    id: doc.id,
-                    date: (data.date as Timestamp).toDate(),
-                } as SalesItem);
-            });
-            setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
-        } catch(e) {
-            console.error("Error fetching sales: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-        } finally {
-            setIsDataLoading(false);
-        }
-      } else if (!isAuthLoading) {
-          setSalesItems([]);
+      if (!targetUserId || !departmentId) {
+        setSalesItems([]);
+        setIsDataLoading(false);
+        return;
+      }
+        
+      setIsDataLoading(true);
+      setSalesItems([]); // Clear previous data
+      try {
+          const salesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'sales');
+          const querySnapshot = await getDocs(salesCollectionRef);
+          const sales: SalesItem[] = [];
+          querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              sales.push({
+                  ...data,
+                  id: doc.id,
+                  date: (data.date as Timestamp).toDate(),
+              } as SalesItem);
+          });
+          setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
+      } catch(e) {
+          console.error("Error fetching sales: ", e);
+          toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+      } finally {
           setIsDataLoading(false);
       }
     };
 
     fetchSales();
-  }, [targetUserId, toast, t, isAuthLoading, departmentId]);
+  }, [targetUserId, departmentId, toast, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -157,7 +159,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
               id: docRef.id,
               date: new Date(),
             };
-            setSalesItems(prevItems => [newItem, ...prevItems]);
+            setSalesItems(prevItems => [newItem, ...prevItems].sort((a,b) => b.date.getTime() - a.date.getTime()));
             
             if(badgeAwarded) {
                 toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });

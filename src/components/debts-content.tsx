@@ -55,16 +55,21 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
     React.useEffect(() => {
         const fetchDebts = async () => {
-          if (targetUserId) {
+            if (!targetUserId || !departmentId) {
+              setDebts([]);
+              setIsDataLoading(false);
+              return;
+            }
             setIsDataLoading(true);
+            setDebts([]); // Clear previous data
             try {
               const debtsCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'debts');
               const querySnapshot = await getDocs(debtsCollectionRef);
               const fetchedDebts: DebtItem[] = [];
 
-              for (const doc of querySnapshot.docs) {
-                const data = doc.data();
-                const paymentsCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'debts', doc.id, 'payments');
+              for (const docRef of querySnapshot.docs) {
+                const data = docRef.data();
+                const paymentsCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'debts', docRef.id, 'payments');
                 const paymentsSnapshot = await getDocs(paymentsCollectionRef);
                 const payments: Payment[] = paymentsSnapshot.docs.map(pDoc => ({
                   id: pDoc.id,
@@ -72,7 +77,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                 })) as Payment[];
                 
                 fetchedDebts.push({
-                  id: doc.id,
+                  id: docRef.id,
                   creditor: data.creditor,
                   amount: data.amount,
                   dueDate: data.dueDate ? (data.dueDate as Timestamp).toDate() : undefined,
@@ -87,14 +92,10 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             } finally {
                 setIsDataLoading(false);
             }
-          } else {
-            setDebts([]);
-            setIsDataLoading(false);
-          }
         };
 
         fetchDebts();
-    }, [targetUserId, toast, t, departmentId]);
+    }, [targetUserId, departmentId, toast, t]);
 
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

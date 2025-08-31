@@ -72,8 +72,21 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             }
 
             setIsDataLoading(true);
+            setExpenses([]);
+            setExpenseCategories({});
+            setSelectedCategory('');
+            
             try {
-                // Fetch expenses
+                // Fetch categories first
+                const categoriesDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
+                const categoriesDoc = await getDoc(categoriesDocRef);
+                if (categoriesDoc.exists()) {
+                     setExpenseCategories(categoriesDoc.data().categories);
+                } else {
+                     setExpenseCategories(getInitialCategories(language, departmentId));
+                }
+
+                // Then fetch expenses
                 const expensesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'expenses');
                 const expensesSnapshot = await getDocs(expensesCollectionRef);
                 const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
@@ -83,17 +96,9 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 })) as ExpenseItem[];
                 setExpenses(fetchedExpenses);
 
-                // Fetch categories
-                const categoriesDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
-                const categoriesDoc = await getDoc(categoriesDocRef);
-                 if (categoriesDoc.exists()) {
-                     setExpenseCategories(categoriesDoc.data().categories);
-                 } else {
-                     setExpenseCategories(getInitialCategories(language, departmentId));
-                 }
             } catch (e) {
                 console.error("Error fetching data: ", e);
-                setExpenseCategories(getInitialCategories(language, departmentId));
+                setExpenseCategories(getInitialCategories(language, departmentId)); // Fallback to initial
             } finally {
                 setIsDataLoading(false);
             }

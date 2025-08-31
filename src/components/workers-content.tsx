@@ -38,42 +38,43 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     React.useEffect(() => {
         const fetchWorkers = async () => {
-            if (targetUserId) {
-                setIsDataLoading(true);
-                try {
-                    const workersColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers');
-                    const workersSnapshot = await getDocs(workersColRef);
-                    const fetchedWorkers: Worker[] = [];
-
-                    for (const workerDoc of workersSnapshot.docs) {
-                        const transactionsColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerDoc.id, 'transactions');
-                        const transactionsSnapshot = await getDocs(transactionsColRef);
-                        const transactions = transactionsSnapshot.docs.map(tDoc => ({ id: tDoc.id, ...tDoc.data() })) as Transaction[];
-                        
-                        const workerData = workerDoc.data();
-                        fetchedWorkers.push({
-                            id: workerDoc.id,
-                            name: workerData.name,
-                            baseSalary: workerData.baseSalary,
-                            transactions: transactions,
-                            paidMonths: workerData.paidMonths || [],
-                        });
-                    }
-                    setWorkers(fetchedWorkers);
-                } catch (e) {
-                    console.error("Error fetching workers: ", e);
-                    toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
-                } finally {
-                    setIsDataLoading(false);
-                }
-            } else {
+            if (!targetUserId || !departmentId) {
                 setWorkers([]);
+                setIsDataLoading(false);
+                return;
+            }
+            setIsDataLoading(true);
+            setWorkers([]); // Clear previous data
+            try {
+                const workersColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers');
+                const workersSnapshot = await getDocs(workersColRef);
+                const fetchedWorkers: Worker[] = [];
+
+                for (const workerDoc of workersSnapshot.docs) {
+                    const transactionsColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerDoc.id, 'transactions');
+                    const transactionsSnapshot = await getDocs(transactionsColRef);
+                    const transactions = transactionsSnapshot.docs.map(tDoc => ({ id: tDoc.id, ...tDoc.data() })) as Transaction[];
+                    
+                    const workerData = workerDoc.data();
+                    fetchedWorkers.push({
+                        id: workerDoc.id,
+                        name: workerData.name,
+                        baseSalary: workerData.baseSalary,
+                        transactions: transactions,
+                        paidMonths: workerData.paidMonths || [],
+                    });
+                }
+                setWorkers(fetchedWorkers);
+            } catch (e) {
+                console.error("Error fetching workers: ", e);
+                toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
+            } finally {
                 setIsDataLoading(false);
             }
         };
 
         fetchWorkers();
-    }, [targetUserId, t, toast, departmentId]);
+    }, [targetUserId, departmentId, t, toast]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
