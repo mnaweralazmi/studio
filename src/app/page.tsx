@@ -2,24 +2,18 @@
 "use client";
 
 import * as React from 'react';
-import * as Lucide from 'lucide-react';
+import { Leaf, PlayCircle, BookOpen, Trash2, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import { useTopics } from '@/context/topics-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlayCircle, BookOpen, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { TopicDialog, TopicFormValues } from '@/components/topic-dialog';
 import type { AgriculturalSection } from '@/lib/topics-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-
-const getIcon = (name: string): React.ElementType => {
-    const Icon = (Lucide as unknown as Record<string, React.ElementType>)[name];
-    return Icon || Lucide.Leaf;
-};
 
 export default function Home() {
   const { t, language } = useLanguage();
@@ -86,7 +80,7 @@ export default function Home() {
       <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">
         <header className="space-y-4 text-center">
           <div className="inline-flex items-center gap-3 bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">
-            <Lucide.Leaf className="h-4 w-4" />
+            <Leaf className="h-4 w-4" />
             <span className="font-semibold">{t('kuwaitiFarmer')}</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground tracking-tight">

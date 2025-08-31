@@ -1,0 +1,132 @@
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithRedirect,
+    getRedirectResult, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, collection, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // صندوق لوجات بسيط
+  const logBox = document.createElement('pre');
+  logBox.style.cssText = 'background:#f6f6f6;border:1px solid #ddd;padding:10px;white-space:pre-wrap;';
+  logBox.id = 'logBox';
+  document.body.appendChild(logBox);
+  const log = (...a)=>{ console.log(...a); logBox.textContent += a.join(' ') + '\n'; };
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLB7Dfw5jpDQsVvep-OWVeNv9Hq_nQZSs",
+    authDomain: "kuwaity-farm.firebaseapp.com",
+    projectId: "kuwaity-farm",
+    storageBucket: "kuwaity-farm.appspot.com",
+    messagingSenderId: "433160071015",
+    appId: "1:433160071015:web:5d271b172d739b16ddb1c2"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn   = document.getElementById('login');
+  const logoutBtn  = document.getElementById('logout');
+  const userP      = document.getElementById('user');
+  const profileDiv = document.getElementById('profile');
+  const nameEl     = document.getElementById('name');
+  const emailEl    = document.getElementById('email');
+  const pointsEl   = document.getElementById('points');
+  const levelEl    = document.getElementById('level');
+  const roleEl     = document.getElementById('role');
+  const badgesEl   = document.getElementById('badges');
+  const debtsDiv   = document.getElementById('debts');
+  const debtsList  = document.getElementById('debtsList');
+
+  // اكتب بعض التشخيصات المفيدة
+  log('origin =', location.origin);
+  log('authDomain =', firebaseConfig.authDomain);
+  log('apiKey starts with =', firebaseConfig.apiKey.slice(0,6), '…');
+
+  loginBtn.onclick = async () => {
+    try {
+      log('Starting signInWithRedirect…');
+      await signInWithRedirect(auth, provider);
+    } catch (e) {
+      log('signInWithRedirect error:', e.code || '', e.message || e);
+      alert('تعذر بدء تسجيل الدخول: ' + (e.message || e));
+    }
+  };
+
+  logoutBtn.onclick = () => signOut(auth);
+
+  // التحقق من نتيجة العودة من جوجل
+  getRedirectResult(auth).then(res => {
+    if (res) {
+      log('getRedirectResult OK: user =', res.user?.email || res.user?.uid);
+    } else {
+      log('getRedirectResult: no result (first load or already handled).');
+    }
+  }).catch(e => {
+    log('getRedirectResult error:', e.code || '', e.message || e);
+  });
+
+  // متابعة تغيّر حالة المصادقة
+  onAuthStateChanged(auth, async (user) => {
+    log('onAuthStateChanged fired. user =', !!user ? (user.email || user.uid) : 'null');
+
+    if (!user) {
+      userP.textContent = 'غير مسجّل';
+      loginBtn.style.display  = 'inline-block';
+      logoutBtn.style.display = 'none';
+      profileDiv && (profileDiv.style.display = 'none');
+      debtsDiv   && (debtsDiv.style.display   = 'none');
+      return;
+    }
+
+    userP.textContent = `مسجّل: ${user.email || user.displayName || user.uid}`;
+    loginBtn.style.display  = 'none';
+    logoutBtn.style.display = 'inline-block';
+
+    // قراءة وثيقة المستخدم
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      profileDiv && (profileDiv.style.display = 'block');
+      if (snap.exists()) {
+        const d = snap.data();
+        nameEl   && (nameEl.textContent   = d.name   ?? '');
+        emailEl  && (emailEl.textContent  = d.email  ?? user.email ?? '');
+        pointsEl && (pointsEl.textContent = d.points ?? '');
+        levelEl  && (levelEl.textContent  = d.level  ?? '');
+        roleEl   && (roleEl.textContent   = d.role   ?? '');
+        badgesEl && (badgesEl.textContent = Array.isArray(d.badges) ? d.badges.join(', ') : (d.badges ?? ''));
+      } else {
+        emailEl && (emailEl.textContent = user.email ?? '');
+      }
+    } catch (e) {
+      log('user doc read error:', e.message || e);
+    }
+
+    // الاستماع للديون
+    try {
+      if (debtsDiv && debtsList) {
+        debtsDiv.style.display = 'block';
+        const ref = collection(db, 'users', user.uid, 'debts');
+        onSnapshot(ref, (qsnap) => {
+          debtsList.innerHTML = '';
+          if (qsnap.empty) {
+            debtsList.innerHTML = "<li class='muted'>لا توجد ديون</li>";
+          } else {
+            qsnap.forEach(s => {
+              const d = s.data();
+              const li = document.createElement('li');
+              li.textContent = `المبلغ: ${d.amount ?? '-'} — الدائن: ${d.creditor ?? '-'} — الحالة: ${d.status ?? '-'}`;
+              debtsList.appendChild(li);
+            });
+          }
+        });
+      }
+    } catch (e) {
+      log('debts listen error:', e.message || e);
+    }
+  });
+</script>
