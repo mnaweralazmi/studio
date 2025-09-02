@@ -265,5 +265,3 @@ export default function TopicDetailsPage() {
     </main>
   );
 }
-
-    

@@ -68,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         ...firebaseUser, // This includes uid, email, etc. from auth
                         ...userData, // This includes role, points, level, etc. from firestore
                         displayName: userData.name || firebaseUser.displayName, // Prioritize firestore name
+                        name: userData.name || firebaseUser.displayName, // also set name property
                         photoURL: userData.photoURL || firebaseUser.photoURL, // Prioritize firestore photo
                     } as AppUser);
                 } else {

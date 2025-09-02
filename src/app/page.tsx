@@ -10,7 +10,7 @@ import { useTopics } from '@/context/topics-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
-import { TopicDialog, TopicFormValues } from '@/components/topic-dialog';
+import { ContentDialog } from '@/components/content-dialog';
 import type { AgriculturalSection } from '@/lib/topics-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
@@ -35,7 +35,7 @@ export default function Home() {
       setIsDialogOpen(true);
   }
 
-  const handleSubmit = async (data: TopicFormValues) => {
+  const handleSubmit = async (data: any) => {
     if (editingTopic) {
         // Update existing topic in Firestore
         const topicRef = doc(db, 'topics', editingTopic.id);
@@ -100,7 +100,7 @@ export default function Home() {
         <section className="w-full border-t pt-8">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-3xl font-bold">{t('agriculturalTopics')}</h2>
-              {isAdmin && <TopicDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} onSubmit={handleSubmit} topic={editingTopic} setEditingTopic={setEditingTopic} />}
+              {isAdmin && <ContentDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} onSubmit={handleSubmit} />}
             </div>
              {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -179,5 +179,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
