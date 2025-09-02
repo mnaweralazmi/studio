@@ -13,7 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, CalendarIcon, Repeat, Bell, Clock } from 'lucide-react';
+import { PlusCircle, CalendarIcon, Repeat, Clock } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';

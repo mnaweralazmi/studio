@@ -4,7 +4,7 @@
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import { initialAgriculturalSections, type AgriculturalSection } from '@/lib/topics-data';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 
 
 interface TopicsContextType {
@@ -28,12 +28,12 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             
             if (querySnapshot.empty) {
                 // If the collection is empty, populate it with initial data
-                const batch = [];
+                const batch = writeBatch(db);
                 for (const section of initialAgriculturalSections) {
                     const docRef = doc(db, 'topics', section.id);
-                    batch.push(setDoc(docRef, section));
+                    batch.set(docRef, section);
                 }
-                await Promise.all(batch);
+                await batch.commit();
                 setTopics(initialAgriculturalSections);
             } else {
                 const fetchedTopics: AgriculturalSection[] = querySnapshot.docs.map(doc => ({

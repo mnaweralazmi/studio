@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { format, isValid, addDays, startOfDay, isToday } from 'date-fns';
+import { format, isToday, addDays } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, writeBatch, Timestamp, addDoc, query } from 'firebase/firestore';
+import { collection, getDocs, doc, writeBatch, Timestamp, query, deleteDoc } from 'firebase/firestore';
 
 export interface Task {
   id: string;
@@ -149,7 +149,7 @@ export default function CalendarPage() {
   }, [user, t, toast]);
 
   React.useEffect(() => {
-    if (!loading) {
+    if (!loading && user) {
       fetchTasks();
     }
   }, [user, loading, fetchTasks]);
@@ -174,7 +174,8 @@ export default function CalendarPage() {
                 isCompleted: false,
             };
             delete (newTaskData as any).id;
-            batch.set(doc(tasksCollectionRef), newTaskData);
+            const newDocRef = doc(tasksCollectionRef);
+            batch.set(newDocRef, newTaskData);
         }
         
         batch.update(taskRef, { isCompleted: true });
