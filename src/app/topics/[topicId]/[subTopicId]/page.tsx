@@ -14,25 +14,26 @@ import { useAuth } from '@/context/auth-context';
 import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SubTopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics } = useTopics();
+  const { topics, loading: topicsLoading } = useTopics();
   const { user } = useAuth();
   const { toast } = useToast();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   const [subTopic, setSubTopic] = React.useState<SubTopic | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isPointsLoading, setIsPointsLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (topics.length > 0 && params.topicId && params.subTopicId) {
       const currentTopic = topics.find((t: AgriculturalSection) => t.id === params.topicId);
       if (currentTopic) {
+        const foundSubTopic = currentTopic.subTopics.find((st: SubTopic) => st.id === params.subTopicId);
         setTopic(currentTopic);
-        const currentSubTopic = currentTopic.subTopics.find((st: SubTopic) => st.id === params.subTopicId);
-        setSubTopic(currentSubTopic || null);
+        setSubTopic(foundSubTopic || null);
       }
     }
   }, [params.topicId, params.subTopicId, topics]);
@@ -43,7 +44,7 @@ export default function SubTopicDetailsPage() {
       
       const viewedTopicKey = `viewed-${subTopic.id}`;
       if (sessionStorage.getItem(viewedTopicKey)) {
-        setIsLoading(false);
+        setIsPointsLoading(false);
         return; // Already awarded points this session
       }
 
@@ -79,23 +80,41 @@ export default function SubTopicDetailsPage() {
       } catch (error) {
         console.error("Failed to award points:", error);
       } finally {
-        setIsLoading(false);
+        setIsPointsLoading(false);
       }
     };
 
     if (user && subTopic) {
       awardPoints();
     } else if (!user) {
-      setIsLoading(false);
+      setIsPointsLoading(false);
     }
   }, [user, subTopic, toast, t]);
 
-  if (isLoading || !topic || !subTopic) {
+  if (topicsLoading || isPointsLoading) {
+    return (
+        <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
+            <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
+                <Skeleton className="h-10 w-48" />
+                <Card>
+                    <Skeleton className="h-96 w-full" />
+                    <div className="p-6 md:p-10 space-y-4">
+                        <Skeleton className="h-10 w-3/4" />
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                </Card>
+            </div>
+        </main>
+    )
+  }
+
+  if (!topic || !subTopic) {
     return <div>{t('loading')}</div>; 
   }
 
-  const title = t(subTopic.titleKey as any);
-  const description = t(subTopic.descriptionKey as any);
+  const title = subTopic.titleKey === 'custom' ? subTopic.title : t(subTopic.titleKey as any);
+  const description = subTopic.descriptionKey === 'custom' ? subTopic.description : t(subTopic.descriptionKey as any);
+  const topicTitle = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -104,7 +123,7 @@ export default function SubTopicDetailsPage() {
             <div>
                 <Button variant="outline" onClick={() => router.back()} className="mb-6">
                 <ArrowLeft className={language === 'ar' ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
-                {t('backToTopics', { topicName: t(topic.titleKey as any) })}
+                {t('backToTopics', { topicName: topicTitle! })}
                 </Button>
             </div>
             
@@ -112,7 +131,7 @@ export default function SubTopicDetailsPage() {
                 <div className="relative w-full h-96">
                 <Image
                     src={subTopic.image}
-                    alt={title}
+                    alt={title!}
                     fill
                     style={{objectFit: 'cover'}}
                     data-ai-hint={subTopic.hint}
@@ -133,3 +152,5 @@ export default function SubTopicDetailsPage() {
     </main>
   );
 }
+
+    

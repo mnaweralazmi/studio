@@ -2,34 +2,34 @@
 "use client";
 
 import * as React from 'react';
-import { format, isValid, addDays, parseISO, startOfDay, isToday, isTomorrow, isWithinInterval, endOfWeek, endOfMonth } from 'date-fns';
+import { format, isValid, addDays, startOfDay, isToday } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, CalendarDays, CheckCircle, Repeat, Bell, Trash2, ChevronDown, Clock, GripVertical } from 'lucide-react';
+import { PlusCircle, CalendarDays, CheckCircle, Repeat, Bell, Trash2, Clock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Separator } from '@/components/ui/separator';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, writeBatch, Timestamp, addDoc, query } from 'firebase/firestore';
 
 export interface Task {
   id: string;
   title: string;
   description?: string;
-  dueDate: string; // ISO string
+  dueDate: Date; // Keep as Date object for easier manipulation
   isCompleted: boolean;
   isRecurring: boolean;
   reminderDays?: number;
 }
 
 const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
-    const dueDate = parseISO(task.dueDate);
-    const hasTime = !!task.dueDate.match(/T\d{2}:\d{2}/);
+    const dueDate = task.dueDate;
+    const dateStr = dueDate.toISOString();
+    const hasTime = !!dateStr.match(/T\d{2}:\d{2}/) && !dateStr.endsWith("T00:00:00.000Z");
     
     const getIconWithBg = (Icon: React.ElementType, colorClass: string) => (
         <div className={`p-1 rounded-full ${colorClass}`}>
@@ -126,69 +126,84 @@ export default function CalendarPage() {
   const { user, loading } = useAuth();
   const { language, t } = useLanguage();
 
+  const fetchTasks = React.useCallback(async () => {
+    if (user) {
+        try {
+            const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
+            const q = query(tasksCollectionRef);
+            const querySnapshot = await getDocs(q);
+            const fetchedTasks: Task[] = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    dueDate: (data.dueDate as Timestamp).toDate(),
+                } as Task;
+            });
+            setTasks(fetchedTasks);
+        } catch (e) {
+            console.error("Failed to fetch tasks:", e);
+            toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
+        }
+    }
+  }, [user, t, toast]);
+
   React.useEffect(() => {
-    if (user && !loading) {
-      const userTasksKey = `calendarTasks_${user.uid}`;
-      const storedTasks = localStorage.getItem(userTasksKey);
-      if (storedTasks) {
-          try {
-              const parsedTasks: Task[] = JSON.parse(storedTasks);
-              const validTasks = parsedTasks.filter(task => task.dueDate && isValid(parseISO(task.dueDate)));
-              setTasks(validTasks);
-          } catch(e) {
-              console.error("Failed to parse tasks, resetting.", e);
-              localStorage.removeItem(userTasksKey);
-          }
-      }
+    if (!loading) {
+      fetchTasks();
     }
-  }, [user, loading]);
-  
-  const updateTasks = (newTasks: Task[]) => {
-    setTasks(newTasks);
-    if(user) {
-        const userTasksKey = `calendarTasks_${user.uid}`;
-        localStorage.setItem(userTasksKey, JSON.stringify(newTasks));
-    }
-  }
+  }, [user, loading, fetchTasks]);
 
-  const handleCompleteTask = (taskId: string) => {
-    let newTasks = [...tasks];
-    const taskIndex = newTasks.findIndex(t => t.id === taskId);
-    if (taskIndex === -1) return;
+  const handleCompleteTask = async (taskId: string) => {
+    if (!user) return;
+    const taskToComplete = tasks.find(t => t.id === taskId);
+    if (!taskToComplete) return;
 
-    const taskToComplete = newTasks[taskIndex];
+    try {
+        const batch = writeBatch(db);
+        const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
 
-    if (taskToComplete.isRecurring) {
-        taskToComplete.isCompleted = true;
+        if (taskToComplete.isRecurring) {
+            const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
+            const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
+            
+            // Create a new task for the next occurrence
+            const newTaskData = {
+                ...taskToComplete,
+                dueDate: Timestamp.fromDate(nextDueDate),
+                isCompleted: false,
+            };
+            delete (newTaskData as any).id;
+            batch.set(doc(tasksCollectionRef), newTaskData);
+        }
         
-        const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
-        const newTask: Task = {
-            ...taskToComplete,
-            id: crypto.randomUUID(),
-            dueDate: nextDueDate.toISOString(),
-            isCompleted: false,
-        };
-        newTasks.push(newTask);
-    } else {
-        taskToComplete.isCompleted = true;
+        batch.update(taskRef, { isCompleted: true });
+
+        await batch.commit();
+        await fetchTasks(); // Refetch to get all updates
+        toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });
+    } catch (e) {
+        console.error("Failed to complete task:", e);
+        toast({ variant: 'destructive', title: t('error'), description: 'Failed to update task.' });
     }
-    
-    updateTasks(newTasks);
-    toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });
   };
   
-  const handleDeleteTask = (taskId: string) => {
-    const newTasks = tasks.filter(t => t.id !== taskId);
-    updateTasks(newTasks);
-    toast({ variant: "destructive", title: t('taskDeleted') });
+  const handleDeleteTask = async (taskId: string) => {
+    if (!user) return;
+    try {
+        await deleteDoc(doc(db, 'users', user.uid, 'tasks', taskId));
+        setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
+        toast({ variant: "destructive", title: t('taskDeleted') });
+    } catch(e) {
+        console.error("Error deleting task:", e);
+        toast({ variant: "destructive", title: t('error'), description: 'Failed to delete task.' });
+    }
   }
   
-  const today = startOfDay(new Date());
-
   const upcomingTasks = tasks.filter(task => !task.isCompleted)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
-  const todayTasks = upcomingTasks.filter(task => isToday(parseISO(task.dueDate)));
+  const todayTasks = upcomingTasks.filter(task => isToday(task.dueDate));
   
   const allCompletedTasks = tasks
     .filter(task => task.isCompleted)
@@ -270,3 +285,5 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    

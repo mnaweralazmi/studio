@@ -15,12 +15,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { ContentDialog, ContentFormValues } from '@/components/content-dialog';
 import { useAuth } from '@/context/auth-context';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, setTopics } = useTopics();
+  const { topics, setTopics, loading } = useTopics();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   const { toast } = useToast();
   
@@ -43,75 +46,103 @@ export default function TopicDetailsPage() {
     setIsDialogOpen(true);
   }
   
-  const handleSubmit = (data: ContentFormValues) => {
-    setTopics(prevTopics => {
-        return prevTopics.map(currentTopic => {
-            if (currentTopic.id === topic?.id) {
-                const updatedTopic = { ...currentTopic };
-                if (data.type === 'subtopic') {
-                    const newSubTopic: SubTopic = {
-                        id: editingContent ? (editingContent.data as SubTopic).id : crypto.randomUUID(),
-                        titleKey: 'custom',
-                        title: data.title,
-                        descriptionKey: 'custom',
-                        description: data.description!,
-                        image: data.imageUrl,
-                        hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-                    };
-                    if (editingContent) {
-                        updatedTopic.subTopics = updatedTopic.subTopics.map(st => st.id === newSubTopic.id ? newSubTopic : st);
-                    } else {
-                        updatedTopic.subTopics = [...updatedTopic.subTopics, newSubTopic];
-                    }
-                    toast({ title: editingContent ? t('editTopicSuccess') : t('addTopicSuccess') });
-                } else if (data.type === 'video') {
-                     const newVideo: VideoSection = {
-                        id: editingContent ? (editingContent.data as VideoSection).id : crypto.randomUUID(),
-                        titleKey: 'custom',
-                        title: data.title,
-                        durationKey: 'custom',
-                        duration: data.duration!,
-                        image: data.imageUrl,
-                        videoUrl: data.videoUrl!,
-                        hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-                    };
-                    if (editingContent) {
-                        updatedTopic.videos = (updatedTopic.videos || []).map(v => v.id === newVideo.id ? newVideo : v);
-                    } else {
-                        updatedTopic.videos = [...(updatedTopic.videos || []), newVideo];
-                    }
-                     toast({ title: editingContent ? t('editVideoSuccess') : t('addVideoSuccess') });
-                }
-                return updatedTopic;
-            }
-            return currentTopic;
+  const handleSubmit = async (data: ContentFormValues) => {
+    if (!topic) return;
+
+    let updatedTopic: AgriculturalSection | null = null;
+
+    if (data.type === 'subtopic') {
+        const newSubTopic: SubTopic = {
+            id: editingContent ? (editingContent.data as SubTopic).id : crypto.randomUUID(),
+            titleKey: 'custom',
+            title: data.title,
+            descriptionKey: 'custom',
+            description: data.description!,
+            image: data.imageUrl,
+            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
+        };
+
+        if (editingContent) {
+            const subTopics = topic.subTopics.map(st => st.id === newSubTopic.id ? newSubTopic : st);
+            updatedTopic = { ...topic, subTopics };
+        } else {
+            const subTopics = [...topic.subTopics, newSubTopic];
+            updatedTopic = { ...topic, subTopics };
+        }
+        toast({ title: editingContent ? t('editTopicSuccess') : t('addTopicSuccess') });
+
+    } else if (data.type === 'video') {
+        const newVideo: VideoSection = {
+            id: editingContent ? (editingContent.data as VideoSection).id : crypto.randomUUID(),
+            titleKey: 'custom',
+            title: data.title,
+            durationKey: 'custom',
+            duration: data.duration!,
+            image: data.imageUrl,
+            videoUrl: data.videoUrl!,
+            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
+        };
+
+        if (editingContent) {
+            const videos = (topic.videos || []).map(v => v.id === newVideo.id ? newVideo : v);
+            updatedTopic = { ...topic, videos };
+        } else {
+            const videos = [...(topic.videos || []), newVideo];
+            updatedTopic = { ...topic, videos };
+        }
+        toast({ title: editingContent ? t('editVideoSuccess') : t('addVideoSuccess') });
+    }
+
+    if (updatedTopic) {
+        const topicRef = doc(db, 'topics', topic.id);
+        await updateDoc(topicRef, {
+            subTopics: updatedTopic.subTopics,
+            videos: updatedTopic.videos,
         });
-    });
+        setTopics(prevTopics => prevTopics.map(t => t.id === topic.id ? updatedTopic! : t));
+    }
+    
     setIsDialogOpen(false);
     setEditingContent(undefined);
   };
   
-  const handleDelete = (type: 'subtopic' | 'video', id: string) => {
-      setTopics(prevTopics => {
-          return prevTopics.map(currentTopic => {
-              if (currentTopic.id === topic?.id) {
-                   const updatedTopic = { ...currentTopic };
-                   if (type === 'subtopic') {
-                       updatedTopic.subTopics = updatedTopic.subTopics.filter(st => st.id !== id);
-                   } else {
-                       updatedTopic.videos = (updatedTopic.videos || []).filter(v => v.id !== id);
-                   }
-                   return updatedTopic;
-              }
-              return currentTopic;
-          })
+  const handleDelete = async (type: 'subtopic' | 'video', id: string) => {
+      if (!topic) return;
+      
+      let updatedTopic: AgriculturalSection | null = null;
+      if (type === 'subtopic') {
+          const subTopics = topic.subTopics.filter(st => st.id !== id);
+          updatedTopic = { ...topic, subTopics };
+      } else {
+          const videos = (topic.videos || []).filter(v => v.id !== id);
+          updatedTopic = { ...topic, videos };
+      }
+
+      const topicRef = doc(db, 'topics', topic.id);
+      await updateDoc(topicRef, {
+          subTopics: updatedTopic.subTopics,
+          videos: updatedTopic.videos,
       });
+
+      setTopics(prevTopics => prevTopics.map(t => t.id === topic.id ? updatedTopic! : t));
       toast({ variant: 'destructive', title: type === 'subtopic' ? t('deleteTopicSuccess') : t('deleteVideoSuccess')});
   }
 
 
-  if (!topic) {
-    return <div>{t('loading')}</div>; 
+  if (loading || !topic) {
+    return (
+        <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
+            <div className="w-full max-w-5xl mx-auto flex flex-col gap-12">
+                <Skeleton className="h-10 w-36" />
+                <Skeleton className="h-24 w-full" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <Skeleton className="h-80 w-full" />
+                    <Skeleton className="h-80 w-full" />
+                    <Skeleton className="h-80 w-full" />
+                </div>
+            </div>
+        </main>
+    );
   }
 
   const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
@@ -234,3 +265,5 @@ export default function TopicDetailsPage() {
     </main>
   );
 }
+
+    

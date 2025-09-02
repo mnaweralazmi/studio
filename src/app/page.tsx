@@ -14,10 +14,14 @@ import { TopicDialog, TopicFormValues } from '@/components/topic-dialog';
 import type { AgriculturalSection } from '@/lib/topics-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { doc, runTransaction, getDocs, collection, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 export default function Home() {
-  const { t, language } = useLanguage();
-  const { topics, setTopics } = useTopics();
+  const { t } = useLanguage();
+  const { topics, setTopics, loading } = useTopics();
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -31,46 +35,48 @@ export default function Home() {
       setIsDialogOpen(true);
   }
 
-  const handleSubmit = (data: TopicFormValues) => {
-    setTopics(prevTopics => {
-        if (editingTopic) {
-            // Update existing topic
-            toast({ title: t('editTopicSuccess') });
-            return prevTopics.map(topic => 
-                topic.id === editingTopic.id ? { 
-                    ...topic, 
-                    titleKey: 'custom', 
-                    title: data.title,
-                    descriptionKey: 'custom',
-                    description: data.description,
-                    image: data.image,
-                    iconName: data.iconName,
-                    hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-                } : topic
-            );
-        } else {
-            // Add new topic
-            const newTopic: AgriculturalSection = {
-                id: crypto.randomUUID(),
-                titleKey: 'custom',
-                title: data.title,
-                descriptionKey: 'custom',
-                description: data.description,
-                iconName: data.iconName,
-                image: data.image,
-                hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-                subTopics: [],
-                videos: []
-            };
-            toast({ title: t('addTopicSuccess') });
-            return [...prevTopics, newTopic];
-        }
-    });
+  const handleSubmit = async (data: TopicFormValues) => {
+    if (editingTopic) {
+        // Update existing topic in Firestore
+        const topicRef = doc(db, 'topics', editingTopic.id);
+        const updatedData = { 
+            title: data.title,
+            description: data.description,
+            image: data.image,
+            iconName: data.iconName,
+            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
+            titleKey: 'custom', 
+            descriptionKey: 'custom',
+        };
+        await updateDoc(topicRef, updatedData);
+        setTopics(prevTopics => prevTopics.map(topic => 
+            topic.id === editingTopic.id ? { ...topic, ...updatedData } : topic
+        ));
+        toast({ title: t('editTopicSuccess') });
+    } else {
+        // Add new topic to Firestore
+        const newTopicData = {
+            title: data.title,
+            description: data.description,
+            iconName: data.iconName,
+            image: data.image,
+            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
+            titleKey: 'custom',
+            descriptionKey: 'custom',
+            subTopics: [],
+            videos: []
+        };
+        const docRef = await addDoc(collection(db, "topics"), newTopicData);
+        const newTopic: AgriculturalSection = { id: docRef.id, ...newTopicData };
+        setTopics(prevTopics => [...prevTopics, newTopic]);
+        toast({ title: t('addTopicSuccess') });
+    }
     setIsDialogOpen(false);
     setEditingTopic(undefined);
   };
   
-  const handleDelete = (topicId: string) => {
+  const handleDelete = async (topicId: string) => {
+      await deleteDoc(doc(db, 'topics', topicId));
       setTopics(prevTopics => prevTopics.filter(topic => topic.id !== topicId));
       toast({ variant: 'destructive', title: t('deleteTopicSuccess') });
   }
@@ -96,68 +102,74 @@ export default function Home() {
               <h2 className="text-3xl font-bold">{t('agriculturalTopics')}</h2>
               {isAdmin && <TopicDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} onSubmit={handleSubmit} topic={editingTopic} setEditingTopic={setEditingTopic} />}
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {topics.map((topic) => {
-                    const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
-                    const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey as any);
-                    const video = topic.videos && topic.videos.length > 0 ? topic.videos[0] : null;
-                    return (
-                        <Card key={topic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
-                            <div className="relative w-full h-40">
-                                <Image 
-                                    src={topic.image} 
-                                    alt={title!} 
-                                    fill 
-                                    style={{objectFit: 'cover'}}
-                                    data-ai-hint={topic.hint}
-                                />
-                            </div>
-                            <CardContent className="p-4 flex flex-col flex-1">
-                                <h3 className="text-lg font-bold mb-2">{title}</h3>
-                                <p className="text-muted-foreground text-sm flex-1">{description}</p>
-                                <div className="flex flex-col gap-2 mt-4">
-                                    <Button asChild size="sm">
-                                        <Link href={`/topics/${topic.id}`}>
-                                            <BookOpen className="mr-2 h-4 w-4" />
-                                            {t('readMore')}
-                                        </Link>
-                                    </Button>
-                                    {video && (
-                                        <Button asChild variant="secondary" size="sm">
-                                            <a href={video.videoUrl} target="_blank" rel="noopener noreferrer">
-                                                <PlayCircle className="mr-2 h-4 w-4" />
-                                                {t('watchVideo')}
-                                            </a>
+             {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-96 w-full" />)}
+                </div>
+             ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {topics.map((topic) => {
+                        const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
+                        const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey as any);
+                        const video = topic.videos && topic.videos.length > 0 ? topic.videos[0] : null;
+                        return (
+                            <Card key={topic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
+                                <div className="relative w-full h-40">
+                                    <Image 
+                                        src={topic.image} 
+                                        alt={title!} 
+                                        fill 
+                                        style={{objectFit: 'cover'}}
+                                        data-ai-hint={topic.hint}
+                                    />
+                                </div>
+                                <CardContent className="p-4 flex flex-col flex-1">
+                                    <h3 className="text-lg font-bold mb-2">{title}</h3>
+                                    <p className="text-muted-foreground text-sm flex-1">{description}</p>
+                                    <div className="flex flex-col gap-2 mt-4">
+                                        <Button asChild size="sm">
+                                            <Link href={`/topics/${topic.id}`}>
+                                                <BookOpen className="mr-2 h-4 w-4" />
+                                                {t('readMore')}
+                                            </Link>
                                         </Button>
-                                    )}
-                                </div>
-                            </CardContent>
-                             {isAdmin && (
-                                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button size="icon" variant="secondary" onClick={() => handleDialogOpen(topic)}>
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                                                <AlertDialogDescription>{t('confirmDeleteTopicDesc', {topicName: title ?? ""})}</AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(topic.id)}>{t('confirmDelete')}</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            )}
-                        </Card>
-                    )
-                })}
-            </div>
+                                        {video && (
+                                            <Button asChild variant="secondary" size="sm">
+                                                <a href={video.videoUrl} target="_blank" rel="noopener noreferrer">
+                                                    <PlayCircle className="mr-2 h-4 w-4" />
+                                                    {t('watchVideo')}
+                                                </a>
+                                            </Button>
+                                        )}
+                                    </div>
+                                </CardContent>
+                                {isAdmin && (
+                                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button size="icon" variant="secondary" onClick={() => handleDialogOpen(topic)}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
+                                                    <AlertDialogDescription>{t('confirmDeleteTopicDesc', {topicName: title ?? ""})}</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(topic.id)}>{t('confirmDelete')}</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                )}
+                            </Card>
+                        )
+                    })}
+                </div>
+             )}
         </section>
 
         <footer className="text-center mt-16 text-sm text-muted-foreground font-body">
@@ -167,3 +179,5 @@ export default function Home() {
     </main>
   );
 }
+
+    

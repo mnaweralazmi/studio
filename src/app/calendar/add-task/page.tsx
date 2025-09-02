@@ -15,10 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, CalendarIcon, Repeat, Bell, Clock } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import type { Task } from '../page';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { doc, runTransaction } from 'firebase/firestore';
+import { doc, runTransaction, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -93,6 +92,16 @@ export default function AddTaskPage() {
         }
 
         const userRef = doc(db, 'users', user.uid);
+        const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
+        
+        await addDoc(tasksCollectionRef, {
+            title: title,
+            description: description,
+            dueDate: Timestamp.fromDate(finalDueDate),
+            isCompleted: false,
+            isRecurring: isRecurring,
+            reminderDays: reminderDays,
+        });
 
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -120,25 +129,6 @@ export default function AddTaskPage() {
                 toast({ title: t('badgeEarned'), description: t('badgePlannerDesc') });
             }
         });
-
-
-        const userTasksKey = `calendarTasks_${user.uid}`;
-        
-        const storedTasks = localStorage.getItem(userTasksKey);
-        const tasks: Task[] = storedTasks ? JSON.parse(storedTasks) : [];
-        
-        const newTask: Task = {
-            id: crypto.randomUUID(),
-            title: title,
-            description: description,
-            dueDate: finalDueDate.toISOString(),
-            isCompleted: false,
-            isRecurring: isRecurring,
-            reminderDays: reminderDays,
-        };
-
-        tasks.push(newTask);
-        localStorage.setItem(userTasksKey, JSON.stringify(tasks));
         
         toast({
             title: t('taskAddedSuccess'),
@@ -311,3 +301,5 @@ export default function AddTaskPage() {
     </main>
   );
 }
+
+    
