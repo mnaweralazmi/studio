@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -24,22 +24,23 @@ export interface AppUser extends User {
 interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
-  refreshUser: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  refreshUser: () => {},
+  refreshUser: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshUser = async () => {
-    if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
+  const refreshUser = useCallback(async () => {
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
@@ -49,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } : null);
         }
     }
-  }
+  }, []);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -60,7 +61,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const userData = doc.data();
                      setUser({
                         ...firebaseUser,
-                        ...userData
+                        ...userData,
+                        displayName: userData.name || firebaseUser.displayName, // Ensure displayName is consistent
+                        photoURL: userData.photoURL || firebaseUser.photoURL,
                     } as AppUser);
                 }
                 setLoading(false);
