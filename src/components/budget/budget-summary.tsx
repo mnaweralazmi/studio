@@ -117,51 +117,51 @@ export function BudgetSummary() {
             <Card>
                 <CardHeader>
                     <CardTitle>{t('financialSummary')}</CardTitle>
-                    <CardContent className="pt-6">
-                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">{t('totalIncome')}</CardTitle>
-                                    <ArrowUpCircle className="h-5 w-5 text-green-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{summary.totalSales.toFixed(2)} {t('dinar')}</div>
-                                    <p className="text-xs text-muted-foreground">{t('fromSales')}</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">{t('totalExpenditure')}</CardTitle>
-                                    <ArrowDownCircle className="h-5 w-5 text-red-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{summary.totalExpenses.toFixed(2)} {t('dinar')}</div>
-                                    <p className="text-xs text-muted-foreground">{t('expensesAndSalaries')}</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">{t('netProfit')}</CardTitle>
-                                    <DollarSign className={`h-5 w-5 ${summary.netProfit >= 0 ? 'text-blue-500' : 'text-orange-500'}`} />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className={`text-2xl font-bold ${summary.netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{summary.netProfit.toFixed(2)} {t('dinar')}</div>
-                                    <p className="text-xs text-muted-foreground">{t('incomeVsExpenses')}</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">{t('outstandingDebts')}</CardTitle>
-                                    <AlertCircle className="h-5 w-5 text-yellow-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{summary.totalDebts.toFixed(2)} {t('dinar')}</div>
-                                    <p className="text-xs text-muted-foreground">{t('totalUnpaidDebts')}</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </CardContent>
                 </CardHeader>
+                <CardContent>
+                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{t('totalIncome')}</CardTitle>
+                                <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{summary.totalSales.toFixed(2)} {t('dinar')}</div>
+                                <p className="text-xs text-muted-foreground">{t('fromSales')}</p>
+                            </CardContent>
+                        </Card>
+                         <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{t('totalExpenditure')}</CardTitle>
+                                <ArrowDownCircle className="h-5 w-5 text-red-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{summary.totalExpenses.toFixed(2)} {t('dinar')}</div>
+                                <p className="text-xs text-muted-foreground">{t('expensesAndSalaries')}</p>
+                            </CardContent>
+                        </Card>
+                         <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{t('netProfit')}</CardTitle>
+                                <DollarSign className={`h-5 w-5 ${summary.netProfit >= 0 ? 'text-blue-500' : 'text-orange-500'}`} />
+                            </CardHeader>
+                            <CardContent>
+                                <div className={`text-2xl font-bold ${summary.netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{summary.netProfit.toFixed(2)} {t('dinar')}</div>
+                                <p className="text-xs text-muted-foreground">{t('incomeVsExpenses')}</p>
+                            </CardContent>
+                        </Card>
+                         <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{t('outstandingDebts')}</CardTitle>
+                                <AlertCircle className="h-5 w-5 text-yellow-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{summary.totalDebts.toFixed(2)} {t('dinar')}</div>
+                                <p className="text-xs text-muted-foreground">{t('totalUnpaidDebts')}</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </CardContent>
             </Card>
         </div>
     )

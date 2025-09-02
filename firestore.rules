@@ -2,7 +2,6 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // Rule 1: Allow public read access to agricultural topics
     // but restrict writing to authenticated admins.
     match /topics/{topicId} {
