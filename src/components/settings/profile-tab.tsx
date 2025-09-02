@@ -33,7 +33,7 @@ import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage"
 
 export function ProfileTab() {
   const { toast } = useToast();
-  const { user, setUser, loading, refreshUser } = useAuth();
+  const { user, setUser, loading } = useAuth();
   const { t, language } = useLanguage();
 
   const [isSaving, setIsSaving] = React.useState(false);
