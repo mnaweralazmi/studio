@@ -15,6 +15,16 @@ import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc,
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export type ExpenseItem = {
   id: string;
@@ -48,6 +58,75 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
 
 interface ExpensesContentProps {
     departmentId: string;
+}
+
+function EditExpenseDialog({ expense, onSave, children, categories }: { expense: ExpenseItem, onSave: (id: string, data: Partial<ExpenseItem>) => void, children: React.ReactNode, categories: Record<string, string[]> }) {
+    const { t } = useLanguage();
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [selectedCategory, setSelectedCategory] = React.useState(expense.category);
+
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const type = formData.get('type') as 'fixed' | 'variable';
+        const category = formData.get('category') as string;
+        const item = formData.get('item') as string;
+        const amount = Number(formData.get('amount'));
+
+        if (!type || !category || !item || amount <= 0) return;
+
+        onSave(expense.id, { type, category, item, amount });
+        setIsOpen(false);
+    };
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{t('editExpense')}</DialogTitle>
+                </DialogHeader>
+                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="type">{t('expenseType')}</Label>
+                        <Select name="type" defaultValue={expense.type}>
+                            <SelectTrigger id="type"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="fixed">{t('expenseTypeFixed')}</SelectItem>
+                                <SelectItem value="variable">{t('expenseTypeVariable')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="category">{t('category')}</Label>
+                        <Select name="category" defaultValue={expense.category} onValueChange={setSelectedCategory}>
+                            <SelectTrigger id="category"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {Object.keys(categories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="item">{t('item')}</Label>
+                        <Select name="item" defaultValue={expense.item} disabled={!selectedCategory}>
+                            <SelectTrigger id="item"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {categories[selectedCategory]?.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="amount">{t('amountInDinar')}</Label>
+                        <Input id="amount" name="amount" type="number" step="0.01" defaultValue={expense.amount} required />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
+                        <Button type="submit">{t('saveChanges')}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
@@ -89,7 +168,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     ...doc.data(),
                     date: (doc.data().date as Timestamp).toDate()
                 })) as ExpenseItem[];
-                setExpenses(fetchedExpenses);
+                setExpenses(fetchedExpenses.sort((a,b) => b.date.getTime() - a.date.getTime()));
 
             } catch (e) {
                 console.error("Error fetching data: ", e);
@@ -144,7 +223,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
               departmentId,
             };
 
-            setExpenses(prev => [...prev, newExpense]);
+            setExpenses(prev => [...prev, newExpense].sort((a,b) => b.date.getTime() - a.date.getTime()));
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
@@ -163,6 +242,19 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         } catch(e) {
             console.error("Error deleting expense: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to delete expense." });
+        }
+    }
+
+    async function handleEditExpense(id: string, data: Partial<ExpenseItem>) {
+        if (!targetUserId) return;
+        try {
+            const expenseRef = doc(db, 'users', targetUserId, 'expenses', id);
+            await updateDoc(expenseRef, data);
+            setExpenses(prev => prev.map(item => item.id === id ? { ...item, ...data } as ExpenseItem : item));
+            toast({ title: t('expenseUpdatedSuccess') });
+        } catch(e) {
+             console.error("Error updating expense: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to update expense." });
         }
     }
 
@@ -287,8 +379,17 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                                 <TableCell className="text-right">
-                                                     <div className="flex gap-2 justify-end">
-                                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                                    <div className="flex gap-2 justify-end">
+                                                        <EditExpenseDialog expense={item} onSave={handleEditExpense} categories={expenseCategories}>
+                                                            <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
+                                                        </EditExpenseDialog>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild><Button variant="destructive" size="icon" title={t('delete')}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: item.item })}</AlertDialogDescription></AlertDialogHeader>
+                                                                <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => deleteExpense(item.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -314,7 +415,16 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
-                                                        <Button variant="destructive" size="icon" onClick={() => deleteExpense(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                                        <EditExpenseDialog expense={item} onSave={handleEditExpense} categories={expenseCategories}>
+                                                            <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
+                                                        </EditExpenseDialog>
+                                                         <AlertDialog>
+                                                            <AlertDialogTrigger asChild><Button variant="destructive" size="icon" title={t('delete')}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: item.item })}</AlertDialogDescription></AlertDialogHeader>
+                                                                <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => deleteExpense(item.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -330,3 +440,4 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
+

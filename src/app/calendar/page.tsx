@@ -15,6 +15,7 @@ import { useAuth } from '@/context/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, writeBatch, Timestamp, query, deleteDoc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface Task {
   id: string;
@@ -125,32 +126,41 @@ export default function CalendarPage() {
   const { toast } = useToast();
   const { user, loading } = useAuth();
   const { language, t } = useLanguage();
+  const [isTasksLoading, setIsTasksLoading] = React.useState(true);
 
   const fetchTasks = React.useCallback(async () => {
-    if (user) {
-        try {
-            const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
-            const q = query(tasksCollectionRef);
-            const querySnapshot = await getDocs(q);
-            const fetchedTasks: Task[] = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    dueDate: (data.dueDate as Timestamp).toDate(),
-                } as Task;
-            });
-            setTasks(fetchedTasks);
-        } catch (e) {
-            console.error("Failed to fetch tasks:", e);
-            toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
-        }
+    if (!user) {
+        setIsTasksLoading(false);
+        return;
+    };
+    setIsTasksLoading(true);
+    try {
+        const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
+        const q = query(tasksCollectionRef);
+        const querySnapshot = await getDocs(q);
+        const fetchedTasks: Task[] = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                dueDate: (data.dueDate as Timestamp).toDate(),
+            } as Task;
+        });
+        setTasks(fetchedTasks);
+    } catch (e) {
+        console.error("Failed to fetch tasks:", e);
+        toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
+    } finally {
+        setIsTasksLoading(false);
     }
   }, [user, t, toast]);
 
   React.useEffect(() => {
     if (!loading && user) {
       fetchTasks();
+    }
+     if (!loading && !user) {
+      setIsTasksLoading(false);
     }
   }, [user, loading, fetchTasks]);
 
@@ -210,7 +220,7 @@ export default function CalendarPage() {
     .filter(task => task.isCompleted)
     .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
   
-  if (loading) {
+  if (loading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
@@ -230,58 +240,68 @@ export default function CalendarPage() {
             </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
-          <Card className="row-span-1">
-            <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="p-0"
-                classNames={{
-                    root: "w-full",
-                    months: "w-full",
-                    month: "w-full",
-                    table: "w-full",
-                    head_row: "w-full",
-                    row: "w-full",
-                }}
-                locale={language === 'ar' ? arSA : enUS}
-            />
-          </Card>
+        { isTasksLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
+                 <Skeleton className="h-[298px] w-full" />
+                 <Skeleton className="h-[400px] w-full" />
+                 <Skeleton className="h-[400px] w-full" />
+                 <Skeleton className="h-[400px] w-full" />
+            </div>
+        ) : (
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
+                <Card className="row-span-1">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        className="p-0"
+                        classNames={{
+                            root: "w-full",
+                            months: "w-full",
+                            month: "w-full",
+                            table: "w-full",
+                            head_row: "w-full",
+                            row: "w-full",
+                        }}
+                        locale={language === 'ar' ? arSA : enUS}
+                    />
+                </Card>
 
-          <TaskSection 
-            title={t('upcomingTasksForDay')} 
-            tasks={upcomingTasks} 
-            onComplete={handleCompleteTask} 
-            onDelete={handleDeleteTask} 
-            language={language} t={t} 
-          />
-          
-          <TaskSection 
-            title={t('tasksForDay')} 
-            tasks={todayTasks} 
-            onComplete={handleCompleteTask} 
-            onDelete={handleDeleteTask} 
-            language={language} t={t}
-          />
+                <TaskSection 
+                    title={t('upcomingTasksForDay')} 
+                    tasks={upcomingTasks} 
+                    onComplete={handleCompleteTask} 
+                    onDelete={handleDeleteTask} 
+                    language={language} t={t} 
+                />
+                
+                <TaskSection 
+                    title={t('tasksForDay')} 
+                    tasks={todayTasks} 
+                    onComplete={handleCompleteTask} 
+                    onDelete={handleDeleteTask} 
+                    language={language} t={t}
+                />
 
-          <Card>
-            <CardHeader>
-                <CardTitle>{t('completedTasksLog')} ({allCompletedTasks.length})</CardTitle>
-            </CardHeader>
-             <CardContent className="overflow-y-auto max-h-96 pr-2">
-                {allCompletedTasks.length > 0 ? (
-                        <div className="space-y-3">
-                        {allCompletedTasks.slice(0,20).map(task => (
-                            <TaskItem key={task.id} task={task} language={language} t={t} onDelete={handleDeleteTask} />
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-center text-muted-foreground py-4">{t('noCompletedTasks')}</p>
-                )}
-            </CardContent>
-          </Card>
-        </div>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('completedTasksLog')} ({allCompletedTasks.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent className="overflow-y-auto max-h-96 pr-2">
+                        {allCompletedTasks.length > 0 ? (
+                                <div className="space-y-3">
+                                {allCompletedTasks.slice(0,20).map(task => (
+                                    <TaskItem key={task.id} task={task} language={language} t={t} onDelete={handleDeleteTask} />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-center text-muted-foreground py-4">{t('noCompletedTasks')}</p>
+                        )}
+                    </CardContent>
+                </Card>
+                </div>
+        )}
+       
       </div>
     </main>
   );

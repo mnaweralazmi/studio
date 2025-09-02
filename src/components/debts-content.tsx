@@ -21,6 +21,16 @@ import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch, set
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export type Payment = {
   id: string;
@@ -40,6 +50,64 @@ export type DebtItem = {
 
 interface DebtsContentProps {
     departmentId: string;
+}
+
+function EditDebtDialog({ debt, onSave, children }: { debt: DebtItem, onSave: (id: string, data: Partial<DebtItem>) => void, children: React.ReactNode }) {
+    const { t, language } = useLanguage();
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [dueDate, setDueDate] = React.useState<Date | undefined>(debt.dueDate);
+
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const creditor = formData.get('creditor') as string;
+        const amount = Number(formData.get('amount'));
+
+        if (!creditor || amount <= 0) return;
+
+        const updatedData: Partial<DebtItem> = { creditor, amount, dueDate };
+        onSave(debt.id, updatedData);
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{t('editDebt')}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="creditor">{t('creditorName')}</Label>
+                        <Input id="creditor" name="creditor" defaultValue={debt.creditor} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="amount">{t('amountInDinar')}</Label>
+                        <Input id="amount" name="amount" type="number" step="0.01" defaultValue={debt.amount} required />
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                        <Label>{t('dueDateOptional')}</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dueDate ? format(dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : <span>{t('pickDate')}</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
+                        <Button type="submit">{t('saveChanges')}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 export function DebtsContent({ departmentId }: DebtsContentProps) {
@@ -87,7 +155,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                   departmentId: data.departmentId,
                 });
               }
-              setDebts(fetchedDebts);
+              setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             } catch (e) {
                 console.error("Error fetching debts: ", e);
                 toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
@@ -148,7 +216,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
               departmentId,
             };
 
-            setDebts(prev => [...prev, newDebt]);
+            setDebts(prev => [...prev, newDebt].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)));
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -183,6 +251,22 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         } catch (e) {
             console.error("Error deleting document: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to delete debt." });
+        }
+    }
+
+    async function handleEditDebt(id: string, data: Partial<DebtItem>) {
+        if (!targetUserId) return;
+        try {
+            const debtRef = doc(db, 'users', targetUserId, 'debts', id);
+            await updateDoc(debtRef, {
+                ...data,
+                dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null
+            });
+            setDebts(prev => prev.map(item => item.id === id ? { ...item, ...data } : item));
+            toast({ title: t('debtUpdatedSuccess') });
+        } catch (e) {
+            console.error("Error updating debt: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to update debt." });
         }
     }
 
@@ -318,12 +402,14 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                 <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
                             </TableRow></TableHeader>
                             <TableBody>
-                                {debts.map((item) => (
+                                {debts.map((item) => {
+                                  const remainingAmount = getRemainingAmount(item);
+                                  return (
                                     <TableRow key={item.id} className={item.status === 'paid' ? 'bg-green-50/50 dark:bg-green-900/20' : ''}>
                                         <TableCell className="font-medium">{item.creditor}</TableCell>
                                         <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell className="font-mono text-green-600">{getPaidAmount(item).toFixed(2)} {t('dinar')}</TableCell>
-                                        <TableCell className="font-mono">{getRemainingAmount(item).toFixed(2)} {t('dinar')}</TableCell>
+                                        <TableCell className="font-mono">{remainingAmount.toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell>{item.dueDate ? format(item.dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
                                         <TableCell>
                                             <Badge variant={item.status === 'paid' ? 'default' : (item.status === 'partially-paid' ? 'secondary' : 'destructive')} className={item.status === 'paid' ? 'bg-green-600 hover:bg-green-600/80' : ''}>
@@ -333,11 +419,29 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                         <TableCell>
                                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
-                                                <Button variant="destructive" size="icon" onClick={() => deleteDebt(item.id)} title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                                <EditDebtDialog debt={item} onSave={handleEditDebt}>
+                                                     <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
+                                                </EditDebtDialog>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="destructive" size="icon" title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
+                                                            <AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: item.creditor })}</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => deleteDebt(item.id)}>{t('confirmDelete')}</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </div>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                  )
+                                })}
                             </TableBody>
                         </Table>
                     </div>
@@ -347,3 +451,4 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
+
