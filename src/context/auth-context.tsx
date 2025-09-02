@@ -60,30 +60,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
+            // Use onSnapshot for real-time updates
             const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                 if (doc.exists()) {
                     const userData = doc.data();
                      setUser({
-                        ...firebaseUser,
-                        ...userData,
-                        displayName: userData.name || firebaseUser.displayName, // Ensure displayName is consistent
-                        photoURL: userData.photoURL || firebaseUser.photoURL,
+                        ...firebaseUser, // This includes uid, email, etc. from auth
+                        ...userData, // This includes role, points, level, etc. from firestore
+                        displayName: userData.name || firebaseUser.displayName, // Prioritize firestore name
+                        photoURL: userData.photoURL || firebaseUser.photoURL, // Prioritize firestore photo
                     } as AppUser);
+                } else {
+                   // Handle case where user exists in Auth but not Firestore (e.g., during registration)
+                   setUser(firebaseUser as AppUser);
                 }
                 setLoading(false);
             }, (error) => {
-                console.error("Error fetching user data:", error);
-                setUser(firebaseUser as AppUser); // Set basic user info even if firestore fails
+                console.error("Error fetching user data with onSnapshot:", error);
+                setUser(firebaseUser as AppUser); // Fallback to auth user data on error
                 setLoading(false);
             });
-            return () => unsubscribeSnapshot();
+            
+            return () => unsubscribeSnapshot(); // Cleanup snapshot listener on unmount or user change
         } else {
             setUser(null);
             setLoading(false);
         }
     });
 
-    return () => unsubscribeAuth();
+    return () => unsubscribeAuth(); // Cleanup auth state listener
   }, []);
 
 

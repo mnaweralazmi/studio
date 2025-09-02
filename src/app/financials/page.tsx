@@ -28,7 +28,6 @@ export default function FinancialsPage() {
         const department = value as Department;
         setActiveDepartment(department);
         localStorage.setItem('selectedDepartment', department);
-        // Dispatch a custom event to notify other components of the change
         window.dispatchEvent(new CustomEvent('departmentChanged'));
     }
     
@@ -40,10 +39,10 @@ export default function FinancialsPage() {
     };
     
     const departmentTitles: Record<Department, string> = {
-        agriculture: t('topicSoil'), // Using 'Soil' as a proxy for Agriculture
-        livestock: t('livestockSales'), // Proxy for Livestock
-        poultry: t('poultrySales'), // Proxy for Poultry
-        fish: t('fishSales'), // Proxy for Fish
+        agriculture: t('topicSoil'),
+        livestock: t('livestockSales'),
+        poultry: t('poultrySales'),
+        fish: t('fishSales'),
     };
 
 

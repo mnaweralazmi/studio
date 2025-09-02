@@ -120,42 +120,42 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const poultryList = language === 'ar' ? poultryListAr : poultryListEn;
   const fishList = language === 'ar' ? fishListAr : fishListEn;
 
-  React.useEffect(() => {
-    const fetchSales = async () => {
-      if (!targetUserId) {
+  const fetchSales = React.useCallback(async () => {
+    if (!targetUserId) {
         setSalesItems([]);
         setIsDataLoading(false);
         return;
-      }
-        
-      setIsDataLoading(true);
-      setSalesItems([]);
-      try {
-          const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
-          const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
-          const querySnapshot = await getDocs(q);
-          const sales: SalesItem[] = [];
-          querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              sales.push({
-                  ...data,
-                  id: doc.id,
-                  date: (data.date as Timestamp).toDate(),
-              } as SalesItem);
-          });
-          setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
-      } catch(e) {
-          console.error("Error fetching sales: ", e);
-          toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-      } finally {
-          setIsDataLoading(false);
-      }
-    };
+    }
+      
+    setIsDataLoading(true);
+    setSalesItems([]);
+    try {
+        const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
+        const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
+        const querySnapshot = await getDocs(q);
+        const sales: SalesItem[] = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            sales.push({
+                ...data,
+                id: doc.id,
+                date: (data.date as Timestamp).toDate(),
+            } as SalesItem);
+        });
+        setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
+    } catch(e) {
+        console.error("Error fetching sales: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+    } finally {
+        setIsDataLoading(false);
+    }
+  }, [targetUserId, departmentId, toast, t]);
 
+  React.useEffect(() => {
     if (departmentId) {
         fetchSales();
     }
-  }, [targetUserId, departmentId, toast, t]);
+  }, [departmentId, fetchSales]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -190,6 +190,15 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         const userRef = doc(db, 'users', targetUserId);
         const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
 
+        const docRef = await addDoc(salesCollectionRef, submissionData);
+
+        const newItem: SalesItem = {
+          ...(submissionData as any),
+          id: docRef.id,
+          date: new Date(),
+        };
+        setSalesItems(prevItems => [newItem, ...prevItems].sort((a,b) => b.date.getTime() - a.date.getTime()));
+
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) {
@@ -197,32 +206,13 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             }
             
             const currentBadges = userDoc.data().badges || [];
-            let newPoints = userDoc.data().points || 0;
-            let newBadges = [...currentBadges];
-            let badgeAwarded = false;
-
             if (!currentBadges.includes('trader')) {
+                let newPoints = userDoc.data().points || 0;
+                let newBadges = [...currentBadges];
                 newPoints += 25;
                 newBadges.push('trader');
-                badgeAwarded = true;
-            } else {
-                newPoints += 5;
-            }
-            
-            const newLevel = Math.floor(newPoints / 100) + 1;
-            transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
-
-            const docRef = doc(salesCollectionRef);
-            transaction.set(docRef, submissionData);
-
-            const newItem: SalesItem = {
-              ...(submissionData as any),
-              id: docRef.id,
-              date: new Date(),
-            };
-            setSalesItems(prevItems => [newItem, ...prevItems].sort((a,b) => b.date.getTime() - a.date.getTime()));
-            
-            if(badgeAwarded) {
+                const newLevel = Math.floor(newPoints / 100) + 1;
+                transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
                 toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });
             }
         });
