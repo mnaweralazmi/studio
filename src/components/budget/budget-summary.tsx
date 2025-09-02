@@ -26,28 +26,23 @@ export function BudgetSummary() {
     
     const targetUserId = authUser?.uid;
 
-    const fetchAllData = React.useCallback(async (deptId: string) => {
-        if (!targetUserId) {
-            setIsLoading(false);
-            return;
-        }
-
+    const fetchAllData = React.useCallback(async (deptId: string, userId: string) => {
         setIsLoading(true);
 
         try {
             // Fetch Sales
-            const salesSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'sales'), where("departmentId", "==", deptId)));
+            const salesSnapshot = await getDocs(query(collection(db, 'users', userId, 'sales'), where("departmentId", "==", deptId)));
             const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().total, 0);
 
             // Fetch Expenses
-            const expensesSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'expenses'), where("departmentId", "==", deptId)));
+            const expensesSnapshot = await getDocs(query(collection(db, 'users', userId, 'expenses'), where("departmentId", "==", deptId)));
             const totalExpensesItems = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
             
             // Fetch Workers and Transactions to calculate salaries paid
-            const workersSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'workers'), where("departmentId", "==", deptId)));
+            const workersSnapshot = await getDocs(query(collection(db, 'users', userId, 'workers'), where("departmentId", "==", deptId)));
             let totalSalariesPaid = 0;
             for (const workerDoc of workersSnapshot.docs) {
-                const transactionsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'workers', workerDoc.id, 'transactions'));
+                const transactionsSnapshot = await getDocs(collection(db, 'users', userId, 'workers', workerDoc.id, 'transactions'));
                 const salaries = transactionsSnapshot.docs
                     .map(doc => doc.data() as Transaction)
                     .filter(t => t.type === 'salary')
@@ -56,13 +51,13 @@ export function BudgetSummary() {
             }
             
             // Fetch Debts and Debt Payments
-            const debtsSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'debts'), where("departmentId", "==", deptId)));
+            const debtsSnapshot = await getDocs(query(collection(db, 'users', userId, 'debts'), where("departmentId", "==", deptId)));
             let totalDebts = 0;
             let totalDebtPayments = 0;
 
             for(const debtDoc of debtsSnapshot.docs) {
                 const debtData = debtDoc.data();
-                const paymentsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'debts', debtDoc.id, 'payments'));
+                const paymentsSnapshot = await getDocs(collection(db, 'users', userId, 'debts', debtDoc.id, 'payments'));
                 const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
 
                 const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
@@ -84,21 +79,28 @@ export function BudgetSummary() {
         } finally {
             setIsLoading(false);
         }
-    }, [targetUserId]);
+    }, []);
 
     React.useEffect(() => {
         const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
         setDepartmentId(lastSelectedDept);
-        fetchAllData(lastSelectedDept);
+        if (targetUserId) {
+            fetchAllData(lastSelectedDept, targetUserId);
+        } else {
+            setIsLoading(false);
+        }
 
         const handleDepartmentChange = () => {
             const newDept = localStorage.getItem('selectedDepartment') || 'agriculture';
             setDepartmentId(newDept);
-            fetchAllData(newDept);
+            if (targetUserId) {
+                fetchAllData(newDept, targetUserId);
+            }
         };
+        
         window.addEventListener('departmentChanged', handleDepartmentChange);
         return () => window.removeEventListener('departmentChanged', handleDepartmentChange);
-    }, [fetchAllData]);
+    }, [fetchAllData, targetUserId]);
 
 
     if (isLoading) {

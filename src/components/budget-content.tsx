@@ -123,14 +123,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const fishList = language === 'ar' ? fishListAr : fishListEn;
 
   const fetchSales = React.useCallback(async () => {
-    if (!targetUserId) {
-        setSalesItems([]);
-        setIsDataLoading(false);
-        return;
-    }
+    if (!targetUserId) return;
       
     setIsDataLoading(true);
-    setSalesItems([]);
     try {
         const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
         const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
@@ -154,10 +149,13 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   }, [targetUserId, departmentId, toast, t]);
 
   React.useEffect(() => {
-    if (departmentId) {
+    if (targetUserId) {
         fetchSales();
+    } else {
+        setIsDataLoading(false);
+        setSalesItems([]);
     }
-  }, [departmentId, fetchSales]);
+  }, [departmentId, fetchSales, targetUserId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -412,7 +410,12 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   }
   
   if (isAuthLoading) {
-      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+      return (
+        <div className="space-y-6">
+            <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
+            <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
+        </div>
+      )
   }
 
   return (
@@ -466,4 +469,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-

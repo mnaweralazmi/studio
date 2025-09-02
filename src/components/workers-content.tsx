@@ -29,7 +29,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const [workers, setWorkers] = React.useState<Worker[]>([]);
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
-    const { user: authUser } = useAuth();
+    const { user: authUser, loading: isAuthLoading } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
 
@@ -37,13 +37,9 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     React.useEffect(() => {
         const fetchWorkers = async () => {
-            if (!targetUserId || !departmentId) {
-                setWorkers([]);
-                setIsDataLoading(false);
-                return;
-            }
+            if (!targetUserId) return;
+            
             setIsDataLoading(true);
-            setWorkers([]);
             try {
                 const workersColRef = collection(db, 'users', targetUserId, 'workers');
                 const q = query(workersColRef, where("departmentId", "==", departmentId));
@@ -74,8 +70,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             }
         };
         
-        if (departmentId) {
+        if (targetUserId) {
             fetchWorkers();
+        } else {
+            setIsDataLoading(false);
+            setWorkers([]);
         }
     }, [targetUserId, departmentId, t, toast]);
     
@@ -263,8 +262,14 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     
     const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
 
-    if (!targetUserId) {
-      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    if (isAuthLoading) {
+        return (
+            <div className="space-y-6">
+                <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+                <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
+            </div>
+        )
     }
 
     return (
@@ -388,4 +393,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-

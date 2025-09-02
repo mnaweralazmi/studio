@@ -135,7 +135,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
-    const { user: authUser } = useAuth();
+    const { user: authUser, loading: isAuthLoading } = useAuth();
     const formRef = React.useRef<HTMLFormElement>(null);
     const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
@@ -143,21 +143,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
-            if (!targetUserId || !departmentId) {
-                setExpenses([]);
-                setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
-                setIsDataLoading(false);
-                return;
-            }
+            if (!targetUserId) return;
 
             setIsDataLoading(true);
-            setExpenses([]);
-            setExpenseCategories({});
-            setSelectedCategory('');
             
             try {
-                // For simplicity, we'll manage categories in the frontend for now.
-                // A more robust solution would save custom categories to Firestore.
                 setExpenseCategories(getInitialCategories(language, departmentId));
 
                 const expensesCollectionRef = collection(db, 'users', targetUserId, 'expenses');
@@ -178,8 +168,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             }
         };
 
-        if (departmentId) {
+        if (targetUserId) {
             fetchExpensesAndCategories();
+        } else {
+            setExpenses([]);
+            setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
+            setIsDataLoading(false);
         }
     }, [targetUserId, language, departmentId]);
     
@@ -264,8 +258,14 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const totalFixedExpenses = fixedExpenses.reduce((sum, item) => sum + item.amount, 0);
     const totalVariableExpenses = variableExpenses.reduce((sum, item) => sum + item.amount, 0);
 
-    if (!targetUserId) {
-      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    if (isAuthLoading) {
+        return (
+            <div className="space-y-6">
+                <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
+                <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+                <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
+            </div>
+        )
     }
 
     return (
@@ -440,4 +440,3 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
-

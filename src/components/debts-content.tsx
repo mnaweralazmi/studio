@@ -113,7 +113,7 @@ function EditDebtDialog({ debt, onSave, children }: { debt: DebtItem, onSave: (i
 export function DebtsContent({ departmentId }: DebtsContentProps) {
     const [debts, setDebts] = React.useState<DebtItem[]>([]);
     const { toast } = useToast();
-    const { user: authUser } = useAuth();
+    const { user: authUser, loading: isAuthLoading } = useAuth();
     const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { language, t } = useLanguage();
     const formRef = React.useRef<HTMLFormElement>(null);
@@ -123,13 +123,9 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
     React.useEffect(() => {
         const fetchDebts = async () => {
-            if (!targetUserId || !departmentId) {
-              setDebts([]);
-              setIsDataLoading(false);
-              return;
-            }
+            if (!targetUserId) return;
+            
             setIsDataLoading(true);
-            setDebts([]);
             try {
               const debtsCollectionRef = collection(db, 'users', targetUserId, 'debts');
               const q = query(debtsCollectionRef, where("departmentId", "==", departmentId));
@@ -164,8 +160,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             }
         };
 
-        if (departmentId) {
+        if (targetUserId) {
             fetchDebts();
+        } else {
+            setIsDataLoading(false);
+            setDebts([]);
         }
     }, [targetUserId, departmentId, toast, t]);
 
@@ -326,8 +325,15 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         return sum + getRemainingAmount(item);
     }, 0);
 
-    if (!targetUserId) {
-      return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    if (isAuthLoading) {
+        return (
+            <div className="space-y-6">
+                <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
+                <Card><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
+                <Card><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+                <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
+            </div>
+        )
     }
 
     return (
@@ -451,4 +457,3 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
-
