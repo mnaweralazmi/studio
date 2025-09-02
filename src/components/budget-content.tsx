@@ -151,11 +151,11 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   React.useEffect(() => {
     if (targetUserId) {
         fetchSales();
-    } else {
+    } else if (!isAuthLoading) {
         setIsDataLoading(false);
         setSalesItems([]);
     }
-  }, [departmentId, fetchSales, targetUserId]);
+  }, [departmentId, fetchSales, targetUserId, isAuthLoading]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -232,8 +232,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   async function deleteItem(id: string) {
     if (!targetUserId) return;
     try {
-        const saleDocRef = doc(db, 'users', targetUserId, 'sales', id);
-        await deleteDoc(saleDocRef);
+        await deleteDoc(doc(db, "users", targetUserId, "sales", id));
         setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
         toast({
             variant: "destructive",
@@ -469,3 +468,5 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
+
+    
