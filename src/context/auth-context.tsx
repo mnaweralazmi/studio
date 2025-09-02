@@ -25,12 +25,14 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   refreshUser: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   refreshUser: async () => {},
+  setUser: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -47,7 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              setUser(currentUser => currentUser ? {
                 ...currentUser,
                 ...userData,
-            } : null);
+                 displayName: userData.name || firebaseUser.displayName,
+                 photoURL: userData.photoURL || firebaseUser.photoURL,
+            } as AppUser : null);
         }
     }
   }, []);
@@ -84,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -97,5 +101,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

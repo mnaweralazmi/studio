@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -32,8 +33,8 @@ import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage"
 
 export function ProfileTab() {
   const { toast } = useToast();
-  const { user, refreshUser } = useAuth();
-  const { language, t } = useLanguage();
+  const { user, setUser, loading, refreshUser } = useAuth();
+  const { t, language } = useLanguage();
 
   const [isSaving, setIsSaving] = React.useState(false);
   const [isDirty, setIsDirty] = React.useState(false);
@@ -47,7 +48,7 @@ export function ProfileTab() {
 
   React.useEffect(() => {
     if (user) {
-      setName(user.displayName || "");
+      setName(user.displayName || user.name || "");
       setAvatarUrl(user.photoURL || "");
     }
   }, [user]);
@@ -83,7 +84,6 @@ export function ProfileTab() {
     setIsSaving(true);
 
     try {
-      // تغيير كلمة المرور (إن وُجدت)
       if (newPassword && currentPassword && auth.currentUser.email) {
         const credential = EmailAuthProvider.credential(
           auth.currentUser.email,
@@ -94,21 +94,26 @@ export function ProfileTab() {
         toast({ title: t("passwordChangedSuccess" as any) });
       }
 
-      // تحديث بروفايل Auth
       await updateProfile(auth.currentUser, {
         displayName: name,
         photoURL: avatarUrl,
       });
 
-      // حفظ في Firestore
       const userDocRef = doc(db, "users", user.uid);
       await setDoc(
         userDocRef,
-        { name, email: user.email, photoURL: avatarUrl },
+        { name, photoURL: avatarUrl },
         { merge: true }
       );
 
-      await refreshUser();
+      // Refresh context state
+      setUser(prevUser => prevUser ? ({
+          ...prevUser,
+          displayName: name,
+          name: name,
+          photoURL: avatarUrl,
+      }) : null);
+
 
       toast({
         title: t("profileUpdated" as any),
@@ -146,12 +151,8 @@ export function ProfileTab() {
     reader.onloadend = async () => {
       const dataUrl = reader.result as string;
       const prev = avatarUrl;
-
-      // معاينة فورية
       setAvatarUrl(dataUrl);
       setIsDirty(true);
-
-      // Toast إعلامي (بدون id)
       toast({ title: t("uploading" as any) || "جاري رفع الصورة..." });
 
       const storage = getStorage();
@@ -164,7 +165,6 @@ export function ProfileTab() {
         await uploadString(storageRef, dataUrl, "data_url");
         const downloadUrl = await getDownloadURL(storageRef);
         setAvatarUrl(downloadUrl);
-
         toast({
           title: t("uploadSuccessTitle" as any) || "تم رفع الصورة بنجاح!",
           description:
@@ -182,12 +182,32 @@ export function ProfileTab() {
     reader.readAsDataURL(file);
   };
 
-  if (!user) {
+  if (loading) {
     return (
       <Card>
-        <CardContent>
-          <Skeleton className="h-96 w-full" />
+        <CardHeader>
+           <Skeleton className="h-8 w-48" />
+           <Skeleton className="h-4 w-64" />
+        </CardHeader>
+        <CardContent className="space-y-8">
+            <div className="flex items-center gap-6">
+                <Skeleton className="h-24 w-24 rounded-full" />
+                <Skeleton className="h-10 w-32" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full" />
+                 </div>
+                 <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full" />
+                 </div>
+            </div>
         </CardContent>
+        <CardFooter className="border-t pt-6 flex justify-end">
+            <Skeleton className="h-10 w-28" />
+        </CardFooter>
       </Card>
     );
   }
@@ -204,7 +224,6 @@ export function ProfileTab() {
         </CardHeader>
 
         <CardContent className="space-y-8">
-          {/* الصورة الشخصية */}
           <div className="space-y-2">
             <Label>{t("profilePicture" as any)}</Label>
             <div className="flex items-center gap-6 flex-wrap">
@@ -219,7 +238,7 @@ export function ProfileTab() {
               </Avatar>
               <Button asChild variant="outline">
                 <label className="cursor-pointer flex items-center">
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Upload className="mr-2 h-4 w-4" />
                   <span>{t("changePicture" as any)}</span>
                   <Input
                     type="file"
@@ -232,7 +251,6 @@ export function ProfileTab() {
             </div>
           </div>
 
-          {/* الاسم والبريد */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="name">{t("fullName" as any)}</Label>
@@ -247,11 +265,10 @@ export function ProfileTab() {
               <Label htmlFor="email">
                 {t("email" as any)} ({t("cannotChange" as any)})
               </Label>
-              <Input id="email" readOnly disabled value={user.email || ""} />
+              <Input id="email" readOnly disabled value={user?.email || ""} />
             </div>
           </div>
 
-          {/* تغيير كلمة المرور */}
           <div>
             <h3 className="text-lg font-medium mb-4">
               {t("changePassword" as any)}
