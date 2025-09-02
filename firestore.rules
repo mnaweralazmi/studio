@@ -2,25 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // القاعدة الرئيسية: تطابق أي وثيقة داخل مجموعة users
-    match /users/{uid} {
-      // السماح للمستخدم بقراءة وإنشاء وتحديث وثيقته الشخصية فقط
-      // لا نسمح بحذف وثيقة المستخدم نفسها من خلال الكود
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid;
-      allow delete: if false; 
-    }
-    
-    // القاعدة الفرعية: تطابق أي وثيقة داخل أي مجموعة فرعية (مثل debts) تابعة لمستخدم
-    // {document=**} تعني أنها تطابق أي مسار فرعي
-    match /users/{uid}/{document=**} {
-      // السماح للمستخدم بقراءة وإنشاء وتحديث وحذف البيانات داخل مجموعاته الفرعية
-      // على سبيل المثال، يمكنه إضافة أو تعديل دين
-      allow read:   if request.auth != null && request.auth.uid == uid;
-      allow create: if request.auth != null && request.auth.uid == uid;
-      allow update: if request.auth != null && request.auth.uid == uid;
-      // منع الحذف من الواجهة لضمان عدم فقدان البيانات عن طريق الخطأ
-      allow delete: if false;
+    // This single, comprehensive rule grants the authenticated user full access
+    // (read, and write which includes create, update, and delete) 
+    // to their own user document AND all subcollections and documents within it.
+    // The wildcard {path=**} ensures this rule applies recursively to any depth.
+    match /users/{userId}/{path=**} {
+      allow read, write: if request.auth.uid == userId;
     }
   }
 }

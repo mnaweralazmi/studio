@@ -5,16 +5,25 @@ import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { PlusCircle, Trash2, Wallet } from 'lucide-react';
+import { PlusCircle, Trash2, Wallet, Pencil } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Simplified type, no Zod
 export type SalesItem = {
@@ -46,6 +55,56 @@ interface BudgetContentProps {
     departmentId: 'agriculture' | 'livestock' | 'poultry' | 'fish';
 }
 
+function EditSaleDialog({ sale, onSave, children }: { sale: SalesItem, onSave: (id: string, data: Partial<SalesItem>) => void, children: React.ReactNode }) {
+    const { t } = useLanguage();
+    const [isOpen, setIsOpen] = React.useState(false);
+
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const quantity = Number(formData.get('quantity'));
+        const price = Number(formData.get('price'));
+
+        if (quantity <= 0 || price <= 0) {
+            return;
+        }
+
+        const updatedData: Partial<SalesItem> = {
+            quantity,
+            price,
+            total: quantity * price
+        };
+        onSave(sale.id, updatedData);
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{t('editSale')}</DialogTitle>
+                    <DialogDescription>{t('editSaleDesc')}</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="quantity">{t('quantity')}</Label>
+                        <Input id="quantity" name="quantity" type="number" step="1" defaultValue={sale.quantity} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="price">{t('unitPrice')}</Label>
+                        <Input id="price" name="price" type="number" step="0.01" defaultValue={sale.price} required />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
+                        <Button type="submit">{t('saveChanges')}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export function BudgetContent({ departmentId }: BudgetContentProps) {
   const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
   const { toast } = useToast();
@@ -56,7 +115,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   
   const targetUserId = authUser?.uid;
 
-  // Dynamic lists based on language
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
   const livestockList = language === 'ar' ? livestockListAr : livestockListEn;
   const poultryList = language === 'ar' ? poultryListAr : poultryListEn;
@@ -64,17 +122,18 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
   React.useEffect(() => {
     const fetchSales = async () => {
-      if (!targetUserId || !departmentId) {
+      if (!targetUserId) {
         setSalesItems([]);
         setIsDataLoading(false);
         return;
       }
         
       setIsDataLoading(true);
-      setSalesItems([]); // Clear previous data
+      setSalesItems([]);
       try {
-          const salesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'sales');
-          const querySnapshot = await getDocs(salesCollectionRef);
+          const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
+          const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
+          const querySnapshot = await getDocs(q);
           const sales: SalesItem[] = [];
           querySnapshot.forEach((doc) => {
               const data = doc.data();
@@ -93,7 +152,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
       }
     };
 
-    fetchSales();
+    if (departmentId) {
+        fetchSales();
+    }
   }, [targetUserId, departmentId, toast, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -127,7 +188,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     try {
         const userRef = doc(db, 'users', targetUserId);
-        const salesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'sales');
+        const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
 
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -181,7 +242,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   async function deleteItem(id: string) {
     if (!targetUserId) return;
     try {
-        const saleDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'sales', id);
+        const saleDocRef = doc(db, 'users', targetUserId, 'sales', id);
         await deleteDoc(saleDocRef);
         setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
         toast({
@@ -194,8 +255,24 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
   }
 
+  async function handleSave(id: string, data: Partial<SalesItem>) {
+    if (!targetUserId) return;
+    try {
+        const saleDocRef = doc(db, 'users', targetUserId, 'sales', id);
+        await updateDoc(saleDocRef, data);
+        setSalesItems(prev => prev.map(item => item.id === id ? { ...item, ...data } : item));
+        toast({ title: t('salesUpdatedSuccess') });
+    } catch (e) {
+        console.error("Error updating document: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to update sale." });
+    }
+  }
+
   const renderActions = (item: SalesItem) => (
       <div className="flex gap-2 justify-end">
+        <EditSaleDialog sale={item} onSave={handleSave}>
+            <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
+        </EditSaleDialog>
         <Button variant="destructive" size="icon" onClick={() => deleteItem(item.id)} title={t('deleteItem')}>
             <Trash2 className="h-4 w-4" />
         </Button>
@@ -364,7 +441,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                     <Skeleton className="h-40 w-full" />
                 </CardContent>
             </Card>
-        ) : salesItems.length > 0 && (
+        ) : salesItems.length > 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-xl sm:text-2xl">{t('salesList')}</CardTitle>
@@ -379,7 +456,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
               </div>
             </CardContent>
           </Card>
-        )}
+        ) : null}
     </div>
   );
 }

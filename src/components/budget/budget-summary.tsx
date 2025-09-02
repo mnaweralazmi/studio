@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
@@ -36,18 +36,18 @@ export function BudgetSummary() {
 
         try {
             // Fetch Sales
-            const salesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'sales'));
+            const salesSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'sales'), where("departmentId", "==", deptId)));
             const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().total, 0);
 
             // Fetch Expenses
-            const expensesSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'expenses'));
+            const expensesSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'expenses'), where("departmentId", "==", deptId)));
             const totalExpensesItems = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
             
             // Fetch Workers and Transactions to calculate salaries paid
-            const workersSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'workers'));
+            const workersSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'workers'), where("departmentId", "==", deptId)));
             let totalSalariesPaid = 0;
             for (const workerDoc of workersSnapshot.docs) {
-                const transactionsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'workers', workerDoc.id, 'transactions'));
+                const transactionsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'workers', workerDoc.id, 'transactions'));
                 const salaries = transactionsSnapshot.docs
                     .map(doc => doc.data() as Transaction)
                     .filter(t => t.type === 'salary')
@@ -56,13 +56,13 @@ export function BudgetSummary() {
             }
             
             // Fetch Debts and Debt Payments
-            const debtsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'debts'));
+            const debtsSnapshot = await getDocs(query(collection(db, 'users', targetUserId, 'debts'), where("departmentId", "==", deptId)));
             let totalDebts = 0;
             let totalDebtPayments = 0;
 
             for(const debtDoc of debtsSnapshot.docs) {
                 const debtData = debtDoc.data();
-                const paymentsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'departments', deptId, 'debts', debtDoc.id, 'payments'));
+                const paymentsSnapshot = await getDocs(collection(db, 'users', targetUserId, 'debts', debtDoc.id, 'payments'));
                 const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
 
                 const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
@@ -91,7 +91,6 @@ export function BudgetSummary() {
         setDepartmentId(lastSelectedDept);
         fetchAllData(lastSelectedDept);
 
-        // Listen for department changes from other components
         const handleDepartmentChange = () => {
             const newDept = localStorage.getItem('selectedDepartment') || 'agriculture';
             setDepartmentId(newDept);

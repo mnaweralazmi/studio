@@ -11,12 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp, Pencil } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 
-// No Zod
 export type ExpenseItem = {
   id: string;
   date: Date;
@@ -24,6 +23,7 @@ export type ExpenseItem = {
   category: string;
   item: string;
   amount: number;
+  departmentId: string;
 };
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
@@ -77,18 +77,13 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             setSelectedCategory('');
             
             try {
-                // Fetch categories first
-                const categoriesDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
-                const categoriesDoc = await getDoc(categoriesDocRef);
-                if (categoriesDoc.exists()) {
-                     setExpenseCategories(categoriesDoc.data().categories);
-                } else {
-                     setExpenseCategories(getInitialCategories(language, departmentId));
-                }
+                // For simplicity, we'll manage categories in the frontend for now.
+                // A more robust solution would save custom categories to Firestore.
+                setExpenseCategories(getInitialCategories(language, departmentId));
 
-                // Then fetch expenses
-                const expensesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'expenses');
-                const expensesSnapshot = await getDocs(expensesCollectionRef);
+                const expensesCollectionRef = collection(db, 'users', targetUserId, 'expenses');
+                const q = query(expensesCollectionRef, where("departmentId", "==", departmentId));
+                const expensesSnapshot = await getDocs(q);
                 const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
@@ -98,25 +93,17 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
             } catch (e) {
                 console.error("Error fetching data: ", e);
-                setExpenseCategories(getInitialCategories(language, departmentId)); // Fallback to initial
+                setExpenseCategories(getInitialCategories(language, departmentId));
             } finally {
                 setIsDataLoading(false);
             }
         };
-        fetchExpensesAndCategories();
+
+        if (departmentId) {
+            fetchExpensesAndCategories();
+        }
     }, [targetUserId, language, departmentId]);
     
-    async function updateCategoriesInDb(newCategories: Record<string, string[]>) {
-        if (!targetUserId || !departmentId) return;
-        try {
-            const categoriesDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'appData', `expenseCategories_${language}`);
-            await setDoc(categoriesDocRef, { categories: newCategories });
-        } catch (e) {
-            console.error("Error updating categories: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to save new category."});
-        }
-    }
-
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!targetUserId) {
@@ -138,25 +125,23 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
         
         const newExpenseData = {
-            id: Date.now().toString(),
             date: Timestamp.fromDate(new Date()),
             type: data.type,
             category: data.category,
             item: data.item,
             amount: data.amount,
+            departmentId,
         };
 
         try {
-            const expensesCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'expenses');
+            const expensesCollectionRef = collection(db, 'users', targetUserId, 'expenses');
             const docRef = await addDoc(expensesCollectionRef, newExpenseData);
             
             const newExpense: ExpenseItem = {
               id: docRef.id,
               date: new Date(),
-              type: data.type,
-              category: data.category,
-              item: data.item,
-              amount: data.amount,
+              ...data,
+              departmentId,
             };
 
             setExpenses(prev => [...prev, newExpense]);
@@ -172,7 +157,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     async function deleteExpense(id: string) {
         if (!targetUserId) return;
         try {
-            await deleteDoc(doc(db, 'users', targetUserId, 'departments', departmentId, 'expenses', id));
+            await deleteDoc(doc(db, 'users', targetUserId, 'expenses', id));
             setExpenses(prev => prev.filter(item => item.id !== id));
             toast({ variant: "destructive", title: t('expenseDeleted') });
         } catch(e) {
@@ -283,7 +268,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                         <Skeleton className="h-40 w-full" />
                     </CardContent>
                 </Card>
-            ) : (fixedExpenses.length > 0 || variableExpenses.length > 0) && (
+            ) : (fixedExpenses.length > 0 || variableExpenses.length > 0) ? (
                  <Card>
                     <CardHeader>
                         <CardTitle className="text-xl sm:text-2xl">{t('expensesList')}</CardTitle>
@@ -341,7 +326,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                         )}
                     </CardContent>
                 </Card>
-            )}
+            ) : null}
         </>
     );
 }

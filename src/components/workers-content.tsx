@@ -13,7 +13,7 @@ import { FinancialRecordDialog } from '@/components/workers/financial-record-dia
 import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
 import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
-import { collection, getDocs, doc, addDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, deleteDoc, writeBatch, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const { user: authUser } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
-    const [editingWorker, setEditingWorker] = React.useState<Worker | null>(null);
 
     const targetUserId = authUser?.uid;
 
@@ -44,14 +43,15 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 return;
             }
             setIsDataLoading(true);
-            setWorkers([]); // Clear previous data
+            setWorkers([]);
             try {
-                const workersColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers');
-                const workersSnapshot = await getDocs(workersColRef);
+                const workersColRef = collection(db, 'users', targetUserId, 'workers');
+                const q = query(workersColRef, where("departmentId", "==", departmentId));
+                const workersSnapshot = await getDocs(q);
                 const fetchedWorkers: Worker[] = [];
 
                 for (const workerDoc of workersSnapshot.docs) {
-                    const transactionsColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerDoc.id, 'transactions');
+                    const transactionsColRef = collection(db, 'users', targetUserId, 'workers', workerDoc.id, 'transactions');
                     const transactionsSnapshot = await getDocs(transactionsColRef);
                     const transactions = transactionsSnapshot.docs.map(tDoc => ({ id: tDoc.id, ...tDoc.data() })) as Transaction[];
                     
@@ -60,6 +60,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                         id: workerDoc.id,
                         name: workerData.name,
                         baseSalary: workerData.baseSalary,
+                        departmentId: workerData.departmentId,
                         transactions: transactions,
                         paidMonths: workerData.paidMonths || [],
                     });
@@ -72,8 +73,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 setIsDataLoading(false);
             }
         };
-
-        fetchWorkers();
+        
+        if (departmentId) {
+            fetchWorkers();
+        }
     }, [targetUserId, departmentId, t, toast]);
     
 
@@ -96,11 +99,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         if (workerId) {
             // Update existing worker
             try {
-                const workerDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId);
-                await updateDoc(workerDocRef, data);
+                const workerDocRef = doc(db, 'users', targetUserId, 'workers', workerId);
+                await updateDoc(workerDocRef, data as any);
                 setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, ...data } : w));
                 toast({ title: t('workerUpdatedSuccess') });
-                setEditingWorker(null);
             } catch(e) {
                  console.error("Error updating worker: ", e);
                 toast({ variant: "destructive", title: t('error'), description: "Failed to update worker data." });
@@ -108,10 +110,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         } else {
             // Add new worker
             try {
-                const workersColRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'workers');
+                const workersColRef = collection(db, 'users', targetUserId, 'workers');
                 const docRef = await addDoc(workersColRef, {
                     ...data,
                     paidMonths: [],
+                    departmentId: departmentId,
                 });
     
                 const newWorker: Worker = {
@@ -119,6 +122,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     ...data,
                     paidMonths: [],
                     transactions: [],
+                    departmentId,
                 };
     
                 setWorkers(prev => [...prev, newWorker]);
@@ -133,8 +137,22 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     async function deleteWorker(workerId: string) {
         if (!targetUserId) return;
+        const batch = writeBatch(db);
+        const workerDocRef = doc(db, 'users', targetUserId, 'workers', workerId);
+        
         try {
-            await deleteDoc(doc(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId));
+            // Delete all transactions in the subcollection first
+            const transactionsRef = collection(workerDocRef, 'transactions');
+            const transactionsSnapshot = await getDocs(transactionsRef);
+            transactionsSnapshot.forEach(transactionDoc => {
+                batch.delete(transactionDoc.ref);
+            });
+
+            // Then delete the main worker document
+            batch.delete(workerDocRef);
+
+            await batch.commit();
+
             setWorkers(prev => prev.filter(w => w.id !== workerId));
             toast({ variant: "destructive", title: t('workerDeleted') });
         } catch (e) {
@@ -160,10 +178,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label} ${year}`
             };
 
-            const transactionRef = doc(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId, 'transactions'));
+            const transactionRef = doc(collection(db, 'users', targetUserId, 'workers', workerId, 'transactions'));
             batch.set(transactionRef, newTransactionData);
             
-            const workerRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId);
+            const workerRef = doc(db, 'users', targetUserId, 'workers', workerId);
             const updatedPaidMonths = [...worker.paidMonths, { year, month }];
             batch.update(workerRef, { paidMonths: updatedPaidMonths });
 
@@ -198,7 +216,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            const transactionRef = await addDoc(collection(db, 'users', targetUserId, 'departments', departmentId, 'workers', workerId, 'transactions'), newTransactionData);
+            const transactionRef = await addDoc(collection(db, 'users', targetUserId, 'workers', workerId, 'transactions'), newTransactionData);
             
             setWorkers(prev => prev.map(w => {
                 if (w.id === workerId) {

@@ -17,12 +17,11 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
-import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch, setDoc, updateDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 
-// No Zod
 export type Payment = {
   id: string;
   amount: number;
@@ -36,6 +35,7 @@ export type DebtItem = {
   dueDate?: Date;
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
+  departmentId: string;
 };
 
 interface DebtsContentProps {
@@ -61,15 +61,16 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
               return;
             }
             setIsDataLoading(true);
-            setDebts([]); // Clear previous data
+            setDebts([]);
             try {
-              const debtsCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'debts');
-              const querySnapshot = await getDocs(debtsCollectionRef);
+              const debtsCollectionRef = collection(db, 'users', targetUserId, 'debts');
+              const q = query(debtsCollectionRef, where("departmentId", "==", departmentId));
+              const querySnapshot = await getDocs(q);
               const fetchedDebts: DebtItem[] = [];
 
               for (const docRef of querySnapshot.docs) {
                 const data = docRef.data();
-                const paymentsCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'debts', docRef.id, 'payments');
+                const paymentsCollectionRef = collection(db, 'users', targetUserId, 'debts', docRef.id, 'payments');
                 const paymentsSnapshot = await getDocs(paymentsCollectionRef);
                 const payments: Payment[] = paymentsSnapshot.docs.map(pDoc => ({
                   id: pDoc.id,
@@ -83,6 +84,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                   dueDate: data.dueDate ? (data.dueDate as Timestamp).toDate() : undefined,
                   status: data.status,
                   payments: payments,
+                  departmentId: data.departmentId,
                 });
               }
               setDebts(fetchedDebts);
@@ -94,7 +96,9 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             }
         };
 
-        fetchDebts();
+        if (departmentId) {
+            fetchDebts();
+        }
     }, [targetUserId, departmentId, toast, t]);
 
 
@@ -118,19 +122,22 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
 
         const newDebtData = {
-            ...data,
+            creditor: data.creditor,
+            amount: data.amount,
             status: 'unpaid',
             payments: [],
             dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
+            departmentId: departmentId,
         };
 
         try {
-            const debtsCollectionRef = collection(db, 'users', targetUserId, 'departments', departmentId, 'debts');
+            const debtsCollectionRef = collection(db, 'users', targetUserId, 'debts');
             const docRef = await addDoc(debtsCollectionRef, {
                 creditor: newDebtData.creditor,
                 amount: newDebtData.amount,
                 status: newDebtData.status,
                 dueDate: newDebtData.dueDate,
+                departmentId: newDebtData.departmentId,
             });
 
             const newDebt: DebtItem = {
@@ -138,6 +145,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
               id: docRef.id,
               status: 'unpaid',
               payments: [],
+              departmentId,
             };
 
             setDebts(prev => [...prev, newDebt]);
@@ -151,18 +159,33 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
     }
 
-    async function deleteDebt(id: string) {
+    async function deleteDebt(debtId: string) {
         if (!targetUserId) return;
+        
+        const batch = writeBatch(db);
+        const debtDocRef = doc(db, 'users', targetUserId, 'debts', debtId);
+        
         try {
-            const debtDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'debts', id);
-            await deleteDoc(debtDocRef);
-            setDebts(prev => prev.filter(item => item.id !== id));
+            // Delete all payments in the subcollection first
+            const paymentsRef = collection(debtDocRef, 'payments');
+            const paymentsSnapshot = await getDocs(paymentsRef);
+            paymentsSnapshot.forEach(paymentDoc => {
+                batch.delete(paymentDoc.ref);
+            });
+
+            // Then delete the main debt document
+            batch.delete(debtDocRef);
+
+            await batch.commit();
+
+            setDebts(prev => prev.filter(item => item.id !== debtId));
             toast({ variant: "destructive", title: t('debtDeleted') });
         } catch (e) {
             console.error("Error deleting document: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to delete debt." });
         }
     }
+
 
     async function handlePayment(debtId: string, paymentAmount: number) {
         if (!targetUserId) return;
@@ -173,7 +196,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         try {
             const batch = writeBatch(db);
             
-            const newPaymentRef = doc(collection(db, 'users', targetUserId, 'departments', departmentId, 'debts', debtId, 'payments'));
+            const newPaymentRef = doc(collection(db, 'users', targetUserId, 'debts', debtId, 'payments'));
             batch.set(newPaymentRef, {
                 amount: paymentAmount,
                 date: Timestamp.fromDate(new Date()),
@@ -182,7 +205,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             let newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
 
-            const debtDocRef = doc(db, 'users', targetUserId, 'departments', departmentId, 'debts', debtId);
+            const debtDocRef = doc(db, 'users', targetUserId, 'debts', debtId);
             batch.update(debtDocRef, { status: newStatus });
             
             await batch.commit();
@@ -279,7 +302,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                         <Skeleton className="h-40 w-full" />
                     </CardContent>
                 </Card>
-            ) : debts.length > 0 && (
+            ) : debts.length > 0 ? (
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
                 <CardContent>
@@ -320,7 +343,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                     </div>
                 </CardContent>
             </Card>
-            )}
+            ) : null}
         </div>
     );
 }

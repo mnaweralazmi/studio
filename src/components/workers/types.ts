@@ -1,6 +1,4 @@
 
-// No Zod needed for simple types
-
 export type WorkerFormValues = {
   name: string;
   baseSalary: number;
@@ -20,6 +18,7 @@ export interface Worker extends WorkerFormValues {
   id: string;
   paidMonths: { year: number; month: number }[];
   transactions: Transaction[];
+  departmentId: string;
 }
 
 
