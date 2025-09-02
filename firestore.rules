@@ -1,13 +1,15 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // This single, comprehensive rule grants the authenticated user full access
-    // (read, and write which includes create, update, and delete) 
-    // to their own user document AND all subcollections and documents within it.
-    // The wildcard {path=**} ensures this rule applies recursively to any depth.
-    match /users/{userId}/{path=**} {
+    match /users/{userId}/{document=**} {
       allow read, write: if request.auth.uid == userId;
+    }
+
+    match /topics/{document=**} {
+      allow read;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
