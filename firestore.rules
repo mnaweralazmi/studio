@@ -1,14 +1,18 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth.uid == userId;
+    // This rule allows a user to read and write (which includes create, update, and delete)
+    // to their own user document and all subcollections and documents within it.
+    // The wildcard {path=**} ensures this rule applies recursively to any depth.
+    match /users/{userId}/{path=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    match /topics/{document=**} {
-      allow read;
+    // This rule allows any authenticated user to read from the 'topics' collection,
+    // but only admins can write to it.
+    match /topics/{topicId}/{path=**} {
+      allow read: if request.auth != null;
       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
