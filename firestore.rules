@@ -1,46 +1,25 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // Allow public read access to general app data
     match /data/{document=**} {
       allow read: if true;
-      allow write: if false;
+      allow write: if false; // Protect public data from client writes
     }
 
-    // Securely lock down user-specific collections
+    // Allow any authenticated user to manage their own user document
     match /users/{userId} {
-       allow read, update: if request.auth.uid == userId;
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId;
     }
 
-    match /tasks/{taskId} {
-      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
-    }
-
-    match /sales/{saleId} {
-      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
-    }
-
-    match /expenses/{expenseId} {
-      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
-    }
-
-    match /debts/{debtId} {
-      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
-      
-      match /payments/{paymentId} {
-         allow read, write, delete: if request.auth.uid == get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId;
-      }
-    }
-
-    match /workers/{workerId} {
-      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
-      
-      match /transactions/{transactionId} {
-         allow read, write, delete: if request.auth.uid == get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId;
-      }
+    // Secure all user-specific data collections (tasks, sales, etc.)
+    // This rule requires that any document in a top-level collection has an ownerId
+    // that matches the authenticated user's UID for all operations.
+    match /{collection}/{docId} {
+       allow read, update, delete: if request.auth.uid == resource.data.ownerId;
+       allow create: if request.auth.uid == request.resource.data.ownerId;
     }
   }
 }
