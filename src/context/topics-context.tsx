@@ -4,7 +4,7 @@
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import { initialAgriculturalSections, type AgriculturalSection } from '@/lib/topics-data';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 
 
 interface TopicsContextType {
@@ -27,13 +27,8 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const querySnapshot = await getDocs(topicsCollectionRef);
             
             if (querySnapshot.empty) {
-                // If the collection is empty, populate it with initial data
-                const batch = writeBatch(db);
-                for (const section of initialAgriculturalSections) {
-                    const docRef = doc(db, 'data', section.id);
-                    batch.set(docRef, section);
-                }
-                await batch.commit();
+                // If firestore is empty, use local initial data without writing to firestore.
+                // This prevents permission errors if rules are read-only for clients.
                 setTopics(initialAgriculturalSections);
             } else {
                 const fetchedTopics: AgriculturalSection[] = querySnapshot.docs.map(doc => ({
@@ -43,8 +38,8 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 setTopics(fetchedTopics);
             }
         } catch (error) {
-            console.error("Error fetching or populating topics: ", error);
-            // Fallback to initial data if there's an error
+            console.error("Error fetching topics, falling back to initial data: ", error);
+            // Fallback to initial data if there's any other error
             setTopics(initialAgriculturalSections);
         } finally {
             setLoading(false);
@@ -70,5 +65,3 @@ export const useTopics = () => {
   }
   return context;
 };
-
-    
