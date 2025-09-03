@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { format, isToday, addDays } from 'date-fns';
+import { format, isToday, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -202,7 +202,9 @@ export default function CalendarPage() {
   const handleDeleteTask = async (taskId: string) => {
     if (!user) return;
     try {
-        await deleteDoc(doc(db, 'users', user.uid, 'tasks', taskId));
+        const taskDocRef = doc(db, 'users', user.uid, 'tasks', taskId);
+        await deleteDoc(taskDocRef);
+        // Optimistically update the UI
         setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
         toast({ variant: "destructive", title: t('taskDeleted') });
     } catch(e) {
@@ -214,7 +216,7 @@ export default function CalendarPage() {
   const upcomingTasks = tasks.filter(task => !task.isCompleted)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
-  const todayTasks = upcomingTasks.filter(task => isToday(task.dueDate));
+  const selectedDayTasks = upcomingTasks.filter(task => date && isSameDay(task.dueDate, date));
   
   const allCompletedTasks = tasks
     .filter(task => task.isCompleted)
@@ -268,7 +270,7 @@ export default function CalendarPage() {
                 </Card>
 
                 <TaskSection 
-                    title={t('upcomingTasksForDay')} 
+                    title={t('allUpcomingTasks')} 
                     tasks={upcomingTasks} 
                     onComplete={handleCompleteTask} 
                     onDelete={handleDeleteTask} 
@@ -277,7 +279,7 @@ export default function CalendarPage() {
                 
                 <TaskSection 
                     title={t('tasksForDay')} 
-                    tasks={todayTasks} 
+                    tasks={selectedDayTasks} 
                     onComplete={handleCompleteTask} 
                     onDelete={handleDeleteTask} 
                     language={language} t={t}
@@ -306,5 +308,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
-    

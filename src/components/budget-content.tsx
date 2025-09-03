@@ -232,7 +232,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   async function deleteItem(id: string) {
     if (!targetUserId) return;
     try {
-        await deleteDoc(doc(db, "users", targetUserId, "sales", id));
+        const saleDocRef = doc(db, 'users', targetUserId, 'sales', id);
+        await deleteDoc(saleDocRef);
         setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
         toast({
             variant: "destructive",
@@ -468,5 +469,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-
-    

@@ -2,17 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Rule 1: Allow public read access to agricultural topics.
-    // Writing is restricted to authenticated admins to allow for content management.
-    match /topics/{topicId}/{path=**} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
     
-    // Rule 2: Secure user data.
-    // Users can perform any action (read, write, delete) on their own data and all subcollections.
-    // The {path=**} wildcard ensures this rule applies recursively to any depth.
+    // Rule 1: Allow public read access to agricultural topics.
+    // This is necessary for the main page and topic pages to function for all users.
+    match /topics/{topicId} {
+      allow read: if true;
+      allow write: if false; // Writing to topics should be handled by admin tools, not client-side.
+    }
+
+    // Rule 2: Secure user-specific data.
+    // Users can fully control (read, write, update, delete) their own user document
+    // and all documents within their subcollections (like tasks, sales, expenses, etc.).
+    // The {path=**} wildcard ensures this rule applies recursively to all sub-paths.
     match /users/{userId}/{path=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }

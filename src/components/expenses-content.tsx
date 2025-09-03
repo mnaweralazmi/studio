@@ -230,7 +230,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     async function deleteExpense(id: string) {
         if (!targetUserId) return;
         try {
-            await deleteDoc(doc(db, 'users', targetUserId, 'expenses', id));
+            const expenseDocRef = doc(db, 'users', targetUserId, 'expenses', id);
+            await deleteDoc(expenseDocRef);
             setExpenses(prev => prev.filter(item => item.id !== id));
             toast({ variant: "destructive", title: t('expenseDeleted') });
         } catch(e) {
