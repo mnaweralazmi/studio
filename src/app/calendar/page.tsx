@@ -204,7 +204,6 @@ export default function CalendarPage() {
     try {
         const taskDocRef = doc(db, 'users', user.uid, 'tasks', taskId);
         await deleteDoc(taskDocRef);
-        // Optimistically update the UI
         setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
         toast({ variant: "destructive", title: t('taskDeleted') });
     } catch(e) {

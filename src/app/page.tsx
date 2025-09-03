@@ -76,9 +76,14 @@ export default function Home() {
   };
   
   const handleDelete = async (topicId: string) => {
+    try {
       await deleteDoc(doc(db, 'topics', topicId));
       setTopics(prevTopics => prevTopics.filter(topic => topic.id !== topicId));
       toast({ variant: 'destructive', title: t('deleteTopicSuccess') });
+    } catch (e) {
+      console.error("Failed to delete topic:", e);
+      toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete topic.' });
+    }
   }
 
   return (

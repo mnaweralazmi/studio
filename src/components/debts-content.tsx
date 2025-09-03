@@ -232,10 +232,10 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     async function deleteDebt(debtId: string) {
         if (!targetUserId) return;
         
-        const batch = writeBatch(db);
         const debtDocRef = doc(db, 'users', targetUserId, 'debts', debtId);
         
         try {
+            const batch = writeBatch(db);
             // Delete all payments in the subcollection first
             const paymentsRef = collection(debtDocRef, 'payments');
             const paymentsSnapshot = await getDocs(paymentsRef);
@@ -460,5 +460,3 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
-
-    

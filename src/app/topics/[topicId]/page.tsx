@@ -94,12 +94,17 @@ export default function TopicDetailsPage() {
     }
 
     if (updatedTopic) {
+      try {
         const topicRef = doc(db, 'topics', topic.id);
         await updateDoc(topicRef, {
             subTopics: updatedTopic.subTopics,
             videos: updatedTopic.videos,
         });
         setTopics(prevTopics => prevTopics.map(t => t.id === topic.id ? updatedTopic! : t));
+      } catch (e) {
+        console.error("Failed to update topic:", e);
+        toast({ variant: 'destructive', title: t('error'), description: 'Failed to save content.' });
+      }
     }
     
     setIsDialogOpen(false);
@@ -117,15 +122,20 @@ export default function TopicDetailsPage() {
           const videos = (topic.videos || []).filter(v => v.id !== id);
           updatedTopic = { ...topic, videos };
       }
+      
+      try {
+        const topicRef = doc(db, 'topics', topic.id);
+        await updateDoc(topicRef, {
+            subTopics: updatedTopic.subTopics,
+            videos: updatedTopic.videos,
+        });
 
-      const topicRef = doc(db, 'topics', topic.id);
-      await updateDoc(topicRef, {
-          subTopics: updatedTopic.subTopics,
-          videos: updatedTopic.videos,
-      });
-
-      setTopics(prevTopics => prevTopics.map(t => t.id === topic.id ? updatedTopic! : t));
-      toast({ variant: 'destructive', title: type === 'subtopic' ? t('deleteTopicSuccess') : t('deleteVideoSuccess')});
+        setTopics(prevTopics => prevTopics.map(t => t.id === topic.id ? updatedTopic! : t));
+        toast({ variant: 'destructive', title: type === 'subtopic' ? t('deleteTopicSuccess') : t('deleteVideoSuccess')});
+      } catch(e) {
+          console.error("Failed to delete content:", e);
+          toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete content.' });
+      }
   }
 
 
