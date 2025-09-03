@@ -143,7 +143,10 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     React.useEffect(() => {
         const fetchExpensesAndCategories = async () => {
-            if (!targetUserId) return;
+            if (!targetUserId) {
+                setIsDataLoading(false);
+                return;
+            }
 
             setIsDataLoading(true);
             
@@ -170,12 +173,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
         if (targetUserId) {
             fetchExpensesAndCategories();
-        } else {
+        } else if (!isAuthLoading) {
             setExpenses([]);
             setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
             setIsDataLoading(false);
         }
-    }, [targetUserId, language, departmentId]);
+    }, [targetUserId, language, departmentId, isAuthLoading]);
     
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -441,3 +444,5 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
+
+    

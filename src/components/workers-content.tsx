@@ -37,7 +37,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     React.useEffect(() => {
         const fetchWorkers = async () => {
-            if (!targetUserId) return;
+            if (!targetUserId) {
+                setIsDataLoading(false);
+                return;
+            }
             
             setIsDataLoading(true);
             try {
@@ -72,11 +75,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         if (targetUserId) {
             fetchWorkers();
-        } else {
+        } else if (!isAuthLoading) {
             setIsDataLoading(false);
             setWorkers([]);
         }
-    }, [targetUserId, departmentId, t, toast]);
+    }, [targetUserId, departmentId, isAuthLoading, t, toast]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
@@ -393,3 +396,5 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
+
+    

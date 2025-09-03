@@ -122,40 +122,43 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const poultryList = language === 'ar' ? poultryListAr : poultryListEn;
   const fishList = language === 'ar' ? fishListAr : fishListEn;
 
-  const fetchSales = React.useCallback(async () => {
-    if (!targetUserId) return;
-      
-    setIsDataLoading(true);
-    try {
-        const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
-        const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
-        const querySnapshot = await getDocs(q);
-        const sales: SalesItem[] = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            sales.push({
-                ...data,
-                id: doc.id,
-                date: (data.date as Timestamp).toDate(),
-            } as SalesItem);
-        });
-        setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
-    } catch(e) {
-        console.error("Error fetching sales: ", e);
-        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-    } finally {
-        setIsDataLoading(false);
-    }
-  }, [targetUserId, departmentId, toast, t]);
-
   React.useEffect(() => {
+    const fetchSales = async () => {
+        if (!targetUserId) {
+            setIsDataLoading(false);
+            return;
+        }
+      
+        setIsDataLoading(true);
+        try {
+            const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
+            const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
+            const querySnapshot = await getDocs(q);
+            const sales: SalesItem[] = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                sales.push({
+                    ...data,
+                    id: doc.id,
+                    date: (data.date as Timestamp).toDate(),
+                } as SalesItem);
+            });
+            setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
+        } catch(e) {
+            console.error("Error fetching sales: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+        } finally {
+            setIsDataLoading(false);
+        }
+    };
+    
     if (targetUserId) {
         fetchSales();
     } else if (!isAuthLoading) {
         setIsDataLoading(false);
         setSalesItems([]);
     }
-  }, [departmentId, fetchSales, targetUserId, isAuthLoading]);
+  }, [departmentId, targetUserId, isAuthLoading, toast, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -469,3 +472,5 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
+
+    

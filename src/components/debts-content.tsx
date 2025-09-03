@@ -123,7 +123,10 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
     React.useEffect(() => {
         const fetchDebts = async () => {
-            if (!targetUserId) return;
+            if (!targetUserId) {
+                setIsDataLoading(false);
+                return;
+            }
             
             setIsDataLoading(true);
             try {
@@ -162,11 +165,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         if (targetUserId) {
             fetchDebts();
-        } else {
+        } else if (!isAuthLoading) {
             setIsDataLoading(false);
             setDebts([]);
         }
-    }, [targetUserId, departmentId, toast, t]);
+    }, [targetUserId, departmentId, isAuthLoading, toast, t]);
 
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -457,3 +460,5 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
+
+    

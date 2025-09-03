@@ -13,7 +13,7 @@ import type { Payment } from '../debts-content';
 import type { Worker, Transaction } from '../workers/types';
 
 export function BudgetSummary() {
-    const { user: authUser } = useAuth();
+    const { user: authUser, loading: authLoading } = useAuth();
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = React.useState(true);
     const [departmentId, setDepartmentId] = React.useState<string>('agriculture');
@@ -84,9 +84,10 @@ export function BudgetSummary() {
     React.useEffect(() => {
         const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
         setDepartmentId(lastSelectedDept);
+        
         if (targetUserId) {
             fetchAllData(lastSelectedDept, targetUserId);
-        } else {
+        } else if (!authLoading) {
             setIsLoading(false);
         }
 
@@ -100,10 +101,10 @@ export function BudgetSummary() {
         
         window.addEventListener('departmentChanged', handleDepartmentChange);
         return () => window.removeEventListener('departmentChanged', handleDepartmentChange);
-    }, [fetchAllData, targetUserId]);
+    }, [fetchAllData, targetUserId, authLoading]);
 
 
-    if (isLoading) {
+    if (isLoading || authLoading) {
         return (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <Skeleton className="h-32" />
@@ -168,3 +169,5 @@ export function BudgetSummary() {
         </div>
     )
 }
+
+    
