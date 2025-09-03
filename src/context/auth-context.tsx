@@ -64,13 +64,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                 if (doc.exists()) {
                     const userData = doc.data();
-                     setUser({
-                        ...firebaseUser, // This includes uid, email, etc. from auth
-                        ...userData, // This includes role, points, level, etc. from firestore
-                        displayName: userData.name || firebaseUser.displayName, // Prioritize firestore name
-                        name: userData.name || firebaseUser.displayName, // also set name property
-                        photoURL: userData.photoURL || firebaseUser.photoURL, // Prioritize firestore photo
-                    } as AppUser);
+                    const combinedUser: AppUser = {
+                        ...firebaseUser,
+                        ...userData,
+                        displayName: userData.name || firebaseUser.displayName,
+                        name: userData.name || firebaseUser.displayName,
+                        photoURL: userData.photoURL || firebaseUser.photoURL,
+                    };
+                     setUser(combinedUser);
                 } else {
                    // Handle case where user exists in Auth but not Firestore (e.g., during registration)
                    setUser(firebaseUser as AppUser);
