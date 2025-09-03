@@ -36,9 +36,10 @@ export default function Home() {
   }
 
   const handleSubmit = async (data: any) => {
+    const topicsCollectionRef = collection(db, "data");
     if (editingTopic) {
         // Update existing topic in Firestore
-        const topicRef = doc(db, 'topics', editingTopic.id);
+        const topicRef = doc(topicsCollectionRef, editingTopic.id);
         const updatedData = { 
             title: data.title,
             description: data.description,
@@ -66,7 +67,7 @@ export default function Home() {
             subTopics: [],
             videos: []
         };
-        const docRef = await addDoc(collection(db, "topics"), newTopicData);
+        const docRef = await addDoc(topicsCollectionRef, newTopicData);
         const newTopic: AgriculturalSection = { id: docRef.id, ...newTopicData };
         setTopics(prevTopics => [...prevTopics, newTopic]);
         toast({ title: t('addTopicSuccess') });
@@ -76,8 +77,9 @@ export default function Home() {
   };
   
   const handleDelete = async (topicId: string) => {
+    const topicRef = doc(db, 'data', topicId);
     try {
-      await deleteDoc(doc(db, 'topics', topicId));
+      await deleteDoc(topicRef);
       setTopics(prevTopics => prevTopics.filter(topic => topic.id !== topicId));
       toast({ variant: 'destructive', title: t('deleteTopicSuccess') });
     } catch (e) {

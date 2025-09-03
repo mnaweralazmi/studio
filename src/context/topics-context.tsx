@@ -23,14 +23,14 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const fetchTopics = async () => {
         setLoading(true);
         try {
-            const topicsCollectionRef = collection(db, 'topics');
+            const topicsCollectionRef = collection(db, 'data');
             const querySnapshot = await getDocs(topicsCollectionRef);
             
             if (querySnapshot.empty) {
                 // If the collection is empty, populate it with initial data
                 const batch = writeBatch(db);
                 for (const section of initialAgriculturalSections) {
-                    const docRef = doc(db, 'topics', section.id);
+                    const docRef = doc(db, 'data', section.id);
                     batch.set(docRef, section);
                 }
                 await batch.commit();

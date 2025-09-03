@@ -95,7 +95,7 @@ export default function TopicDetailsPage() {
 
     if (updatedTopic) {
       try {
-        const topicRef = doc(db, 'topics', topic.id);
+        const topicRef = doc(db, 'data', topic.id);
         await updateDoc(topicRef, {
             subTopics: updatedTopic.subTopics,
             videos: updatedTopic.videos,
@@ -124,7 +124,7 @@ export default function TopicDetailsPage() {
       }
       
       try {
-        const topicRef = doc(db, 'topics', topic.id);
+        const topicRef = doc(db, 'data', topic.id);
         await updateDoc(topicRef, {
             subTopics: updatedTopic.subTopics,
             videos: updatedTopic.videos,
