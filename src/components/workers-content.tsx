@@ -139,10 +139,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     async function deleteWorker(workerId: string) {
         if (!targetUserId) return;
-        const batch = writeBatch(db);
-        const workerDocRef = doc(db, 'users', targetUserId, 'workers', workerId);
         
         try {
+            const batch = writeBatch(db);
+            const workerDocRef = doc(db, 'users', targetUserId, 'workers', workerId);
+            
             // Delete all transactions in the subcollection first
             const transactionsRef = collection(workerDocRef, 'transactions');
             const transactionsSnapshot = await getDocs(transactionsRef);
