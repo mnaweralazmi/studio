@@ -6,45 +6,16 @@ service cloud.firestore {
     // Allow public read access to general app data
     match /data/{document=**} {
       allow read: if true;
-      allow write: if false; // Protect public data from client writes
+      allow write: if false;
     }
 
     // Securely lock down user data and their subcollections
     match /users/{userId} {
       // Allow user to read/write their own document
-      allow read, update, delete, create: if request.auth.uid == userId;
+      allow read, update, delete: if request.auth.uid == userId;
 
-      // Correctly nested rule for the 'tasks' subcollection
-      match /tasks/{taskId} {
-        allow read, write, delete, create: if request.auth.uid == userId;
-      }
-      
-      // Correctly nested rule for the 'sales' subcollection
-      match /sales/{saleId} {
-        allow read, write, delete, create: if request.auth.uid == userId;
-      }
-      
-      // Correctly nested rule for the 'expenses' subcollection
-      match /expenses/{expenseId} {
-        allow read, write, delete, create: if request.auth.uid == userId;
-      }
-      
-      // Correctly nested rule for the 'debts' subcollection and its subcollections
-      match /debts/{debtId} {
-        allow read, write, delete, create: if request.auth.uid == userId;
-        
-        match /payments/{paymentId} {
-           allow read, write, delete, create: if request.auth.uid == userId;
-        }
-      }
-      
-      // Correctly nested rule for the 'workers' subcollection and its subcollections
-      match /workers/{workerId} {
-        allow read, write, delete, create: if request.auth.uid == userId;
-
-        match /transactions/{transactionId} {
-           allow read, write, delete, create: if request.auth.uid == userId;
-        }
+      match /{document=**} {
+        allow read, write, delete: if request.auth.uid == userId;
       }
     }
   }
