@@ -8,23 +8,21 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, Repeat, Trash2, PlusCircle, TrendingUp, Pencil } from 'lucide-react';
+import { CreditCard, Repeat, PlusCircle, TrendingUp, Pencil } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, setDoc, Timestamp, getDoc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export type ExpenseItem = {
   id: string;
@@ -230,19 +228,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
     }
 
-    async function deleteExpense(id: string) {
-        if (!targetUserId) return;
-        try {
-            const expenseDocRef = doc(db, 'users', targetUserId, 'expenses', id);
-            await deleteDoc(expenseDocRef);
-            setExpenses(prev => prev.filter(item => item.id !== id));
-            toast({ variant: "destructive", title: t('expenseDeleted') });
-        } catch(e) {
-            console.error("Error deleting expense: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to delete expense." });
-        }
-    }
-
     async function handleEditExpense(id: string, data: Partial<ExpenseItem>) {
         if (!targetUserId) return;
         try {
@@ -387,13 +372,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                         <EditExpenseDialog expense={item} onSave={handleEditExpense} categories={expenseCategories}>
                                                             <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
                                                         </EditExpenseDialog>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild><Button variant="destructive" size="icon" title={t('delete')}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: item.item })}</AlertDialogDescription></AlertDialogHeader>
-                                                                <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => deleteExpense(item.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -422,13 +400,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                         <EditExpenseDialog expense={item} onSave={handleEditExpense} categories={expenseCategories}>
                                                             <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
                                                         </EditExpenseDialog>
-                                                         <AlertDialog>
-                                                            <AlertDialogTrigger asChild><Button variant="destructive" size="icon" title={t('delete')}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: item.item })}</AlertDialogDescription></AlertDialogHeader>
-                                                                <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => deleteExpense(item.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -444,5 +415,3 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
-
-    

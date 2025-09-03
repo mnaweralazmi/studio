@@ -5,11 +5,11 @@ import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { PlusCircle, Trash2, Wallet, Pencil } from 'lucide-react';
+import { PlusCircle, Wallet, Pencil } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, query, where, writeBatch, updateDoc, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, Timestamp, query, where, updateDoc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
@@ -24,7 +24,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 
 // Simplified type, no Zod
@@ -232,22 +231,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
   }
   
-  async function deleteItem(id: string) {
-    if (!targetUserId) return;
-    try {
-        const saleDocRef = doc(db, 'users', targetUserId, 'sales', id);
-        await deleteDoc(saleDocRef);
-        setSalesItems(prevItems => prevItems.filter(item => item.id !== id));
-        toast({
-            variant: "destructive",
-            title: t('itemDeleted'),
-        });
-    } catch(e) {
-        console.error("Error deleting document: ", e);
-        toast({ variant: "destructive", title: t('error'), description: "Failed to delete sale."});
-    }
-  }
-
   async function handleSave(id: string, data: Partial<SalesItem>) {
     if (!targetUserId) return;
     try {
@@ -266,23 +249,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         <EditSaleDialog sale={item} onSave={handleSave}>
             <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
         </EditSaleDialog>
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" title={t('deleteItem')}>
-                    <Trash2 className="h-4 w-4" />
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                    <AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: item.product })}</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deleteItem(item.id)}>{t('confirmDelete')}</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
       </div>
   );
 
@@ -472,5 +438,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-
-    

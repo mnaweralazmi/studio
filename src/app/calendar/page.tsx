@@ -8,13 +8,12 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, CalendarDays, CheckCircle, Repeat, Bell, Trash2, Clock } from 'lucide-react';
+import { PlusCircle, CalendarDays, CheckCircle, Repeat, Bell, Clock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, writeBatch, Timestamp, query, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, writeBatch, Timestamp, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export interface Task {
@@ -27,7 +26,7 @@ export interface Task {
   reminderDays?: number;
 }
 
-const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
+const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
     const dueDate = task.dueDate;
     const dateStr = dueDate.toISOString();
     const hasTime = !!dateStr.match(/T\d{2}:\d{2}/) && !dateStr.endsWith("T00:00:00.000Z");
@@ -49,26 +48,6 @@ const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onC
                     )}
                     {task.isCompleted && (
                         <CheckCircle className="h-5 w-5 text-green-500" />
-                    )}
-
-                    {onDelete && (
-                         <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                 <button title={t('deleteTask')} className="group">
-                                    <Trash2 className="h-5 w-5 text-gray-400 group-hover:text-destructive transition-colors" />
-                                </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                                    <AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: task.title })}</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                 <AlertDialogFooter>
-                                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => onDelete(task.id)}>{t('confirmDelete')}</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
                     )}
                 </div>
                 
@@ -95,15 +74,15 @@ const TaskItem = ({ task, onComplete, onDelete, language, t }: { task: Task, onC
 };
 
 
-const TaskList = ({ tasks, onComplete, onDelete, language, t }: { tasks: Task[], onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
+const TaskList = ({ tasks, onComplete, language, t }: { tasks: Task[], onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
     <div className="space-y-3">
         {tasks.map(task => (
-            <TaskItem key={task.id} task={task} onComplete={onComplete} onDelete={onDelete} language={language} t={t} />
+            <TaskItem key={task.id} task={task} onComplete={onComplete} language={language} t={t} />
         ))}
     </div>
 );
 
-const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[], onComplete?: (id: string) => void, onDelete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
+const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[], onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
     <Card className="flex flex-col h-full">
         <CardHeader>
             <CardTitle>{title} ({tasks.length})</CardTitle>
@@ -199,19 +178,6 @@ export default function CalendarPage() {
     }
   };
   
-  const handleDeleteTask = async (taskId: string) => {
-    if (!user) return;
-    try {
-        const taskDocRef = doc(db, 'users', user.uid, 'tasks', taskId);
-        await deleteDoc(taskDocRef);
-        setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
-        toast({ variant: "destructive", title: t('taskDeleted') });
-    } catch(e) {
-        console.error("Error deleting task:", e);
-        toast({ variant: "destructive", title: t('error'), description: 'Failed to delete task.' });
-    }
-  }
-  
   const upcomingTasks = tasks.filter(task => !task.isCompleted)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
@@ -272,7 +238,6 @@ export default function CalendarPage() {
                     title={t('allUpcomingTasks')} 
                     tasks={upcomingTasks} 
                     onComplete={handleCompleteTask} 
-                    onDelete={handleDeleteTask} 
                     language={language} t={t} 
                 />
                 
@@ -280,7 +245,6 @@ export default function CalendarPage() {
                     title={t('tasksForDay')} 
                     tasks={selectedDayTasks} 
                     onComplete={handleCompleteTask} 
-                    onDelete={handleDeleteTask} 
                     language={language} t={t}
                 />
 
@@ -292,7 +256,7 @@ export default function CalendarPage() {
                         {allCompletedTasks.length > 0 ? (
                                 <div className="space-y-3">
                                 {allCompletedTasks.slice(0,20).map(task => (
-                                    <TaskItem key={task.id} task={task} language={language} t={t} onDelete={handleDeleteTask} />
+                                    <TaskItem key={task.id} task={task} language={language} t={t} />
                                 ))}
                             </div>
                         ) : (

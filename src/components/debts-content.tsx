@@ -11,26 +11,24 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Landmark, Trash2, PlusCircle, CalendarIcon, CheckCircle, Pencil } from 'lucide-react';
+import { Landmark, PlusCircle, CalendarIcon, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
-import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, writeBatch, setDoc, updateDoc, query, where, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export type Payment = {
   id: string;
@@ -84,7 +82,7 @@ function EditDebtDialog({ debt, onSave, children }: { debt: DebtItem, onSave: (i
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="amount">{t('amountInDinar')}</Label>
-                        <Input id="amount" name="amount" type="number" step="0.01" defaultValue={debt.amount} required />
+                        <Input id="amount" name="amount" type="number" step="0.01" defaultValue={debt.amount} required readOnly/>
                     </div>
                     <div className="flex flex-col space-y-2">
                         <Label>{t('dueDateOptional')}</Label>
@@ -226,33 +224,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         } catch (e) {
             console.error("Error adding document: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to save debt." });
-        }
-    }
-
-    async function deleteDebt(debtId: string) {
-        if (!targetUserId) return;
-        
-        try {
-            const batch = writeBatch(db);
-            const debtDocRef = doc(db, 'users', targetUserId, 'debts', debtId);
-            
-            // Delete all payments in the subcollection first
-            const paymentsRef = collection(debtDocRef, 'payments');
-            const paymentsSnapshot = await getDocs(paymentsRef);
-            paymentsSnapshot.forEach(paymentDoc => {
-                batch.delete(paymentDoc.ref);
-            });
-
-            // Then delete the main debt document
-            batch.delete(debtDocRef);
-
-            await batch.commit();
-
-            setDebts(prev => prev.filter(item => item.id !== debtId));
-            toast({ variant: "destructive", title: t('debtDeleted') });
-        } catch (e) {
-            console.error("Error deleting document: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to delete debt." });
         }
     }
 
@@ -431,21 +402,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                                 <EditDebtDialog debt={item} onSave={handleEditDebt}>
                                                      <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
                                                 </EditDebtDialog>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="destructive" size="icon" title={t('delete')}><Trash2 className="h-4 w-4" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                                                            <AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: item.creditor })}</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => deleteDebt(item.id)}>{t('confirmDelete')}</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -460,5 +416,3 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
-
-    

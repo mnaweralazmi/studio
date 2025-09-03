@@ -10,10 +10,9 @@ import { useLanguage } from '@/context/language-context';
 import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
-import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
 import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
-import { collection, getDocs, doc, addDoc, deleteDoc, writeBatch, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, writeBatch, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -134,33 +133,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 console.error("Error adding worker: ", e);
                 toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
             }
-        }
-    }
-
-    async function deleteWorker(workerId: string) {
-        if (!targetUserId) return;
-        
-        try {
-            const batch = writeBatch(db);
-            const workerDocRef = doc(db, 'users', targetUserId, 'workers', workerId);
-            
-            // Delete all transactions in the subcollection first
-            const transactionsRef = collection(workerDocRef, 'transactions');
-            const transactionsSnapshot = await getDocs(transactionsRef);
-            transactionsSnapshot.forEach(transactionDoc => {
-                batch.delete(transactionDoc.ref);
-            });
-
-            // Then delete the main worker document
-            batch.delete(workerDocRef);
-
-            await batch.commit();
-
-            setWorkers(prev => prev.filter(w => w.id !== workerId));
-            toast({ variant: "destructive", title: t('workerDeleted') });
-        } catch (e) {
-            console.error("Error deleting worker: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker data." });
         }
     }
 
@@ -364,7 +336,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                       return (
                       <TableRow key={worker.id}>
                         <TableCell className="font-medium">{worker.name}</TableCell>
-                        <TableCell>{(worker.baseSalary || 0).toFixed(2)} {t('dinar')}</TableCell>
+                        <TableCell>{(worker.baseSalary || 0).toFixed(2)} {t('dinar')} {t('monthly')}</TableCell>
                         <TableCell>
                            <BadgeCheck className={`h-5 w-5 ${isPaidThisMonth ? 'text-green-600' : 'text-muted-foreground'}`}/>
                         </TableCell>
@@ -378,7 +350,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                 <AddWorkerDialog onSave={handleSaveWorker} worker={worker}>
                                     <Button variant="ghost" size="icon" title={t('editWorker')}><Pencil className="h-4 w-4" /></Button>
                                 </AddWorkerDialog>
-                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => deleteWorker(worker.id)} />
                             </div>
                         </TableCell>
                       </TableRow>
@@ -397,5 +368,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-
-    

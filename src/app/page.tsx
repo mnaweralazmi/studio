@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { Leaf, PlayCircle, BookOpen, Trash2, Pencil } from 'lucide-react';
+import { Leaf, PlayCircle, BookOpen, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
@@ -12,9 +12,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
 import { ContentDialog } from '@/components/content-dialog';
 import type { AgriculturalSection } from '@/lib/topics-data';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { doc, runTransaction, getDocs, collection, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, collection, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -76,18 +75,6 @@ export default function Home() {
     setEditingTopic(undefined);
   };
   
-  const handleDelete = async (topicId: string) => {
-    const topicRef = doc(db, 'data', topicId);
-    try {
-      await deleteDoc(topicRef);
-      setTopics(prevTopics => prevTopics.filter(topic => topic.id !== topicId));
-      toast({ variant: 'destructive', title: t('deleteTopicSuccess') });
-    } catch (e) {
-      console.error("Failed to delete topic:", e);
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete topic.' });
-    }
-  }
-
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
       <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">
@@ -155,21 +142,6 @@ export default function Home() {
                                         <Button size="icon" variant="secondary" onClick={() => handleDialogOpen(topic)}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
-                                                    <AlertDialogDescription>{t('confirmDeleteTopicDesc', {topicName: title ?? ""})}</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(topic.id)}>{t('confirmDelete')}</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
                                     </div>
                                 )}
                             </Card>

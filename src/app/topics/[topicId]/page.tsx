@@ -10,8 +10,7 @@ import { useLanguage } from '@/context/language-context';
 import { useTopics } from '@/context/topics-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, Pencil, PlayCircle, FileText } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ArrowLeft, Pencil, PlayCircle, FileText } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { ContentDialog, ContentFormValues } from '@/components/content-dialog';
 import { useAuth } from '@/context/auth-context';
@@ -111,34 +110,6 @@ export default function TopicDetailsPage() {
     setEditingContent(undefined);
   };
   
-  const handleDelete = async (type: 'subtopic' | 'video', id: string) => {
-      if (!topic) return;
-      
-      let updatedTopic: AgriculturalSection | null = null;
-      if (type === 'subtopic') {
-          const subTopics = topic.subTopics.filter(st => st.id !== id);
-          updatedTopic = { ...topic, subTopics };
-      } else {
-          const videos = (topic.videos || []).filter(v => v.id !== id);
-          updatedTopic = { ...topic, videos };
-      }
-      
-      try {
-        const topicRef = doc(db, 'data', topic.id);
-        await updateDoc(topicRef, {
-            subTopics: updatedTopic.subTopics,
-            videos: updatedTopic.videos,
-        });
-
-        setTopics(prevTopics => prevTopics.map(t => t.id === topic.id ? updatedTopic! : t));
-        toast({ variant: 'destructive', title: type === 'subtopic' ? t('deleteTopicSuccess') : t('deleteVideoSuccess')});
-      } catch(e) {
-          console.error("Failed to delete content:", e);
-          toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete content.' });
-      }
-  }
-
-
   if (loading || !topic) {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -206,17 +177,6 @@ export default function TopicDetailsPage() {
                                     <Button size="icon" variant="secondary" onClick={() => handleDialogOpen({ type: 'subtopic', data: subTopic })}>
                                         <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                        <AlertDialogHeader>
-  <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteTopicDesc', { topicName: subTopicTitle?? "" })} </AlertDialogDescription></AlertDialogHeader>
-
-                                            <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete('subtopic', subTopic.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
                                 </div>
                             )}
                         </Card>
@@ -253,15 +213,6 @@ export default function TopicDetailsPage() {
                                              <Button size="icon" variant="secondary" onClick={() => handleDialogOpen({ type: 'video', data: video })}>
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button size="icon" variant="destructive"><Trash2 className="h-4 w-4" /></Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader><AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDeleteVideoDesc', { videoName: videoTitle?? "" })}</AlertDialogDescription></AlertDialogHeader>
-                                                    <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete('video', video.id)}>{t('confirmDelete')}</AlertDialogAction></AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
                                         </div>
                                     )}
                                 </Card>

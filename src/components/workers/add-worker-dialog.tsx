@@ -59,7 +59,7 @@ export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogPro
                         <Input id="name" name="name" placeholder={t('workerNamePlaceholder')} defaultValue={worker?.name} required />
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="baseSalary">{t('baseSalaryInDinar')}</Label>
+                        <Label htmlFor="baseSalary">{t('baseSalaryInDinar')} ({t('monthly')})</Label>
                         <Input id="baseSalary" name="baseSalary" type="number" step="1" defaultValue={worker?.baseSalary} required />
                     </div>
                     <DialogFooter>
