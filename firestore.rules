@@ -2,24 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow public read access to general app data
+    // Allow public read for general data
     match /data/{document=**} {
       allow read: if true;
-      allow write: if false; // Protect public data from client writes
+      allow write: if false;
     }
 
     // Allow any authenticated user to manage their own user document
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
+      allow read, update, delete, create: if request.auth.uid == userId;
     }
-
-    // Secure all user-specific data collections (tasks, sales, etc.)
-    // This rule requires that any document in a top-level collection has an ownerId
-    // that matches the authenticated user's UID for all operations.
+    
+    // This wildcard match handles all other top-level collections 
+    // (tasks, sales, expenses, debts, workers)
     match /{collection}/{docId} {
+       // Check the ownerId field on the document for reads and writes
        allow read, update, delete: if request.auth.uid == resource.data.ownerId;
+       // Check the ownerId field on the incoming document for creates
        allow create: if request.auth.uid == request.resource.data.ownerId;
+
+       // Allow access to subcollections like payments or transactions
+       match /{subCollection}/{subDocId} {
+         allow read, write, delete, create: if request.auth.uid == get(/databases/$(database)/documents/$(collection)/$(docId)).data.ownerId;
+       }
     }
   }
 }

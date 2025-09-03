@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
+import { collection, addDoc, Timestamp, runTransaction, doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,8 +20,6 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { addTask, type TaskData } from '@/lib/api/tasks';
-import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
@@ -31,6 +30,32 @@ const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Be
 
 const fruitListAr = [ "فراولة", "توت", "تين", "عنب", "بطيخ", "شمام", "رمان", "مانجو", "موز", "تفاح", "برتقال", "ليمون" ] as const;
 const fruitListEn = [ "Strawberry", "Berry", "Fig", "Grape", "Watermelon", "Melon", "Pomegranate", "Mango", "Banana", "Apple", "Orange", "Lemon" ] as const;
+
+// --- Data Types ---
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate: Date; 
+  isCompleted: boolean;
+  isRecurring: boolean;
+  reminderDays?: number;
+  ownerId: string;
+}
+
+export type TaskData = Omit<Task, 'id' | 'ownerId'>;
+
+// --- Firestore API Functions ---
+async function addTask(uid: string, data: TaskData): Promise<string> {
+    if (!uid) throw new Error("User is not authenticated.");
+    const tasksCollectionRef = collection(db, 'tasks');
+    const docRef = await addDoc(tasksCollectionRef, {
+        ...data,
+        dueDate: Timestamp.fromDate(data.dueDate),
+        ownerId: uid,
+    });
+    return docRef.id;
+}
 
 
 export default function AddTaskPage() {

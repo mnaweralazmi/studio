@@ -4,6 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
+import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,87 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { addDebt, getDebts, updateDebt, addDebtPayment, type DebtItem, type DebtItemData, type Payment } from '@/lib/api/debts';
+import { db } from '@/lib/firebase';
+
+// --- Data Types ---
+export type Payment = {
+  id: string;
+  amount: number;
+  date: Date;
+};
+
+export type DebtItem = {
+  id: string;
+  creditor: string;
+  amount: number;
+  dueDate?: Date;
+  status: 'unpaid' | 'paid' | 'partially-paid';
+  payments: Payment[];
+  departmentId: string;
+  ownerId: string;
+};
+
+export type DebtItemData = Omit<DebtItem, 'id' | 'ownerId' | 'payments'>;
+
+// --- Firestore API Functions ---
+async function getDebts(uid: string, departmentId: string): Promise<DebtItem[]> {
+    if (!uid) throw new Error("User is not authenticated.");
+    
+    const debtsCollectionRef = collection(db, 'debts');
+    const q = query(debtsCollectionRef, where("ownerId", "==", uid), where("departmentId", "==", departmentId));
+    const querySnapshot = await getDocs(q);
+    
+    const debtPromises = querySnapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        const paymentsCollectionRef = collection(db, 'debts', docSnap.id, 'payments');
+        const paymentsSnapshot = await getDocs(paymentsCollectionRef);
+        const payments: Payment[] = paymentsSnapshot.docs.map(pDoc => ({
+            id: pDoc.id,
+            amount: pDoc.data().amount,
+            date: (pDoc.data().date as Timestamp).toDate(),
+        }));
+
+        return {
+            id: docSnap.id,
+            ...data,
+            dueDate: data.dueDate ? (data.dueDate as Timestamp).toDate() : undefined,
+            payments: payments,
+        } as DebtItem;
+    });
+    return Promise.all(debtPromises);
+}
+
+async function addDebt(uid: string, data: DebtItemData): Promise<string> {
+    if (!uid) throw new Error("User is not authenticated.");
+    const debtsCollectionRef = collection(db, 'debts');
+    const docRef = await addDoc(debtsCollectionRef, {
+        ...data,
+        dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
+        ownerId: uid,
+    });
+    return docRef.id;
+}
+
+async function updateDebt(debtId: string, data: Partial<DebtItemData>): Promise<void> {
+    const debtRef = doc(db, 'debts', debtId);
+    const updateData: any = { ...data };
+    if (data.dueDate) {
+        updateData.dueDate = Timestamp.fromDate(data.dueDate);
+    }
+    await updateDoc(debtRef, updateData);
+}
+
+async function addDebtPayment(debtId: string, newStatus: DebtItem['status'], paymentData: Omit<Payment, 'id'|'date'> & { date: Date }) {
+    const batch = writeBatch(db);
+    const newPaymentRef = doc(collection(db, 'debts', debtId, 'payments'));
+    batch.set(newPaymentRef, {
+        amount: paymentData.amount,
+        date: Timestamp.fromDate(paymentData.date),
+    });
+    const debtDocRef = doc(db, 'debts', debtId);
+    batch.update(debtDocRef, { status: newStatus });
+    await batch.commit();
+}
 
 
 interface DebtsContentProps {
@@ -154,7 +235,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             creditor: data.creditor,
             amount: data.amount,
             status: 'unpaid',
-            payments: [],
             dueDate: data.dueDate,
             departmentId: departmentId,
         };
@@ -164,6 +244,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             const newDebt: DebtItem = {
               ...newDebtData,
               id: docId,
+              payments: [],
+              ownerId: targetUserId
             };
 
             setDebts(prev => [...prev, newDebt].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)));
@@ -205,7 +287,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             let newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
 
-            const paymentData: Omit<Payment, 'id'> = {
+            const paymentData = {
                 amount: paymentAmount,
                 date: new Date(),
             };

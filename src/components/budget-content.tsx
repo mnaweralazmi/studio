@@ -2,6 +2,7 @@
 "use client"
 
 import * as React from 'react';
+import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, runTransaction } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -22,11 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { addSale, getSales, updateSale, type SalesItem, type SalesItemData } from '@/lib/api/sales';
-import { runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { doc } from 'firebase/firestore';
-
 
 // Data lists
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
@@ -40,6 +37,55 @@ const poultryListEn = ["Broiler Chicken", "Layer Chicken", "Eggs"];
 
 const fishListAr = ["سبيطي", "هامور", "شعم"];
 const fishListEn = ["Spgre", "Hamour", "Sheim"];
+
+
+// --- Data Types ---
+export type SalesItem = {
+  id: string;
+  product: string;
+  quantity: number;
+  weightPerUnit?: number;
+  price: number;
+  total: number;
+  date: Date;
+  departmentId: string;
+  ownerId: string;
+};
+
+export type SalesItemData = Omit<SalesItem, 'id' | 'ownerId'>;
+
+// --- Firestore API Functions ---
+async function getSales(uid: string, departmentId: string): Promise<SalesItem[]> {
+    if (!uid) throw new Error("User is not authenticated.");
+    
+    const salesCollectionRef = collection(db, 'sales');
+    const q = query(salesCollectionRef, where("ownerId", "==", uid), where("departmentId", "==", departmentId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+            id: docSnap.id,
+            ...data,
+            date: (data.date as Timestamp).toDate(),
+        } as SalesItem;
+    });
+}
+
+async function addSale(uid: string, data: SalesItemData): Promise<string> {
+    if (!uid) throw new Error("User is not authenticated.");
+    const salesCollectionRef = collection(db, 'sales');
+    const docRef = await addDoc(salesCollectionRef, {
+        ...data,
+        date: Timestamp.fromDate(data.date),
+        ownerId: uid,
+    });
+    return docRef.id;
+}
+
+async function updateSale(saleId: string, data: Partial<SalesItemData>): Promise<void> {
+    const saleRef = doc(db, 'sales', saleId);
+    await updateDoc(saleRef, data);
+}
 
 
 interface BudgetContentProps {

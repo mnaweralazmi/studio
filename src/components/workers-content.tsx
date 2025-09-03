@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from 'react';
+import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
@@ -14,10 +15,88 @@ import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } fro
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { addWorker, getWorkers, updateWorker, paySalary, addTransaction } from '@/lib/api/workers';
+import { db } from '@/lib/firebase';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
+
+// --- Firestore API Functions ---
+async function getWorkers(uid: string, departmentId: string): Promise<Worker[]> {
+     if (!uid) throw new Error("User is not authenticated.");
+    
+    const workersColRef = collection(db, 'workers');
+    const q = query(workersColRef, where("ownerId", "==", uid), where("departmentId", "==", departmentId));
+    const workersSnapshot = await getDocs(q);
+
+    const workerPromises = workersSnapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        const transactionsColRef = collection(db, 'workers', docSnap.id, 'transactions');
+        const transactionsSnapshot = await getDocs(transactionsColRef);
+        const transactions: Transaction[] = transactionsSnapshot.docs.map(tDoc => ({ 
+            id: tDoc.id, 
+            ...tDoc.data(),
+            date: (tDoc.data().date as Timestamp).toDate(),
+        })) as Transaction[];
+
+        return {
+            id: docSnap.id,
+            name: data.name,
+            baseSalary: data.baseSalary,
+            departmentId: data.departmentId,
+            paidMonths: data.paidMonths || [],
+            transactions: transactions,
+            ownerId: data.ownerId,
+        };
+    });
+    return Promise.all(workerPromises);
+}
+
+async function addWorker(uid: string, data: WorkerFormValues & { departmentId: string }): Promise<string> {
+    if (!uid) throw new Error("User is not authenticated.");
+    const workersColRef = collection(db, 'workers');
+    const docRef = await addDoc(workersColRef, {
+        ...data,
+        ownerId: uid,
+        paidMonths: [],
+    });
+    return docRef.id;
+}
+
+async function updateWorker(workerId: string, data: Partial<WorkerFormValues>): Promise<void> {
+    const workerRef = doc(db, 'workers', workerId);
+    await updateDoc(workerRef, data);
+}
+
+async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
+    const batch = writeBatch(db);
+    
+    const workerRef = doc(db, 'workers', workerId);
+    const workerDoc = await getDocs(query(collection(db, 'workers'), where('__name__', '==', workerId)));
+    if (workerDoc.empty) throw new Error("Worker not found");
+    const workerData = workerDoc.docs[0].data();
+
+    // Add new paid month to the array
+    const updatedPaidMonths = [...(workerData.paidMonths || []), paidMonth];
+    batch.update(workerRef, { paidMonths: updatedPaidMonths });
+
+    // Add a corresponding transaction
+    const newTransactionRef = doc(collection(db, 'workers', workerId, 'transactions'));
+    batch.set(newTransactionRef, {
+        ...transactionData,
+        date: Timestamp.fromDate(new Date()),
+    });
+
+    await batch.commit();
+}
+
+async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
+    const newTransactionRef = await addDoc(collection(db, 'workers', workerId, 'transactions'), {
+        ...transactionData,
+        date: Timestamp.fromDate(new Date()),
+    });
+    return newTransactionRef.id;
+}
+
 
 interface WorkersContentProps {
     departmentId: string;
@@ -102,6 +181,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     paidMonths: [],
                     transactions: [],
                     departmentId,
+                    ownerId: targetUserId,
                 };
     
                 setWorkers(prev => [...prev, newWorker]);
@@ -130,10 +210,15 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
             setWorkers(prev => prev.map(w => {
                 if (w.id === workerId) {
+                    const newTransaction: Transaction = {
+                        id: crypto.randomUUID(), // temp client-side id
+                        ...newTransactionData,
+                        date: new Date().toISOString()
+                    }
                     return {
                         ...w,
                         paidMonths: [...w.paidMonths, { year, month }],
-                        transactions: [...w.transactions, { id: crypto.randomUUID(), ...newTransactionData, date: new Date() }],
+                        transactions: [...w.transactions, newTransaction],
                     };
                 }
                 return w;
@@ -150,7 +235,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         if (!targetUserId) return;
         
         try {
-            const newTransactionData: Omit<Transaction, 'id' | 'date'> = {
+            const newTransactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'> = {
                 type: transaction.type,
                 amount: transaction.amount,
                 description: transaction.description,
@@ -160,9 +245,14 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             
             setWorkers(prev => prev.map(w => {
                 if (w.id === workerId) {
+                    const newTransaction: Transaction = {
+                        id: docId,
+                        ...newTransactionData,
+                        date: new Date().toISOString(),
+                    }
                     return {
                         ...w,
-                        transactions: [...w.transactions, { id: docId, ...newTransactionData, date: new Date() }],
+                        transactions: [...w.transactions, newTransaction],
                     };
                 }
                 return w;

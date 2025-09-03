@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from 'react';
+import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { addExpense, getExpenses, updateExpense, type ExpenseItem, type ExpenseItemData } from '@/lib/api/expenses';
+import { db } from '@/lib/firebase';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -42,6 +43,55 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
         }
     }
 };
+
+// --- Data Types ---
+export type ExpenseItem = {
+  id: string;
+  date: Date;
+  type: 'fixed' | 'variable';
+  category: string;
+  item: string;
+  amount: number;
+  departmentId: string;
+  ownerId: string;
+};
+
+export type ExpenseItemData = Omit<ExpenseItem, 'id' | 'ownerId'>;
+
+
+// --- Firestore API Functions ---
+async function getExpenses(uid: string, departmentId: string): Promise<ExpenseItem[]> {
+    if (!uid) throw new Error("User is not authenticated.");
+    
+    const expensesCollectionRef = collection(db, 'expenses');
+    const q = query(expensesCollectionRef, where("ownerId", "==", uid), where("departmentId", "==", departmentId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+            id: docSnap.id,
+            ...data,
+            date: (data.date as Timestamp).toDate(),
+        } as ExpenseItem;
+    });
+}
+
+async function addExpense(uid: string, data: ExpenseItemData): Promise<string> {
+    if (!uid) throw new Error("User is not authenticated.");
+    const expensesCollectionRef = collection(db, 'expenses');
+    const docRef = await addDoc(expensesCollectionRef, {
+        ...data,
+        date: Timestamp.fromDate(data.date),
+        ownerId: uid,
+    });
+    return docRef.id;
+}
+
+async function updateExpense(expenseId: string, data: Partial<ExpenseItemData>): Promise<void> {
+    const expenseRef = doc(db, 'expenses', expenseId);
+    await updateDoc(expenseRef, data);
+}
+
 
 interface ExpensesContentProps {
     departmentId: string;
