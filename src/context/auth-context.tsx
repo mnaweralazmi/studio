@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export interface Badge {
@@ -31,42 +31,52 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-export const AuthProvider = ({ children }: { children: React.Node }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-        if (firebaseUser) {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            
-            const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-                setLoading(true);
-                const userData = doc.data();
-                const combinedUser: AppUser = {
-                    ...firebaseUser,
-                    ...userData,
-                    uid: firebaseUser.uid, // Ensure uid from auth is always present
-                    displayName: userData?.name || firebaseUser.displayName,
-                    name: userData?.name || firebaseUser.displayName,
-                    photoURL: userData?.photoURL || firebaseUser.photoURL,
-                };
-                setUser(combinedUser);
-                setLoading(false);
-            }, (error) => {
-                console.error("Error with onSnapshot:", error);
-                setUser(firebaseUser as AppUser); // Fallback to auth user
-                setLoading(false);
-            });
+    let unsubscribeSnapshot: Unsubscribe | null = null;
 
-            return () => unsubscribeSnapshot(); // Cleanup snapshot listener
-        } else {
-            setUser(null);
-            setLoading(false);
-        }
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      // First, clean up any existing snapshot listener
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+
+      if (firebaseUser) {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        
+        unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
+          const userData = doc.data();
+          const combinedUser: AppUser = {
+            ...firebaseUser,
+            ...userData,
+            uid: firebaseUser.uid,
+            displayName: userData?.name || firebaseUser.displayName,
+            name: userData?.name || firebaseUser.displayName,
+            photoURL: userData?.photoURL || firebaseUser.photoURL,
+          };
+          setUser(combinedUser);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error with onSnapshot, falling back to auth user:", error);
+          setUser(firebaseUser as AppUser);
+          setLoading(false);
+        });
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
     });
 
-    return () => unsubscribeAuth(); // Cleanup auth listener
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
   }, []);
 
 
