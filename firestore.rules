@@ -2,14 +2,13 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Allow public read access to the agricultural topics
+    // Allow public read access to general app data
     match /data/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null; // Only authenticated users can write for now
+      allow write: if false; // Protect public data from being written by clients
     }
-
-    // Secure user-specific data
+    
+    // Securely lock down user data
     match /users/{userId}/{document=**} {
       allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
