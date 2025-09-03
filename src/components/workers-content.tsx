@@ -12,7 +12,7 @@ import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog'
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
 import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
-import { collection, getDocs, doc, addDoc, writeBatch, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, writeBatch, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -213,7 +213,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const getWorkerBalance = (worker: Worker) => {
         return (worker.transactions || []).reduce((acc, t) => {
              if (t.type === 'bonus') return acc + t.amount;
-             if (t.type === 'deduction' || t.type === 'salary') return acc - t.amount;
+             if (t.type === 'deduction') return acc - t.amount;
              return acc;
         }, 0);
     }
@@ -368,3 +368,5 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
+
+    
