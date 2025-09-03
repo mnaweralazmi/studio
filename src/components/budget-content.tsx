@@ -472,3 +472,5 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
+
+    
