@@ -10,6 +10,7 @@ import { DebtsContent } from '@/components/debts-content';
 import { WorkersContent } from '@/components/workers-content';
 import { Wallet, CreditCard, Landmark, Users, Leaf, PawPrint, Bird, Fish } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { BudgetSummary } from '@/components/budget/budget-summary';
 
 type Department = 'agriculture' | 'livestock' | 'poultry' | 'fish';
 
@@ -49,10 +50,17 @@ export default function FinancialsPage() {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
             <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
+                <div className="w-full">
+                    <h1 className="text-3xl font-bold">{t('financialManagementTitle')}</h1>
+                    <p className="text-muted-foreground">{t('financialManagementDesc')}</p>
+                </div>
+                
+                <BudgetSummary />
+
                 <Card>
                     <CardHeader>
-                        <CardTitle>{t('financialManagement')}</CardTitle>
-                        <CardDescription>{t('financialManagementDesc')}</CardDescription>
+                        <CardTitle>{t('departmentalManagement')}</CardTitle>
+                        <CardDescription>{t('selectDepartmentToManage')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Tabs value={activeDepartment} onValueChange={handleDepartmentChange} className="w-full">
