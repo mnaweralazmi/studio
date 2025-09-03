@@ -1,4 +1,5 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     
@@ -13,30 +14,36 @@ service cloud.firestore {
       // Allow user to read/write their own document
       allow read, update, delete, create: if request.auth.uid == userId;
 
-      // Explicitly grant access to each subcollection for the owner
+      // Correctly nested rule for the 'tasks' subcollection
       match /tasks/{taskId} {
         allow read, write, delete, create: if request.auth.uid == userId;
       }
+      
+      // Correctly nested rule for the 'sales' subcollection
       match /sales/{saleId} {
         allow read, write, delete, create: if request.auth.uid == userId;
       }
+      
+      // Correctly nested rule for the 'expenses' subcollection
       match /expenses/{expenseId} {
         allow read, write, delete, create: if request.auth.uid == userId;
       }
+      
+      // Correctly nested rule for the 'debts' subcollection and its subcollections
       match /debts/{debtId} {
         allow read, write, delete, create: if request.auth.uid == userId;
         
-        // Allow access to payments subcollection within a debt
         match /payments/{paymentId} {
-          allow read, write, delete, create: if request.auth.uid == userId;
+           allow read, write, delete, create: if request.auth.uid == userId;
         }
       }
+      
+      // Correctly nested rule for the 'workers' subcollection and its subcollections
       match /workers/{workerId} {
         allow read, write, delete, create: if request.auth.uid == userId;
-        
-        // Allow access to transactions subcollection within a worker
+
         match /transactions/{transactionId} {
-          allow read, write, delete, create: if request.auth.uid == userId;
+           allow read, write, delete, create: if request.auth.uid == userId;
         }
       }
     }
