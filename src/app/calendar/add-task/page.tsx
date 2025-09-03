@@ -17,10 +17,11 @@ import { PlusCircle, CalendarIcon, Repeat, Clock } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { doc, runTransaction, collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { addTask, type TaskData } from '@/lib/api/tasks';
+import { doc, runTransaction } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -91,18 +92,18 @@ export default function AddTaskPage() {
             finalDueDate.setHours(hours, minutes);
         }
 
-        const userRef = doc(db, 'users', user.uid);
-        const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
-        
-        await addDoc(tasksCollectionRef, {
+        const taskData: TaskData = {
             title: title,
             description: description,
-            dueDate: Timestamp.fromDate(finalDueDate),
+            dueDate: finalDueDate,
             isCompleted: false,
             isRecurring: isRecurring,
             reminderDays: reminderDays,
-        });
+        };
 
+        await addTask(user.uid, taskData);
+
+        const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) {
@@ -252,7 +253,6 @@ export default function AddTaskPage() {
                                 </div>
                             </div>
                         </div>
-
                          <div className="space-y-2">
                             <Label>{t('remindMeBefore')}</Label>
                             <Select onValueChange={(value) => setReminderDays(Number(value))} defaultValue={String(reminderDays)}>
@@ -301,5 +301,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    

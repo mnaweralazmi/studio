@@ -1,4 +1,6 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     
@@ -8,9 +10,37 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Securely lock down user data and ALL their subcollections
-    match /users/{userId}/{document=**} {
-      allow read, write, create, update, delete: if request.auth.uid == userId;
+    // Securely lock down user-specific collections
+    match /users/{userId} {
+       allow read, update: if request.auth.uid == userId;
+    }
+
+    match /tasks/{taskId} {
+      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    match /sales/{saleId} {
+      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    match /expenses/{expenseId} {
+      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    match /debts/{debtId} {
+      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
+      
+      match /payments/{paymentId} {
+         allow read, write, delete: if request.auth.uid == get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId;
+      }
+    }
+
+    match /workers/{workerId} {
+      allow read, write, update, delete: if request.auth.uid == request.resource.data.ownerId;
+      
+      match /transactions/{transactionId} {
+         allow read, write, delete: if request.auth.uid == get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId;
+      }
     }
   }
 }

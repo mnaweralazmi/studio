@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
-import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, updateDoc, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import {
@@ -29,28 +27,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { addDebt, getDebts, updateDebt, addDebtPayment, type DebtItem, type DebtItemData, type Payment } from '@/lib/api/debts';
 
-export type Payment = {
-  id: string;
-  amount: number;
-  date: string;
-};
-
-export type DebtItem = {
-  id: string;
-  creditor: string;
-  amount: number;
-  dueDate?: Date;
-  status: 'unpaid' | 'paid' | 'partially-paid';
-  payments: Payment[];
-  departmentId: string;
-};
 
 interface DebtsContentProps {
     departmentId: string;
 }
 
-function EditDebtDialog({ debt, onSave, children }: { debt: DebtItem, onSave: (id: string, data: Partial<DebtItem>) => void, children: React.ReactNode }) {
+function EditDebtDialog({ debt, onSave, children }: { debt: DebtItem, onSave: (id: string, data: Partial<DebtItemData>) => void, children: React.ReactNode }) {
     const { t, language } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
     const [dueDate, setDueDate] = React.useState<Date | undefined>(debt.dueDate);
@@ -63,7 +47,7 @@ function EditDebtDialog({ debt, onSave, children }: { debt: DebtItem, onSave: (i
 
         if (!creditor || amount <= 0) return;
 
-        const updatedData: Partial<DebtItem> = { creditor, amount, dueDate };
+        const updatedData: Partial<DebtItemData> = { creditor, amount, dueDate };
         onSave(debt.id, updatedData);
         setIsOpen(false);
     };
@@ -120,7 +104,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const targetUserId = authUser?.uid;
 
     React.useEffect(() => {
-        const fetchDebts = async () => {
+        const fetchDebtsData = async () => {
             if (!targetUserId) {
                 setIsDataLoading(false);
                 return;
@@ -128,30 +112,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             
             setIsDataLoading(true);
             try {
-              const debtsCollectionRef = collection(db, 'users', targetUserId, 'debts');
-              const q = query(debtsCollectionRef, where("departmentId", "==", departmentId));
-              const querySnapshot = await getDocs(q);
-              const fetchedDebts: DebtItem[] = [];
-
-              for (const docRef of querySnapshot.docs) {
-                const data = docRef.data();
-                const paymentsCollectionRef = collection(db, 'users', targetUserId, 'debts', docRef.id, 'payments');
-                const paymentsSnapshot = await getDocs(paymentsCollectionRef);
-                const payments: Payment[] = paymentsSnapshot.docs.map(pDoc => ({
-                  id: pDoc.id,
-                  ...pDoc.data(),
-                })) as Payment[];
-                
-                fetchedDebts.push({
-                  id: docRef.id,
-                  creditor: data.creditor,
-                  amount: data.amount,
-                  dueDate: data.dueDate ? (data.dueDate as Timestamp).toDate() : undefined,
-                  status: data.status,
-                  payments: payments,
-                  departmentId: data.departmentId,
-                });
-              }
+              const fetchedDebts = await getDebts(targetUserId, departmentId);
               setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             } catch (e) {
                 console.error("Error fetching debts: ", e);
@@ -162,7 +123,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         if (targetUserId) {
-            fetchDebts();
+            fetchDebtsData();
         } else if (!isAuthLoading) {
             setIsDataLoading(false);
             setDebts([]);
@@ -189,31 +150,20 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             return;
         }
 
-        const newDebtData = {
+        const newDebtData: DebtItemData = {
             creditor: data.creditor,
             amount: data.amount,
             status: 'unpaid',
             payments: [],
-            dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
+            dueDate: data.dueDate,
             departmentId: departmentId,
         };
 
         try {
-            const debtsCollectionRef = collection(db, 'users', targetUserId, 'debts');
-            const docRef = await addDoc(debtsCollectionRef, {
-                creditor: newDebtData.creditor,
-                amount: newDebtData.amount,
-                status: newDebtData.status,
-                dueDate: newDebtData.dueDate,
-                departmentId: newDebtData.departmentId,
-            });
-
+            const docId = await addDebt(targetUserId, newDebtData);
             const newDebt: DebtItem = {
-              ...data,
-              id: docRef.id,
-              status: 'unpaid',
-              payments: [],
-              departmentId,
+              ...newDebtData,
+              id: docId,
             };
 
             setDebts(prev => [...prev, newDebt].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)));
@@ -227,15 +177,16 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
     }
 
-    async function handleEditDebt(id: string, data: Partial<DebtItem>) {
+    async function handleEditDebt(id: string, data: Partial<DebtItemData>) {
         if (!targetUserId) return;
         try {
-            const debtRef = doc(db, 'users', targetUserId, 'debts', id);
-            await updateDoc(debtRef, {
-                ...data,
-                dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null
-            });
-            setDebts(prev => prev.map(item => item.id === id ? { ...item, ...data } : item));
+            await updateDebt(id, data);
+            setDebts(prev => prev.map(item => {
+              if (item.id === id) {
+                return { ...item, ...data, dueDate: data.dueDate instanceof Date ? data.dueDate : item.dueDate } as DebtItem
+              }
+              return item;
+            }));
             toast({ title: t('debtUpdatedSuccess') });
         } catch (e) {
             console.error("Error updating debt: ", e);
@@ -251,28 +202,22 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         if (!debt) return;
         
         try {
-            const batch = writeBatch(db);
-            
-            const newPaymentRef = doc(collection(db, 'users', targetUserId, 'debts', debtId, 'payments'));
-            batch.set(newPaymentRef, {
-                amount: paymentAmount,
-                date: Timestamp.fromDate(new Date()),
-            });
-
             const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             let newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
 
-            const debtDocRef = doc(db, 'users', targetUserId, 'debts', debtId);
-            batch.update(debtDocRef, { status: newStatus });
-            
-            await batch.commit();
+            const paymentData: Omit<Payment, 'id'> = {
+                amount: paymentAmount,
+                date: new Date(),
+            };
+
+            await addDebtPayment(debtId, newStatus, paymentData);
             
             setDebts(prevDebts => prevDebts.map(d => {
                 if (d.id === debtId) {
                     const newPayment: Payment = {
-                        id: newPaymentRef.id,
+                        id: crypto.randomUUID(), // Temp ID for UI
                         amount: paymentAmount,
-                        date: new Date().toISOString(),
+                        date: new Date(),
                     };
                     return { ...d, payments: [...d.payments, newPayment], status: newStatus };
                 }

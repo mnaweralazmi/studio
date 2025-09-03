@@ -11,8 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, PlusCircle, TrendingUp, Pencil } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import {
@@ -23,16 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-export type ExpenseItem = {
-  id: string;
-  date: Date;
-  type: 'fixed' | 'variable';
-  category: string;
-  item: string;
-  amount: number;
-  departmentId: string;
-};
+import { addExpense, getExpenses, updateExpense, type ExpenseItem, type ExpenseItemData } from '@/lib/api/expenses';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -150,20 +139,13 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             
             try {
                 setExpenseCategories(getInitialCategories(language, departmentId));
-
-                const expensesCollectionRef = collection(db, 'users', targetUserId, 'expenses');
-                const q = query(expensesCollectionRef, where("departmentId", "==", departmentId));
-                const expensesSnapshot = await getDocs(q);
-                const fetchedExpenses = expensesSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    date: (doc.data().date as Timestamp).toDate()
-                })) as ExpenseItem[];
+                const fetchedExpenses = await getExpenses(targetUserId, departmentId);
                 setExpenses(fetchedExpenses.sort((a,b) => b.date.getTime() - a.date.getTime()));
 
             } catch (e) {
                 console.error("Error fetching data: ", e);
                 setExpenseCategories(getInitialCategories(language, departmentId));
+                 toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
             } finally {
                 setIsDataLoading(false);
             }
@@ -176,7 +158,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
             setIsDataLoading(false);
         }
-    }, [targetUserId, language, departmentId, isAuthLoading]);
+    }, [targetUserId, language, departmentId, isAuthLoading, toast, t]);
     
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -198,8 +180,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             return;
         }
         
-        const newExpenseData = {
-            date: Timestamp.fromDate(new Date()),
+        const newExpenseData: ExpenseItemData = {
+            date: new Date(),
             type: data.type,
             category: data.category,
             item: data.item,
@@ -208,14 +190,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            const expensesCollectionRef = collection(db, 'users', targetUserId, 'expenses');
-            const docRef = await addDoc(expensesCollectionRef, newExpenseData);
+            const docId = await addExpense(targetUserId, newExpenseData);
             
             const newExpense: ExpenseItem = {
-              id: docRef.id,
-              date: new Date(),
-              ...data,
-              departmentId,
+              id: docId,
+              ...newExpenseData,
             };
 
             setExpenses(prev => [...prev, newExpense].sort((a,b) => b.date.getTime() - a.date.getTime()));
@@ -231,8 +210,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     async function handleEditExpense(id: string, data: Partial<ExpenseItem>) {
         if (!targetUserId) return;
         try {
-            const expenseRef = doc(db, 'users', targetUserId, 'expenses', id);
-            await updateDoc(expenseRef, data);
+            await updateExpense(id, data);
             setExpenses(prev => prev.map(item => item.id === id ? { ...item, ...data } as ExpenseItem : item));
             toast({ title: t('expenseUpdatedSuccess') });
         } catch(e) {

@@ -12,19 +12,9 @@ import { PlusCircle, CalendarDays, CheckCircle, Repeat, Bell, Clock } from 'luci
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, writeBatch, Timestamp, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getTasks, updateTask, addTask, type Task, type TaskData } from '@/lib/api/tasks';
 
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  dueDate: Date; // Keep as Date object for easier manipulation
-  isCompleted: boolean;
-  isRecurring: boolean;
-  reminderDays?: number;
-}
 
 const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
     const dueDate = task.dueDate;
@@ -114,17 +104,7 @@ export default function CalendarPage() {
     };
     setIsTasksLoading(true);
     try {
-        const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
-        const q = query(tasksCollectionRef);
-        const querySnapshot = await getDocs(q);
-        const fetchedTasks: Task[] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                dueDate: (data.dueDate as Timestamp).toDate(),
-            } as Task;
-        });
+        const fetchedTasks = await getTasks(user.uid);
         setTasks(fetchedTasks);
     } catch (e) {
         console.error("Failed to fetch tasks:", e);
@@ -149,27 +129,22 @@ export default function CalendarPage() {
     if (!taskToComplete) return;
 
     try {
-        const batch = writeBatch(db);
-        const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
+        await updateTask(taskId, { isCompleted: true });
 
         if (taskToComplete.isRecurring) {
             const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
-            const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
             
-            // Create a new task for the next occurrence
-            const newTaskData = {
-                ...taskToComplete,
-                dueDate: Timestamp.fromDate(nextDueDate),
+            const newTaskData: TaskData = {
+                title: taskToComplete.title,
+                description: taskToComplete.description,
+                dueDate: nextDueDate,
                 isCompleted: false,
+                isRecurring: true,
+                reminderDays: taskToComplete.reminderDays
             };
-            delete (newTaskData as any).id;
-            const newDocRef = doc(tasksCollectionRef);
-            batch.set(newDocRef, newTaskData);
+            await addTask(user.uid, newTaskData);
         }
         
-        batch.update(taskRef, { isCompleted: true });
-
-        await batch.commit();
         await fetchTasks(); // Refetch to get all updates
         toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });
     } catch (e) {

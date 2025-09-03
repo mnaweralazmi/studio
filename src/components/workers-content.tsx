@@ -12,10 +12,9 @@ import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog'
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
 import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
-import { collection, getDocs, doc, addDoc, writeBatch, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { addWorker, getWorkers, updateWorker, paySalary, addTransaction } from '@/lib/api/workers';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
@@ -35,7 +34,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const targetUserId = authUser?.uid;
 
     React.useEffect(() => {
-        const fetchWorkers = async () => {
+        const fetchWorkersData = async () => {
             if (!targetUserId) {
                 setIsDataLoading(false);
                 return;
@@ -43,26 +42,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             
             setIsDataLoading(true);
             try {
-                const workersColRef = collection(db, 'users', targetUserId, 'workers');
-                const q = query(workersColRef, where("departmentId", "==", departmentId));
-                const workersSnapshot = await getDocs(q);
-                const fetchedWorkers: Worker[] = [];
-
-                for (const workerDoc of workersSnapshot.docs) {
-                    const transactionsColRef = collection(db, 'users', targetUserId, 'workers', workerDoc.id, 'transactions');
-                    const transactionsSnapshot = await getDocs(transactionsColRef);
-                    const transactions = transactionsSnapshot.docs.map(tDoc => ({ id: tDoc.id, ...tDoc.data() })) as Transaction[];
-                    
-                    const workerData = workerDoc.data();
-                    fetchedWorkers.push({
-                        id: workerDoc.id,
-                        name: workerData.name,
-                        baseSalary: workerData.baseSalary,
-                        departmentId: workerData.departmentId,
-                        transactions: transactions,
-                        paidMonths: workerData.paidMonths || [],
-                    });
-                }
+                const fetchedWorkers = await getWorkers(targetUserId, departmentId);
                 setWorkers(fetchedWorkers);
             } catch (e) {
                 console.error("Error fetching workers: ", e);
@@ -73,7 +53,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         };
         
         if (targetUserId) {
-            fetchWorkers();
+            fetchWorkersData();
         } else if (!isAuthLoading) {
             setIsDataLoading(false);
             setWorkers([]);
@@ -100,8 +80,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         if (workerId) {
             // Update existing worker
             try {
-                const workerDocRef = doc(db, 'users', targetUserId, 'workers', workerId);
-                await updateDoc(workerDocRef, data as any);
+                await updateWorker(workerId, data);
                 setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, ...data } : w));
                 toast({ title: t('workerUpdatedSuccess') });
             } catch(e) {
@@ -111,15 +90,14 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         } else {
             // Add new worker
             try {
-                const workersColRef = collection(db, 'users', targetUserId, 'workers');
-                const docRef = await addDoc(workersColRef, {
+                const newWorkerData = {
                     ...data,
-                    paidMonths: [],
                     departmentId: departmentId,
-                });
+                }
+                const docId = await addWorker(targetUserId, newWorkerData);
     
                 const newWorker: Worker = {
-                    id: docRef.id,
+                    id: docId,
                     ...data,
                     paidMonths: [],
                     transactions: [],
@@ -138,36 +116,24 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
         if (!targetUserId) return;
-        const worker = workers.find(w => w.id === workerId);
-        if (!worker) return;
+        
+        const newTransactionData: Omit<Transaction, 'id' | 'date'> = {
+            type: 'salary',
+            amount: amount,
+            month,
+            year,
+            description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label} ${year}`
+        };
 
         try {
-            const batch = writeBatch(db);
-
-            const newTransactionData: Omit<Transaction, 'id'> = {
-                type: 'salary',
-                amount: amount,
-                date: new Date().toISOString(),
-                month,
-                year,
-                description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label} ${year}`
-            };
-
-            const transactionRef = doc(collection(db, 'users', targetUserId, 'workers', workerId, 'transactions'));
-            batch.set(transactionRef, newTransactionData);
-            
-            const workerRef = doc(db, 'users', targetUserId, 'workers', workerId);
-            const updatedPaidMonths = [...worker.paidMonths, { year, month }];
-            batch.update(workerRef, { paidMonths: updatedPaidMonths });
-
-            await batch.commit();
+            await paySalary(workerId, { year, month }, newTransactionData);
 
             setWorkers(prev => prev.map(w => {
                 if (w.id === workerId) {
                     return {
                         ...w,
-                        paidMonths: updatedPaidMonths,
-                        transactions: [...w.transactions, { id: transactionRef.id, ...newTransactionData }],
+                        paidMonths: [...w.paidMonths, { year, month }],
+                        transactions: [...w.transactions, { id: crypto.randomUUID(), ...newTransactionData, date: new Date() }],
                     };
                 }
                 return w;
@@ -184,20 +150,19 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         if (!targetUserId) return;
         
         try {
-            const newTransactionData: Omit<Transaction, 'id'> = {
+            const newTransactionData: Omit<Transaction, 'id' | 'date'> = {
                 type: transaction.type,
                 amount: transaction.amount,
-                date: new Date().toISOString(),
                 description: transaction.description,
             };
 
-            const transactionRef = await addDoc(collection(db, 'users', targetUserId, 'workers', workerId, 'transactions'), newTransactionData);
+            const docId = await addTransaction(workerId, newTransactionData);
             
             setWorkers(prev => prev.map(w => {
                 if (w.id === workerId) {
                     return {
                         ...w,
-                        transactions: [...w.transactions, { id: transactionRef.id, ...newTransactionData }],
+                        transactions: [...w.transactions, { id: docId, ...newTransactionData, date: new Date() }],
                     };
                 }
                 return w;
@@ -368,5 +333,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-
-    

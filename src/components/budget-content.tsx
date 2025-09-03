@@ -9,8 +9,6 @@ import { PlusCircle, Wallet, Pencil } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
-import { collection, addDoc, getDocs, doc, Timestamp, query, where, updateDoc, runTransaction } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -24,19 +22,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { addSale, getSales, updateSale, type SalesItem, type SalesItemData } from '@/lib/api/sales';
+import { runTransaction } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { doc } from 'firebase/firestore';
 
-
-// Simplified type, no Zod
-export type SalesItem = {
-  id: string;
-  product: string;
-  quantity: number;
-  weightPerUnit?: number;
-  price: number;
-  total: number;
-  date: Date;
-  departmentId: string;
-};
 
 // Data lists
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
@@ -130,18 +120,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
       
         setIsDataLoading(true);
         try {
-            const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
-            const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
-            const querySnapshot = await getDocs(q);
-            const sales: SalesItem[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                sales.push({
-                    ...data,
-                    id: doc.id,
-                    date: (data.date as Timestamp).toDate(),
-                } as SalesItem);
-            });
+            const sales = await getSales(targetUserId, departmentId);
             setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
         } catch(e) {
             console.error("Error fetching sales: ", e);
@@ -178,26 +157,24 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     const total = quantity * price;
-    const submissionData = {
+    const submissionData: SalesItemData = {
         product,
         quantity,
         price,
         total,
         departmentId,
-        date: Timestamp.fromDate(new Date()),
+        date: new Date(),
         ...(weightPerUnit !== undefined && { weightPerUnit }),
     };
 
     try {
         const userRef = doc(db, 'users', targetUserId);
-        const salesCollectionRef = collection(db, 'users', targetUserId, 'sales');
-
-        const docRef = await addDoc(salesCollectionRef, submissionData);
+        
+        const docId = await addSale(targetUserId, submissionData);
 
         const newItem: SalesItem = {
-          ...(submissionData as any),
-          id: docRef.id,
-          date: new Date(),
+          ...submissionData,
+          id: docId,
         };
         setSalesItems(prevItems => [newItem, ...prevItems].sort((a,b) => b.date.getTime() - a.date.getTime()));
 
@@ -234,8 +211,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   async function handleSave(id: string, data: Partial<SalesItem>) {
     if (!targetUserId) return;
     try {
-        const saleDocRef = doc(db, 'users', targetUserId, 'sales', id);
-        await updateDoc(saleDocRef, data);
+        await updateSale(id, data);
         setSalesItems(prev => prev.map(item => item.id === id ? { ...item, ...data } : item));
         toast({ title: t('salesUpdatedSuccess') });
     } catch (e) {

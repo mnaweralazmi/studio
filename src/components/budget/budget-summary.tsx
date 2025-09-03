@@ -4,13 +4,13 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, Timestamp, query, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
-import type { Payment } from '../debts-content';
-import type { Worker, Transaction } from '../workers/types';
+import { getSales } from '@/lib/api/sales';
+import { getExpenses } from '@/lib/api/expenses';
+import { getDebts } from '@/lib/api/debts';
+import { getWorkers } from '@/lib/api/workers';
 
 export function BudgetSummary() {
     const { user: authUser, loading: authLoading } = useAuth();
@@ -30,49 +30,40 @@ export function BudgetSummary() {
         setIsLoading(true);
 
         try {
-            // Fetch Sales
-            const salesSnapshot = await getDocs(query(collection(db, 'users', userId, 'sales'), where("departmentId", "==", deptId)));
-            const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().total, 0);
+            const sales = await getSales(userId, deptId);
+            const expenses = await getExpenses(userId, deptId);
+            const debts = await getDebts(userId, deptId);
+            const workers = await getWorkers(userId, deptId);
 
-            // Fetch Expenses
-            const expensesSnapshot = await getDocs(query(collection(db, 'users', userId, 'expenses'), where("departmentId", "==", deptId)));
-            const totalExpensesItems = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
+            const totalSales = sales.reduce((sum, doc) => sum + doc.total, 0);
+
+            const totalExpensesItems = expenses.reduce((sum, doc) => sum + doc.amount, 0);
             
-            // Fetch Workers and Transactions to calculate salaries paid
-            const workersSnapshot = await getDocs(query(collection(db, 'users', userId, 'workers'), where("departmentId", "==", deptId)));
             let totalSalariesPaid = 0;
-            for (const workerDoc of workersSnapshot.docs) {
-                const transactionsSnapshot = await getDocs(collection(db, 'users', userId, 'workers', workerDoc.id, 'transactions'));
-                const salaries = transactionsSnapshot.docs
-                    .map(doc => doc.data() as Transaction)
+            workers.forEach(worker => {
+                const salaries = (worker.transactions || [])
                     .filter(t => t.type === 'salary')
                     .reduce((sum, t) => sum + t.amount, 0);
                 totalSalariesPaid += salaries;
-            }
+            });
             
-            // Fetch Debts and Debt Payments
-            const debtsSnapshot = await getDocs(query(collection(db, 'users', userId, 'debts'), where("departmentId", "==", deptId)));
-            let totalDebts = 0;
             let totalDebtPayments = 0;
+            debts.forEach(debt => {
+                 const paidAmount = (debt.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
+                 totalDebtPayments += paidAmount;
+            });
 
-            for(const debtDoc of debtsSnapshot.docs) {
-                const debtData = debtDoc.data();
-                const paymentsSnapshot = await getDocs(collection(db, 'users', userId, 'debts', debtDoc.id, 'payments'));
-                const payments = paymentsSnapshot.docs.map(pDoc => pDoc.data() as Payment);
-
-                const paidAmount = (payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-                totalDebtPayments += paidAmount;
-                
-                if (debtData.status !== 'paid') {
-                    totalDebts += (debtData.amount - paidAmount);
-                }
-            }
-
+            const totalOutstandingDebts = debts
+                .filter(d => d.status !== 'paid')
+                .reduce((sum, item) => {
+                    const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
+                    return sum + (item.amount - paidAmount);
+                }, 0);
 
             const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPayments;
-            const netProfit = totalSales - totalExpenses; // Net profit calculation doesn't include outstanding debt principal
+            const netProfit = totalSales - totalExpenses;
 
-            setSummary({ totalSales, totalExpenses, totalDebts, netProfit });
+            setSummary({ totalSales, totalExpenses, totalDebts: totalOutstandingDebts, netProfit });
 
         } catch (error) {
             console.error("Failed to fetch summary data", error);
@@ -169,5 +160,3 @@ export function BudgetSummary() {
         </div>
     )
 }
-
-    
