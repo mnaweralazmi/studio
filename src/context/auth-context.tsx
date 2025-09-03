@@ -46,12 +46,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
-             setUser(currentUser => currentUser ? {
+             setUser(currentUser => currentUser ? ({
                 ...currentUser,
                 ...userData,
                  displayName: userData.name || firebaseUser.displayName,
                  photoURL: userData.photoURL || firebaseUser.photoURL,
-            } as AppUser : null);
+            } as AppUser) : null);
         }
     }
   }, []);
