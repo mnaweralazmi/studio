@@ -27,17 +27,16 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 
 export function ProfileTab() {
   const { toast } = useToast();
-  const { user, setUser, loading } = useAuth();
+  const { user, loading } = useAuth();
   const { t, language } = useLanguage();
 
   const [isSaving, setIsSaving] = React.useState(false);
-  const [isDirty, setIsDirty] = React.useState(false);
 
   // form state
   const [name, setName] = React.useState("");
@@ -53,37 +52,43 @@ export function ProfileTab() {
     }
   }, [user]);
 
-  const handleFieldChange =
-    (setter: React.Dispatch<React.SetStateAction<string>>) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setter(e.target.value);
-      setIsDirty(true);
-    };
 
   async function onProfileSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!user || !auth.currentUser) return;
 
-    if (newPassword && newPassword !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: t("error" as any),
-        description: "كلمتا المرور غير متطابقتين.",
-      });
-      return;
+    // Password validation logic
+    if (newPassword || confirmPassword) {
+      if (newPassword !== confirmPassword) {
+        toast({
+          variant: "destructive",
+          title: t("error" as any),
+          description: "كلمتا المرور غير متطابقتين.",
+        });
+        return;
+      }
+      if (newPassword.length < 6) {
+        toast({
+          variant: "destructive",
+          title: t("error" as any),
+          description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل.",
+        });
+        return;
+      }
+      if (!currentPassword) {
+        toast({
+          variant: "destructive",
+          title: t("error" as any),
+          description: "كلمة المرور الحالية مطلوبة لتغييرها.",
+        });
+        return;
+      }
     }
-    if (newPassword && !currentPassword) {
-      toast({
-        variant: "destructive",
-        title: t("error" as any),
-        description: "كلمة المرور الحالية مطلوبة لتغييرها.",
-      });
-      return;
-    }
-
+    
     setIsSaving(true);
 
     try {
+      // Handle password change
       if (newPassword && currentPassword && auth.currentUser.email) {
         const credential = EmailAuthProvider.credential(
           auth.currentUser.email,
@@ -92,42 +97,38 @@ export function ProfileTab() {
         await reauthenticateWithCredential(auth.currentUser, credential);
         await updatePassword(auth.currentUser, newPassword);
         toast({ title: t("passwordChangedSuccess" as any) });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
       }
 
-      await updateProfile(auth.currentUser, {
-        displayName: name,
-        photoURL: avatarUrl,
-      });
+      // Handle profile info change
+      const currentAuthUser = auth.currentUser;
+      const profileNeedsUpdate = name !== currentAuthUser.displayName || avatarUrl !== currentAuthUser.photoURL;
 
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(
-        userDocRef,
-        { name, photoURL: avatarUrl },
-        { merge: true }
-      );
-
-      // Refresh context state
-      setUser(prevUser => prevUser ? ({
-          ...prevUser,
+      if (profileNeedsUpdate) {
+        await updateProfile(currentAuthUser, {
           displayName: name,
-          name: name,
           photoURL: avatarUrl,
-      }) : null);
+        });
 
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, { name, photoURL: avatarUrl });
+      }
 
-      toast({
-        title: t("profileUpdated" as any),
-        description: t("profileUpdatedSuccess" as any),
-      });
+      if (profileNeedsUpdate) {
+        toast({
+            title: t("profileUpdated" as any),
+            description: t("profileUpdatedSuccess" as any),
+        });
+      }
 
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setIsDirty(false);
     } catch (error: any) {
       let description = t("profileUpdateFailed" as any);
       if (error?.code === "auth/wrong-password") {
         description = t("wrongCurrentPassword" as any);
+      } else if (error?.code === 'auth/requires-recent-login') {
+        description = 'This operation is sensitive and requires recent authentication. Please log in again before retrying this request.';
       }
       toast({
         variant: "destructive",
@@ -150,9 +151,7 @@ export function ProfileTab() {
 
     reader.onloadend = async () => {
       const dataUrl = reader.result as string;
-      const prev = avatarUrl;
-      setAvatarUrl(dataUrl);
-      setIsDirty(true);
+      setAvatarUrl(dataUrl); // Optimistic update for UI
       toast({ title: t("uploading" as any) || "جاري رفع الصورة..." });
 
       const storage = getStorage();
@@ -171,7 +170,7 @@ export function ProfileTab() {
             t("uploadSuccessDesc" as any) || "لا تنسَ حفظ التغييرات.",
         });
       } catch {
-        setAvatarUrl(prev || user.photoURL || "");
+        setAvatarUrl(user.photoURL || ""); // Revert on failure
         toast({
           variant: "destructive",
           title: t("uploadFailed" as any) || "فشل رفع الصورة",
@@ -258,7 +257,7 @@ export function ProfileTab() {
                 id="name"
                 placeholder={t("enterFullName" as any)}
                 value={name}
-                onChange={handleFieldChange(setName)}
+                onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -282,7 +281,7 @@ export function ProfileTab() {
                   id="currentPassword"
                   type="password"
                   value={currentPassword}
-                  onChange={handleFieldChange(setCurrentPassword)}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -294,7 +293,7 @@ export function ProfileTab() {
                   type="password"
                   placeholder={t("leaveBlank" as any)}
                   value={newPassword}
-                  onChange={handleFieldChange(setNewPassword)}
+                  onChange={(e) => setNewPassword(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -305,7 +304,7 @@ export function ProfileTab() {
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
-                  onChange={handleFieldChange(setConfirmPassword)}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
             </div>
@@ -313,7 +312,7 @@ export function ProfileTab() {
         </CardContent>
 
         <CardFooter className="border-t pt-6 flex justify-end">
-          <Button type="submit" disabled={isSaving || !isDirty}>
+          <Button type="submit" disabled={isSaving}>
             <Save
               className={language === "ar" ? "ml-2 h-4 w-4" : "mr-2 h-4 w-4"}
             />

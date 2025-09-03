@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export interface Badge {
@@ -24,78 +24,54 @@ export interface AppUser extends User {
 interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
-  refreshUser: () => Promise<void>;
-  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  refreshUser: async () => {},
-  setUser: () => {},
 });
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: { children: React.Node }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshUser = useCallback(async () => {
-    const firebaseUser = auth.currentUser;
-    if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-             setUser(currentUser => currentUser ? ({
-                ...currentUser,
-                ...userData,
-                 displayName: userData.name || firebaseUser.displayName,
-                 photoURL: userData.photoURL || firebaseUser.photoURL,
-            } as AppUser) : null);
-        }
-    }
-  }, []);
-
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
         if (firebaseUser) {
             const userDocRef = doc(db, 'users', firebaseUser.uid);
-            // Use onSnapshot for real-time updates
+            
             const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    const userData = doc.data();
-                    const combinedUser: AppUser = {
-                        ...firebaseUser,
-                        ...userData,
-                        displayName: userData.name || firebaseUser.displayName,
-                        name: userData.name || firebaseUser.displayName,
-                        photoURL: userData.photoURL || firebaseUser.photoURL,
-                    };
-                     setUser(combinedUser);
-                } else {
-                   // Handle case where user exists in Auth but not Firestore (e.g., during registration)
-                   setUser(firebaseUser as AppUser);
-                }
+                setLoading(true);
+                const userData = doc.data();
+                const combinedUser: AppUser = {
+                    ...firebaseUser,
+                    ...userData,
+                    uid: firebaseUser.uid, // Ensure uid from auth is always present
+                    displayName: userData?.name || firebaseUser.displayName,
+                    name: userData?.name || firebaseUser.displayName,
+                    photoURL: userData?.photoURL || firebaseUser.photoURL,
+                };
+                setUser(combinedUser);
                 setLoading(false);
             }, (error) => {
-                console.error("Error fetching user data with onSnapshot:", error);
-                setUser(firebaseUser as AppUser); // Fallback to auth user data on error
+                console.error("Error with onSnapshot:", error);
+                setUser(firebaseUser as AppUser); // Fallback to auth user
                 setLoading(false);
             });
-            
-            return () => unsubscribeSnapshot(); // Cleanup snapshot listener on unmount or user change
+
+            return () => unsubscribeSnapshot(); // Cleanup snapshot listener
         } else {
             setUser(null);
             setLoading(false);
         }
     });
 
-    return () => unsubscribeAuth(); // Cleanup auth state listener
+    return () => unsubscribeAuth(); // Cleanup auth listener
   }, []);
 
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser, setUser }}>
+    <AuthContext.Provider value={{ user, loading }}>
       {children}
     </AuthContext.Provider>
   );
