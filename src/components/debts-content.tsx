@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, deleteDoc } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,6 @@ import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
-import { db } from '@/lib/firebase';
 import { userSubcollection } from '@/lib/firestore';
 
 // --- Data Types ---
@@ -53,7 +52,7 @@ async function getDebts(departmentId: string): Promise<DebtItem[]> {
             id: docSnap.id,
             ...data,
             dueDate: data.dueDate ? (data.dueDate as unknown as Timestamp).toDate() : undefined,
-            payments: data.payments || [], // Assume payments are nested or need separate fetch
+            payments: (data.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()})),
         } as DebtItem;
     });
     return allDebts.filter(debt => debt.departmentId === departmentId);

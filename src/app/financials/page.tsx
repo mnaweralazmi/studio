@@ -18,21 +18,6 @@ export default function FinancialsPage() {
     const { t } = useLanguage();
     const [activeDepartment, setActiveDepartment] = React.useState<Department>('agriculture');
 
-    React.useEffect(() => {
-        const savedDepartment = localStorage.getItem('selectedDepartment') as Department;
-        if (savedDepartment) {
-            setActiveDepartment(savedDepartment);
-        }
-    }, []);
-
-    const handleDepartmentChange = (value: string) => {
-        const department = value as Department;
-        setActiveDepartment(department);
-        localStorage.setItem('selectedDepartment', department);
-        // Dispatch a custom event to notify other components (like BudgetSummary)
-        window.dispatchEvent(new CustomEvent('departmentChanged', { detail: department }));
-    }
-    
     const departmentIcons: Record<Department, React.ElementType> = {
         agriculture: Leaf,
         livestock: PawPrint,
@@ -56,7 +41,7 @@ export default function FinancialsPage() {
                     <p className="text-muted-foreground">{t('financialManagementDesc')}</p>
                 </div>
                 
-                <BudgetSummary />
+                <BudgetSummary departmentId={activeDepartment} />
 
                 <Card>
                     <CardHeader>
@@ -64,7 +49,7 @@ export default function FinancialsPage() {
                         <CardDescription>{t('selectDepartmentToManage')}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Tabs value={activeDepartment} onValueChange={handleDepartmentChange} className="w-full">
+                        <Tabs value={activeDepartment} onValueChange={(value) => setActiveDepartment(value as Department)} className="w-full">
                             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
                                 {(Object.keys(departmentIcons) as Department[]).map(dept => {
                                     const Icon = departmentIcons[dept];

@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { getDocs, query } from 'firebase/firestore';
+import { getDocs, query, collection, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -12,13 +12,16 @@ import { userSubcollection } from '@/lib/firestore';
 import type { SalesItem } from '../budget-content';
 import type { ExpenseItem } from '../expenses-content';
 import type { DebtItem } from '../debts-content';
-import type { Worker } from '../workers/types';
+import type { Worker, Transaction } from '../workers/types';
+import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+
 
 async function getSales(departmentId: string): Promise<SalesItem[]> {
     const salesCollectionRef = userSubcollection<Omit<SalesItem, 'id'>>('sales');
-    const q = query(salesCollectionRef); // We will filter by departmentId on the client
+    const q = query(salesCollectionRef);
     const querySnapshot = await getDocs(q);
-    const allSales = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SalesItem));
+    const allSales = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as unknown as Timestamp).toDate() } as SalesItem));
     return allSales.filter(sale => sale.departmentId === departmentId);
 }
 
@@ -26,26 +29,45 @@ async function getExpenses(departmentId: string): Promise<ExpenseItem[]> {
     const expensesCollectionRef = userSubcollection<Omit<ExpenseItem, 'id'>>('expenses');
     const q = query(expensesCollectionRef);
     const querySnapshot = await getDocs(q);
-    const allExpenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpenseItem));
+    const allExpenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as unknown as Timestamp).toDate() } as ExpenseItem));
     return allExpenses.filter(exp => exp.departmentId === departmentId);
 }
 
 async function getDebts(departmentId: string): Promise<DebtItem[]> {
     const debtsCollectionRef = userSubcollection<Omit<DebtItem, 'id'>>('debts');
     const querySnapshot = await getDocs(query(debtsCollectionRef));
-    const allDebts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DebtItem));
+    const allDebts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), dueDate: doc.data().dueDate ? (doc.data().dueDate as unknown as Timestamp).toDate() : undefined } as DebtItem));
     return allDebts.filter(debt => debt.departmentId === departmentId);
 }
 
 async function getWorkers(departmentId: string): Promise<Worker[]> {
     const workersColRef = userSubcollection<Omit<Worker, 'id'>>('workers');
     const workersSnapshot = await getDocs(query(workersColRef));
-    const allWorkers = workersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Worker));
-    return allWorkers.filter(worker => worker.departmentId === departmentId);
+    
+    const workerPromises = workersSnapshot.docs
+        .filter(docSnap => docSnap.data().departmentId === departmentId)
+        .map(async (docSnap) => {
+            const data = docSnap.data();
+            const transactionsColRef = collection(db, 'users', auth.currentUser!.uid, 'workers', docSnap.id, 'transactions');
+            const transactionsSnapshot = await getDocs(transactionsColRef);
+            const transactions: Transaction[] = transactionsSnapshot.docs.map(tDoc => ({ 
+                id: tDoc.id, 
+                ...tDoc.data(),
+                date: (tDoc.data().date as Timestamp).toDate().toISOString(),
+            })) as Transaction[];
+
+            return {
+                id: docSnap.id,
+                ...data,
+                transactions,
+            } as Worker;
+        });
+
+    return Promise.all(workerPromises);
 }
 
 
-export function BudgetSummary() {
+export function BudgetSummary({ departmentId }: { departmentId: string }) {
     const { user: authUser, loading: authLoading } = useAuth();
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = React.useState(true);
@@ -58,6 +80,10 @@ export function BudgetSummary() {
     
 
     const fetchAllData = React.useCallback(async (deptId: string) => {
+        if (!authUser) {
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
 
         try {
@@ -69,22 +95,19 @@ export function BudgetSummary() {
             ]);
 
             const totalSales = sales.reduce((sum, doc) => sum + doc.total, 0);
-
             const totalExpensesItems = expenses.reduce((sum, doc) => sum + doc.amount, 0);
             
-            let totalSalariesPaid = 0;
-            workers.forEach(worker => {
+            const totalSalariesPaid = workers.reduce((workerSum, worker) => {
                 const salaries = (worker.transactions || [])
                     .filter(t => t.type === 'salary')
                     .reduce((sum, t) => sum + t.amount, 0);
-                totalSalariesPaid += salaries;
-            });
-            
-            let totalDebtPayments = 0;
-            debts.forEach(debt => {
-                 const paidAmount = (debt.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-                 totalDebtPayments += paidAmount;
-            });
+                return workerSum + salaries;
+            }, 0);
+
+            const totalDebtPaymentsMade = debts.reduce((debtSum, debt) => {
+                const payments = (debt.payments || []).reduce((sum, p) => sum + p.amount, 0);
+                return debtSum + payments;
+            }, 0);
 
             const totalOutstandingDebts = debts
                 .filter(d => d.status !== 'paid')
@@ -93,7 +116,7 @@ export function BudgetSummary() {
                     return sum + (item.amount - paidAmount);
                 }, 0);
 
-            const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPayments;
+            const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPaymentsMade;
             const netProfit = totalSales - totalExpenses;
 
             setSummary({ totalSales, totalExpenses, totalDebts: totalOutstandingDebts, netProfit });
@@ -103,28 +126,15 @@ export function BudgetSummary() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [authUser]);
 
     React.useEffect(() => {
-        const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
-        
         if (authUser) {
-            fetchAllData(lastSelectedDept);
+            fetchAllData(departmentId);
         } else if (!authLoading) {
             setIsLoading(false);
         }
-
-        const handleDepartmentChange = (event: Event) => {
-            const customEvent = event as CustomEvent;
-            const newDept = customEvent.detail || 'agriculture';
-             if (authUser) {
-                fetchAllData(newDept);
-            }
-        };
-        
-        window.addEventListener('departmentChanged', handleDepartmentChange);
-        return () => window.removeEventListener('departmentChanged', handleDepartmentChange);
-    }, [fetchAllData, authUser, authLoading]);
+    }, [departmentId, authUser, authLoading, fetchAllData]);
 
 
     if (isLoading || authLoading) {
