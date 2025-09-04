@@ -2,15 +2,16 @@
 "use client";
 
 import * as React from 'react';
-import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, writeBatch, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { Users, BadgeCheck, Banknote, FileText, PlusCircle, Pencil } from 'lucide-react';
+import { Users, BadgeCheck, Banknote, FileText, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
+import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
 import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,7 +23,7 @@ const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February'
 
 // --- Firestore API Functions ---
 async function getWorkers(uid: string, departmentId: string): Promise<Worker[]> {
-     if (!uid) throw new Error("User is not authenticated.");
+     if (!uid) return [];
     
     const workersColRef = collection(db, 'workers');
     const q = query(workersColRef, where("ownerId", "==", uid), where("departmentId", "==", departmentId));
@@ -66,6 +67,22 @@ async function updateWorker(workerId: string, data: Partial<WorkerFormValues>): 
     const workerRef = doc(db, 'workers', workerId);
     await updateDoc(workerRef, data);
 }
+
+async function deleteWorker(workerId: string) {
+    // First, delete all transactions in the subcollection
+    const transactionsColRef = collection(db, 'workers', workerId, 'transactions');
+    const transactionsSnapshot = await getDocs(transactionsColRef);
+    const batch = writeBatch(db);
+    transactionsSnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    // Then, delete the worker document itself
+    const workerRef = doc(db, 'workers', workerId);
+    await deleteDoc(workerRef);
+}
+
 
 async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
     const batch = writeBatch(db);
@@ -112,32 +129,33 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     const targetUserId = authUser?.uid;
 
-    React.useEffect(() => {
-        const fetchWorkersData = async () => {
-            if (!targetUserId) {
-                setIsDataLoading(false);
-                return;
-            }
-            
-            setIsDataLoading(true);
-            try {
-                const fetchedWorkers = await getWorkers(targetUserId, departmentId);
-                setWorkers(fetchedWorkers);
-            } catch (e) {
-                console.error("Error fetching workers: ", e);
-                toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
-            } finally {
-                setIsDataLoading(false);
-            }
-        };
+    const fetchWorkersData = React.useCallback(async () => {
+        if (!targetUserId) {
+            setIsDataLoading(false);
+            return;
+        }
         
+        setIsDataLoading(true);
+        try {
+            const fetchedWorkers = await getWorkers(targetUserId, departmentId);
+            setWorkers(fetchedWorkers);
+        } catch (e) {
+            console.error("Error fetching workers: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
+        } finally {
+            setIsDataLoading(false);
+        }
+    }, [targetUserId, departmentId, t, toast]);
+
+
+    React.useEffect(() => {
         if (targetUserId) {
             fetchWorkersData();
         } else if (!isAuthLoading) {
             setIsDataLoading(false);
             setWorkers([]);
         }
-    }, [targetUserId, departmentId, isAuthLoading, t, toast]);
+    }, [targetUserId, departmentId, isAuthLoading, fetchWorkersData]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
@@ -160,7 +178,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             // Update existing worker
             try {
                 await updateWorker(workerId, data);
-                setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, ...data } : w));
+                await fetchWorkersData();
                 toast({ title: t('workerUpdatedSuccess') });
             } catch(e) {
                  console.error("Error updating worker: ", e);
@@ -173,24 +191,26 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     ...data,
                     departmentId: departmentId,
                 }
-                const docId = await addWorker(targetUserId, newWorkerData);
-    
-                const newWorker: Worker = {
-                    id: docId,
-                    ...data,
-                    paidMonths: [],
-                    transactions: [],
-                    departmentId,
-                    ownerId: targetUserId,
-                };
-    
-                setWorkers(prev => [...prev, newWorker]);
+                await addWorker(targetUserId, newWorkerData);
+                await fetchWorkersData();
                 toast({ title: t('workerAddedSuccess') });
     
             } catch (e) {
                 console.error("Error adding worker: ", e);
                 toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
             }
+        }
+    }
+    
+    async function handleDeleteWorker(workerId: string) {
+        if (!targetUserId) return;
+        try {
+            await deleteWorker(workerId);
+            await fetchWorkersData();
+            toast({ title: t('workerDeleted') });
+        } catch(e) {
+            console.error("Error deleting worker: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker." });
         }
     }
 
@@ -207,22 +227,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         try {
             await paySalary(workerId, { year, month }, newTransactionData);
-
-            setWorkers(prev => prev.map(w => {
-                if (w.id === workerId) {
-                    const newTransaction: Transaction = {
-                        id: crypto.randomUUID(), // temp client-side id
-                        ...newTransactionData,
-                        date: new Date().toISOString()
-                    }
-                    return {
-                        ...w,
-                        paidMonths: [...w.paidMonths, { year, month }],
-                        transactions: [...w.transactions, newTransaction],
-                    };
-                }
-                return w;
-            }));
+            await fetchWorkersData();
             toast({ title: t('salaryPaidSuccess') });
 
         } catch (e) {
@@ -241,22 +246,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            const docId = await addTransaction(workerId, newTransactionData);
-            
-            setWorkers(prev => prev.map(w => {
-                if (w.id === workerId) {
-                    const newTransaction: Transaction = {
-                        id: docId,
-                        ...newTransactionData,
-                        date: new Date().toISOString(),
-                    }
-                    return {
-                        ...w,
-                        transactions: [...w.transactions, newTransaction],
-                    };
-                }
-                return w;
-            }));
+            await addTransaction(workerId, newTransactionData);
+            await fetchWorkersData();
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
@@ -269,6 +260,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         return (worker.transactions || []).reduce((acc, t) => {
              if (t.type === 'bonus') return acc + t.amount;
              if (t.type === 'deduction') return acc - t.amount;
+             // Salary is not part of the running balance, it's a separate transaction.
              return acc;
         }, 0);
     }
@@ -405,6 +397,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                 <AddWorkerDialog onSave={handleSaveWorker} worker={worker}>
                                     <Button variant="ghost" size="icon" title={t('editWorker')}><Pencil className="h-4 w-4" /></Button>
                                 </AddWorkerDialog>
+                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
                             </div>
                         </TableCell>
                       </TableRow>

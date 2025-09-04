@@ -14,44 +14,37 @@ service cloud.firestore {
       allow read, update, delete, create: if request.auth.uid == userId;
     }
     
-    // Secure all user-specific collections
-    // The `list` permission is for collection queries (where ownerId == uid)
-    // The `get` permission is for reading a single document
-    match /tasks/{taskId} {
-      allow list, get: if request.auth.uid == request.query.filters.ownerId[0][2];
+    // Generic rules for all user-owned collections
+    match /tasks/{docId} {
       allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
     }
 
-    match /sales/{saleId} {
-      allow list, get: if request.auth.uid == request.query.filters.ownerId[0][2];
+    match /sales/{docId} {
       allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
     }
 
-    match /expenses/{expenseId} {
-      allow list, get: if request.auth.uid == request.query.filters.ownerId[0][2];
+    match /expenses/{docId} {
       allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
     }
 
     match /debts/{debtId} {
-      allow list, get: if request.auth.uid == request.query.filters.ownerId[0][2];
       allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
 
       match /payments/{paymentId} {
-        allow read, write: if get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId == request.auth.uid;
+        allow read, write, create, delete: if get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId == request.auth.uid;
       }
     }
 
     match /workers/{workerId} {
-      allow list, get: if request.auth.uid == request.query.filters.ownerId[0][2];
       allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
       
       match /transactions/{transactionId} {
-        allow read, write: if get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId == request.auth.uid;
+        allow read, write, create, delete: if get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId == request.auth.uid;
       }
     }
   }
