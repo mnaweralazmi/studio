@@ -1,30 +1,47 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow public read for general data
+    // Allow public read for general app data
     match /data/{document=**} {
       allow read: if true;
-      allow write: if false;
-    }
-
-    // Allow any authenticated user to manage their own user document
-    match /users/{userId} {
-      allow read, update, delete, create: if request.auth.uid == userId;
+      allow write: if false; // Protect from client-side writes
     }
     
-    // This wildcard match handles all other top-level collections 
-    // (tasks, sales, expenses, debts, workers)
-    match /{collection}/{docId} {
-       // Check the ownerId field on the document for reads and writes
-       allow read, update, delete: if request.auth.uid == resource.data.ownerId;
-       // Check the ownerId field on the incoming document for creates
-       allow create: if request.auth.uid == request.resource.data.ownerId;
+    // Secure all user-specific collections
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
 
-       // Allow access to subcollections like payments or transactions
-       match /{subCollection}/{subDocId} {
-         allow read, write, delete, create: if request.auth.uid == get(/databases/$(database)/documents/$(collection)/$(docId)).data.ownerId;
-       }
+    match /tasks/{docId} {
+      allow read, write: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    match /sales/{docId} {
+      allow read, write: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    match /expenses/{docId} {
+      allow read, write: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    match /debts/{docId} {
+      allow read, write: if request.auth.uid == request.resource.data.ownerId;
+    }
+
+    match /workers/{docId} {
+      allow read, write: if request.auth.uid == request.resource.data.ownerId;
+    }
+    
+    // Allow users to manage their own subcollections within debts and workers
+    match /debts/{debtId}/payments/{paymentId} {
+       allow read, write: if get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId == request.auth.uid;
+    }
+    
+    match /workers/{workerId}/transactions/{transactionId} {
+      allow read, write: if get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId == request.auth.uid;
     }
   }
 }
