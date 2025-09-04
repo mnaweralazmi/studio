@@ -3,11 +3,10 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot, Unsubscribe, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, Unsubscribe, setDoc, getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { initialAgriculturalSections } from '@/lib/topics-data';
 import { userSubcollection } from '@/lib/firestore';
-import { writeBatch } from 'firebase/firestore';
 
 
 export interface Badge {
