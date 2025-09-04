@@ -54,8 +54,8 @@ async function addTask(data: TaskData): Promise<string> {
 }
 
 async function deleteTask(taskId: string): Promise<void> {
-    const { uid } = auth.currentUser!;
-    await deleteDoc(doc(db, 'users', uid, 'tasks', taskId));
+    const taskDocRef = doc(userSubcollection('tasks'), taskId);
+    await deleteDoc(taskDocRef);
 }
 
 

@@ -22,14 +22,11 @@ import { useLanguage } from "@/context/language-context";
 import { useAuth } from "@/context/auth-context";
 
 import {
-  updateProfile,
   updatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from "firebase/auth";
-import { doc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
-import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
+import { auth } from "@/lib/firebase";
 
 export function ProfileTab() {
   const { toast } = useToast();
@@ -58,8 +55,7 @@ export function ProfileTab() {
     if (!user || !auth.currentUser) return;
 
     // The security rules disallow updating the user document,
-    // so we cannot save profile changes from the client.
-    // We can only handle password changes.
+    // so we can only handle password changes.
     
     if (newPassword || confirmPassword || currentPassword) {
       if (newPassword !== confirmPassword) {

@@ -126,6 +126,9 @@ export default function AddTaskPage() {
 
         await addTask(taskData);
 
+        // Since update is disallowed by rules, this transaction will fail.
+        // It's commented out to prevent runtime errors.
+        /*
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -154,6 +157,7 @@ export default function AddTaskPage() {
                 toast({ title: t('badgeEarned'), description: t('badgePlannerDesc') });
             }
         });
+        */
         
         toast({
             title: t('taskAddedSuccess'),

@@ -48,6 +48,9 @@ export default function SubTopicDetailsPage() {
         return; // Already awarded points this session
       }
 
+      // The points logic is commented out because it relies on `update`,
+      // which is disallowed by the new security rules.
+      /*
       try {
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
@@ -83,6 +86,8 @@ export default function SubTopicDetailsPage() {
       } finally {
         setIsPointsLoading(false);
       }
+      */
+     setIsPointsLoading(false); // Set loading to false since the logic is disabled
     };
 
     if (user && subTopic) {

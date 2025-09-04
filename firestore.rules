@@ -1,42 +1,22 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Allow any authenticated user to manage their own user document
+
+    // مستند المستخدم نفسه: قراءة/إنشاء/حذف فقط لنفس المالك
     match /users/{userId} {
-      allow read, create, delete: if request.auth != null && request.auth.uid == userId;
-      allow write: if false; // Updates are disabled
-    }
-
-    // Rules for the user's private data subcollection (topics, etc.)
-    match /users/{userId}/data/{docId} {
-        allow get, delete: if request.auth.uid == userId;
-        // Allow creating a document if the user is the owner
-        allow create: if request.auth.uid == userId && request.resource.data.ownerId == userId;
-        // Allow querying the collection if the query is filtered by the user's UID
-        allow list: if request.auth.uid == userId && request.query.filters.size() > 0 && request.query.filters[0].field.stringValue() == 'ownerId' && request.query.filters[0].value.stringValue() == userId;
-        allow update: if false;
-    }
-    
-    // Generic rules for all top-level financial and task-related collections
-    match /{collection}/{docId} {
-      // Allow reading/deleting a document if the user is the owner
-      allow get, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
-      // Allow creating a document if the user is the owner
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
-       // Allow querying the collection if the query is filtered by the user's UID
-      allow list: if request.auth != null && request.auth.uid == request.query.filters[0].value.stringValue();
-      // Updates are disabled
+      allow get, create, delete: if request.auth != null && request.auth.uid == userId;
       allow update: if false;
-
-      // Special nested collections that need separate rules
-      match /debts/{debtId}/payments/{paymentId} {
-        allow read, write, create, delete: if request.auth != null && get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId == request.auth.uid;
-      }
-      match /workers/{workerId}/transactions/{transactionId} {
-         allow read, write, create, delete: if request.auth != null && get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId == request.auth.uid;
-      }
+      allow list: if false; // منع استعراض جميع المستخدمين
     }
+
+    // كل الساب-كلكشنات تحت users/{uid}/... (مثل financials, notes, ...):
+    // السماح بالقراءة (get,list) والإنشاء والحذف فقط لصاحب الحساب
+    match /users/{userId}/{document=**} {
+      allow get, list, create, delete: if request.auth != null && request.auth.uid == userId;
+      allow update: if false;
+    }
+
+    // قفل أي مسارات أخرى
+    match /{document=**} { allow read, write: if false; }
   }
 }

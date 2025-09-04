@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, addDoc, getDocs, doc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Landmark, PlusCircle, CalendarIcon } from 'lucide-react';
+import { Landmark, PlusCircle, CalendarIcon, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
@@ -40,7 +40,7 @@ export type DebtItem = {
   departmentId: string;
 };
 
-export type DebtItemData = Omit<DebtItem, 'id' | 'payments'>;
+export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
 // --- Firestore API Functions ---
 async function getDebts(departmentId: string): Promise<DebtItem[]> {
@@ -64,19 +64,23 @@ async function addDebt(data: DebtItemData): Promise<string> {
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
+        status: 'unpaid',
         dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
     });
     return docRef.id;
 }
 
+async function deleteDebt(debtId: string): Promise<void> {
+    const debtDocRef = doc(userSubcollection('debts'), debtId);
+    await deleteDoc(debtDocRef);
+}
+
 
 async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'|'date'> & { date: Date }) {
-    const { uid } = auth.currentUser!;
-    const paymentCollectionRef = collection(db, "users", uid, "debts", debtId, "payments");
-    await addDoc(paymentCollectionRef, {
-      amount: paymentData.amount,
-      date: Timestamp.fromDate(paymentData.date)
-    });
+    // This function is complex because `update` is disallowed.
+    // We would need to read the whole debt, delete it, and recreate it with the new payment.
+    // This is risky and disabled for now.
+    console.warn("Updating debts is disallowed by security rules.");
 }
 
 
@@ -93,32 +97,32 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const formRef = React.useRef<HTMLFormElement>(null);
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
-    React.useEffect(() => {
-        const fetchDebtsData = async () => {
-            if (!authUser) {
-                setIsDataLoading(false);
-                return;
-            }
-            
-            setIsDataLoading(true);
-            try {
-              const fetchedDebts = await getDebts(departmentId);
-              setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
-            } catch (e) {
-                console.error("Error fetching debts: ", e);
-                toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
-            } finally {
-                setIsDataLoading(false);
-            }
-        };
+    const fetchDebtsData = React.useCallback(async () => {
+        if (!authUser) {
+            setIsDataLoading(false);
+            return;
+        }
+        
+        setIsDataLoading(true);
+        try {
+          const fetchedDebts = await getDebts(departmentId);
+          setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
+        } catch (e) {
+            console.error("Error fetching debts: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
+        } finally {
+            setIsDataLoading(false);
+        }
+    }, [authUser, departmentId, t, toast]);
 
+    React.useEffect(() => {
         if (authUser) {
             fetchDebtsData();
         } else if (!isAuthLoading) {
             setIsDataLoading(false);
             setDebts([]);
         }
-    }, [authUser, departmentId, isAuthLoading, toast, t]);
+    }, [authUser, departmentId, isAuthLoading, fetchDebtsData]);
 
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -143,20 +147,13 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         const newDebtData: DebtItemData = {
             creditor: data.creditor,
             amount: data.amount,
-            status: 'unpaid',
             dueDate: data.dueDate,
             departmentId: departmentId,
         };
 
         try {
-            const docId = await addDebt(newDebtData);
-            const newDebt: DebtItem = {
-              ...newDebtData,
-              id: docId,
-              payments: [],
-            };
-
-            setDebts(prev => [...prev, newDebt].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)));
+            await addDebt(newDebtData);
+            await fetchDebtsData();
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -166,30 +163,22 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             toast({ variant: "destructive", title: t('error'), description: "Failed to save debt." });
         }
     }
+    
+    async function handleDelete(debtId: string) {
+        try {
+            await deleteDebt(debtId);
+            await fetchDebtsData();
+            toast({ title: t('debtDeleted') });
+        } catch(e) {
+            console.error("Error deleting debt: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to delete debt." });
+        }
+    }
 
     async function handlePayment(debtId: string, paymentAmount: number) {
         if (!authUser) return;
-        
-        const debt = debts.find(d => d.id === debtId);
-        if (!debt) return;
-        
-        try {
-            const paymentData = {
-                amount: paymentAmount,
-                date: new Date(),
-            };
-
-            await addDebtPayment(debtId, paymentData);
-            
-            // Refetch all data to get the latest status
-            const fetchedDebts = await getDebts(departmentId);
-            setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
-            
-            toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" });
-        } catch(e) {
-            console.error("Error processing payment: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to record payment." });
-        }
+        toast({ variant: "destructive", title: t('error'), description: "Updating debts is not allowed by security rules." });
+        // The logic is disabled because it requires updating the document, which is disallowed.
     }
 
     const getPaidAmount = (debt: DebtItem) => {
@@ -305,6 +294,9 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                         <TableCell>
                                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
+                                                 <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>

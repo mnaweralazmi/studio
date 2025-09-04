@@ -2,11 +2,11 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp, runTransaction } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, runTransaction, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { PlusCircle, Wallet } from 'lucide-react';
+import { PlusCircle, Wallet, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
@@ -70,6 +70,10 @@ async function addSale(data: SalesItemData): Promise<string> {
     return docRef.id;
 }
 
+async function deleteSale(saleId: string): Promise<void> {
+    const saleDocRef = doc(userSubcollection('sales'), saleId);
+    await deleteDoc(saleDocRef);
+}
 
 interface BudgetContentProps {
     departmentId: 'agriculture' | 'livestock' | 'poultry' | 'fish';
@@ -88,32 +92,32 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const poultryList = language === 'ar' ? poultryListAr : poultryListEn;
   const fishList = language === 'ar' ? fishListAr : fishListEn;
 
+  const fetchSales = React.useCallback(async () => {
+    if (!authUser) {
+        setIsDataLoading(false);
+        return;
+    }
+  
+    setIsDataLoading(true);
+    try {
+        const sales = await getSales(departmentId);
+        setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
+    } catch(e) {
+        console.error("Error fetching sales: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+    } finally {
+        setIsDataLoading(false);
+    }
+  }, [departmentId, authUser, toast, t]);
+
   React.useEffect(() => {
-    const fetchSales = async () => {
-        if (!authUser) {
-            setIsDataLoading(false);
-            return;
-        }
-      
-        setIsDataLoading(true);
-        try {
-            const sales = await getSales(departmentId);
-            setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
-        } catch(e) {
-            console.error("Error fetching sales: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-        } finally {
-            setIsDataLoading(false);
-        }
-    };
-    
     if (authUser) {
         fetchSales();
     } else if (!isAuthLoading) {
         setIsDataLoading(false);
         setSalesItems([]);
     }
-  }, [departmentId, authUser, isAuthLoading, toast, t]);
+  }, [departmentId, authUser, isAuthLoading, fetchSales]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -145,46 +149,43 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        const userRef = doc(db, 'users', authUser.uid);
+        await addSale(submissionData);
+        await fetchSales(); // Refetch data
         
-        const docId = await addSale(submissionData);
-
-        const newItem: SalesItem = {
-          ...submissionData,
-          id: docId,
-        };
-        setSalesItems(prevItems => [newItem, ...prevItems].sort((a,b) => b.date.getTime() - a.date.getTime()));
-
+        // Points awarding is disabled because `update` is disallowed by rules.
+        /*
+        const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists()) {
-                throw "User document does not exist!";
-            }
+            if (!userDoc.exists()) throw "User document does not exist!";
             
             const currentBadges = userDoc.data().badges || [];
             if (!currentBadges.includes('trader')) {
-                let newPoints = userDoc.data().points || 0;
-                let newBadges = [...currentBadges];
-                newPoints += 25;
-                newBadges.push('trader');
-                const newLevel = Math.floor(newPoints / 100) + 1;
-                // Updates are disallowed by security rules
-                // transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+                // transaction.update(...) is disallowed.
                 toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });
             }
         });
+        */
         
         formRef.current?.reset();
-        
-        toast({
-          title: t('salesAddedSuccess'),
-        });
+        toast({ title: t('salesAddedSuccess') });
 
     } catch (e) {
         console.error("Error adding document: ", e);
         toast({ variant: "destructive", title: t('error'), description: "Failed to save sale."});
     }
   }
+
+  const handleDelete = async (saleId: string) => {
+    try {
+        await deleteSale(saleId);
+        await fetchSales(); // Refetch data
+        toast({ title: t('itemDeleted') });
+    } catch (e) {
+        console.error("Error deleting sale: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to delete sale." });
+    }
+  };
 
   const totalSales = salesItems.reduce((sum, item) => sum + item.total, 0);
 
@@ -293,6 +294,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 {departmentId === 'agriculture' && <TableHead>{t('tableCartonWeightKg')}</TableHead>}
                 <TableHead>{t('unitPrice')}</TableHead>
                 <TableHead>{t('tableTotal')}</TableHead>
+                 <TableHead className="text-right">{t('tableActions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -303,6 +305,11 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                      {departmentId === 'agriculture' && <TableCell>{item.weightPerUnit || '-'}</TableCell>}
                      <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
                      <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
+                     <TableCell className="text-right">
+                         <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                     </TableCell>
                  </TableRow>
              ))}
           </TableBody>

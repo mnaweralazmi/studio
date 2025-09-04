@@ -3,10 +3,10 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot, Unsubscribe, setDoc, getDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, onSnapshot, Unsubscribe, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { initialAgriculturalSections } from '@/lib/topics-data';
-import { userSubcollection } from '@/lib/firestore';
+import { collection } from 'firebase/firestore';
 
 
 export interface Badge {
@@ -36,7 +36,7 @@ const AuthContext = createContext<AuthContextType>({
 
 
 async function provisionInitialUserData(uid: string) {
-    const dataCollectionRef = userSubcollection('data');
+    const dataCollectionRef = collection(db, "users", uid, "data");
     const existingData = await getDocs(dataCollectionRef);
 
     if (existingData.empty) {

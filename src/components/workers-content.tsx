@@ -6,7 +6,7 @@ import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, deleteDoc } fr
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { Users, BadgeCheck, Banknote, FileText, PlusCircle, Trash2 } from 'lucide-react';
+import { Users, BadgeCheck, Banknote, FileText, PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
@@ -29,11 +29,9 @@ async function getWorkers(departmentId: string): Promise<Worker[]> {
 
     const workerPromises = workersSnapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
-        // Skip workers not in the current department
         if (data.departmentId !== departmentId) return null;
 
-        const { uid } = auth.currentUser!;
-        const transactionsColRef = collection(db, 'users', uid, 'workers', docSnap.id, 'transactions');
+        const transactionsColRef = collection(db, 'users', auth.currentUser!.uid, 'workers', docSnap.id, 'transactions');
         const transactionsSnapshot = await getDocs(transactionsColRef);
         const transactions: Transaction[] = transactionsSnapshot.docs.map(tDoc => ({ 
             id: tDoc.id, 
@@ -66,15 +64,10 @@ async function addWorker(data: WorkerFormValues & { departmentId: string }): Pro
 
 
 async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
-    const { uid } = auth.currentUser!;
-    const workerDocRef = doc(db, 'users', uid, 'workers', workerId);
-    
-    // In a real 'update' scenario (which is disallowed), we would read the doc first.
-    // Since we can't update, we can't truly add to the paidMonths array.
-    // This operation will fail if we attempt to update.
+    // This function is complex because `update` is disallowed.
+    // It would require deleting and recreating the worker doc, which is risky.
     // For now, we will only add a transaction.
-    
-    const transactionRef = collection(db, 'users', uid, 'workers', workerId, 'transactions');
+    const transactionRef = collection(userSubcollection('workers'), workerId, 'transactions');
     await addDoc(transactionRef, {
         ...transactionData,
         date: Timestamp.fromDate(new Date()),
@@ -82,8 +75,7 @@ async function paySalary(workerId: string, paidMonth: { year: number, month: num
 }
 
 async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
-    const { uid } = auth.currentUser!;
-    const transactionRef = collection(db, 'users', uid, 'workers', workerId, 'transactions');
+    const transactionRef = collection(userSubcollection('workers'), workerId, 'transactions');
     const newTransactionRef = await addDoc(transactionRef, {
         ...transactionData,
         date: Timestamp.fromDate(new Date()),
@@ -92,8 +84,8 @@ async function addTransaction(workerId: string, transactionData: Omit<Transactio
 }
 
 async function deleteWorker(workerId: string) {
-    const { uid } = auth.currentUser!;
-    await deleteDoc(doc(db, "users", uid, "workers", workerId));
+    const workerDocRef = doc(userSubcollection('workers'), workerId);
+    await deleteDoc(workerDocRef);
 }
 
 
@@ -146,29 +138,20 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         const workerExists = workers.some(w => w.name.toLowerCase() === data.name.toLowerCase() && w.id !== workerId);
         if (workerExists) {
-            toast({
-                variant: "destructive",
-                title: t('error'),
-                description: t('workerExistsError')
-            });
+            toast({ variant: "destructive", title: t('error'), description: t('workerExistsError') });
             return;
         }
 
         if (workerId) {
             // Updates are disallowed by security rules.
             toast({ variant: "destructive", title: t('error'), description: "Updating worker data is not allowed." });
-
         } else {
             // Add new worker
             try {
-                const newWorkerData = {
-                    ...data,
-                    departmentId: departmentId,
-                }
+                const newWorkerData = { ...data, departmentId };
                 await addWorker(newWorkerData);
                 await fetchWorkersData();
                 toast({ title: t('workerAddedSuccess') });
-    
             } catch (e) {
                 console.error("Error adding worker: ", e);
                 toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
@@ -178,24 +161,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     
     async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
         if (!authUser) return;
-        
-        const newTransactionData: Omit<Transaction, 'id' | 'date'> = {
-            type: 'salary',
-            amount: amount,
-            month,
-            year,
-            description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label} ${year}`
-        };
-
-        try {
-            await paySalary(workerId, { year, month }, newTransactionData);
-            await fetchWorkersData();
-            toast({ title: t('salaryPaidSuccess') });
-
-        } catch (e) {
-            console.error("Error paying salary: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to record salary payment." });
-        }
+        toast({ variant: "destructive", title: t('error'), description: "Updating worker data is not allowed." });
+        // The logic to update paidMonths is disabled. We can only add a transaction.
     }
 
     async function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
@@ -222,7 +189,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         return (worker.transactions || []).reduce((acc, t) => {
              if (t.type === 'bonus') return acc + t.amount;
              if (t.type === 'deduction') return acc - t.amount;
-             // Salary is not part of the running balance, it's a separate transaction.
              return acc;
         }, 0);
     }

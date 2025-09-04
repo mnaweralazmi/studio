@@ -2,14 +2,14 @@
 "use client";
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, Repeat, PlusCircle, TrendingUp } from 'lucide-react';
+import { CreditCard, Repeat, PlusCircle, TrendingUp, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from './ui/skeleton';
@@ -74,6 +74,10 @@ async function addExpense(data: ExpenseItemData): Promise<string> {
     return docRef.id;
 }
 
+async function deleteExpense(expenseId: string): Promise<void> {
+    const expenseDocRef = doc(userSubcollection('expenses'), expenseId);
+    await deleteDoc(expenseDocRef);
+}
 
 interface ExpensesContentProps {
     departmentId: string;
@@ -89,29 +93,29 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const formRef = React.useRef<HTMLFormElement>(null);
     const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
+    const fetchExpensesAndCategories = React.useCallback(async () => {
+        if (!authUser) {
+            setIsDataLoading(false);
+            return;
+        }
+
+        setIsDataLoading(true);
+        
+        try {
+            setExpenseCategories(getInitialCategories(language, departmentId));
+            const fetchedExpenses = await getExpenses(departmentId);
+            setExpenses(fetchedExpenses.sort((a,b) => b.date.getTime() - a.date.getTime()));
+
+        } catch (e) {
+            console.error("Error fetching data: ", e);
+            setExpenseCategories(getInitialCategories(language, departmentId));
+             toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
+        } finally {
+            setIsDataLoading(false);
+        }
+    }, [authUser, language, departmentId, toast, t]);
+
     React.useEffect(() => {
-        const fetchExpensesAndCategories = async () => {
-            if (!authUser) {
-                setIsDataLoading(false);
-                return;
-            }
-
-            setIsDataLoading(true);
-            
-            try {
-                setExpenseCategories(getInitialCategories(language, departmentId));
-                const fetchedExpenses = await getExpenses(departmentId);
-                setExpenses(fetchedExpenses.sort((a,b) => b.date.getTime() - a.date.getTime()));
-
-            } catch (e) {
-                console.error("Error fetching data: ", e);
-                setExpenseCategories(getInitialCategories(language, departmentId));
-                 toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-            } finally {
-                setIsDataLoading(false);
-            }
-        };
-
         if (authUser) {
             fetchExpensesAndCategories();
         } else if (!isAuthLoading) {
@@ -119,7 +123,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
             setIsDataLoading(false);
         }
-    }, [authUser, language, departmentId, isAuthLoading, toast, t]);
+    }, [authUser, language, departmentId, isAuthLoading, fetchExpensesAndCategories]);
     
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -151,20 +155,25 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            const docId = await addExpense(newExpenseData);
-            
-            const newExpense: ExpenseItem = {
-              id: docId,
-              ...newExpenseData,
-            };
-
-            setExpenses(prev => [...prev, newExpense].sort((a,b) => b.date.getTime() - a.date.getTime()));
+            await addExpense(newExpenseData);
+            await fetchExpensesAndCategories(); // Refetch
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
         } catch(e) {
             console.error("Error adding expense: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to save expense." });
+        }
+    }
+
+    const handleDelete = async (expenseId: string) => {
+        try {
+            await deleteExpense(expenseId);
+            await fetchExpensesAndCategories(); // Refetch
+            toast({ title: t('expenseDeleted') });
+        } catch(e) {
+            console.error("Error deleting expense: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to delete expense." });
         }
     }
 
@@ -287,13 +296,16 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</h3>
                             <div className="overflow-x-auto border rounded-lg">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead></TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {fixedExpenses.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>{item.category}</TableCell>
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -307,7 +319,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</h3>
                              <div className="overflow-x-auto border rounded-lg">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead></TableRow></TableHeader>
+                                    <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {variableExpenses.map((item) => (
                                             <TableRow key={item.id}>
@@ -315,6 +327,9 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                                 <TableCell className="font-medium">{item.item}</TableCell>
                                                 <TableCell>{new Date(item.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</TableCell>
                                                 <TableCell className="text-right">{item.amount.toFixed(2)} {t('dinar')}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>

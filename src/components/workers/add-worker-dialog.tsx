@@ -11,11 +11,12 @@ import { Label } from '../ui/label';
 
 interface AddWorkerDialogProps {
     onSave: (data: WorkerFormValues, workerId?: string) => void;
-    worker?: Worker;
+    // Worker editing is disabled due to security rules
+    // worker?: Worker;
     children: React.ReactNode;
 }
 
-export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogProps) {
+export function AddWorkerDialog({ onSave, children }: AddWorkerDialogProps) {
     const { t } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
     const formRef = React.useRef<HTMLFormElement>(null);
@@ -39,7 +40,7 @@ export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogPro
             return;
         }
 
-        onSave(data, worker?.id);
+        onSave(data);
         setIsOpen(false);
     };
 
@@ -50,21 +51,21 @@ export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogPro
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{worker ? t('editWorker') : t('addNewWorker')}</DialogTitle>
-                    <DialogDescription>{worker ? t('editWorkerDesc') : t('addNewWorkerDesc')}</DialogDescription>
+                    <DialogTitle>{t('addNewWorker')}</DialogTitle>
+                    <DialogDescription>{t('addNewWorkerDesc')}</DialogDescription>
                 </DialogHeader>
                 <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">{t('workerName')}</Label>
-                        <Input id="name" name="name" placeholder={t('workerNamePlaceholder')} defaultValue={worker?.name} required />
+                        <Input id="name" name="name" placeholder={t('workerNamePlaceholder')} required />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="baseSalary">{t('baseSalaryInDinar')} ({t('monthly')})</Label>
-                        <Input id="baseSalary" name="baseSalary" type="number" step="1" defaultValue={worker?.baseSalary} required />
+                        <Input id="baseSalary" name="baseSalary" type="number" step="1" required />
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
-                        <Button type="submit">{worker ? t('saveChanges') : t('addWorker')}</Button>
+                        <Button type="submit">{t('addWorker')}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
