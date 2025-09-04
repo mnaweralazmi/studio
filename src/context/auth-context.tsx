@@ -3,8 +3,12 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, onSnapshot, Unsubscribe, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { initialAgriculturalSections } from '@/lib/topics-data';
+import { userSubcollection } from '@/lib/firestore';
+import { writeBatch } from 'firebase/firestore';
+
 
 export interface Badge {
     id: 'explorer' | 'planner' | 'trader';
@@ -31,6 +35,22 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
+
+async function provisionInitialUserData(uid: string) {
+    const dataCollectionRef = userSubcollection('data');
+    const existingData = await getDocs(dataCollectionRef);
+
+    if (existingData.empty) {
+        const batch = writeBatch(db);
+        initialAgriculturalSections.forEach(topic => {
+            const docRef = doc(dataCollectionRef, topic.id);
+            batch.set(docRef, topic);
+        });
+        await batch.commit();
+    }
+}
+
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,16 +58,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let unsubscribeSnapshot: Unsubscribe | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      // First, clean up any existing snapshot listener
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
         unsubscribeSnapshot = null;
       }
 
       if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        // Provision initial topics if they don't exist for the user
+        await provisionInitialUserData(firebaseUser.uid);
         
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
           const userData = doc.data();
           const combinedUser: AppUser = {

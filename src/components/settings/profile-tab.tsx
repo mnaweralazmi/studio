@@ -27,7 +27,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 
@@ -57,129 +57,50 @@ export function ProfileTab() {
     event.preventDefault();
     if (!user || !auth.currentUser) return;
 
-    // Password validation logic
-    if (newPassword || confirmPassword) {
+    // The security rules disallow updating the user document,
+    // so we cannot save profile changes from the client.
+    // We can only handle password changes.
+    
+    if (newPassword || confirmPassword || currentPassword) {
       if (newPassword !== confirmPassword) {
-        toast({
-          variant: "destructive",
-          title: t("error" as any),
-          description: "كلمتا المرور غير متطابقتين.",
-        });
+        toast({ variant: "destructive", title: t("error" as any), description: "كلمتا المرور غير متطابقتين." });
         return;
       }
       if (newPassword.length < 6) {
-        toast({
-          variant: "destructive",
-          title: t("error" as any),
-          description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل.",
-        });
+        toast({ variant: "destructive", title: t("error" as any), description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
         return;
       }
       if (!currentPassword) {
-        toast({
-          variant: "destructive",
-          title: t("error" as any),
-          description: "كلمة المرور الحالية مطلوبة لتغييرها.",
-        });
+        toast({ variant: "destructive", title: t("error" as any), description: "كلمة المرور الحالية مطلوبة لتغييرها." });
         return;
       }
-    }
     
-    setIsSaving(true);
-
-    try {
-      // Handle password change
-      if (newPassword && currentPassword && auth.currentUser.email) {
-        const credential = EmailAuthProvider.credential(
-          auth.currentUser.email,
-          currentPassword
-        );
-        await reauthenticateWithCredential(auth.currentUser, credential);
-        await updatePassword(auth.currentUser, newPassword);
-        toast({ title: t("passwordChangedSuccess" as any) });
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
+      setIsSaving(true);
+      try {
+        if (newPassword && currentPassword && auth.currentUser.email) {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await updatePassword(auth.currentUser, newPassword);
+            toast({ title: t("passwordChangedSuccess" as any) });
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+        }
+      } catch (error: any) {
+        let description = t("profileUpdateFailed" as any);
+        if (error?.code === "auth/wrong-password") {
+            description = t("wrongCurrentPassword" as any);
+        } else if (error?.code === 'auth/requires-recent-login') {
+            description = 'This operation is sensitive and requires recent authentication. Please log in again before retrying this request.';
+        }
+        toast({ variant: "destructive", title: t("error" as any), description });
+      } finally {
+        setIsSaving(false);
       }
-
-      // Handle profile info change
-      const currentAuthUser = auth.currentUser;
-      const profileNeedsUpdate = name !== currentAuthUser.displayName || avatarUrl !== currentAuthUser.photoURL;
-
-      if (profileNeedsUpdate) {
-        await updateProfile(currentAuthUser, {
-          displayName: name,
-          photoURL: avatarUrl,
-        });
-
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, { name, photoURL: avatarUrl });
-      }
-
-      if (profileNeedsUpdate) {
-        toast({
-            title: t("profileUpdated" as any),
-            description: t("profileUpdatedSuccess" as any),
-        });
-      }
-
-    } catch (error: any) {
-      let description = t("profileUpdateFailed" as any);
-      if (error?.code === "auth/wrong-password") {
-        description = t("wrongCurrentPassword" as any);
-      } else if (error?.code === 'auth/requires-recent-login') {
-        description = 'This operation is sensitive and requires recent authentication. Please log in again before retrying this request.';
-      }
-      toast({
-        variant: "destructive",
-        title: t("error" as any),
-        description,
-      });
-    } finally {
-      setIsSaving(false);
+    } else {
+        toast({ title: "Info", description: "Profile updates are disabled by security rules." });
     }
   }
-
-  const handleAvatarChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (!user) return;
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onloadend = async () => {
-      const dataUrl = reader.result as string;
-      setAvatarUrl(dataUrl); // Optimistic update for UI
-      toast({ title: t("uploading" as any) || "جاري رفع الصورة..." });
-
-      const storage = getStorage();
-      const storageRef = ref(
-        storage,
-        `avatars/${user.uid}/${Date.now()}_${file.name}`
-      );
-
-      try {
-        await uploadString(storageRef, dataUrl, "data_url");
-        const downloadUrl = await getDownloadURL(storageRef);
-        setAvatarUrl(downloadUrl);
-        toast({
-          title: t("uploadSuccessTitle" as any) || "تم رفع الصورة بنجاح!",
-          description:
-            t("uploadSuccessDesc" as any) || "لا تنسَ حفظ التغييرات.",
-        });
-      } catch {
-        setAvatarUrl(user.photoURL || ""); // Revert on failure
-        toast({
-          variant: "destructive",
-          title: t("uploadFailed" as any) || "فشل رفع الصورة",
-        });
-      }
-    };
-
-    reader.readAsDataURL(file);
-  };
 
   if (loading) {
     return (
@@ -191,7 +112,10 @@ export function ProfileTab() {
         <CardContent className="space-y-8">
             <div className="flex items-center gap-6">
                 <Skeleton className="h-24 w-24 rounded-full" />
-                <Skeleton className="h-10 w-32" />
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-2">
@@ -235,16 +159,10 @@ export function ProfileTab() {
                   <ImageIcon className="h-10 w-10 text-muted-foreground" />
                 </AvatarFallback>
               </Avatar>
-              <Button asChild variant="outline">
-                <label className="cursor-pointer flex items-center">
+              <Button asChild variant="outline" disabled>
+                <label className="cursor-not-allowed flex items-center">
                   <Upload className="mr-2 h-4 w-4" />
                   <span>{t("changePicture" as any)}</span>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={handleAvatarChange}
-                  />
                 </label>
               </Button>
             </div>
@@ -258,6 +176,7 @@ export function ProfileTab() {
                 placeholder={t("enterFullName" as any)}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                readOnly
               />
             </div>
             <div className="space-y-2">

@@ -29,7 +29,8 @@ export default function FinancialsPage() {
         const department = value as Department;
         setActiveDepartment(department);
         localStorage.setItem('selectedDepartment', department);
-        window.dispatchEvent(new CustomEvent('departmentChanged'));
+        // Dispatch a custom event to notify other components (like BudgetSummary)
+        window.dispatchEvent(new CustomEvent('departmentChanged', { detail: department }));
     }
     
     const departmentIcons: Record<Department, React.ElementType> = {

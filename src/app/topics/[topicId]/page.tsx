@@ -10,25 +10,18 @@ import { useLanguage } from '@/context/language-context';
 import { useTopics } from '@/context/topics-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Pencil, PlayCircle, FileText } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import { ContentDialog, ContentFormValues } from '@/components/content-dialog';
+import { ArrowLeft, PlayCircle, FileText } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
-import { db } from '@/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, setTopics, loading } = useTopics();
+  const { topics, loading } = useTopics();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
-  const { toast } = useToast();
   
   const { user } = useAuth();
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [editingContent, setEditingContent] = React.useState<{type: 'subtopic' | 'video', data: SubTopic | VideoSection} | undefined>(undefined);
 
 
   React.useEffect(() => {
@@ -37,78 +30,6 @@ export default function TopicDetailsPage() {
       setTopic(currentTopic || null);
     }
   }, [params.topicId, topics]);
-
-  const isAdmin = user?.role === 'admin';
-
-  const handleDialogOpen = (content?: {type: 'subtopic' | 'video', data: SubTopic | VideoSection}) => {
-    setEditingContent(content);
-    setIsDialogOpen(true);
-  }
-  
-  const handleSubmit = async (data: ContentFormValues) => {
-    if (!topic) return;
-
-    let updatedTopic: AgriculturalSection | null = null;
-
-    if (data.type === 'subtopic') {
-        const newSubTopic: SubTopic = {
-            id: editingContent ? (editingContent.data as SubTopic).id : crypto.randomUUID(),
-            titleKey: 'custom',
-            title: data.title,
-            descriptionKey: 'custom',
-            description: data.description!,
-            image: data.imageUrl,
-            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-        };
-
-        if (editingContent) {
-            const subTopics = topic.subTopics.map(st => st.id === newSubTopic.id ? newSubTopic : st);
-            updatedTopic = { ...topic, subTopics };
-        } else {
-            const subTopics = [...topic.subTopics, newSubTopic];
-            updatedTopic = { ...topic, subTopics };
-        }
-        toast({ title: editingContent ? t('editTopicSuccess') : t('addTopicSuccess') });
-
-    } else if (data.type === 'video') {
-        const newVideo: VideoSection = {
-            id: editingContent ? (editingContent.data as VideoSection).id : crypto.randomUUID(),
-            titleKey: 'custom',
-            title: data.title,
-            durationKey: 'custom',
-            duration: data.duration!,
-            image: data.imageUrl,
-            videoUrl: data.videoUrl!,
-            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-        };
-
-        if (editingContent) {
-            const videos = (topic.videos || []).map(v => v.id === newVideo.id ? newVideo : v);
-            updatedTopic = { ...topic, videos };
-        } else {
-            const videos = [...(topic.videos || []), newVideo];
-            updatedTopic = { ...topic, videos };
-        }
-        toast({ title: editingContent ? t('editVideoSuccess') : t('addVideoSuccess') });
-    }
-
-    if (updatedTopic) {
-      try {
-        const topicRef = doc(db, 'data', topic.id);
-        await updateDoc(topicRef, {
-            subTopics: updatedTopic.subTopics,
-            videos: updatedTopic.videos,
-        });
-        setTopics(prevTopics => prevTopics.map(t => t.id === topic.id ? updatedTopic! : t));
-      } catch (e) {
-        console.error("Failed to update topic:", e);
-        toast({ variant: 'destructive', title: t('error'), description: 'Failed to save content.' });
-      }
-    }
-    
-    setIsDialogOpen(false);
-    setEditingContent(undefined);
-  };
   
   if (loading || !topic) {
     return (
@@ -145,7 +66,6 @@ export default function TopicDetailsPage() {
                     </h1>
                     <p className="text-lg text-muted-foreground">{description}</p>
                 </div>
-                {isAdmin && <ContentDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} onSubmit={handleSubmit} content={editingContent} setEditingContent={setEditingContent} />}
             </div>
           </div>
           
@@ -172,13 +92,6 @@ export default function TopicDetailsPage() {
                                     <p className="text-muted-foreground text-sm flex-1">{subTopicDescription!.substring(0, 120)}...</p>
                                 </CardContent>
                             </Link>
-                             {isAdmin && (
-                                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button size="icon" variant="secondary" onClick={() => handleDialogOpen({ type: 'subtopic', data: subTopic })}>
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            )}
                         </Card>
                     )})}
                 </div>
@@ -208,13 +121,6 @@ export default function TopicDetailsPage() {
                                             <p className="text-muted-foreground text-sm flex-1">{videoDuration}</p>
                                         </CardContent>
                                     </a>
-                                     {isAdmin && (
-                                        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                             <Button size="icon" variant="secondary" onClick={() => handleDialogOpen({ type: 'video', data: video })}>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    )}
                                 </Card>
                         )})}
                     </div>

@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, Timestamp, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Landmark, PlusCircle, CalendarIcon, Pencil } from 'lucide-react';
+import { Landmark, PlusCircle, CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
@@ -20,15 +20,8 @@ import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { db } from '@/lib/firebase';
+import { userSubcollection } from '@/lib/firestore';
 
 // --- Data Types ---
 export type Payment = {
@@ -45,132 +38,50 @@ export type DebtItem = {
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
   departmentId: string;
-  ownerId: string;
 };
 
-export type DebtItemData = Omit<DebtItem, 'id' | 'ownerId' | 'payments'>;
+export type DebtItemData = Omit<DebtItem, 'id' | 'payments'>;
 
 // --- Firestore API Functions ---
-async function getDebts(uid: string, departmentId: string): Promise<DebtItem[]> {
-    if (!uid) throw new Error("User is not authenticated.");
+async function getDebts(departmentId: string): Promise<DebtItem[]> {
+    const debtsCollectionRef = userSubcollection<Omit<DebtItem, 'id'>>('debts');
+    const querySnapshot = await getDocs(debtsCollectionRef);
     
-    const debtsCollectionRef = collection(db, 'debts');
-    const q = query(debtsCollectionRef, where("ownerId", "==", uid), where("departmentId", "==", departmentId));
-    const querySnapshot = await getDocs(q);
-    
-    const debtPromises = querySnapshot.docs.map(async (docSnap) => {
+    const allDebts = querySnapshot.docs.map(docSnap => {
         const data = docSnap.data();
-        const paymentsCollectionRef = collection(db, 'debts', docSnap.id, 'payments');
-        const paymentsSnapshot = await getDocs(paymentsCollectionRef);
-        const payments: Payment[] = paymentsSnapshot.docs.map(pDoc => ({
-            id: pDoc.id,
-            amount: pDoc.data().amount,
-            date: (pDoc.data().date as Timestamp).toDate(),
-        }));
-
         return {
             id: docSnap.id,
             ...data,
-            dueDate: data.dueDate ? (data.dueDate as Timestamp).toDate() : undefined,
-            payments: payments,
+            dueDate: data.dueDate ? (data.dueDate as unknown as Timestamp).toDate() : undefined,
+            payments: data.payments || [], // Assume payments are nested or need separate fetch
         } as DebtItem;
     });
-    return Promise.all(debtPromises);
+    return allDebts.filter(debt => debt.departmentId === departmentId);
 }
 
-async function addDebt(uid: string, data: DebtItemData): Promise<string> {
-    if (!uid) throw new Error("User is not authenticated.");
-    const debtsCollectionRef = collection(db, 'debts');
+async function addDebt(data: DebtItemData): Promise<string> {
+    const debtsCollectionRef = userSubcollection('debts');
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
+        payments: [],
         dueDate: data.dueDate ? Timestamp.fromDate(data.dueDate) : null,
-        ownerId: uid,
     });
     return docRef.id;
 }
 
-async function updateDebt(debtId: string, data: Partial<DebtItemData>): Promise<void> {
-    const debtRef = doc(db, 'debts', debtId);
-    const updateData: any = { ...data };
-    if (data.dueDate) {
-        updateData.dueDate = Timestamp.fromDate(data.dueDate);
-    }
-    await updateDoc(debtRef, updateData);
-}
 
-async function addDebtPayment(debtId: string, newStatus: DebtItem['status'], paymentData: Omit<Payment, 'id'|'date'> & { date: Date }) {
-    const batch = writeBatch(db);
-    const newPaymentRef = doc(collection(db, 'debts', debtId, 'payments'));
-    batch.set(newPaymentRef, {
-        amount: paymentData.amount,
-        date: Timestamp.fromDate(paymentData.date),
+async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'|'date'> & { date: Date }) {
+    const { uid } = auth.currentUser!;
+    const paymentCollectionRef = collection(db, "users", uid, "debts", debtId, "payments");
+    await addDoc(paymentCollectionRef, {
+      amount: paymentData.amount,
+      date: Timestamp.fromDate(paymentData.date)
     });
-    const debtDocRef = doc(db, 'debts', debtId);
-    batch.update(debtDocRef, { status: newStatus });
-    await batch.commit();
 }
 
 
 interface DebtsContentProps {
     departmentId: string;
-}
-
-function EditDebtDialog({ debt, onSave, children }: { debt: DebtItem, onSave: (id: string, data: Partial<DebtItemData>) => void, children: React.ReactNode }) {
-    const { t, language } = useLanguage();
-    const [isOpen, setIsOpen] = React.useState(false);
-    const [dueDate, setDueDate] = React.useState<Date | undefined>(debt.dueDate);
-
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const creditor = formData.get('creditor') as string;
-        const amount = Number(formData.get('amount'));
-
-        if (!creditor || amount <= 0) return;
-
-        const updatedData: Partial<DebtItemData> = { creditor, amount, dueDate };
-        onSave(debt.id, updatedData);
-        setIsOpen(false);
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t('editDebt')}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="creditor">{t('creditorName')}</Label>
-                        <Input id="creditor" name="creditor" defaultValue={debt.creditor} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="amount">{t('amountInDinar')}</Label>
-                        <Input id="amount" name="amount" type="number" step="0.01" defaultValue={debt.amount} required readOnly/>
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                        <Label>{t('dueDateOptional')}</Label>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}>
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dueDate ? format(dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : <span>{t('pickDate')}</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
-                        <Button type="submit">{t('saveChanges')}</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
 }
 
 export function DebtsContent({ departmentId }: DebtsContentProps) {
@@ -182,18 +93,16 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const formRef = React.useRef<HTMLFormElement>(null);
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
-    const targetUserId = authUser?.uid;
-
     React.useEffect(() => {
         const fetchDebtsData = async () => {
-            if (!targetUserId) {
+            if (!authUser) {
                 setIsDataLoading(false);
                 return;
             }
             
             setIsDataLoading(true);
             try {
-              const fetchedDebts = await getDebts(targetUserId, departmentId);
+              const fetchedDebts = await getDebts(departmentId);
               setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             } catch (e) {
                 console.error("Error fetching debts: ", e);
@@ -203,18 +112,18 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             }
         };
 
-        if (targetUserId) {
+        if (authUser) {
             fetchDebtsData();
         } else if (!isAuthLoading) {
             setIsDataLoading(false);
             setDebts([]);
         }
-    }, [targetUserId, departmentId, isAuthLoading, toast, t]);
+    }, [authUser, departmentId, isAuthLoading, toast, t]);
 
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!targetUserId) {
+        if (!authUser) {
             toast({ variant: "destructive", title: t('error'), description: "You cannot add debts for this user." });
             return;
         }
@@ -240,12 +149,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            const docId = await addDebt(targetUserId, newDebtData);
+            const docId = await addDebt(newDebtData);
             const newDebt: DebtItem = {
               ...newDebtData,
               id: docId,
               payments: [],
-              ownerId: targetUserId
             };
 
             setDebts(prev => [...prev, newDebt].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)));
@@ -259,52 +167,23 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
     }
 
-    async function handleEditDebt(id: string, data: Partial<DebtItemData>) {
-        if (!targetUserId) return;
-        try {
-            await updateDebt(id, data);
-            setDebts(prev => prev.map(item => {
-              if (item.id === id) {
-                return { ...item, ...data, dueDate: data.dueDate instanceof Date ? data.dueDate : item.dueDate } as DebtItem
-              }
-              return item;
-            }));
-            toast({ title: t('debtUpdatedSuccess') });
-        } catch (e) {
-            console.error("Error updating debt: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to update debt." });
-        }
-    }
-
-
     async function handlePayment(debtId: string, paymentAmount: number) {
-        if (!targetUserId) return;
+        if (!authUser) return;
         
         const debt = debts.find(d => d.id === debtId);
         if (!debt) return;
         
         try {
-            const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
-            let newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
-
             const paymentData = {
                 amount: paymentAmount,
                 date: new Date(),
             };
 
-            await addDebtPayment(debtId, newStatus, paymentData);
+            await addDebtPayment(debtId, paymentData);
             
-            setDebts(prevDebts => prevDebts.map(d => {
-                if (d.id === debtId) {
-                    const newPayment: Payment = {
-                        id: crypto.randomUUID(), // Temp ID for UI
-                        amount: paymentAmount,
-                        date: new Date(),
-                    };
-                    return { ...d, payments: [...d.payments, newPayment], status: newStatus };
-                }
-                return d;
-            }));
+            // Refetch all data to get the latest status
+            const fetchedDebts = await getDebts(departmentId);
+            setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             
             toast({ title: t('paymentRecordedSuccess'), className: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" });
         } catch(e) {
@@ -426,9 +305,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                         <TableCell>
                                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
-                                                <EditDebtDialog debt={item} onSave={handleEditDebt}>
-                                                     <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
-                                                </EditDebtDialog>
                                             </div>
                                         </TableCell>
                                     </TableRow>

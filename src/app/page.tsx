@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { Leaf, PlayCircle, BookOpen, Pencil } from 'lucide-react';
+import { Leaf, PlayCircle, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
@@ -10,70 +10,13 @@ import { useTopics } from '@/context/topics-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
-import { ContentDialog } from '@/components/content-dialog';
-import type { AgriculturalSection } from '@/lib/topics-data';
-import { useToast } from '@/hooks/use-toast';
-import { doc, collection, updateDoc, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function Home() {
   const { t } = useLanguage();
-  const { topics, setTopics, loading } = useTopics();
+  const { topics, loading } = useTopics();
   const { user } = useAuth();
-  const { toast } = useToast();
-  
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [editingTopic, setEditingTopic] = React.useState<AgriculturalSection | undefined>(undefined);
-
-  const isAdmin = user?.role === 'admin';
-
-  const handleDialogOpen = (topic?: AgriculturalSection) => {
-      setEditingTopic(topic);
-      setIsDialogOpen(true);
-  }
-
-  const handleSubmit = async (data: any) => {
-    const topicsCollectionRef = collection(db, "data");
-    if (editingTopic) {
-        // Update existing topic in Firestore
-        const topicRef = doc(topicsCollectionRef, editingTopic.id);
-        const updatedData = { 
-            title: data.title,
-            description: data.description,
-            image: data.image,
-            iconName: data.iconName,
-            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-            titleKey: 'custom', 
-            descriptionKey: 'custom',
-        };
-        await updateDoc(topicRef, updatedData);
-        setTopics(prevTopics => prevTopics.map(topic => 
-            topic.id === editingTopic.id ? { ...topic, ...updatedData } : topic
-        ));
-        toast({ title: t('editTopicSuccess') });
-    } else {
-        // Add new topic to Firestore
-        const newTopicData = {
-            title: data.title,
-            description: data.description,
-            iconName: data.iconName,
-            image: data.image,
-            hint: data.title.toLowerCase().split(' ').slice(0, 2).join(' '),
-            titleKey: 'custom',
-            descriptionKey: 'custom',
-            subTopics: [],
-            videos: []
-        };
-        const docRef = await addDoc(topicsCollectionRef, newTopicData);
-        const newTopic: AgriculturalSection = { id: docRef.id, ...newTopicData };
-        setTopics(prevTopics => [...prevTopics, newTopic]);
-        toast({ title: t('addTopicSuccess') });
-    }
-    setIsDialogOpen(false);
-    setEditingTopic(undefined);
-  };
   
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -94,7 +37,6 @@ export default function Home() {
         <section className="w-full border-t pt-8">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-3xl font-bold">{t('agriculturalTopics')}</h2>
-              {isAdmin && <ContentDialog isOpen={isDialogOpen} setIsOpen={setIsDialogOpen} onSubmit={handleSubmit} />}
             </div>
              {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -137,13 +79,6 @@ export default function Home() {
                                         )}
                                     </div>
                                 </CardContent>
-                                {isAdmin && (
-                                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button size="icon" variant="secondary" onClick={() => handleDialogOpen(topic)}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                )}
                             </Card>
                         )
                     })}

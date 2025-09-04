@@ -1,51 +1,29 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Allow public read for general app data
-    match /data/{document=**} {
-      allow read: if true;
-      allow write: if false;
+    // Lock down by default.
+    match /{document=**} {
+      allow read, write: if false;
     }
     
-    // Allow users to manage their own user document
+    // User profile documents
     match /users/{userId} {
-      allow read, update, delete, create: if request.auth.uid == userId;
+      // Allow users to create their own profile, get it, or delete it.
+      allow get, create, delete: if request.auth.uid == userId;
+      // Disallow updates to the profile document from the client to prevent tampering with fields like 'role' or 'points'.
+      allow update: if false;
+      // Disallow listing all users for privacy.
+      allow list: if false;
     }
     
-    // Generic rules for all user-owned collections
-    match /tasks/{docId} {
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
-    }
-
-    match /sales/{docId} {
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
-    }
-
-    match /expenses/{docId} {
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
-    }
-
-    match /debts/{debtId} {
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
-
-      match /payments/{paymentId} {
-        allow read, write, create, delete: if get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId == request.auth.uid;
-      }
-    }
-
-    match /workers/{workerId} {
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
-      
-      match /transactions/{transactionId} {
-        allow read, write, create, delete: if get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId == request.auth.uid;
-      }
+    // Any subcollection under a user's document
+    match /users/{userId}/{subcollection}/{docId} {
+        // Allow full access only to the authenticated user who owns the subcollection.
+        allow get, list, create, delete: if request.auth.uid == userId;
+        // Disallow updates based on the provided rules.
+        allow update: if false;
     }
   }
 }

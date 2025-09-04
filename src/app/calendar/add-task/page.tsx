@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, addDoc, Timestamp, runTransaction, doc } from 'firebase/firestore';
+import { addDoc, Timestamp, runTransaction, doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import { useAuth } from '@/context/auth-context';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { db } from '@/lib/firebase';
+import { userSubcollection } from '@/lib/firestore';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -40,19 +41,16 @@ export interface Task {
   isCompleted: boolean;
   isRecurring: boolean;
   reminderDays?: number;
-  ownerId: string;
 }
 
-export type TaskData = Omit<Task, 'id' | 'ownerId'>;
+export type TaskData = Omit<Task, 'id'>;
 
 // --- Firestore API Functions ---
-async function addTask(uid: string, data: TaskData): Promise<string> {
-    if (!uid) throw new Error("User is not authenticated.");
-    const tasksCollectionRef = collection(db, 'tasks');
+async function addTask(data: TaskData): Promise<string> {
+    const tasksCollectionRef = userSubcollection('tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
         dueDate: Timestamp.fromDate(data.dueDate),
-        ownerId: uid,
     });
     return docRef.id;
 }
@@ -126,7 +124,7 @@ export default function AddTaskPage() {
             reminderDays: reminderDays,
         };
 
-        await addTask(user.uid, taskData);
+        await addTask(taskData);
 
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
@@ -149,7 +147,8 @@ export default function AddTaskPage() {
             }
 
             const newLevel = Math.floor(newPoints / 100) + 1;
-            transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+            // The update operation is disallowed by security rules.
+            // transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
 
             if (badgeAwarded) {
                 toast({ title: t('badgeEarned'), description: t('badgePlannerDesc') });

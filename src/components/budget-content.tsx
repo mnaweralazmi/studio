@@ -2,11 +2,11 @@
 "use client"
 
 import * as React from 'react';
-import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where, runTransaction } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, runTransaction } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { PlusCircle, Wallet, Pencil } from 'lucide-react';
+import { PlusCircle, Wallet } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
@@ -14,16 +14,8 @@ import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { db } from '@/lib/firebase';
+import { userSubcollection } from '@/lib/firestore';
 
 // Data lists
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
@@ -49,97 +41,38 @@ export type SalesItem = {
   total: number;
   date: Date;
   departmentId: string;
-  ownerId: string;
 };
 
-export type SalesItemData = Omit<SalesItem, 'id' | 'ownerId'>;
+export type SalesItemData = Omit<SalesItem, 'id'>;
 
 // --- Firestore API Functions ---
-async function getSales(uid: string, departmentId: string): Promise<SalesItem[]> {
-    if (!uid) throw new Error("User is not authenticated.");
-    
-    const salesCollectionRef = collection(db, 'sales');
-    const q = query(salesCollectionRef, where("ownerId", "==", uid), where("departmentId", "==", departmentId));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnap => {
+async function getSales(departmentId: string): Promise<SalesItem[]> {
+    const salesCollectionRef = userSubcollection<Omit<SalesItem, 'id'>>('sales');
+    const querySnapshot = await getDocs(salesCollectionRef);
+    const allSales = querySnapshot.docs.map(docSnap => {
         const data = docSnap.data();
         return {
             id: docSnap.id,
             ...data,
-            date: (data.date as Timestamp).toDate(),
+            date: (data.date as unknown as Timestamp).toDate(),
         } as SalesItem;
     });
+    // Filter by department on the client-side
+    return allSales.filter(sale => sale.departmentId === departmentId);
 }
 
-async function addSale(uid: string, data: SalesItemData): Promise<string> {
-    if (!uid) throw new Error("User is not authenticated.");
-    const salesCollectionRef = collection(db, 'sales');
+async function addSale(data: SalesItemData): Promise<string> {
+    const salesCollectionRef = userSubcollection('sales');
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
-        ownerId: uid,
     });
     return docRef.id;
-}
-
-async function updateSale(saleId: string, data: Partial<SalesItemData>): Promise<void> {
-    const saleRef = doc(db, 'sales', saleId);
-    await updateDoc(saleRef, data);
 }
 
 
 interface BudgetContentProps {
     departmentId: 'agriculture' | 'livestock' | 'poultry' | 'fish';
-}
-
-function EditSaleDialog({ sale, onSave, children }: { sale: SalesItem, onSave: (id: string, data: Partial<SalesItem>) => void, children: React.ReactNode }) {
-    const { t } = useLanguage();
-    const [isOpen, setIsOpen] = React.useState(false);
-
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const quantity = Number(formData.get('quantity'));
-        const price = Number(formData.get('price'));
-
-        if (quantity <= 0 || price <= 0) {
-            return;
-        }
-
-        const updatedData: Partial<SalesItem> = {
-            quantity,
-            price,
-            total: quantity * price
-        };
-        onSave(sale.id, updatedData);
-        setIsOpen(false);
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t('editSale')}</DialogTitle>
-                    <DialogDescription>{t('editSaleDesc')}</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="quantity">{t('quantity')}</Label>
-                        <Input id="quantity" name="quantity" type="number" step="1" defaultValue={sale.quantity} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="price">{t('unitPrice')}</Label>
-                        <Input id="price" name="price" type="number" step="0.01" defaultValue={sale.price} required />
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
-                        <Button type="submit">{t('saveChanges')}</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
 }
 
 export function BudgetContent({ departmentId }: BudgetContentProps) {
@@ -150,8 +83,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const { language, t } = useLanguage();
   const formRef = React.useRef<HTMLFormElement>(null);
   
-  const targetUserId = authUser?.uid;
-
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
   const livestockList = language === 'ar' ? livestockListAr : livestockListEn;
   const poultryList = language === 'ar' ? poultryListAr : poultryListEn;
@@ -159,14 +90,14 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
   React.useEffect(() => {
     const fetchSales = async () => {
-        if (!targetUserId) {
+        if (!authUser) {
             setIsDataLoading(false);
             return;
         }
       
         setIsDataLoading(true);
         try {
-            const sales = await getSales(targetUserId, departmentId);
+            const sales = await getSales(departmentId);
             setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
         } catch(e) {
             console.error("Error fetching sales: ", e);
@@ -176,18 +107,18 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         }
     };
     
-    if (targetUserId) {
+    if (authUser) {
         fetchSales();
     } else if (!isAuthLoading) {
         setIsDataLoading(false);
         setSalesItems([]);
     }
-  }, [departmentId, targetUserId, isAuthLoading, toast, t]);
+  }, [departmentId, authUser, isAuthLoading, toast, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!targetUserId) {
-        toast({ variant: "destructive", title: t('error'), description: "You cannot add sales for this user."});
+    if (!authUser) {
+        toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add sales."});
         return;
     }
     
@@ -214,9 +145,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        const userRef = doc(db, 'users', targetUserId);
+        const userRef = doc(db, 'users', authUser.uid);
         
-        const docId = await addSale(targetUserId, submissionData);
+        const docId = await addSale(submissionData);
 
         const newItem: SalesItem = {
           ...submissionData,
@@ -237,7 +168,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 newPoints += 25;
                 newBadges.push('trader');
                 const newLevel = Math.floor(newPoints / 100) + 1;
-                transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+                // Updates are disallowed by security rules
+                // transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
                 toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });
             }
         });
@@ -253,26 +185,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         toast({ variant: "destructive", title: t('error'), description: "Failed to save sale."});
     }
   }
-  
-  async function handleSave(id: string, data: Partial<SalesItem>) {
-    if (!targetUserId) return;
-    try {
-        await updateSale(id, data);
-        setSalesItems(prev => prev.map(item => item.id === id ? { ...item, ...data } : item));
-        toast({ title: t('salesUpdatedSuccess') });
-    } catch (e) {
-        console.error("Error updating document: ", e);
-        toast({ variant: "destructive", title: t('error'), description: "Failed to update sale." });
-    }
-  }
-
-  const renderActions = (item: SalesItem) => (
-      <div className="flex gap-2 justify-end">
-        <EditSaleDialog sale={item} onSave={handleSave}>
-            <Button variant="ghost" size="icon" title={t('edit')}><Pencil className="h-4 w-4" /></Button>
-        </EditSaleDialog>
-      </div>
-  );
 
   const totalSales = salesItems.reduce((sum, item) => sum + item.total, 0);
 
@@ -381,7 +293,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 {departmentId === 'agriculture' && <TableHead>{t('tableCartonWeightKg')}</TableHead>}
                 <TableHead>{t('unitPrice')}</TableHead>
                 <TableHead>{t('tableTotal')}</TableHead>
-                <TableHead className="text-right">{t('tableActions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -392,7 +303,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                      {departmentId === 'agriculture' && <TableCell>{item.weightPerUnit || '-'}</TableCell>}
                      <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
                      <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
-                     <TableCell className="text-right">{renderActions(item)}</TableCell>
                  </TableRow>
              ))}
           </TableBody>

@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format, isToday, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, addDoc, getDocs, doc, Timestamp, updateDoc, query, where } from 'firebase/firestore';
+import { getDocs, Timestamp, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
+import { userSubcollection } from '@/lib/firestore';
 
 // --- Data Types ---
 export interface Task {
@@ -25,45 +26,36 @@ export interface Task {
   isCompleted: boolean;
   isRecurring: boolean;
   reminderDays?: number;
-  ownerId: string;
 }
 
-export type TaskData = Omit<Task, 'id' | 'ownerId'>;
+export type TaskData = Omit<Task, 'id'>;
 
 // --- Firestore API Functions ---
-async function getTasks(uid: string): Promise<Task[]> {
-    if (!uid) throw new Error("User is not authenticated.");
-    const tasksCollectionRef = collection(db, 'tasks');
-    const q = query(tasksCollectionRef, where("ownerId", "==", uid));
-    const querySnapshot = await getDocs(q);
+async function getTasks(): Promise<Task[]> {
+    const tasksCollectionRef = userSubcollection<Omit<Task, 'id'>>('tasks');
+    const querySnapshot = await getDocs(tasksCollectionRef);
     return querySnapshot.docs.map(docSnap => {
         const data = docSnap.data();
         return {
             id: docSnap.id,
             ...data,
-            dueDate: (data.dueDate as Timestamp).toDate(),
+            dueDate: (data.dueDate as unknown as Timestamp).toDate(),
         } as Task;
     });
 }
 
-async function addTask(uid: string, data: TaskData): Promise<string> {
-    if (!uid) throw new Error("User is not authenticated.");
-    const tasksCollectionRef = collection(db, 'tasks');
+async function addTask(data: TaskData): Promise<string> {
+    const tasksCollectionRef = userSubcollection('tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
         dueDate: Timestamp.fromDate(data.dueDate),
-        ownerId: uid,
     });
     return docRef.id;
 }
 
-async function updateTask(taskId: string, data: Partial<TaskData>): Promise<void> {
-    const taskRef = doc(db, 'tasks', taskId);
-    const updateData: any = { ...data };
-    if (data.dueDate) {
-        updateData.dueDate = Timestamp.fromDate(data.dueDate);
-    }
-    await updateDoc(taskRef, updateData);
+async function deleteTask(taskId: string): Promise<void> {
+    const { uid } = auth.currentUser!;
+    await deleteDoc(doc(db, 'users', uid, 'tasks', taskId));
 }
 
 
@@ -155,7 +147,7 @@ export default function CalendarPage() {
     };
     setIsTasksLoading(true);
     try {
-        const fetchedTasks = await getTasks(user.uid);
+        const fetchedTasks = await getTasks();
         setTasks(fetchedTasks);
     } catch (e) {
         console.error("Failed to fetch tasks:", e);
@@ -180,7 +172,8 @@ export default function CalendarPage() {
     if (!taskToComplete) return;
 
     try {
-        await updateTask(taskId, { isCompleted: true });
+        // Since updates are disallowed, we delete the old task.
+        await deleteTask(taskId);
 
         if (taskToComplete.isRecurring) {
             const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
@@ -193,7 +186,7 @@ export default function CalendarPage() {
                 isRecurring: true,
                 reminderDays: taskToComplete.reminderDays
             };
-            await addTask(user.uid, newTaskData);
+            await addTask(newTaskData);
         }
         
         await fetchTasks(); // Refetch to get all updates

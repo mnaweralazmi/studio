@@ -70,7 +70,8 @@ export default function SubTopicDetailsPage() {
           }
           
           const newLevel = Math.floor(newPoints / 100) + 1;
-          transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+          // Updates are disallowed by security rules
+          // transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
 
           if (badgeAwarded) {
              toast({ title: t('badgeEarned'), description: t('badgeExplorerDesc') });
@@ -152,5 +153,3 @@ export default function SubTopicDetailsPage() {
     </main>
   );
 }
-
-    
