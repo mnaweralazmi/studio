@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { getDocs, Timestamp, query } from 'firebase/firestore';
+import { getDocs, query } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -11,8 +11,8 @@ import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-
 import { userSubcollection } from '@/lib/firestore';
 import type { SalesItem } from '../budget-content';
 import type { ExpenseItem } from '../expenses-content';
-import type { DebtItem, Payment } from '../debts-content';
-import type { Worker, Transaction } from '../workers/types';
+import type { DebtItem } from '../debts-content';
+import type { Worker } from '../workers/types';
 
 async function getSales(departmentId: string): Promise<SalesItem[]> {
     const salesCollectionRef = userSubcollection<Omit<SalesItem, 'id'>>('sales');
