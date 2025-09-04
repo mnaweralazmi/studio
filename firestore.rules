@@ -1,29 +1,42 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Lock down by default.
-    match /{document=**} {
-      allow read, write: if false;
-    }
     
-    // User profile documents
+    // Allow any authenticated user to manage their own user document
     match /users/{userId} {
-      // Allow users to create their own profile, get it, or delete it.
-      allow get, create, delete: if request.auth.uid == userId;
-      // Disallow updates to the profile document from the client to prevent tampering with fields like 'role' or 'points'.
-      allow update: if false;
-      // Disallow listing all users for privacy.
-      allow list: if false;
+      allow read, create, delete: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Updates are disabled
+    }
+
+    // Rules for the user's private data subcollection (topics, etc.)
+    match /users/{userId}/data/{docId} {
+        allow get, delete: if request.auth.uid == userId;
+        // Allow creating a document if the user is the owner
+        allow create: if request.auth.uid == userId && request.resource.data.ownerId == userId;
+        // Allow querying the collection if the query is filtered by the user's UID
+        allow list: if request.auth.uid == userId && request.query.filters.size() > 0 && request.query.filters[0].field.stringValue() == 'ownerId' && request.query.filters[0].value.stringValue() == userId;
+        allow update: if false;
     }
     
-    // Any subcollection under a user's document
-    match /users/{userId}/{subcollection}/{docId} {
-        // Allow full access only to the authenticated user who owns the subcollection.
-        allow get, list, create, delete: if request.auth.uid == userId;
-        // Disallow updates based on the provided rules.
-        allow update: if false;
+    // Generic rules for all top-level financial and task-related collections
+    match /{collection}/{docId} {
+      // Allow reading/deleting a document if the user is the owner
+      allow get, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      // Allow creating a document if the user is the owner
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+       // Allow querying the collection if the query is filtered by the user's UID
+      allow list: if request.auth != null && request.auth.uid == request.query.filters[0].value.stringValue();
+      // Updates are disabled
+      allow update: if false;
+
+      // Special nested collections that need separate rules
+      match /debts/{debtId}/payments/{paymentId} {
+        allow read, write, create, delete: if request.auth != null && get(/databases/$(database)/documents/debts/$(debtId)).data.ownerId == request.auth.uid;
+      }
+      match /workers/{workerId}/transactions/{transactionId} {
+         allow read, write, create, delete: if request.auth != null && get(/databases/$(database)/documents/workers/$(workerId)).data.ownerId == request.auth.uid;
+      }
     }
   }
 }
