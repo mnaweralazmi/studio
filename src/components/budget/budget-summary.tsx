@@ -73,7 +73,6 @@ export function BudgetSummary() {
     const { user: authUser, loading: authLoading } = useAuth();
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = React.useState(true);
-    const [departmentId, setDepartmentId] = React.useState<string>('agriculture');
     const [summary, setSummary] = React.useState({
         totalSales: 0,
         totalExpenses: 0,
@@ -131,7 +130,6 @@ export function BudgetSummary() {
 
     React.useEffect(() => {
         const lastSelectedDept = localStorage.getItem('selectedDepartment') || 'agriculture';
-        setDepartmentId(lastSelectedDept);
         
         if (targetUserId) {
             fetchAllData(lastSelectedDept, targetUserId);
@@ -141,7 +139,6 @@ export function BudgetSummary() {
 
         const handleDepartmentChange = () => {
             const newDept = localStorage.getItem('selectedDepartment') || 'agriculture';
-            setDepartmentId(newDept);
             if (targetUserId) {
                 fetchAllData(newDept, targetUserId);
             }

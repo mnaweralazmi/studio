@@ -68,22 +68,6 @@ async function updateWorker(workerId: string, data: Partial<WorkerFormValues>): 
     await updateDoc(workerRef, data);
 }
 
-async function deleteWorker(workerId: string) {
-    // First, delete all transactions in the subcollection
-    const transactionsColRef = collection(db, 'workers', workerId, 'transactions');
-    const transactionsSnapshot = await getDocs(transactionsColRef);
-    const batch = writeBatch(db);
-    transactionsSnapshot.forEach(doc => {
-        batch.delete(doc.ref);
-    });
-    await batch.commit();
-
-    // Then, delete the worker document itself
-    const workerRef = doc(db, 'workers', workerId);
-    await deleteDoc(workerRef);
-}
-
-
 async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
     const batch = writeBatch(db);
     
@@ -202,18 +186,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         }
     }
     
-    async function handleDeleteWorker(workerId: string) {
-        if (!targetUserId) return;
-        try {
-            await deleteWorker(workerId);
-            await fetchWorkersData();
-            toast({ title: t('workerDeleted') });
-        } catch(e) {
-            console.error("Error deleting worker: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker." });
-        }
-    }
-
     async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
         if (!targetUserId) return;
         
@@ -397,7 +369,16 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                 <AddWorkerDialog onSave={handleSaveWorker} worker={worker}>
                                     <Button variant="ghost" size="icon" title={t('editWorker')}><Pencil className="h-4 w-4" /></Button>
                                 </AddWorkerDialog>
-                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
+                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => {
+                                    if(!targetUserId) return;
+                                    deleteDoc(doc(db, "workers", worker.id)).then(() => {
+                                        toast({ title: t('workerDeleted') });
+                                        fetchWorkersData();
+                                    }).catch(e => {
+                                        console.error("Error deleting worker: ", e);
+                                        toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker." });
+                                    })
+                                }} />
                             </div>
                         </TableCell>
                       </TableRow>
