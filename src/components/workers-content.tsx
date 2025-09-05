@@ -27,6 +27,8 @@ async function addWorker(data: WorkerFormValues & { departmentId: string; ownerI
         ...data,
         paidMonths: [],
         transactions: [],
+        ownerId: data.ownerId,
+        departmentId: data.departmentId,
     });
     return docRef.id;
 }

@@ -174,8 +174,9 @@ export default function CalendarPage() {
     if (!taskToComplete) return;
 
     try {
+        await deleteTask(taskId);
+        
         if (taskToComplete.isRecurring) {
-            await updateTask(taskId, { isCompleted: true });
             const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
             const newTaskData: TaskData = {
                 title: taskToComplete.title,
@@ -187,8 +188,6 @@ export default function CalendarPage() {
                 ownerId: user.uid,
             };
             await addTask(newTaskData);
-        } else {
-            await deleteTask(taskId);
         }
         
         toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });

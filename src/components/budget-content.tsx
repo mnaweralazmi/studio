@@ -134,7 +134,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         departmentId,
         date: new Date(),
         ownerId: authUser.uid,
-        ...(weightPerUnit !== undefined && { weightPerUnit }),
+        ...(weightPerUnit && { weightPerUnit }),
     };
 
     try {
