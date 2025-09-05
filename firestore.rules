@@ -1,27 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Users can read their own user document
-    match /users/{userId} {
-      allow read, create, delete, update: if request.auth != null && request.auth.uid == userId;
-    }
 
-    // Public data (like agricultural topics) can be read by any authenticated user
+    // Helpers
+    function authed() { return request.auth != null; }
+    function isOwnerExisting() { return authed() && resource.data.ownerId == request.auth.uid; }
+    function isOwnerNew() { return authed() && request.resource.data.ownerId == request.auth.uid; }
+
+    // Public read-only collection: data (agricultural topics)
     match /data/{docId} {
-       allow read: if request.auth != null;
-       // Write access can be restricted to admins if needed in the future
-       allow write: if request.auth != null; 
+      allow read: if true;   // anyone can read
+      allow write: if false; // no writes
     }
 
-    // User-specific data (tasks, sales, etc.)
-    // A user can list/read documents they own.
-    // A user can create documents with their own ownerId.
+    // User-scoped root collections (tasks, sales, expenses, workers, ...):
     match /{collection}/{docId} {
-       allow read, list, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-       // Deny updates for now to maintain simplicity, can be enabled later.
-       allow update: if false;
+      allow get, list: if isOwnerExisting();   // read only own docs
+      allow create: if isOwnerNew();           // create only with ownerId = uid
+      allow update, delete: if isOwnerExisting();
+    }
+
+    // Fallback: deny everything else
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }
