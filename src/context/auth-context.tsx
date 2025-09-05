@@ -76,11 +76,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userData = doc.data();
           const combinedUser: AppUser = {
             ...firebaseUser,
-            ...(userData || {}), // Use empty object if userData is null
-            uid: firebaseUser.uid,
-            displayName: userData?.name || firebaseUser.displayName,
-            name: userData?.name || firebaseUser.displayName,
-            photoURL: userData?.photoURL || firebaseUser.photoURL,
+            // Ensure properties from both sources are merged correctly
+            name: userData?.name || firebaseUser.displayName || undefined,
+            displayName: userData?.name || firebaseUser.displayName || undefined,
+            photoURL: userData?.photoURL || firebaseUser.photoURL || undefined,
+            // Spread the rest of the userData
+            ...(userData || {}),
           };
           setUser(combinedUser);
           setLoading(false);

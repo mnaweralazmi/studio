@@ -15,6 +15,7 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
+import { getDataForUser } from './budget/budget-summary';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -79,6 +80,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
     React.useEffect(() => {
+        setExpenseCategories(getInitialCategories(language, departmentId));
+        setSelectedCategory('');
+    }, [language, departmentId]);
+
+    React.useEffect(() => {
         if (!authUser) {
           if(!isAuthLoading) {
             setIsDataLoading(false);
@@ -88,50 +94,20 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
 
         setIsDataLoading(true);
-        setExpenseCategories(getInitialCategories(language, departmentId));
         
-        const expensesCollectionRef = collection(db, 'expenses');
-        const q1 = query(expensesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
-
-        const processSnapshot = (snapshot: any) => {
-            const fetchedExpenses = snapshot.docs.map((docSnap: any) => {
-                const data = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    ...data,
-                    date: (data.date as unknown as Timestamp).toDate(),
-                } as ExpenseItem;
+        getDataForUser<ExpenseItem>('expenses', authUser.uid, departmentId)
+            .then(data => {
+                setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+            })
+            .catch(error => {
+                console.error("Error fetching expenses: ", error);
+                toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
+            })
+            .finally(() => {
+                setIsDataLoading(false);
             });
-            setExpenses(fetchedExpenses.sort((a,b) => b.date.getTime() - a.date.getTime()));
-            setIsDataLoading(false);
-        };
-        
-        const unsubscribe = onSnapshot(q1, (querySnapshot) => {
-            if (!querySnapshot.empty) {
-                processSnapshot(querySnapshot);
-            } else {
-                const q2 = query(expensesCollectionRef, where("departmentId", "==", departmentId));
-                onSnapshot(q2, (legacySnapshot) => {
-                     const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
-                     if (legacyDocs.length > 0) {
-                        processSnapshot({ docs: legacyDocs });
-                     } else {
-                        setExpenses([]);
-                        setIsDataLoading(false);
-                     }
-                }, (error) => {
-                    console.error("Error fetching legacy expenses: ", error);
-                    setIsDataLoading(false);
-                });
-            }
-        }, (error) => {
-            console.error("Error fetching expenses: ", error);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-            setIsDataLoading(false);
-        });
 
-        return () => unsubscribe();
-    }, [authUser, language, departmentId, isAuthLoading, toast, t]);
+    }, [authUser, departmentId, isAuthLoading, toast, t]);
     
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -164,7 +140,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            await addExpense(newExpenseData);
+            const newExpenseId = await addExpense(newExpenseData);
+            setExpenses(prev => [{...newExpenseData, id: newExpenseId, date: new Date()}, ...prev]);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
@@ -177,6 +154,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const handleDelete = async (expenseId: string) => {
         try {
             await deleteExpense(expenseId);
+            setExpenses(prev => prev.filter(e => e.id !== expenseId));
             toast({ title: t('expenseDeleted') });
         } catch(e) {
             console.error("Error deleting expense: ", e);
@@ -257,7 +235,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="category">{t('category')}</Label>
-                                <Select name="category" onValueChange={setSelectedCategory}>
+                                <Select name="category" onValueChange={setSelectedCategory} value={selectedCategory}>
                                     <SelectTrigger id="category"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
                                     <SelectContent>
                                         {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}

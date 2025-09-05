@@ -17,6 +17,7 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
+import { getDataForUser } from './budget/budget-summary';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
@@ -87,50 +88,25 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         }
         
         setIsDataLoading(true);
-        const workersColRef = collection(db, 'workers');
-        const q1 = query(workersColRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
-
-        const processSnapshot = (snapshot: any) => {
-            const fetchedWorkers = snapshot.docs.map((docSnap: any) => {
-                const data = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    ...data,
-                    transactions: (data.transactions || []).map((t: any) => ({
+        getDataForUser<Worker>('workers', authUser.uid, departmentId)
+            .then(data => {
+                const fetchedWorkers = data.map(d => ({
+                    ...d,
+                    transactions: (d.transactions || []).map((t: any) => ({
                         ...t,
-                        date: (t.date as Timestamp).toDate().toISOString()
+                        date: new Date(t.date).toISOString()
                     }))
-                } as Worker;
+                }));
+                setWorkers(fetchedWorkers);
+            })
+            .catch(error => {
+                console.error("Error fetching workers: ", error);
+                toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
+            })
+            .finally(() => {
+                setIsDataLoading(false);
             });
-            setWorkers(fetchedWorkers);
-            setIsDataLoading(false);
-        };
         
-        const unsubscribe = onSnapshot(q1, (querySnapshot) => {
-            if (!querySnapshot.empty) {
-                processSnapshot(querySnapshot);
-            } else {
-                 const q2 = query(workersColRef, where("departmentId", "==", departmentId));
-                 onSnapshot(q2, (legacySnapshot) => {
-                    const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
-                    if (legacyDocs.length > 0) {
-                        processSnapshot({ docs: legacyDocs });
-                    } else {
-                        setWorkers([]);
-                        setIsDataLoading(false);
-                    }
-                 }, (error) => {
-                    console.error("Error fetching legacy workers: ", error);
-                    setIsDataLoading(false);
-                 });
-            }
-        }, (error) => {
-            console.error("Error fetching workers: ", error);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
-            setIsDataLoading(false);
-        });
-        
-        return () => unsubscribe();
     }, [authUser, departmentId, isAuthLoading, t, toast]);
     
 
@@ -149,10 +125,12 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         try {
             if (workerId) {
                 await updateWorker(workerId, data);
+                setWorkers(prev => prev.map(w => w.id === workerId ? {...w, ...data} : w));
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
                 const newWorkerData = { ...data, departmentId, ownerId: authUser.uid };
-                await addWorker(newWorkerData);
+                const newId = await addWorker(newWorkerData);
+                setWorkers(prev => [...prev, {...newWorkerData, id: newId, paidMonths: [], transactions: []}]);
                 toast({ title: t('workerAddedSuccess') });
             }
         } catch (e) {
@@ -172,6 +150,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 year,
             };
             await paySalary(workerId, {year, month}, transaction);
+             setWorkers(prev => prev.map(w => w.id === workerId ? {
+                ...w, 
+                paidMonths: [...w.paidMonths, {year, month}],
+                transactions: [...w.transactions, {...transaction, id: new Date().toISOString(), date: new Date().toISOString()}]
+            } : w));
             toast({ title: t('salaryPaidSuccess') });
         } catch (e) {
             console.error("Error paying salary: ", e);
@@ -189,12 +172,27 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            await addTransaction(workerId, newTransactionData);
+            const newId = await addTransaction(workerId, newTransactionData);
+            setWorkers(prev => prev.map(w => w.id === workerId ? {
+                ...w,
+                transactions: [...w.transactions, {...newTransactionData, id: newId, date: new Date().toISOString()}]
+            } : w));
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
             console.error("Error adding transaction: ", e);
             toast({ variant: "destructive", title: t('error'), description: "Failed to add transaction." });
+        }
+    }
+
+    async function handleDeleteWorker(workerId: string) {
+        try {
+            await deleteWorker(workerId);
+            setWorkers(prev => prev.filter(w => w.id !== workerId));
+            toast({ title: t('workerDeleted') });
+        } catch(e) {
+            console.error("Error deleting worker: ", e);
+             toast({ variant: "destructive", title: t('error'), description: t('workerDeleted') });
         }
     }
   
@@ -338,7 +336,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                 <AddWorkerDialog worker={worker} onSave={handleSaveWorker}>
                                     <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                                 </AddWorkerDialog>
-                                <DeleteWorkerAlert workerName={worker.name} onConfirm={async () => await deleteWorker(worker.id)} />
+                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
                             </div>
                         </TableCell>
                       </TableRow>

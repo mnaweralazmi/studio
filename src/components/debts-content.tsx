@@ -21,6 +21,7 @@ import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
+import { getDataForUser } from './budget/budget-summary';
 
 export type Payment = {
   id: string;
@@ -96,48 +97,23 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
 
         setIsDataLoading(true);
-        const debtsCollectionRef = collection(db, 'debts');
-        const q1 = query(debtsCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
         
-        const processSnapshot = (snapshot: any) => {
-             const fetchedDebts = snapshot.docs.map((docSnap: any) => {
-                const data = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    ...data,
-                    dueDate: data.dueDate ? (data.dueDate as unknown as Timestamp).toDate() : undefined,
-                    payments: (data.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()})),
-                } as DebtItem;
+        getDataForUser<DebtItem>('debts', authUser.uid, departmentId)
+            .then(data => {
+                const fetchedDebts = data.map(d => ({
+                    ...d,
+                    payments: (d.payments || []).map(p => ({...p, date: new Date(p.date)}))
+                }));
+                setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
+            })
+            .catch(error => {
+                console.error("Error fetching debts: ", error);
+                toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
+            })
+            .finally(() => {
+                setIsDataLoading(false);
             });
-            setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
-            setIsDataLoading(false);
-        };
 
-        const unsubscribe = onSnapshot(q1, (querySnapshot) => {
-             if (!querySnapshot.empty) {
-                processSnapshot(querySnapshot);
-            } else {
-                const q2 = query(debtsCollectionRef, where("departmentId", "==", departmentId));
-                onSnapshot(q2, (legacySnapshot) => {
-                    const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
-                    if (legacyDocs.length > 0) {
-                        processSnapshot({ docs: legacyDocs });
-                    } else {
-                        setDebts([]);
-                        setIsDataLoading(false);
-                    }
-                }, (error) => {
-                    console.error("Error fetching legacy debts: ", error);
-                    setIsDataLoading(false);
-                });
-            }
-        }, (error) => {
-            console.error("Error fetching debts: ", error);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
-            setIsDataLoading(false);
-        });
-
-        return () => unsubscribe();
     }, [authUser, departmentId, isAuthLoading, t, toast]);
 
 
@@ -169,7 +145,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            await addDebt(newDebtData);
+            const newDebtId = await addDebt(newDebtData);
+            setDebts(prev => [...prev, { ...newDebtData, id: newDebtId, status: 'unpaid', payments: []}].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -183,6 +160,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     async function handleDelete(debtId: string) {
         try {
             await deleteDebt(debtId);
+            setDebts(prev => prev.filter(d => d.id !== debtId));
             toast({ title: t('debtDeleted') });
         } catch(e) {
             console.error("Error deleting debt: ", e);
@@ -197,18 +175,26 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         if (!debt) return;
 
         try {
-            await addDebtPayment(debtId, { amount: paymentAmount, date: new Date() });
+            const newPayment = { amount: paymentAmount, date: new Date() };
+            await addDebtPayment(debtId, newPayment);
             
-            const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
+            const updatedDebts = debts.map(d => {
+                if (d.id === debtId) {
+                    const totalPaid = d.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
+                    const newStatus: DebtItem['status'] = totalPaid >= d.amount ? 'paid' : 'partially-paid';
+                     if (newStatus !== d.status) {
+                        updateDebtStatus(debtId, newStatus);
+                    }
+                    return {
+                        ...d,
+                        payments: [...d.payments, {...newPayment, id: new Date().toISOString()}],
+                        status: newStatus
+                    };
+                }
+                return d;
+            });
+            setDebts(updatedDebts);
             
-            let newStatus: DebtItem['status'] = 'partially-paid';
-            if (totalPaid >= debt.amount) {
-                newStatus = 'paid';
-            }
-            
-            if (newStatus !== debt.status) {
-                await updateDebtStatus(debtId, newStatus);
-            }
             toast({ title: t('paymentRecordedSuccess') });
         } catch (e) {
             console.error("Error processing payment: ", e);

@@ -15,6 +15,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { db } from '@/lib/firebase';
+import { getDataForUser } from './budget/budget-summary';
+
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -84,47 +86,19 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
-    const salesCollectionRef = collection(db, 'sales');
-    const q1 = query(salesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
-
-    const processSnapshot = (snapshot: any) => {
-        const sales = snapshot.docs.map((docSnap: any) => {
-          const data = docSnap.data();
-          return {
-              id: docSnap.id,
-              ...data,
-              date: (data.date as unknown as Timestamp).toDate(),
-          } as SalesItem;
-      });
-      setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
-      setIsDataLoading(false);
-    };
-
-    const unsubscribe = onSnapshot(q1, (querySnapshot) => {
-      if (!querySnapshot.empty) {
-        processSnapshot(querySnapshot);
-      } else {
-        const q2 = query(salesCollectionRef, where("departmentId", "==", departmentId));
-        onSnapshot(q2, (legacySnapshot) => {
-            const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
-            if (legacyDocs.length > 0) {
-                 processSnapshot({ docs: legacyDocs });
-            } else {
-                 setSalesItems([]);
-                 setIsDataLoading(false);
-            }
-        }, (error) => {
-             console.error("Error fetching legacy sales: ", error);
-             setIsDataLoading(false);
-        });
-      }
-    }, (error) => {
+    
+    getDataForUser<SalesItem>('sales', authUser.uid, departmentId)
+      .then(data => {
+        setSalesItems(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+      })
+      .catch(error => {
         console.error("Error fetching sales: ", error);
         toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+      })
+      .finally(() => {
         setIsDataLoading(false);
-    });
+      });
 
-    return () => unsubscribe();
   }, [departmentId, authUser, isAuthLoading, toast, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -158,7 +132,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        await addSale(submissionData);
+        const newSaleId = await addSale(submissionData);
+        setSalesItems(prev => [{...submissionData, id: newSaleId, date: new Date()}, ...prev]);
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
@@ -187,6 +162,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const handleDelete = async (saleId: string) => {
     try {
         await deleteSale(saleId);
+        setSalesItems(prev => prev.filter(item => item.id !== saleId));
         toast({ title: t('itemDeleted') });
     } catch (e) {
         console.error("Error deleting sale: ", e);
