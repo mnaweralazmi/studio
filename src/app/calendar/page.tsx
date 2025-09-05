@@ -147,50 +147,39 @@ export default function CalendarPage() {
     setIsTasksLoading(true);
     const tasksCollectionRef = collection(db, 'tasks');
     
+    const handleSnapshot = (querySnapshot: any) => {
+        const fetchedTasks = querySnapshot.docs.map((docSnap: any) => {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                ...data,
+                dueDate: (data.dueDate as unknown as Timestamp).toDate(),
+            } as Task;
+        });
+        setTasks(fetchedTasks);
+        setIsTasksLoading(false);
+    };
+
+    const handleError = (error: any) => {
+        console.error("Failed to fetch tasks:", error);
+        toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
+        setIsTasksLoading(false);
+    };
+    
     // First query: Try to fetch data with ownerId
     const q1 = query(tasksCollectionRef, where("ownerId", "==", user.uid));
     
     const unsubscribe = onSnapshot(q1, (querySnapshot) => {
         if (!querySnapshot.empty) {
-            const fetchedTasks = querySnapshot.docs.map(docSnap => {
-                const data = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    ...data,
-                    dueDate: (data.dueDate as unknown as Timestamp).toDate(),
-                } as Task;
-            });
-            setTasks(fetchedTasks);
-            setIsTasksLoading(false);
+            handleSnapshot(querySnapshot);
         } else {
             // Second query (fallback): Fetch data without ownerId for legacy data
-            const q2 = query(tasksCollectionRef);
-             onSnapshot(q2, (snapshot) => {
-                const fetchedTasks = snapshot.docs.map(docSnap => {
-                    const data = docSnap.data();
-                     // Filter client-side for legacy data that might not have an ownerId
-                    if (data.ownerId && data.ownerId !== user.uid) {
-                        return null;
-                    }
-                    return {
-                        id: docSnap.id,
-                        ...data,
-                        dueDate: (data.dueDate as unknown as Timestamp).toDate(),
-                    } as Task;
-                }).filter(Boolean) as Task[]; // filter out nulls
-                setTasks(fetchedTasks);
-                setIsTasksLoading(false);
-            }, (error) => {
-                console.error("Failed to fetch legacy tasks:", error);
-                toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
-                setIsTasksLoading(false);
-            });
+            // This is less secure and should only be for transitioning old data.
+            // Ensure Firestore rules are accommodating for this if needed, or phase out.
+            const q2 = query(tasksCollectionRef, where("ownerId", "==", null));
+             onSnapshot(q2, handleSnapshot, handleError);
         }
-    }, (error) => {
-        console.error("Failed to fetch tasks:", error);
-        toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
-        setIsTasksLoading(false);
-    });
+    }, handleError);
 
     return () => unsubscribe();
   }, [user, loading, t, toast]);
@@ -317,3 +306,5 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    

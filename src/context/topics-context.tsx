@@ -21,11 +21,9 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { user } = useAuth();
 
   useEffect(() => {
+    setLoading(true);
     const topicsCollectionRef = collection(db, 'data');
     
-    // Always fetch initial static data first to prevent flicker
-    setTopics(initialAgriculturalSections);
-
     const unsubscribe = onSnapshot(topicsCollectionRef, (querySnapshot) => {
         if (!querySnapshot.empty) {
             const fetchedTopics: AgriculturalSection[] = querySnapshot.docs.map(doc => ({
@@ -33,23 +31,12 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 ...doc.data()
             })) as AgriculturalSection[];
             
-            // Filter topics that are either global (no ownerId) or belong to the user
+            // This ensures all global topics are included, plus any user-specific ones.
             const userTopics = fetchedTopics.filter(topic => !topic.ownerId || (user && topic.ownerId === user.uid));
-            
-            // Combine initial static topics with user-specific topics, avoiding duplicates
-            const combinedTopics = [...initialAgriculturalSections];
-            userTopics.forEach(userTopic => {
-                const index = combinedTopics.findIndex(t => t.id === userTopic.id);
-                if (index === -1) {
-                    combinedTopics.push(userTopic);
-                } else {
-                    // Potentially replace if user-specific is more up-to-date, though current logic doesn't support topic editing.
-                    // For now, we just avoid duplicates.
-                }
-            });
+            setTopics(userTopics);
 
-            setTopics(combinedTopics);
         } else {
+             // If the 'data' collection is empty, fall back to initial static data.
              setTopics(initialAgriculturalSections);
         }
         setLoading(false);
@@ -78,3 +65,5 @@ export const useTopics = () => {
   }
   return context;
 };
+
+    
