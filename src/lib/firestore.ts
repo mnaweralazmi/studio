@@ -2,6 +2,7 @@
  * @fileoverview
  * This file centralizes Firestore collection paths to ensure consistency and
  * compliance with the security rules, which dictate that all user data
+
  * must be stored in subcollections under /users/{userId}.
  */
 import { auth, db } from '@/lib/firebase';
