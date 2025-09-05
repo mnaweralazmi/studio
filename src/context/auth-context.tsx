@@ -69,12 +69,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (firebaseUser) {
+        setLoading(true); // Set loading while we fetch Firestore data
         const userDocRef = doc(db, 'users', firebaseUser.uid);
+        
         unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
           const userData = doc.data();
           const combinedUser: AppUser = {
             ...firebaseUser,
-            ...userData,
+            ...(userData || {}), // Use empty object if userData is null
             uid: firebaseUser.uid,
             displayName: userData?.name || firebaseUser.displayName,
             name: userData?.name || firebaseUser.displayName,
@@ -84,7 +86,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setLoading(false);
         }, (error) => {
           console.error("Error with onSnapshot, falling back to auth user:", error);
-          setUser(firebaseUser as AppUser);
+          // IMPORTANT: Still set the user, even if Firestore fails
+          setUser(firebaseUser as AppUser); 
           setLoading(false);
         });
       } else {
