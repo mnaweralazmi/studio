@@ -14,10 +14,23 @@ import type { DebtItem } from '../debts-content';
 import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
 
-async function getDataForUser<T extends { id: string }>(collectionName: string, userId: string, departmentId: string): Promise<T[]> {
+async function getDataForUser<T extends { id: string, ownerId?: string }>(collectionName: string, userId: string, departmentId: string): Promise<T[]> {
     const colRef = collection(db, collectionName);
-    const q = query(colRef, where("ownerId", "==", userId), where("departmentId", "==", departmentId));
-    const snapshot = await getDocs(q);
+    
+    // First query: Try to fetch data with ownerId and departmentId
+    const q1 = query(colRef, where("ownerId", "==", userId), where("departmentId", "==", departmentId));
+    let snapshot = await getDocs(q1);
+
+    // Second query (fallback): If first is empty, try fetching just by departmentId (for legacy data)
+    if (snapshot.empty) {
+        const q2 = query(colRef, where("departmentId", "==", departmentId));
+        const legacySnapshot = await getDocs(q2);
+        const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
+        if (legacyDocs.length > 0) {
+             snapshot = legacySnapshot;
+        }
+    }
+
     return snapshot.docs.map(doc => {
         const data = doc.data();
         // Convert Timestamps to Dates for relevant fields

@@ -31,6 +31,7 @@ export interface AgriculturalSection {
     hint?: string;
     subTopics: SubTopic[];
     videos: VideoSection[];
+    ownerId?: string;
 }
   
 export const initialAgriculturalSections: AgriculturalSection[] = [

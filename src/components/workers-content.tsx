@@ -88,10 +88,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const workersColRef = collection(db, 'workers');
-        const q = query(workersColRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+        const q1 = query(workersColRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const fetchedWorkers = querySnapshot.docs.map(docSnap => {
+        const processSnapshot = (snapshot: any) => {
+            const fetchedWorkers = snapshot.docs.map((docSnap: any) => {
                 const data = docSnap.data();
                 return {
                     id: docSnap.id,
@@ -104,6 +104,26 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             });
             setWorkers(fetchedWorkers);
             setIsDataLoading(false);
+        };
+        
+        const unsubscribe = onSnapshot(q1, (querySnapshot) => {
+            if (!querySnapshot.empty) {
+                processSnapshot(querySnapshot);
+            } else {
+                 const q2 = query(workersColRef, where("departmentId", "==", departmentId));
+                 onSnapshot(q2, (legacySnapshot) => {
+                    const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
+                    if (legacyDocs.length > 0) {
+                        processSnapshot({ docs: legacyDocs });
+                    } else {
+                        setWorkers([]);
+                        setIsDataLoading(false);
+                    }
+                 }, (error) => {
+                    console.error("Error fetching legacy workers: ", error);
+                    setIsDataLoading(false);
+                 });
+            }
         }, (error) => {
             console.error("Error fetching workers: ", error);
             toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });

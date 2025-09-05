@@ -36,7 +36,7 @@ export type DebtItem = {
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
   departmentId: string;
-  ownerId: string;
+  ownerId?: string;
 };
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
@@ -97,10 +97,10 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         setIsDataLoading(true);
         const debtsCollectionRef = collection(db, 'debts');
-        const q = query(debtsCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
-
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const fetchedDebts = querySnapshot.docs.map(docSnap => {
+        const q1 = query(debtsCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+        
+        const processSnapshot = (snapshot: any) => {
+             const fetchedDebts = snapshot.docs.map((docSnap: any) => {
                 const data = docSnap.data();
                 return {
                     id: docSnap.id,
@@ -111,6 +111,26 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             });
             setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             setIsDataLoading(false);
+        };
+
+        const unsubscribe = onSnapshot(q1, (querySnapshot) => {
+             if (!querySnapshot.empty) {
+                processSnapshot(querySnapshot);
+            } else {
+                const q2 = query(debtsCollectionRef, where("departmentId", "==", departmentId));
+                onSnapshot(q2, (legacySnapshot) => {
+                    const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
+                    if (legacyDocs.length > 0) {
+                        processSnapshot({ docs: legacyDocs });
+                    } else {
+                        setDebts([]);
+                        setIsDataLoading(false);
+                    }
+                }, (error) => {
+                    console.error("Error fetching legacy debts: ", error);
+                    setIsDataLoading(false);
+                });
+            }
         }, (error) => {
             console.error("Error fetching debts: ", error);
             toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });

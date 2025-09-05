@@ -44,7 +44,7 @@ export type ExpenseItem = {
   item: string;
   amount: number;
   departmentId: string;
-  ownerId: string;
+  ownerId?: string;
 };
 
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
@@ -91,10 +91,10 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         setExpenseCategories(getInitialCategories(language, departmentId));
         
         const expensesCollectionRef = collection(db, 'expenses');
-        const q = query(expensesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+        const q1 = query(expensesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const fetchedExpenses = querySnapshot.docs.map(docSnap => {
+        const processSnapshot = (snapshot: any) => {
+            const fetchedExpenses = snapshot.docs.map((docSnap: any) => {
                 const data = docSnap.data();
                 return {
                     id: docSnap.id,
@@ -104,6 +104,26 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             });
             setExpenses(fetchedExpenses.sort((a,b) => b.date.getTime() - a.date.getTime()));
             setIsDataLoading(false);
+        };
+        
+        const unsubscribe = onSnapshot(q1, (querySnapshot) => {
+            if (!querySnapshot.empty) {
+                processSnapshot(querySnapshot);
+            } else {
+                const q2 = query(expensesCollectionRef, where("departmentId", "==", departmentId));
+                onSnapshot(q2, (legacySnapshot) => {
+                     const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
+                     if (legacyDocs.length > 0) {
+                        processSnapshot({ docs: legacyDocs });
+                     } else {
+                        setExpenses([]);
+                        setIsDataLoading(false);
+                     }
+                }, (error) => {
+                    console.error("Error fetching legacy expenses: ", error);
+                    setIsDataLoading(false);
+                });
+            }
         }, (error) => {
             console.error("Error fetching expenses: ", error);
             toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });

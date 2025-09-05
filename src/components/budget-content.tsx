@@ -38,7 +38,7 @@ export type SalesItem = {
   total: number;
   date: Date;
   departmentId: string;
-  ownerId: string;
+  ownerId?: string;
 };
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
@@ -85,10 +85,10 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     setIsDataLoading(true);
     const salesCollectionRef = collection(db, 'sales');
-    const q = query(salesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+    const q1 = query(salesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const sales = querySnapshot.docs.map(docSnap => {
+    const processSnapshot = (snapshot: any) => {
+        const sales = snapshot.docs.map((docSnap: any) => {
           const data = docSnap.data();
           return {
               id: docSnap.id,
@@ -98,6 +98,26 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
       });
       setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
       setIsDataLoading(false);
+    };
+
+    const unsubscribe = onSnapshot(q1, (querySnapshot) => {
+      if (!querySnapshot.empty) {
+        processSnapshot(querySnapshot);
+      } else {
+        const q2 = query(salesCollectionRef, where("departmentId", "==", departmentId));
+        onSnapshot(q2, (legacySnapshot) => {
+            const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
+            if (legacyDocs.length > 0) {
+                 processSnapshot({ docs: legacyDocs });
+            } else {
+                 setSalesItems([]);
+                 setIsDataLoading(false);
+            }
+        }, (error) => {
+             console.error("Error fetching legacy sales: ", error);
+             setIsDataLoading(false);
+        });
+      }
     }, (error) => {
         console.error("Error fetching sales: ", error);
         toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
