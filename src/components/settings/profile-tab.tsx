@@ -17,16 +17,12 @@ import { User, Save, Upload, Image as ImageIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { useLanguage } from "@/context/language-context";
 import { useAuth } from "@/context/auth-context";
-
-import {
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, updateProfile } from "firebase/auth";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 export function ProfileTab() {
   const { toast } = useToast();
@@ -35,9 +31,9 @@ export function ProfileTab() {
 
   const [isSaving, setIsSaving] = React.useState(false);
 
-  // form state
   const [name, setName] = React.useState("");
   const [avatarUrl, setAvatarUrl] = React.useState("");
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
@@ -49,52 +45,80 @@ export function ProfileTab() {
     }
   }, [user]);
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setAvatarUrl(URL.createObjectURL(file));
+    }
+  };
 
   async function onProfileSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!user || !auth.currentUser) return;
 
-    // The security rules disallow updating the user document,
-    // so we can only handle password changes.
-    
-    if (newPassword || confirmPassword || currentPassword) {
-      if (newPassword !== confirmPassword) {
-        toast({ variant: "destructive", title: t("error" as any), description: "كلمتا المرور غير متطابقتين." });
-        return;
-      }
-      if (newPassword.length < 6) {
-        toast({ variant: "destructive", title: t("error" as any), description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
-        return;
-      }
-      if (!currentPassword) {
-        toast({ variant: "destructive", title: t("error" as any), description: "كلمة المرور الحالية مطلوبة لتغييرها." });
-        return;
-      }
-    
-      setIsSaving(true);
-      try {
-        if (newPassword && currentPassword && auth.currentUser.email) {
-            const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
-            await reauthenticateWithCredential(auth.currentUser, credential);
-            await updatePassword(auth.currentUser, newPassword);
-            toast({ title: t("passwordChangedSuccess" as any) });
-            setCurrentPassword("");
-            setNewPassword("");
-            setConfirmPassword("");
+    setIsSaving(true);
+    try {
+      // Password change logic
+      if (newPassword) {
+        if (newPassword !== confirmPassword) {
+          toast({ variant: "destructive", title: t("error"), description: t('confirmNewPassword') });
+          setIsSaving(false);
+          return;
         }
-      } catch (error: any) {
-        let description = t("profileUpdateFailed" as any);
-        if (error?.code === "auth/wrong-password") {
-            description = t("wrongCurrentPassword" as any);
-        } else if (error?.code === 'auth/requires-recent-login') {
-            description = 'This operation is sensitive and requires recent authentication. Please log in again before retrying this request.';
+        if (newPassword.length < 6) {
+          toast({ variant: "destructive", title: t("error"), description: t('newPassword') + " must be at least 6 characters." });
+          setIsSaving(false);
+          return;
         }
-        toast({ variant: "destructive", title: t("error" as any), description });
-      } finally {
-        setIsSaving(false);
+        if (!currentPassword) {
+          toast({ variant: "destructive", title: t("error"), description: t('currentPassword') + " is required to change it." });
+          setIsSaving(false);
+          return;
+        }
+        if (auth.currentUser.email) {
+          const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+          await reauthenticateWithCredential(auth.currentUser, credential);
+          await updatePassword(auth.currentUser, newPassword);
+          toast({ title: t("passwordChangedSuccess") });
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        }
       }
-    } else {
-        toast({ title: "Info", description: "Profile updates are disabled by security rules." });
+      
+      let newAvatarUrl = user.photoURL || "";
+      if (avatarFile) {
+        const storage = getStorage();
+        const storageRef = ref(storage, `avatars/${user.uid}`);
+        await uploadBytes(storageRef, avatarFile);
+        newAvatarUrl = await getDownloadURL(storageRef);
+      }
+
+      await updateProfile(auth.currentUser, {
+        displayName: name,
+        photoURL: newAvatarUrl,
+      });
+
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, {
+        name: name,
+        photoURL: newAvatarUrl,
+      });
+
+      toast({ title: t("profileUpdated"), description: t("profileUpdatedSuccess") });
+
+    } catch (error: any) {
+      let description = t("profileUpdateFailed");
+      if (error?.code === "auth/wrong-password") {
+        description = t("wrongCurrentPassword");
+      } else if (error?.code === 'auth/requires-recent-login') {
+        description = 'This operation is sensitive and requires recent authentication. Please log in again before retrying this request.';
+      }
+      console.error(error);
+      toast({ variant: "destructive", title: t("error"), description });
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -137,28 +161,29 @@ export function ProfileTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
             <User className="h-5 w-5 sm:h-6 sm:w-6" />
-            {t("userProfile" as any)}
+            {t("userProfile")}
           </CardTitle>
-          <CardDescription>{t("userProfileDesc" as any)}</CardDescription>
+          <CardDescription>{t("userProfileDesc")}</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-8">
           <div className="space-y-2">
-            <Label>{t("profilePicture" as any)}</Label>
+            <Label>{t("profilePicture")}</Label>
             <div className="flex items-center gap-6 flex-wrap">
               <Avatar className="h-24 w-24 border">
                 <AvatarImage
                   src={avatarUrl || undefined}
-                  alt={t("profilePicture" as any)}
+                  alt={t("profilePicture")}
                 />
                 <AvatarFallback>
                   <ImageIcon className="h-10 w-10 text-muted-foreground" />
                 </AvatarFallback>
               </Avatar>
-              <Button asChild variant="outline" disabled>
-                <label className="cursor-not-allowed flex items-center">
+              <Button asChild variant="outline">
+                <label className="cursor-pointer flex items-center">
                   <Upload className="mr-2 h-4 w-4" />
-                  <span>{t("changePicture" as any)}</span>
+                  <span>{t("changePicture")}</span>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
                 </label>
               </Button>
             </div>
@@ -166,18 +191,17 @@ export function ProfileTab() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="name">{t("fullName" as any)}</Label>
+              <Label htmlFor="name">{t("fullName")}</Label>
               <Input
                 id="name"
-                placeholder={t("enterFullName" as any)}
+                placeholder={t("enterFullName")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                readOnly
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">
-                {t("email" as any)} ({t("cannotChange" as any)})
+                {t("email")} ({t("cannotChange")})
               </Label>
               <Input id="email" readOnly disabled value={user?.email || ""} />
             </div>
@@ -185,12 +209,12 @@ export function ProfileTab() {
 
           <div>
             <h3 className="text-lg font-medium mb-4">
-              {t("changePassword" as any)}
+              {t("changePassword")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">
-                  {t("currentPassword" as any)}
+                  {t("currentPassword")}
                 </Label>
                 <Input
                   id="currentPassword"
@@ -201,19 +225,19 @@ export function ProfileTab() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="newPassword">
-                  {t("newPassword" as any)}
+                  {t("newPassword")}
                 </Label>
                 <Input
                   id="newPassword"
                   type="password"
-                  placeholder={t("leaveBlank" as any)}
+                  placeholder={t("leaveBlank")}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">
-                  {t("confirmNewPassword" as any)}
+                  {t("confirmNewPassword")}
                 </Label>
                 <Input
                   id="confirmPassword"
@@ -231,7 +255,7 @@ export function ProfileTab() {
             <Save
               className={language === "ar" ? "ml-2 h-4 w-4" : "mr-2 h-4 w-4"}
             />
-            {isSaving ? t("saving" as any) : t("saveChanges" as any)}
+            {isSaving ? t("saving") : t("saveChanges")}
           </Button>
         </CardFooter>
       </form>

@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format, isToday, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { getDocs, Timestamp, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { getDocs, Timestamp, addDoc, doc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,6 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
-import { userSubcollection } from '@/lib/firestore';
 
 // --- Data Types ---
 export interface Task {
@@ -26,26 +25,14 @@ export interface Task {
   isCompleted: boolean;
   isRecurring: boolean;
   reminderDays?: number;
+  ownerId: string;
 }
 
 export type TaskData = Omit<Task, 'id'>;
 
 // --- Firestore API Functions ---
-async function getTasks(): Promise<Task[]> {
-    const tasksCollectionRef = userSubcollection<Omit<Task, 'id'>>('tasks');
-    const querySnapshot = await getDocs(tasksCollectionRef);
-    return querySnapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-            id: docSnap.id,
-            ...data,
-            dueDate: (data.dueDate as unknown as Timestamp).toDate(),
-        } as Task;
-    });
-}
-
 async function addTask(data: TaskData): Promise<string> {
-    const tasksCollectionRef = userSubcollection('tasks');
+    const tasksCollectionRef = collection(db, 'tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
         dueDate: Timestamp.fromDate(data.dueDate),
@@ -53,8 +40,16 @@ async function addTask(data: TaskData): Promise<string> {
     return docRef.id;
 }
 
+async function updateTask(taskId: string, data: Partial<TaskData>): Promise<void> {
+    const taskDocRef = doc(db, 'tasks', taskId);
+    await updateDoc(taskDocRef, {
+        ...data,
+        ...(data.dueDate && { dueDate: Timestamp.fromDate(data.dueDate) })
+    });
+}
+
 async function deleteTask(taskId: string): Promise<void> {
-    const taskDocRef = doc(userSubcollection('tasks'), taskId);
+    const taskDocRef = doc(db, 'tasks', taskId);
     await deleteDoc(taskDocRef);
 }
 
@@ -140,31 +135,38 @@ export default function CalendarPage() {
   const { language, t } = useLanguage();
   const [isTasksLoading, setIsTasksLoading] = React.useState(true);
 
-  const fetchTasks = React.useCallback(async () => {
-    if (!user) {
-        setIsTasksLoading(false);
-        return;
-    };
-    setIsTasksLoading(true);
-    try {
-        const fetchedTasks = await getTasks();
-        setTasks(fetchedTasks);
-    } catch (e) {
-        console.error("Failed to fetch tasks:", e);
-        toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
-    } finally {
-        setIsTasksLoading(false);
-    }
-  }, [user, t, toast]);
-
   React.useEffect(() => {
-    if (!loading && user) {
-      fetchTasks();
+    if (!user) {
+      if (!loading) {
+        setIsTasksLoading(false);
+        setTasks([]);
+      }
+      return;
     }
-     if (!loading && !user) {
-      setIsTasksLoading(false);
-    }
-  }, [user, loading, fetchTasks]);
+
+    setIsTasksLoading(true);
+    const tasksCollectionRef = collection(db, 'tasks');
+    const q = query(tasksCollectionRef, where("ownerId", "==", user.uid));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchedTasks = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                ...data,
+                dueDate: (data.dueDate as unknown as Timestamp).toDate(),
+            } as Task;
+        });
+        setTasks(fetchedTasks);
+        setIsTasksLoading(false);
+    }, (error) => {
+        console.error("Failed to fetch tasks:", error);
+        toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
+        setIsTasksLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, loading, t, toast]);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
@@ -172,24 +174,23 @@ export default function CalendarPage() {
     if (!taskToComplete) return;
 
     try {
-        // Since updates are disallowed, we delete the old task.
-        await deleteTask(taskId);
-
         if (taskToComplete.isRecurring) {
+            await updateTask(taskId, { isCompleted: true });
             const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
-            
             const newTaskData: TaskData = {
                 title: taskToComplete.title,
                 description: taskToComplete.description,
                 dueDate: nextDueDate,
                 isCompleted: false,
                 isRecurring: true,
-                reminderDays: taskToComplete.reminderDays
+                reminderDays: taskToComplete.reminderDays,
+                ownerId: user.uid,
             };
             await addTask(newTaskData);
+        } else {
+            await deleteTask(taskId);
         }
         
-        await fetchTasks(); // Refetch to get all updates
         toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });
     } catch (e) {
         console.error("Failed to complete task:", e);

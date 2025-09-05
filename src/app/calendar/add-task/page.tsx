@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, Timestamp, runTransaction, doc } from 'firebase/firestore';
+import { addDoc, Timestamp, runTransaction, doc, collection } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,6 @@ import { useAuth } from '@/context/auth-context';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { db } from '@/lib/firebase';
-import { userSubcollection } from '@/lib/firestore';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -32,7 +31,6 @@ const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Be
 const fruitListAr = [ "فراولة", "توت", "تين", "عنب", "بطيخ", "شمام", "رمان", "مانجو", "موز", "تفاح", "برتقال", "ليمون" ] as const;
 const fruitListEn = [ "Strawberry", "Berry", "Fig", "Grape", "Watermelon", "Melon", "Pomegranate", "Mango", "Banana", "Apple", "Orange", "Lemon" ] as const;
 
-// --- Data Types ---
 export interface Task {
   id: string;
   title: string;
@@ -41,13 +39,13 @@ export interface Task {
   isCompleted: boolean;
   isRecurring: boolean;
   reminderDays?: number;
+  ownerId: string;
 }
 
 export type TaskData = Omit<Task, 'id'>;
 
-// --- Firestore API Functions ---
 async function addTask(data: TaskData): Promise<string> {
-    const tasksCollectionRef = userSubcollection('tasks');
+    const tasksCollectionRef = collection(db, 'tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
         dueDate: Timestamp.fromDate(data.dueDate),
@@ -66,7 +64,6 @@ export default function AddTaskPage() {
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
   const fruitList = language === 'ar' ? fruitListAr : fruitListEn;
 
-  // Simplified state management without React Hook Form
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
@@ -122,13 +119,11 @@ export default function AddTaskPage() {
             isCompleted: false,
             isRecurring: isRecurring,
             reminderDays: reminderDays,
+            ownerId: user.uid,
         };
 
         await addTask(taskData);
 
-        // Since update is disallowed by rules, this transaction will fail.
-        // It's commented out to prevent runtime errors.
-        /*
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -150,14 +145,12 @@ export default function AddTaskPage() {
             }
 
             const newLevel = Math.floor(newPoints / 100) + 1;
-            // The update operation is disallowed by security rules.
-            // transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+            transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
 
             if (badgeAwarded) {
                 toast({ title: t('badgeEarned'), description: t('badgePlannerDesc') });
             }
         });
-        */
         
         toast({
             title: t('taskAddedSuccess'),

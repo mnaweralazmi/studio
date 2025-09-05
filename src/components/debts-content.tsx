@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, getDocs, doc, Timestamp, deleteDoc } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, deleteDoc, updateDoc, arrayUnion, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,9 +20,8 @@ import { useAuth } from '@/context/auth-context';
 import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
-import { userSubcollection } from '@/lib/firestore';
+import { db } from '@/lib/firebase';
 
-// --- Data Types ---
 export type Payment = {
   id: string;
   amount: number;
@@ -37,29 +36,13 @@ export type DebtItem = {
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
   departmentId: string;
+  ownerId: string;
 };
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-// --- Firestore API Functions ---
-async function getDebts(departmentId: string): Promise<DebtItem[]> {
-    const debtsCollectionRef = userSubcollection<Omit<DebtItem, 'id'>>('debts');
-    const querySnapshot = await getDocs(debtsCollectionRef);
-    
-    const allDebts = querySnapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-            id: docSnap.id,
-            ...data,
-            dueDate: data.dueDate ? (data.dueDate as unknown as Timestamp).toDate() : undefined,
-            payments: (data.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()})),
-        } as DebtItem;
-    });
-    return allDebts.filter(debt => debt.departmentId === departmentId);
-}
-
 async function addDebt(data: DebtItemData): Promise<string> {
-    const debtsCollectionRef = userSubcollection('debts');
+    const debtsCollectionRef = collection(db, 'debts');
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
@@ -70,18 +53,25 @@ async function addDebt(data: DebtItemData): Promise<string> {
 }
 
 async function deleteDebt(debtId: string): Promise<void> {
-    const debtDocRef = doc(userSubcollection('debts'), debtId);
+    const debtDocRef = doc(db, 'debts', debtId);
     await deleteDoc(debtDocRef);
 }
 
 
-async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'|'date'> & { date: Date }) {
-    // This function is complex because `update` is disallowed.
-    // We would need to read the whole debt, delete it, and recreate it with the new payment.
-    // This is risky and disabled for now.
-    console.warn("Updating debts is disallowed by security rules.");
+async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'>) {
+    const debtRef = doc(db, 'debts', debtId);
+    await updateDoc(debtRef, {
+        payments: arrayUnion({
+            ...paymentData,
+            id: new Date().getTime().toString() // Simple unique ID
+        })
+    });
 }
 
+async function updateDebtStatus(debtId: string, status: DebtItem['status']) {
+    const debtRef = doc(db, 'debts', debtId);
+    await updateDoc(debtRef, { status });
+}
 
 interface DebtsContentProps {
     departmentId: string;
@@ -96,32 +86,39 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const formRef = React.useRef<HTMLFormElement>(null);
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
-    const fetchDebtsData = React.useCallback(async () => {
+    React.useEffect(() => {
         if (!authUser) {
-            setIsDataLoading(false);
+            if (!isAuthLoading) {
+                setIsDataLoading(false);
+                setDebts([]);
+            }
             return;
         }
-        
-        setIsDataLoading(true);
-        try {
-          const fetchedDebts = await getDebts(departmentId);
-          setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
-        } catch (e) {
-            console.error("Error fetching debts: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
-        } finally {
-            setIsDataLoading(false);
-        }
-    }, [authUser, departmentId, t, toast]);
 
-    React.useEffect(() => {
-        if (authUser) {
-            fetchDebtsData();
-        } else if (!isAuthLoading) {
+        setIsDataLoading(true);
+        const debtsCollectionRef = collection(db, 'debts');
+        const q = query(debtsCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedDebts = querySnapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    ...data,
+                    dueDate: data.dueDate ? (data.dueDate as unknown as Timestamp).toDate() : undefined,
+                    payments: (data.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()})),
+                } as DebtItem;
+            });
+            setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             setIsDataLoading(false);
-            setDebts([]);
-        }
-    }, [authUser, departmentId, isAuthLoading, fetchDebtsData]);
+        }, (error) => {
+            console.error("Error fetching debts: ", error);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
+            setIsDataLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [authUser, departmentId, isAuthLoading, t, toast]);
 
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -148,11 +145,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             amount: data.amount,
             dueDate: data.dueDate,
             departmentId: departmentId,
+            ownerId: authUser.uid,
         };
 
         try {
             await addDebt(newDebtData);
-            await fetchDebtsData();
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -166,7 +163,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     async function handleDelete(debtId: string) {
         try {
             await deleteDebt(debtId);
-            await fetchDebtsData();
             toast({ title: t('debtDeleted') });
         } catch(e) {
             console.error("Error deleting debt: ", e);
@@ -176,8 +172,28 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
     async function handlePayment(debtId: string, paymentAmount: number) {
         if (!authUser) return;
-        toast({ variant: "destructive", title: t('error'), description: "Updating debts is not allowed by security rules." });
-        // The logic is disabled because it requires updating the document, which is disallowed.
+        
+        const debt = debts.find(d => d.id === debtId);
+        if (!debt) return;
+
+        try {
+            await addDebtPayment(debtId, { amount: paymentAmount, date: new Date() });
+            
+            const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
+            
+            let newStatus: DebtItem['status'] = 'partially-paid';
+            if (totalPaid >= debt.amount) {
+                newStatus = 'paid';
+            }
+            
+            if (newStatus !== debt.status) {
+                await updateDebtStatus(debtId, newStatus);
+            }
+            toast({ title: t('paymentRecordedSuccess') });
+        } catch (e) {
+            console.error("Error processing payment: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to record payment." });
+        }
     }
 
     const getPaidAmount = (debt: DebtItem) => {

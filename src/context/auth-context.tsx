@@ -3,9 +3,10 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot, Unsubscribe, setDoc, getDocs, writeBatch, collection } from 'firebase/firestore';
+import { doc, onSnapshot, Unsubscribe, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { initialAgriculturalSections } from '@/lib/topics-data';
+import { collection, writeBatch } from 'firebase/firestore';
 
 
 export interface Badge {
@@ -33,18 +34,20 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
+// This function runs once to provision the initial topics in the root /data collection
+// if it doesn't already exist.
+async function provisionInitialTopics() {
+    const dataCollectionRef = collection(db, "data");
+    const docSnap = await getDoc(doc(dataCollectionRef, initialAgriculturalSections[0].id));
 
-async function provisionInitialUserData(uid: string) {
-    const dataCollectionRef = collection(db, "users", uid, "data");
-    const existingData = await getDocs(dataCollectionRef);
-
-    if (existingData.empty) {
+    if (!docSnap.exists()) {
         const batch = writeBatch(db);
         initialAgriculturalSections.forEach(topic => {
             const docRef = doc(dataCollectionRef, topic.id);
             batch.set(docRef, topic);
         });
         await batch.commit();
+        console.log("Initial agricultural topics have been provisioned.");
     }
 }
 
@@ -55,6 +58,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let unsubscribeSnapshot: Unsubscribe | null = null;
+    
+    // Provision topics on app start
+    provisionInitialTopics();
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (unsubscribeSnapshot) {
@@ -63,9 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (firebaseUser) {
-        // Provision initial topics if they don't exist for the user
-        await provisionInitialUserData(firebaseUser.uid);
-        
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
           const userData = doc.data();

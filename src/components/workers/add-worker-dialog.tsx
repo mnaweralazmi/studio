@@ -11,36 +11,44 @@ import { Label } from '../ui/label';
 
 interface AddWorkerDialogProps {
     onSave: (data: WorkerFormValues, workerId?: string) => void;
-    // Worker editing is disabled due to security rules
-    // worker?: Worker;
+    worker?: Worker;
     children: React.ReactNode;
 }
 
-export function AddWorkerDialog({ onSave, children }: AddWorkerDialogProps) {
+export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogProps) {
     const { t } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
     const formRef = React.useRef<HTMLFormElement>(null);
+    const [name, setName] = React.useState(worker?.name || '');
+    const [baseSalary, setBaseSalary] = React.useState(worker?.baseSalary || 0);
+
+    React.useEffect(() => {
+        if (worker) {
+            setName(worker.name);
+            setBaseSalary(worker.baseSalary);
+        } else {
+            setName('');
+            setBaseSalary(0);
+        }
+    }, [worker]);
 
     React.useEffect(() => {
         if (!isOpen) {
             formRef.current?.reset();
+            setName(worker?.name || '');
+            setBaseSalary(worker?.baseSalary || 0);
         }
-    }, [isOpen]);
+    }, [isOpen, worker]);
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const data = {
-            name: formData.get('name') as string,
-            baseSalary: Number(formData.get('baseSalary')),
-        };
-
-        if (data.name.length < 3 || data.baseSalary < 0) {
+        
+        if (name.length < 3 || baseSalary < 0) {
             // Basic validation
             return;
         }
 
-        onSave(data);
+        onSave({ name, baseSalary }, worker?.id);
         setIsOpen(false);
     };
 
@@ -51,21 +59,21 @@ export function AddWorkerDialog({ onSave, children }: AddWorkerDialogProps) {
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{t('addNewWorker')}</DialogTitle>
-                    <DialogDescription>{t('addNewWorkerDesc')}</DialogDescription>
+                    <DialogTitle>{worker ? t('editWorker') : t('addNewWorker')}</DialogTitle>
+                    <DialogDescription>{worker ? t('editWorkerDesc') : t('addNewWorkerDesc')}</DialogDescription>
                 </DialogHeader>
                 <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">{t('workerName')}</Label>
-                        <Input id="name" name="name" placeholder={t('workerNamePlaceholder')} required />
+                        <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('workerNamePlaceholder')} required />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="baseSalary">{t('baseSalaryInDinar')} ({t('monthly')})</Label>
-                        <Input id="baseSalary" name="baseSalary" type="number" step="1" required />
+                        <Input id="baseSalary" name="baseSalary" type="number" value={baseSalary} onChange={(e) => setBaseSalary(Number(e.target.value))} step="1" required />
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
-                        <Button type="submit">{t('addWorker')}</Button>
+                        <Button type="submit">{worker ? t('saveChanges') : t('addWorker')}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

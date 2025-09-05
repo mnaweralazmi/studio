@@ -2,11 +2,11 @@
 "use client";
 
 import * as React from 'react';
-import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, where, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { Users, BadgeCheck, Banknote, FileText, PlusCircle } from 'lucide-react';
+import { Users, BadgeCheck, Banknote, FileText, PlusCircle, Edit } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
@@ -16,75 +16,49 @@ import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } fro
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { db, auth } from '@/lib/firebase';
-import { userSubcollection } from '@/lib/firestore';
+import { db } from '@/lib/firebase';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
-// --- Firestore API Functions ---
-async function getWorkers(departmentId: string): Promise<Worker[]> {
-    const workersColRef = userSubcollection<Omit<Worker, 'id'>>('workers');
-    const workersSnapshot = await getDocs(workersColRef);
-
-    const workerPromises = workersSnapshot.docs.map(async (docSnap) => {
-        const data = docSnap.data();
-        if (data.departmentId !== departmentId) return null;
-
-        const transactionsColRef = collection(db, 'users', auth.currentUser!.uid, 'workers', docSnap.id, 'transactions');
-        const transactionsSnapshot = await getDocs(transactionsColRef);
-        const transactions: Transaction[] = transactionsSnapshot.docs.map(tDoc => ({ 
-            id: tDoc.id, 
-            ...tDoc.data(),
-            date: (tDoc.data().date as Timestamp).toDate().toISOString(),
-        })) as Transaction[];
-
-        return {
-            id: docSnap.id,
-            name: data.name,
-            baseSalary: data.baseSalary,
-            departmentId: data.departmentId,
-            paidMonths: data.paidMonths || [],
-            transactions: transactions,
-        };
-    });
-
-    const results = await Promise.all(workerPromises);
-    return results.filter(w => w !== null) as Worker[];
-}
-
-async function addWorker(data: WorkerFormValues & { departmentId: string }): Promise<string> {
-    const workersColRef = userSubcollection('workers');
+async function addWorker(data: WorkerFormValues & { departmentId: string; ownerId: string }): Promise<string> {
+    const workersColRef = collection(db, 'workers');
     const docRef = await addDoc(workersColRef, {
         ...data,
         paidMonths: [],
+        transactions: [],
     });
     return docRef.id;
 }
 
+async function updateWorker(workerId: string, data: Partial<WorkerFormValues>) {
+    const workerDocRef = doc(db, 'workers', workerId);
+    await updateDoc(workerDocRef, data);
+}
 
 async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
-    // This function is complex because `update` is disallowed.
-    // It would require deleting and recreating the worker doc, which is risky.
-    // For now, we will only add a transaction.
-    const transactionRef = collection(userSubcollection('workers'), workerId, 'transactions');
-    await addDoc(transactionRef, {
-        ...transactionData,
-        date: Timestamp.fromDate(new Date()),
+    const workerRef = doc(db, 'workers', workerId);
+    await updateDoc(workerRef, {
+        paidMonths: arrayUnion(paidMonth),
+        transactions: arrayUnion({ ...transactionData, date: Timestamp.now(), id: new Date().getTime().toString() })
     });
 }
 
 async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
-    const transactionRef = collection(userSubcollection('workers'), workerId, 'transactions');
-    const newTransactionRef = await addDoc(transactionRef, {
+    const workerRef = doc(db, 'workers', workerId);
+    const newTransaction = {
         ...transactionData,
-        date: Timestamp.fromDate(new Date()),
+        date: Timestamp.now(),
+        id: new Date().getTime().toString()
+    };
+    await updateDoc(workerRef, {
+        transactions: arrayUnion(newTransaction)
     });
-    return newTransactionRef.id;
+    return newTransaction.id;
 }
 
 async function deleteWorker(workerId: string) {
-    const workerDocRef = doc(userSubcollection('workers'), workerId);
+    const workerDocRef = doc(db, 'workers', workerId);
     await deleteDoc(workerDocRef);
 }
 
@@ -101,33 +75,41 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
 
-    const fetchWorkersData = React.useCallback(async () => {
+    React.useEffect(() => {
         if (!authUser) {
-            setIsDataLoading(false);
+            if (!isAuthLoading) {
+                setWorkers([]);
+                setIsDataLoading(false);
+            }
             return;
         }
         
         setIsDataLoading(true);
-        try {
-            const fetchedWorkers = await getWorkers(departmentId);
+        const workersColRef = collection(db, 'workers');
+        const q = query(workersColRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedWorkers = querySnapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    ...data,
+                    transactions: (data.transactions || []).map((t: any) => ({
+                        ...t,
+                        date: (t.date as Timestamp).toDate().toISOString()
+                    }))
+                } as Worker;
+            });
             setWorkers(fetchedWorkers);
-        } catch (e) {
-            console.error("Error fetching workers: ", e);
+            setIsDataLoading(false);
+        }, (error) => {
+            console.error("Error fetching workers: ", error);
             toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
-        } finally {
             setIsDataLoading(false);
-        }
-    }, [authUser, departmentId, t, toast]);
-
-
-    React.useEffect(() => {
-        if (authUser) {
-            fetchWorkersData();
-        } else if (!isAuthLoading) {
-            setIsDataLoading(false);
-            setWorkers([]);
-        }
-    }, [authUser, departmentId, isAuthLoading, fetchWorkersData]);
+        });
+        
+        return () => unsubscribe();
+    }, [authUser, departmentId, isAuthLoading, t, toast]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
@@ -142,27 +124,37 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             return;
         }
 
-        if (workerId) {
-            // Updates are disallowed by security rules.
-            toast({ variant: "destructive", title: t('error'), description: "Updating worker data is not allowed." });
-        } else {
-            // Add new worker
-            try {
-                const newWorkerData = { ...data, departmentId };
+        try {
+            if (workerId) {
+                await updateWorker(workerId, data);
+                toast({ title: t('workerUpdatedSuccess') });
+            } else {
+                const newWorkerData = { ...data, departmentId, ownerId: authUser.uid };
                 await addWorker(newWorkerData);
-                await fetchWorkersData();
                 toast({ title: t('workerAddedSuccess') });
-            } catch (e) {
-                console.error("Error adding worker: ", e);
-                toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
             }
+        } catch (e) {
+            console.error("Error saving worker: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to save worker data." });
         }
     }
     
     async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
         if (!authUser) return;
-        toast({ variant: "destructive", title: t('error'), description: "Updating worker data is not allowed." });
-        // The logic to update paidMonths is disabled. We can only add a transaction.
+        try {
+            const transaction: Omit<Transaction, 'id'|'date'> = {
+                type: 'salary',
+                amount: amount,
+                description: `${t('salaryForMonth')} ${months.find(m => m.value === month)?.label || ''} ${year}`,
+                month,
+                year,
+            };
+            await paySalary(workerId, {year, month}, transaction);
+            toast({ title: t('salaryPaidSuccess') });
+        } catch (e) {
+            console.error("Error paying salary: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to record salary payment." });
+        }
     }
 
     async function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
@@ -176,7 +168,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             };
 
             await addTransaction(workerId, newTransactionData);
-            await fetchWorkersData();
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
@@ -194,7 +185,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
     
     const getMonthStatus = (worker: Worker, month: number, year: number) => {
-        return worker.paidMonths.some(p => p.month === month && p.year === year);
+        return (worker.paidMonths || []).some(p => p.month === month && p.year === year);
     }
 
     const currentMonth = new Date().getMonth() + 1;
@@ -322,17 +313,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                 <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
                                 <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
-                                <DeleteWorkerAlert workerName={worker.name} onConfirm={async () => {
-                                    if(!authUser) return;
-                                    try {
-                                        await deleteWorker(worker.id);
-                                        toast({ title: t('workerDeleted') });
-                                        fetchWorkersData();
-                                    } catch (e) {
-                                        console.error("Error deleting worker: ", e);
-                                        toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker." });
-                                    }
-                                }} />
+                                <AddWorkerDialog worker={worker} onSave={handleSaveWorker}>
+                                    <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                </AddWorkerDialog>
+                                <DeleteWorkerAlert workerName={worker.name} onConfirm={async () => await deleteWorker(worker.id)} />
                             </div>
                         </TableCell>
                       </TableRow>

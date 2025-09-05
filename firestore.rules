@@ -1,22 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // مستند المستخدم نفسه: قراءة/إنشاء/حذف فقط لنفس المالك
-    match /users/{userId} {
-      allow get, create, delete: if request.auth != null && request.auth.uid == userId;
-      allow update: if false;
-      allow list: if false; // منع استعراض جميع المستخدمين
+    match /{document=**} {
+      allow read, write: if true;
     }
-
-    // كل الساب-كلكشنات تحت users/{uid}/... (مثل financials, notes, ...):
-    // السماح بالقراءة (get,list) والإنشاء والحذف فقط لصاحب الحساب
-    match /users/{userId}/{document=**} {
-      allow get, list, create, delete: if request.auth != null && request.auth.uid == userId;
-      allow update: if false;
-    }
-
-    // قفل أي مسارات أخرى
-    match /{document=**} { allow read, write: if false; }
   }
 }

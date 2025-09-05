@@ -2,68 +2,32 @@
 "use client";
 
 import * as React from 'react';
-import { getDocs, query, collection, Timestamp } from 'firebase/firestore';
+import { getDocs, query, collection, Timestamp, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
-import { userSubcollection } from '@/lib/firestore';
 import type { SalesItem } from '../budget-content';
 import type { ExpenseItem } from '../expenses-content';
 import type { DebtItem } from '../debts-content';
-import type { Worker, Transaction } from '../workers/types';
+import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
-import { auth } from '@/lib/firebase';
 
-
-async function getSales(departmentId: string): Promise<SalesItem[]> {
-    const salesCollectionRef = userSubcollection<Omit<SalesItem, 'id'>>('sales');
-    const q = query(salesCollectionRef);
-    const querySnapshot = await getDocs(q);
-    const allSales = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as unknown as Timestamp).toDate() } as SalesItem));
-    return allSales.filter(sale => sale.departmentId === departmentId);
-}
-
-async function getExpenses(departmentId: string): Promise<ExpenseItem[]> {
-    const expensesCollectionRef = userSubcollection<Omit<ExpenseItem, 'id'>>('expenses');
-    const q = query(expensesCollectionRef);
-    const querySnapshot = await getDocs(q);
-    const allExpenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as unknown as Timestamp).toDate() } as ExpenseItem));
-    return allExpenses.filter(exp => exp.departmentId === departmentId);
-}
-
-async function getDebts(departmentId: string): Promise<DebtItem[]> {
-    const debtsCollectionRef = userSubcollection<Omit<DebtItem, 'id'>>('debts');
-    const querySnapshot = await getDocs(query(debtsCollectionRef));
-    const allDebts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), dueDate: doc.data().dueDate ? (doc.data().dueDate as unknown as Timestamp).toDate() : undefined } as DebtItem));
-    return allDebts.filter(debt => debt.departmentId === departmentId);
-}
-
-async function getWorkers(departmentId: string): Promise<Worker[]> {
-    const workersColRef = userSubcollection<Omit<Worker, 'id'>>('workers');
-    const workersSnapshot = await getDocs(query(workersColRef));
-    
-    const workerPromises = workersSnapshot.docs
-        .filter(docSnap => docSnap.data().departmentId === departmentId)
-        .map(async (docSnap) => {
-            const data = docSnap.data();
-            const transactionsColRef = collection(db, 'users', auth.currentUser!.uid, 'workers', docSnap.id, 'transactions');
-            const transactionsSnapshot = await getDocs(transactionsColRef);
-            const transactions: Transaction[] = transactionsSnapshot.docs.map(tDoc => ({ 
-                id: tDoc.id, 
-                ...tDoc.data(),
-                date: (tDoc.data().date as Timestamp).toDate().toISOString(),
-            })) as Transaction[];
-
-            return {
-                id: docSnap.id,
-                ...data,
-                transactions,
-            } as Worker;
+async function getDataForUser<T extends { id: string }>(collectionName: string, userId: string, departmentId: string): Promise<T[]> {
+    const colRef = collection(db, collectionName);
+    const q = query(colRef, where("ownerId", "==", userId), where("departmentId", "==", departmentId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Convert Timestamps to Dates for relevant fields
+        Object.keys(data).forEach(key => {
+            if (data[key] instanceof Timestamp) {
+                data[key] = data[key].toDate();
+            }
         });
-
-    return Promise.all(workerPromises);
+        return { id: doc.id, ...data } as T;
+    });
 }
 
 
@@ -88,12 +52,12 @@ export function BudgetSummary({ departmentId }: { departmentId: string }) {
 
         try {
             const [sales, expenses, debts, workers] = await Promise.all([
-                getSales(deptId),
-                getExpenses(deptId),
-                getDebts(deptId),
-                getWorkers(deptId)
+                getDataForUser<SalesItem>('sales', authUser.uid, deptId),
+                getDataForUser<ExpenseItem>('expenses', authUser.uid, deptId),
+                getDataForUser<DebtItem>('debts', authUser.uid, deptId),
+                getDataForUser<Worker>('workers', authUser.uid, deptId)
             ]);
-
+            
             const totalSales = sales.reduce((sum, doc) => sum + doc.total, 0);
             const totalExpensesItems = expenses.reduce((sum, doc) => sum + doc.amount, 0);
             
@@ -116,7 +80,7 @@ export function BudgetSummary({ departmentId }: { departmentId: string }) {
                     return sum + (item.amount - paidAmount);
                 }, 0);
 
-            const totalExpenses = totalExpensesItems + totalSalariesPaid + totalDebtPaymentsMade;
+            const totalExpenses = totalExpensesItems + totalSalariesPaid;
             const netProfit = totalSales - totalExpenses;
 
             setSummary({ totalSales, totalExpenses, totalDebts: totalOutstandingDebts, netProfit });
@@ -129,7 +93,7 @@ export function BudgetSummary({ departmentId }: { departmentId: string }) {
     }, [authUser]);
 
     React.useEffect(() => {
-        if (authUser) {
+        if (authUser && departmentId) {
             fetchAllData(departmentId);
         } else if (!authLoading) {
             setIsLoading(false);

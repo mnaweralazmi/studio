@@ -45,12 +45,9 @@ export default function SubTopicDetailsPage() {
       const viewedTopicKey = `viewed-${subTopic.id}`;
       if (sessionStorage.getItem(viewedTopicKey)) {
         setIsPointsLoading(false);
-        return; // Already awarded points this session
+        return;
       }
 
-      // The points logic is commented out because it relies on `update`,
-      // which is disallowed by the new security rules.
-      /*
       try {
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
@@ -73,8 +70,7 @@ export default function SubTopicDetailsPage() {
           }
           
           const newLevel = Math.floor(newPoints / 100) + 1;
-          // Updates are disallowed by security rules
-          // transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
+          transaction.update(userRef, { points: newPoints, level: newLevel, badges: newBadges });
 
           if (badgeAwarded) {
              toast({ title: t('badgeEarned'), description: t('badgeExplorerDesc') });
@@ -86,8 +82,6 @@ export default function SubTopicDetailsPage() {
       } finally {
         setIsPointsLoading(false);
       }
-      */
-     setIsPointsLoading(false); // Set loading to false since the logic is disabled
     };
 
     if (user && subTopic) {
@@ -149,7 +143,6 @@ export default function SubTopicDetailsPage() {
                     </h1>
                     <div className="prose prose-lg dark:prose-invert max-w-none font-body text-foreground/90">
                         <p>{description}</p>
-                        {/* More detailed content can be added here */}
                     </div>
                 </div>
             </Card>

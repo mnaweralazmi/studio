@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp, deleteDoc } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, deleteDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
-import { userSubcollection } from '@/lib/firestore';
+import { db } from '@/lib/firebase';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -36,7 +36,6 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
     }
 };
 
-// --- Data Types ---
 export type ExpenseItem = {
   id: string;
   date: Date;
@@ -45,28 +44,14 @@ export type ExpenseItem = {
   item: string;
   amount: number;
   departmentId: string;
+  ownerId: string;
 };
 
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-// --- Firestore API Functions ---
-async function getExpenses(departmentId: string): Promise<ExpenseItem[]> {
-    const expensesCollectionRef = userSubcollection<Omit<ExpenseItem, 'id'>>('expenses');
-    const querySnapshot = await getDocs(expensesCollectionRef);
-    const allExpenses = querySnapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-            id: docSnap.id,
-            ...data,
-            date: (data.date as unknown as Timestamp).toDate(),
-        } as ExpenseItem;
-    });
-    return allExpenses.filter(exp => exp.departmentId === departmentId);
-}
-
 async function addExpense(data: ExpenseItemData): Promise<string> {
-    const expensesCollectionRef = userSubcollection('expenses');
+    const expensesCollectionRef = collection(db, 'expenses');
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -75,7 +60,7 @@ async function addExpense(data: ExpenseItemData): Promise<string> {
 }
 
 async function deleteExpense(expenseId: string): Promise<void> {
-    const expenseDocRef = doc(userSubcollection('expenses'), expenseId);
+    const expenseDocRef = doc(db, 'expenses', expenseId);
     await deleteDoc(expenseDocRef);
 }
 
@@ -93,37 +78,40 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const formRef = React.useRef<HTMLFormElement>(null);
     const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
-    const fetchExpensesAndCategories = React.useCallback(async () => {
+    React.useEffect(() => {
         if (!authUser) {
+          if(!isAuthLoading) {
             setIsDataLoading(false);
-            return;
+            setExpenses([]);
+          }
+          return;
         }
 
         setIsDataLoading(true);
+        setExpenseCategories(getInitialCategories(language, departmentId));
         
-        try {
-            setExpenseCategories(getInitialCategories(language, departmentId));
-            const fetchedExpenses = await getExpenses(departmentId);
+        const expensesCollectionRef = collection(db, 'expenses');
+        const q = query(expensesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedExpenses = querySnapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    ...data,
+                    date: (data.date as unknown as Timestamp).toDate(),
+                } as ExpenseItem;
+            });
             setExpenses(fetchedExpenses.sort((a,b) => b.date.getTime() - a.date.getTime()));
-
-        } catch (e) {
-            console.error("Error fetching data: ", e);
-            setExpenseCategories(getInitialCategories(language, departmentId));
-             toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-        } finally {
             setIsDataLoading(false);
-        }
-    }, [authUser, language, departmentId, toast, t]);
-
-    React.useEffect(() => {
-        if (authUser) {
-            fetchExpensesAndCategories();
-        } else if (!isAuthLoading) {
-            setExpenses([]);
-            setExpenseCategories(getInitialCategories(language, departmentId || 'agriculture'));
+        }, (error) => {
+            console.error("Error fetching expenses: ", error);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
             setIsDataLoading(false);
-        }
-    }, [authUser, language, departmentId, isAuthLoading, fetchExpensesAndCategories]);
+        });
+
+        return () => unsubscribe();
+    }, [authUser, language, departmentId, isAuthLoading, toast, t]);
     
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -152,11 +140,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             item: data.item,
             amount: data.amount,
             departmentId,
+            ownerId: authUser.uid,
         };
 
         try {
             await addExpense(newExpenseData);
-            await fetchExpensesAndCategories(); // Refetch
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
@@ -169,7 +157,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const handleDelete = async (expenseId: string) => {
         try {
             await deleteExpense(expenseId);
-            await fetchExpensesAndCategories(); // Refetch
             toast({ title: t('expenseDeleted') });
         } catch(e) {
             console.error("Error deleting expense: ", e);

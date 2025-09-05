@@ -3,9 +3,8 @@
 
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import { initialAgriculturalSections, type AgriculturalSection } from '@/lib/topics-data';
-import { getDocs } from 'firebase/firestore';
-import { useAuth } from './auth-context';
-import { userSubcollection } from '@/lib/firestore';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface TopicsContextType {
   topics: AgriculturalSection[];
@@ -16,47 +15,31 @@ interface TopicsContextType {
 const TopicsContext = createContext<TopicsContextType | undefined>(undefined);
 
 export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTopics = async () => {
-        if (!user) {
-            setLoading(false);
-            setTopics([]);
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const topicsCollectionRef = userSubcollection<Omit<AgriculturalSection, 'id'>>('data');
-            const querySnapshot = await getDocs(topicsCollectionRef);
-            
-            if (querySnapshot.empty) {
-                // This case should be handled by the initial provisioning in AuthContext,
-                // but as a fallback, we use the local data.
-                setTopics(initialAgriculturalSections);
-            } else {
-                const fetchedTopics: AgriculturalSection[] = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as AgriculturalSection[];
-                setTopics(fetchedTopics);
-            }
-        } catch (error) {
-            console.error("Error fetching topics for user, falling back to initial data: ", error);
-            // Fallback to initial data if there's any other error
+    const topicsCollectionRef = collection(db, 'data');
+    
+    const unsubscribe = onSnapshot(topicsCollectionRef, (querySnapshot) => {
+        if (querySnapshot.empty) {
             setTopics(initialAgriculturalSections);
-        } finally {
-            setLoading(false);
+        } else {
+            const fetchedTopics: AgriculturalSection[] = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as AgriculturalSection[];
+            setTopics(fetchedTopics);
         }
-    };
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching topics, falling back to initial data: ", error);
+        setTopics(initialAgriculturalSections);
+        setLoading(false);
+    });
 
-    if (!authLoading) {
-        fetchTopics();
-    }
-  }, [user, authLoading]);
+    return () => unsubscribe();
+  }, []);
 
   const value = useMemo(() => ({ topics, setTopics, loading }), [topics, loading]);
 

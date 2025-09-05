@@ -19,6 +19,7 @@ export interface Worker extends WorkerFormValues {
   paidMonths: { year: number; month: number }[];
   transactions: Transaction[];
   departmentId: string;
+  ownerId: string;
 }
 
 

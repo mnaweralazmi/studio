@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp, runTransaction, deleteDoc } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, runTransaction, deleteDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -15,9 +15,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { db } from '@/lib/firebase';
-import { userSubcollection } from '@/lib/firestore';
 
-// Data lists
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
 
@@ -31,7 +29,6 @@ const fishListAr = ["سبيطي", "هامور", "شعم"];
 const fishListEn = ["Spgre", "Hamour", "Sheim"];
 
 
-// --- Data Types ---
 export type SalesItem = {
   id: string;
   product: string;
@@ -41,28 +38,13 @@ export type SalesItem = {
   total: number;
   date: Date;
   departmentId: string;
+  ownerId: string;
 };
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-// --- Firestore API Functions ---
-async function getSales(departmentId: string): Promise<SalesItem[]> {
-    const salesCollectionRef = userSubcollection<Omit<SalesItem, 'id'>>('sales');
-    const querySnapshot = await getDocs(salesCollectionRef);
-    const allSales = querySnapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-            id: docSnap.id,
-            ...data,
-            date: (data.date as unknown as Timestamp).toDate(),
-        } as SalesItem;
-    });
-    // Filter by department on the client-side
-    return allSales.filter(sale => sale.departmentId === departmentId);
-}
-
 async function addSale(data: SalesItemData): Promise<string> {
-    const salesCollectionRef = userSubcollection('sales');
+    const salesCollectionRef = collection(db, 'sales');
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -71,7 +53,7 @@ async function addSale(data: SalesItemData): Promise<string> {
 }
 
 async function deleteSale(saleId: string): Promise<void> {
-    const saleDocRef = doc(userSubcollection('sales'), saleId);
+    const saleDocRef = doc(db, 'sales', saleId);
     await deleteDoc(saleDocRef);
 }
 
@@ -92,32 +74,38 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const poultryList = language === 'ar' ? poultryListAr : poultryListEn;
   const fishList = language === 'ar' ? fishListAr : fishListEn;
 
-  const fetchSales = React.useCallback(async () => {
-    if (!authUser) {
-        setIsDataLoading(false);
-        return;
-    }
-  
-    setIsDataLoading(true);
-    try {
-        const sales = await getSales(departmentId);
-        setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
-    } catch(e) {
-        console.error("Error fetching sales: ", e);
-        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-    } finally {
-        setIsDataLoading(false);
-    }
-  }, [departmentId, authUser, toast, t]);
-
   React.useEffect(() => {
-    if (authUser) {
-        fetchSales();
-    } else if (!isAuthLoading) {
+    if (!authUser) {
+      if (!isAuthLoading) {
         setIsDataLoading(false);
         setSalesItems([]);
+      }
+      return;
     }
-  }, [departmentId, authUser, isAuthLoading, fetchSales]);
+
+    setIsDataLoading(true);
+    const salesCollectionRef = collection(db, 'sales');
+    const q = query(salesCollectionRef, where("ownerId", "==", authUser.uid), where("departmentId", "==", departmentId));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const sales = querySnapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+              id: docSnap.id,
+              ...data,
+              date: (data.date as unknown as Timestamp).toDate(),
+          } as SalesItem;
+      });
+      setSalesItems(sales.sort((a,b) => b.date.getTime() - a.date.getTime()));
+      setIsDataLoading(false);
+    }, (error) => {
+        console.error("Error fetching sales: ", error);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+        setIsDataLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [departmentId, authUser, isAuthLoading, toast, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -145,15 +133,13 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         total,
         departmentId,
         date: new Date(),
+        ownerId: authUser.uid,
         ...(weightPerUnit !== undefined && { weightPerUnit }),
     };
 
     try {
         await addSale(submissionData);
-        await fetchSales(); // Refetch data
         
-        // Points awarding is disabled because `update` is disallowed by rules.
-        /*
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -161,11 +147,13 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             
             const currentBadges = userDoc.data().badges || [];
             if (!currentBadges.includes('trader')) {
-                // transaction.update(...) is disallowed.
+                const newBadges = [...currentBadges, 'trader'];
+                let newPoints = (userDoc.data().points || 0) + 10;
+                const newLevel = Math.floor(newPoints / 100) + 1;
+                transaction.update(userRef, { badges: newBadges, points: newPoints, level: newLevel });
                 toast({ title: t('badgeEarned'), description: t('badgeTraderDesc') });
             }
         });
-        */
         
         formRef.current?.reset();
         toast({ title: t('salesAddedSuccess') });
@@ -179,7 +167,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const handleDelete = async (saleId: string) => {
     try {
         await deleteSale(saleId);
-        await fetchSales(); // Refetch data
         toast({ title: t('itemDeleted') });
     } catch (e) {
         console.error("Error deleting sale: ", e);
