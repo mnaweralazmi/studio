@@ -22,33 +22,36 @@ import { getDataForUser } from './budget/budget-summary';
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
-async function addWorker(data: WorkerFormValues & { departmentId: string; ownerId: string }): Promise<string> {
-    const workersColRef = collection(db, 'workers');
+async function addWorker(departmentId: string, data: WorkerFormValues & { ownerId: string }): Promise<string> {
+    const collectionName = `${departmentId}_workers`;
+    const workersColRef = collection(db, collectionName);
     const docRef = await addDoc(workersColRef, {
         ...data,
         paidMonths: [],
         transactions: [],
         ownerId: data.ownerId,
-        departmentId: data.departmentId,
     });
     return docRef.id;
 }
 
-async function updateWorker(workerId: string, data: Partial<WorkerFormValues>) {
-    const workerDocRef = doc(db, 'workers', workerId);
+async function updateWorker(departmentId: string, workerId: string, data: Partial<WorkerFormValues>) {
+    const collectionName = `${departmentId}_workers`;
+    const workerDocRef = doc(db, collectionName, workerId);
     await updateDoc(workerDocRef, data);
 }
 
-async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
-    const workerRef = doc(db, 'workers', workerId);
+async function paySalary(departmentId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
+    const collectionName = `${departmentId}_workers`;
+    const workerRef = doc(db, collectionName, workerId);
     await updateDoc(workerRef, {
         paidMonths: arrayUnion(paidMonth),
         transactions: arrayUnion({ ...transactionData, date: Timestamp.now(), id: new Date().getTime().toString() })
     });
 }
 
-async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
-    const workerRef = doc(db, 'workers', workerId);
+async function addTransaction(departmentId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
+    const collectionName = `${departmentId}_workers`;
+    const workerRef = doc(db, collectionName, workerId);
     const newTransaction = {
         ...transactionData,
         date: Timestamp.now(),
@@ -60,8 +63,9 @@ async function addTransaction(workerId: string, transactionData: Omit<Transactio
     return newTransaction.id;
 }
 
-async function deleteWorker(workerId: string) {
-    const workerDocRef = doc(db, 'workers', workerId);
+async function deleteWorker(departmentId: string, workerId: string) {
+    const collectionName = `${departmentId}_workers`;
+    const workerDocRef = doc(db, collectionName, workerId);
     await deleteDoc(workerDocRef);
 }
 
@@ -88,7 +92,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         }
         
         setIsDataLoading(true);
-        getDataForUser<Worker>('workers', authUser.uid, departmentId)
+        const collectionName = `${departmentId}_workers`;
+        getDataForUser<Worker>(collectionName, authUser.uid)
             .then(data => {
                 const fetchedWorkers = data.map(d => ({
                     ...d,
@@ -124,12 +129,12 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         try {
             if (workerId) {
-                await updateWorker(workerId, data);
+                await updateWorker(departmentId, workerId, data);
                 setWorkers(prev => prev.map(w => w.id === workerId ? {...w, ...data} : w));
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
-                const newWorkerData = { ...data, departmentId, ownerId: authUser.uid };
-                const newId = await addWorker(newWorkerData);
+                const newWorkerData = { ...data, ownerId: authUser.uid };
+                const newId = await addWorker(departmentId, newWorkerData);
                 setWorkers(prev => [...prev, {...newWorkerData, id: newId, paidMonths: [], transactions: []}]);
                 toast({ title: t('workerAddedSuccess') });
             }
@@ -149,7 +154,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 month,
                 year,
             };
-            await paySalary(workerId, {year, month}, transaction);
+            await paySalary(departmentId, workerId, {year, month}, transaction);
              setWorkers(prev => prev.map(w => w.id === workerId ? {
                 ...w, 
                 paidMonths: [...w.paidMonths, {year, month}],
@@ -172,7 +177,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            const newId = await addTransaction(workerId, newTransactionData);
+            const newId = await addTransaction(departmentId, workerId, newTransactionData);
             setWorkers(prev => prev.map(w => w.id === workerId ? {
                 ...w,
                 transactions: [...w.transactions, {...newTransactionData, id: newId, date: new Date().toISOString()}]
@@ -187,7 +192,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     async function handleDeleteWorker(workerId: string) {
         try {
-            await deleteWorker(workerId);
+            await deleteWorker(departmentId, workerId);
             setWorkers(prev => prev.filter(w => w.id !== workerId));
             toast({ title: t('workerDeleted') });
         } catch(e) {
@@ -294,7 +299,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl sm:text-2xl">{t('workersList')}</CardTitle>
-                <AddWorkerDialog onSave={handleSaveWorker}>
+                <AddWorkerDialog onSave={handleSaveWorker} departmentId={departmentId}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('addNewWorker')}
@@ -331,12 +336,12 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                         </TableCell>
                         <TableCell>
                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                                <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
-                                <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
-                                <AddWorkerDialog worker={worker} onSave={handleSaveWorker}>
+                                <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} departmentId={departmentId} />
+                                <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} departmentId={departmentId} />
+                                <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>
                                     <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                                 </AddWorkerDialog>
-                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
+                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} departmentId={departmentId} />
                             </div>
                         </TableCell>
                       </TableRow>

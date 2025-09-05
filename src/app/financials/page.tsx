@@ -12,7 +12,7 @@ import { Wallet, CreditCard, Landmark, Users, Leaf, PawPrint, Bird, Fish } from 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { BudgetSummary } from '@/components/budget/budget-summary';
 
-type Department = 'agriculture' | 'livestock' | 'poultry' | 'fish';
+export type Department = 'agriculture' | 'livestock' | 'poultry' | 'fish';
 
 export default function FinancialsPage() {
     const { t } = useLanguage();

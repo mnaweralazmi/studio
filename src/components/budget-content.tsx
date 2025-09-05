@@ -39,14 +39,14 @@ export type SalesItem = {
   price: number;
   total: number;
   date: Date;
-  departmentId: string;
   ownerId?: string;
 };
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-async function addSale(data: SalesItemData): Promise<string> {
-    const salesCollectionRef = collection(db, 'sales');
+async function addSale(departmentId: string, data: SalesItemData): Promise<string> {
+    const collectionName = `${departmentId}_sales`;
+    const salesCollectionRef = collection(db, collectionName);
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -54,8 +54,9 @@ async function addSale(data: SalesItemData): Promise<string> {
     return docRef.id;
 }
 
-async function deleteSale(saleId: string): Promise<void> {
-    const saleDocRef = doc(db, 'sales', saleId);
+async function deleteSale(departmentId: string, saleId: string): Promise<void> {
+    const collectionName = `${departmentId}_sales`;
+    const saleDocRef = doc(db, collectionName, saleId);
     await deleteDoc(saleDocRef);
 }
 
@@ -86,8 +87,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
+    const collectionName = `${departmentId}_sales`;
     
-    getDataForUser<SalesItem>('sales', authUser.uid, departmentId)
+    getDataForUser<SalesItem>(collectionName, authUser.uid)
       .then(data => {
         setSalesItems(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
       })
@@ -125,14 +127,13 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         quantity,
         price,
         total,
-        departmentId,
         date: new Date(),
         ownerId: authUser.uid,
         ...(weightPerUnit && { weightPerUnit }),
     };
 
     try {
-        const newSaleId = await addSale(submissionData);
+        const newSaleId = await addSale(departmentId, submissionData);
         setSalesItems(prev => [{...submissionData, id: newSaleId, date: new Date()}, ...prev]);
         
         const userRef = doc(db, 'users', authUser.uid);
@@ -161,7 +162,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
   const handleDelete = async (saleId: string) => {
     try {
-        await deleteSale(saleId);
+        await deleteSale(departmentId, saleId);
         setSalesItems(prev => prev.filter(item => item.id !== saleId));
         toast({ title: t('itemDeleted') });
     } catch (e) {

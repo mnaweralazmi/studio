@@ -15,10 +15,11 @@ import { Label } from '../ui/label';
 
 interface FinancialRecordDialogProps {
     worker: Worker;
+    departmentId: string;
     onAddTransaction: (workerId: string, transaction: TransactionFormValues) => void;
 }
 
-function FinancialRecordDialogComponent({ worker, onAddTransaction }: FinancialRecordDialogProps) {
+function FinancialRecordDialogComponent({ worker, departmentId, onAddTransaction }: FinancialRecordDialogProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const { language, t } = useLanguage();
     const formRef = React.useRef<HTMLFormElement>(null);

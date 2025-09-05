@@ -12,10 +12,11 @@ import { Label } from '../ui/label';
 interface AddWorkerDialogProps {
     onSave: (data: WorkerFormValues, workerId?: string) => void;
     worker?: Worker;
+    departmentId: string;
     children: React.ReactNode;
 }
 
-export function AddWorkerDialog({ onSave, worker, children }: AddWorkerDialogProps) {
+export function AddWorkerDialog({ onSave, worker, departmentId, children }: AddWorkerDialogProps) {
     const { t } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
     const formRef = React.useRef<HTMLFormElement>(null);

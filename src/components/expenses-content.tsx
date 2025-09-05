@@ -44,15 +44,15 @@ export type ExpenseItem = {
   category: string;
   item: string;
   amount: number;
-  departmentId: string;
   ownerId?: string;
 };
 
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-async function addExpense(data: ExpenseItemData): Promise<string> {
-    const expensesCollectionRef = collection(db, 'expenses');
+async function addExpense(departmentId: string, data: ExpenseItemData): Promise<string> {
+    const collectionName = `${departmentId}_expenses`;
+    const expensesCollectionRef = collection(db, collectionName);
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -60,8 +60,9 @@ async function addExpense(data: ExpenseItemData): Promise<string> {
     return docRef.id;
 }
 
-async function deleteExpense(expenseId: string): Promise<void> {
-    const expenseDocRef = doc(db, 'expenses', expenseId);
+async function deleteExpense(departmentId: string, expenseId: string): Promise<void> {
+    const collectionName = `${departmentId}_expenses`;
+    const expenseDocRef = doc(db, collectionName, expenseId);
     await deleteDoc(expenseDocRef);
 }
 
@@ -94,8 +95,9 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
 
         setIsDataLoading(true);
+        const collectionName = `${departmentId}_expenses`;
         
-        getDataForUser<ExpenseItem>('expenses', authUser.uid, departmentId)
+        getDataForUser<ExpenseItem>(collectionName, authUser.uid)
             .then(data => {
                 setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
             })
@@ -135,12 +137,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             category: data.category,
             item: data.item,
             amount: data.amount,
-            departmentId,
             ownerId: authUser.uid,
         };
 
         try {
-            const newExpenseId = await addExpense(newExpenseData);
+            const newExpenseId = await addExpense(departmentId, newExpenseData);
             setExpenses(prev => [{...newExpenseData, id: newExpenseId, date: new Date()}, ...prev]);
             formRef.current?.reset();
             setSelectedCategory('');
@@ -153,7 +154,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     const handleDelete = async (expenseId: string) => {
         try {
-            await deleteExpense(expenseId);
+            await deleteExpense(departmentId, expenseId);
             setExpenses(prev => prev.filter(e => e.id !== expenseId));
             toast({ title: t('expenseDeleted') });
         } catch(e) {

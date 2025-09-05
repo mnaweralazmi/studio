@@ -36,14 +36,14 @@ export type DebtItem = {
   dueDate?: Date;
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
-  departmentId: string;
   ownerId?: string;
 };
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-async function addDebt(data: DebtItemData): Promise<string> {
-    const debtsCollectionRef = collection(db, 'debts');
+async function addDebt(departmentId: string, data: DebtItemData): Promise<string> {
+    const collectionName = `${departmentId}_debts`;
+    const debtsCollectionRef = collection(db, collectionName);
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
@@ -53,14 +53,16 @@ async function addDebt(data: DebtItemData): Promise<string> {
     return docRef.id;
 }
 
-async function deleteDebt(debtId: string): Promise<void> {
-    const debtDocRef = doc(db, 'debts', debtId);
+async function deleteDebt(departmentId: string, debtId: string): Promise<void> {
+    const collectionName = `${departmentId}_debts`;
+    const debtDocRef = doc(db, collectionName, debtId);
     await deleteDoc(debtDocRef);
 }
 
 
-async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'>) {
-    const debtRef = doc(db, 'debts', debtId);
+async function addDebtPayment(departmentId: string, debtId: string, paymentData: Omit<Payment, 'id'>) {
+    const collectionName = `${departmentId}_debts`;
+    const debtRef = doc(db, collectionName, debtId);
     await updateDoc(debtRef, {
         payments: arrayUnion({
             ...paymentData,
@@ -69,8 +71,9 @@ async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'>) 
     });
 }
 
-async function updateDebtStatus(debtId: string, status: DebtItem['status']) {
-    const debtRef = doc(db, 'debts', debtId);
+async function updateDebtStatus(departmentId: string, debtId: string, status: DebtItem['status']) {
+    const collectionName = `${departmentId}_debts`;
+    const debtRef = doc(db, collectionName, debtId);
     await updateDoc(debtRef, { status });
 }
 
@@ -97,8 +100,9 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
 
         setIsDataLoading(true);
+        const collectionName = `${departmentId}_debts`;
         
-        getDataForUser<DebtItem>('debts', authUser.uid, departmentId)
+        getDataForUser<DebtItem>(collectionName, authUser.uid)
             .then(data => {
                 const fetchedDebts = data.map(d => ({
                     ...d,
@@ -140,12 +144,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             creditor: data.creditor,
             amount: data.amount,
             dueDate: data.dueDate,
-            departmentId: departmentId,
             ownerId: authUser.uid,
         };
 
         try {
-            const newDebtId = await addDebt(newDebtData);
+            const newDebtId = await addDebt(departmentId, newDebtData);
             setDebts(prev => [...prev, { ...newDebtData, id: newDebtId, status: 'unpaid', payments: []}].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             formRef.current?.reset();
             setDueDate(undefined);
@@ -159,7 +162,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     
     async function handleDelete(debtId: string) {
         try {
-            await deleteDebt(debtId);
+            await deleteDebt(departmentId, debtId);
             setDebts(prev => prev.filter(d => d.id !== debtId));
             toast({ title: t('debtDeleted') });
         } catch(e) {
@@ -176,14 +179,14 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         try {
             const newPayment = { amount: paymentAmount, date: new Date() };
-            await addDebtPayment(debtId, newPayment);
+            await addDebtPayment(departmentId, debtId, newPayment);
             
             const updatedDebts = debts.map(d => {
                 if (d.id === debtId) {
                     const totalPaid = d.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
                     const newStatus: DebtItem['status'] = totalPaid >= d.amount ? 'paid' : 'partially-paid';
                      if (newStatus !== d.status) {
-                        updateDebtStatus(debtId, newStatus);
+                        updateDebtStatus(departmentId, debtId, newStatus);
                     }
                     return {
                         ...d,
@@ -314,7 +317,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                         </TableCell>
                                         <TableCell>
                                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                                                {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
+                                                {item.status !== 'paid' && <PaymentDialog debt={item} departmentId={departmentId} onConfirm={handlePayment} />}
                                                  <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>

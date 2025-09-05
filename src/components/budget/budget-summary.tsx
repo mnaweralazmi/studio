@@ -14,39 +14,36 @@ import type { DebtItem } from '../debts-content';
 import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
 
-export async function getDataForUser<T extends { id: string, ownerId?: string }>(collectionName: string, userId: string, departmentId: string): Promise<T[]> {
+export async function getDataForUser<T extends { id: string, ownerId?: string }>(collectionName: string, userId: string): Promise<T[]> {
     const colRef = collection(db, collectionName);
     
-    // First query: Try to fetch data with ownerId and departmentId
-    const q1 = query(colRef, where("ownerId", "==", userId), where("departmentId", "==", departmentId));
-    let snapshot = await getDocs(q1);
+    const q1 = query(colRef, where("ownerId", "==", userId));
+    const snapshot = await getDocs(q1);
 
-    // Fallback for legacy data: if q1 is empty, it might be that the user has legacy data without ownerId.
-    // In that case, fetch all data for the department and filter client-side.
-    // This is not ideal for performance or security if rules were strict, but necessary for compatibility.
-    if (snapshot.empty) {
-        const q2 = query(colRef, where("departmentId", "==", departmentId));
-        const legacySnapshot = await getDocs(q2);
-        // We only want docs that have NO ownerId, to avoid mixing data if another user has data for this dept.
-        const legacyDocs = legacySnapshot.docs.filter(doc => !doc.data().ownerId);
-        if (legacyDocs.length > 0) {
-             return legacyDocs.map(doc => {
-                const data = doc.data();
-                Object.keys(data).forEach(key => { if (data[key] instanceof Timestamp) { data[key] = data[key].toDate(); } });
-                return { id: doc.id, ...data } as T;
+    if (!snapshot.empty) {
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            Object.keys(data).forEach(key => {
+                if (data[key] instanceof Timestamp) {
+                    data[key] = data[key].toDate();
+                }
             });
-        }
+            return { id: doc.id, ...data } as T;
+        });
     }
 
-    return snapshot.docs.map(doc => {
-        const data = doc.data();
-        Object.keys(data).forEach(key => {
-            if (data[key] instanceof Timestamp) {
-                data[key] = data[key].toDate();
-            }
+    // Fallback for legacy data
+    const q2 = query(colRef, where("ownerId", "==", null));
+    const legacySnapshot = await getDocs(q2);
+     if (!legacySnapshot.empty) {
+        return legacySnapshot.docs.map(doc => {
+            const data = doc.data();
+            Object.keys(data).forEach(key => { if (data[key] instanceof Timestamp) { data[key] = data[key].toDate(); } });
+            return { id: doc.id, ...data } as T;
         });
-        return { id: doc.id, ...data } as T;
-    });
+    }
+
+    return [];
 }
 
 
@@ -71,10 +68,10 @@ export function BudgetSummary({ departmentId }: { departmentId: string }) {
 
         try {
             const [sales, expenses, debts, workers] = await Promise.all([
-                getDataForUser<SalesItem>('sales', authUser.uid, deptId),
-                getDataForUser<ExpenseItem>('expenses', authUser.uid, deptId),
-                getDataForUser<DebtItem>('debts', authUser.uid, deptId),
-                getDataForUser<Worker>('workers', authUser.uid, deptId)
+                getDataForUser<SalesItem>(`${deptId}_sales`, authUser.uid),
+                getDataForUser<ExpenseItem>(`${deptId}_expenses`, authUser.uid),
+                getDataForUser<DebtItem>(`${deptId}_debts`, authUser.uid),
+                getDataForUser<Worker>(`${deptId}_workers`, authUser.uid)
             ]);
             
             const totalSales = sales.reduce((sum, doc) => sum + doc.total, 0);
