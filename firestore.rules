@@ -1,8 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    
+    // Users can read their own user document
+    match /users/{userId} {
+      allow read, create, delete, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Public data (like agricultural topics) can be read by any authenticated user
+    match /data/{docId} {
+       allow read: if request.auth != null;
+       // Write access can be restricted to admins if needed in the future
+       allow write: if request.auth != null; 
+    }
+
+    // User-specific data (tasks, sales, etc.)
+    // A user can list/read documents they own.
+    // A user can create documents with their own ownerId.
+    match /{collection}/{docId} {
+       allow read, list, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+       // Deny updates for now to maintain simplicity, can be enabled later.
+       allow update: if false;
     }
   }
 }
