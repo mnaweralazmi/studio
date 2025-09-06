@@ -26,7 +26,7 @@ export function PaymentDialog({ debt, departmentId, onConfirm }: PaymentDialogPr
     const [amount, setAmount] = React.useState(0);
     const [error, setError] = React.useState('');
 
-    const remainingAmount = debt.amount - debt.payments.reduce((sum, p) => sum + p.amount, 0);
+    const remainingAmount = debt.amount - (debt.payments || []).reduce((sum, p) => sum + p.amount, 0);
 
     React.useEffect(() => {
         if(isOpen) {
@@ -100,7 +100,7 @@ export function PaymentDialog({ debt, departmentId, onConfirm }: PaymentDialogPr
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {debt.payments.length > 0 ? debt.payments.map(p => (
+                                    {(debt.payments || []).length > 0 ? debt.payments.map(p => (
                                         <TableRow key={p.id}>
                                             <TableCell>{format(new Date(p.date), 'yyyy/MM/dd')}</TableCell>
                                             <TableCell className="text-right font-mono">{p.amount.toFixed(2)}</TableCell>

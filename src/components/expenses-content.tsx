@@ -15,7 +15,6 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
-import { getDataForUser } from './budget/budget-summary';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -112,17 +111,17 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            getDataForUser<ExpenseItem>(collectionName, authUser.uid)
-                .then(data => {
-                    setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
-                })
-                .catch(error => {
-                    console.error("Error fetching expenses: ", error);
-                    toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-                })
-                .finally(() => {
-                    setIsDataLoading(false);
-                });
+            const data = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                date: (doc.data().date as Timestamp).toDate()
+            }) as ExpenseItem);
+            setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+            setIsDataLoading(false);
+        }, (error) => {
+            console.error("Error fetching expenses: ", error);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
+            setIsDataLoading(false);
         });
 
         return () => unsubscribe();
@@ -347,5 +346,3 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
-
-    

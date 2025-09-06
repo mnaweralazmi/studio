@@ -15,38 +15,6 @@ import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
 
-export async function getDataForUser<T extends { id: string, ownerId?: string }>(collectionName: string, userId: string): Promise<T[]> {
-    const colRef = collection(db, collectionName);
-    
-    const q1 = query(colRef, where("ownerId", "==", userId));
-    const snapshot = await getDocs(q1);
-
-    if (!snapshot.empty) {
-        return snapshot.docs.map(doc => {
-            const data = doc.data();
-            Object.keys(data).forEach(key => {
-                if (data[key] instanceof Timestamp) {
-                    data[key] = data[key].toDate();
-                }
-            });
-            return { id: doc.id, ...data } as T;
-        });
-    }
-
-    const q2 = query(colRef, where("ownerId", "==", null));
-    const legacySnapshot = await getDocs(q2);
-     if (!legacySnapshot.empty) {
-        return legacySnapshot.docs.map(doc => {
-            const data = doc.data();
-            Object.keys(data).forEach(key => { if (data[key] instanceof Timestamp) { data[key] = data[key].toDate(); } });
-            return { id: doc.id, ...data } as T;
-        });
-    }
-
-    return [];
-}
-
-
 const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
 
 export function BudgetSummary() {
@@ -60,7 +28,6 @@ export function BudgetSummary() {
         netProfit: 0,
     });
     
-
     React.useEffect(() => {
         if (!authUser) {
             if (!authLoading) setIsLoading(false);
@@ -69,35 +36,36 @@ export function BudgetSummary() {
 
         setIsLoading(true);
         
-        const unsubscribes = departments.flatMap(deptId => {
-            const collectionNames = [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`];
-            return collectionNames.map(colName => 
-                onSnapshot(query(collection(db, colName), where("ownerId", "==", authUser.uid)), () => {
-                    fetchAllData();
-                })
-            );
-        });
-
         const fetchAllData = async () => {
             if (!authUser) return;
 
             try {
+                const allDataPromises = departments.flatMap(deptId => [
+                    getDocs(query(collection(db, `${deptId}_sales`), where("ownerId", "==", authUser.uid))),
+                    getDocs(query(collection(db, `${deptId}_expenses`), where("ownerId", "==", authUser.uid))),
+                    getDocs(query(collection(db, `${deptId}_debts`), where("ownerId", "==", authUser.uid))),
+                    getDocs(query(collection(db, `${deptId}_workers`), where("ownerId", "==", authUser.uid)))
+                ]);
+
+                const allSnapshots = await Promise.all(allDataPromises);
+
                 let allSales: SalesItem[] = [];
                 let allExpenses: ExpenseItem[] = [];
                 let allDebts: DebtItem[] = [];
                 let allWorkers: Worker[] = [];
 
-                for (const deptId of departments) {
-                    const [sales, expenses, debts, workers] = await Promise.all([
-                        getDataForUser<SalesItem>(`${deptId}_sales`, authUser.uid),
-                        getDataForUser<ExpenseItem>(`${deptId}_expenses`, authUser.uid),
-                        getDataForUser<DebtItem>(`${deptId}_debts`, authUser.uid),
-                        getDataForUser<Worker>(`${deptId}_workers`, authUser.uid)
-                    ]);
-                    allSales.push(...sales);
-                    allExpenses.push(...expenses);
-                    allDebts.push(...debts);
-                    allWorkers.push(...workers);
+                for (let i = 0; i < allSnapshots.length; i += 4) {
+                    allSales.push(...allSnapshots[i].docs.map(doc => doc.data() as SalesItem));
+                    allExpenses.push(...allSnapshots[i+1].docs.map(doc => doc.data() as ExpenseItem));
+                    const debtsData = allSnapshots[i+2].docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            ...data,
+                            payments: (data.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}))
+                        } as DebtItem;
+                    });
+                    allDebts.push(...debtsData);
+                    allWorkers.push(...allSnapshots[i+3].docs.map(doc => doc.data() as Worker));
                 }
                 
                 const totalSales = allSales.reduce((sum, doc) => sum + doc.total, 0);
@@ -130,6 +98,9 @@ export function BudgetSummary() {
         };
         
         fetchAllData();
+
+        const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
+        const unsubscribes = collectionNames.map(colName => onSnapshot(query(collection(db, colName), where("ownerId", "==", authUser.uid)), fetchAllData));
 
         return () => unsubscribes.forEach(unsub => unsub());
 
@@ -192,5 +163,3 @@ export function BudgetSummary() {
         </div>
     )
 }
-
-    

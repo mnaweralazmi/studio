@@ -31,8 +31,8 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 ...doc.data()
             })) as AgriculturalSection[];
             
-            const userTopics = fetchedTopics.filter(topic => !topic.ownerId || (user && topic.ownerId === user.uid));
-            setTopics(userTopics);
+            // Show all topics to all users
+            setTopics(fetchedTopics);
         } else {
              setTopics(initialAgriculturalSections);
         }
@@ -66,5 +66,3 @@ export const useTopics = () => {
   }
   return context;
 };
-
-    

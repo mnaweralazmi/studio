@@ -17,7 +17,6 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
-import { getDataForUser } from './budget/budget-summary';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
@@ -96,24 +95,23 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            getDataForUser<Worker>(collectionName, authUser.uid)
-                .then(data => {
-                    const fetchedWorkers = data.map(d => ({
-                        ...d,
-                        transactions: (d.transactions || []).map((t: any) => ({
-                            ...t,
-                            date: new Date(t.date).toISOString()
-                        }))
-                    }));
-                    setWorkers(fetchedWorkers);
-                })
-                .catch(error => {
-                    console.error("Error fetching workers: ", error);
-                    toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
-                })
-                .finally(() => {
-                    setIsDataLoading(false);
-                });
+            const data = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                return {
+                    id: doc.id,
+                    ...docData,
+                    transactions: (docData.transactions || []).map((t: any) => ({
+                        ...t,
+                        date: (t.date as Timestamp).toDate().toISOString()
+                    }))
+                } as Worker;
+            });
+            setWorkers(data);
+            setIsDataLoading(false);
+        }, (error) => {
+            console.error("Error fetching workers: ", error);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
+            setIsDataLoading(false);
         });
 
         return () => unsubscribe();
@@ -354,5 +352,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-
-    

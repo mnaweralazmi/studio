@@ -15,8 +15,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { db } from '@/lib/firebase';
-import { getDataForUser } from './budget/budget-summary';
-
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -102,19 +100,19 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     setIsDataLoading(true);
     const collectionName = `${departmentId}_sales`;
     const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
-
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        getDataForUser<SalesItem>(collectionName, authUser.uid)
-          .then(data => {
-            setSalesItems(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
-          })
-          .catch(error => {
-            console.error("Error fetching sales: ", error);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-          })
-          .finally(() => {
-            setIsDataLoading(false);
-          });
+        const data = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            date: (doc.data().date as Timestamp).toDate()
+        }) as SalesItem);
+        setSalesItems(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+        setIsDataLoading(false);
+    }, (error) => {
+        console.error("Error fetching sales: ", error);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+        setIsDataLoading(false);
     });
 
     return () => unsubscribe();
@@ -381,5 +379,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-
-    

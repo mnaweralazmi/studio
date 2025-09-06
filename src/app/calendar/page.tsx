@@ -157,27 +157,8 @@ export default function CalendarPage() {
                 dueDate: (data.dueDate as unknown as Timestamp).toDate(),
             } as Task;
         });
-
-        if (fetchedTasks.length === 0) {
-            // Fallback for legacy data
-            const legacyQ = query(tasksCollectionRef, where("ownerId", "==", null));
-            const unsubscribeLegacy = onSnapshot(legacyQ, (legacySnapshot) => {
-                 const legacyTasks = legacySnapshot.docs.map((docSnap: any) => {
-                    const data = docSnap.data();
-                    return {
-                        id: docSnap.id,
-                        ...data,
-                        dueDate: (data.dueDate as unknown as Timestamp).toDate(),
-                    } as Task;
-                });
-                setTasks(legacyTasks);
-                setIsTasksLoading(false);
-            });
-            return () => unsubscribeLegacy();
-        } else {
-            setTasks(fetchedTasks);
-            setIsTasksLoading(false);
-        }
+        setTasks(fetchedTasks);
+        setIsTasksLoading(false);
     }, (error) => {
         console.error("Failed to fetch tasks:", error);
         toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
@@ -316,7 +297,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
-    
-
-    

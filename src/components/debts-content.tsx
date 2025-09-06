@@ -21,7 +21,6 @@ import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
-import { getDataForUser } from './budget/budget-summary';
 
 export type Payment = {
   id: string;
@@ -117,23 +116,23 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         setIsDataLoading(true);
         const collectionName = `${departmentId}_debts`;
         const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
-
+        
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            getDataForUser<DebtItem>(collectionName, authUser.uid)
-                .then(data => {
-                    const fetchedDebts = data.map(d => ({
-                        ...d,
-                        payments: (d.payments || []).map(p => ({...p, date: new Date(p.date)}))
-                    }));
-                    setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
-                })
-                .catch(error => {
-                    console.error("Error fetching debts: ", error);
-                    toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
-                })
-                .finally(() => {
-                    setIsDataLoading(false);
-                });
+            const data = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                return {
+                    id: doc.id,
+                    ...docData,
+                    dueDate: docData.dueDate ? (docData.dueDate as Timestamp).toDate() : undefined,
+                    payments: (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}))
+                } as DebtItem;
+            });
+            setDebts(data.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
+            setIsDataLoading(false);
+        }, (error) => {
+            console.error("Error fetching debts: ", error);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
+            setIsDataLoading(false);
         });
 
         return () => unsubscribe();
@@ -344,5 +343,3 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
-
-    
