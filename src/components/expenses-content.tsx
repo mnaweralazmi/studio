@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp, deleteDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, deleteDoc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,10 +60,23 @@ async function addExpense(departmentId: string, data: ExpenseItemData): Promise<
     return docRef.id;
 }
 
-async function deleteExpense(departmentId: string, expenseId: string): Promise<void> {
-    const collectionName = `${departmentId}_expenses`;
-    const expenseDocRef = doc(db, collectionName, expenseId);
-    await deleteDoc(expenseDocRef);
+async function archiveExpense(departmentId: string, expense: ExpenseItem): Promise<void> {
+    const batch = writeBatch(db);
+
+    const originalExpenseRef = doc(db, `${departmentId}_expenses`, expense.id);
+    batch.delete(originalExpenseRef);
+
+    const archiveCollectionName = `archive_expenses`;
+    const archiveExpenseRef = doc(collection(db, archiveCollectionName));
+    const archivedExpenseData = {
+        ...expense,
+        archivedAt: Timestamp.now(),
+        departmentId: departmentId,
+    };
+    delete (archivedExpenseData as any).id;
+    batch.set(archiveExpenseRef, archivedExpenseData);
+
+    await batch.commit();
 }
 
 interface ExpensesContentProps {
@@ -153,13 +166,15 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     }
 
     const handleDelete = async (expenseId: string) => {
+        const expenseToArchive = expenses.find(item => item.id === expenseId);
+        if (!expenseToArchive) return;
         try {
-            await deleteExpense(departmentId, expenseId);
+            await archiveExpense(departmentId, expenseToArchive);
             setExpenses(prev => prev.filter(e => e.id !== expenseId));
-            toast({ title: t('expenseDeleted') });
+            toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
-            console.error("Error deleting expense: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to delete expense." });
+            console.error("Error archiving expense: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to archive expense." });
         }
     }
 

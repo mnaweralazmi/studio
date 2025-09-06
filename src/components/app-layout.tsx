@@ -4,7 +4,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ClipboardPen, CalendarDays, Settings, BarChart } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +20,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays },
     { href: '/financials', label: t('departmentalManagement'), icon: ClipboardPen },
     { href: '/summary', label: t('financialSummary'), icon: BarChart },
+    { href: '/archive', label: t('archive'), icon: Archive },
     { href: '/settings', label: t('settings'), icon: Settings },
   ];
 
@@ -36,7 +37,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto pb-24">{children}</main>
       
       <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t border-border/20 bg-background/80 backdrop-blur-md">
-        <div className={`mx-auto grid h-full max-w-lg font-medium grid-cols-5`}>
+        <div className={`mx-auto grid h-full max-w-lg font-medium grid-cols-${navItems.length}`}>
           {navItems.map(item => {
             const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             return (

@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format, isToday, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { getDocs, Timestamp, addDoc, doc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { getDocs, Timestamp, addDoc, doc, updateDoc, deleteDoc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -166,16 +166,12 @@ export default function CalendarPage() {
         setIsTasksLoading(false);
     };
     
-    // First query: Try to fetch data with ownerId
     const q1 = query(tasksCollectionRef, where("ownerId", "==", user.uid));
     
     const unsubscribe = onSnapshot(q1, (querySnapshot) => {
         if (!querySnapshot.empty) {
             handleSnapshot(querySnapshot);
         } else {
-            // Second query (fallback): Fetch data without ownerId for legacy data
-            // This is less secure and should only be for transitioning old data.
-            // Ensure Firestore rules are accommodating for this if needed, or phase out.
             const q2 = query(tasksCollectionRef, where("ownerId", "==", null));
              onSnapshot(q2, handleSnapshot, handleError);
         }
@@ -190,22 +186,29 @@ export default function CalendarPage() {
     if (!taskToComplete) return;
 
     try {
-        await deleteTask(taskId);
+        const batch = writeBatch(db);
+        const originalTaskRef = doc(db, 'tasks', taskId);
         
         if (taskToComplete.isRecurring) {
+            // Update the existing task with a new due date
             const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
-            const newTaskData: TaskData = {
-                title: taskToComplete.title,
-                description: taskToComplete.description,
-                dueDate: nextDueDate,
-                isCompleted: false,
-                isRecurring: true,
-                reminderDays: taskToComplete.reminderDays,
-                ownerId: user.uid,
+            batch.update(originalTaskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
+        } else {
+            // Move to archive and delete from active tasks
+            const archiveRef = doc(collection(db, 'completed_tasks'));
+            const archivedTaskData = {
+                ...taskToComplete,
+                completedAt: Timestamp.now(),
+                isCompleted: true
             };
-            await addTask(newTaskData);
+            delete (archivedTaskData as any).id;
+            
+            batch.set(archiveRef, archivedTaskData);
+            batch.delete(originalTaskRef);
         }
         
+        await batch.commit();
+
         toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });
     } catch (e) {
         console.error("Failed to complete task:", e);

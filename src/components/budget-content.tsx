@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp, runTransaction, deleteDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, runTransaction, deleteDoc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -54,10 +54,23 @@ async function addSale(departmentId: string, data: SalesItemData): Promise<strin
     return docRef.id;
 }
 
-async function deleteSale(departmentId: string, saleId: string): Promise<void> {
-    const collectionName = `${departmentId}_sales`;
-    const saleDocRef = doc(db, collectionName, saleId);
-    await deleteDoc(saleDocRef);
+async function archiveSale(departmentId: string, sale: SalesItem): Promise<void> {
+    const batch = writeBatch(db);
+
+    const originalSaleRef = doc(db, `${departmentId}_sales`, sale.id);
+    batch.delete(originalSaleRef);
+
+    const archiveCollectionName = `archive_sales`;
+    const archiveSaleRef = doc(collection(db, archiveCollectionName));
+    const archivedSaleData = {
+        ...sale,
+        archivedAt: Timestamp.now(),
+        departmentId: departmentId
+    };
+    delete (archivedSaleData as any).id;
+    batch.set(archiveSaleRef, archivedSaleData);
+
+    await batch.commit();
 }
 
 interface BudgetContentProps {
@@ -161,13 +174,15 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   }
 
   const handleDelete = async (saleId: string) => {
+    const saleToArchive = salesItems.find(item => item.id === saleId);
+    if (!saleToArchive) return;
     try {
-        await deleteSale(departmentId, saleId);
+        await archiveSale(departmentId, saleToArchive);
         setSalesItems(prev => prev.filter(item => item.id !== saleId));
-        toast({ title: t('itemDeleted') });
+        toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
     } catch (e) {
-        console.error("Error deleting sale: ", e);
-        toast({ variant: "destructive", title: t('error'), description: "Failed to delete sale." });
+        console.error("Error archiving sale: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to archive sale." });
     }
   };
 

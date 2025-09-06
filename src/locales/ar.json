@@ -412,5 +412,16 @@
     "financialManagementFor": "الإدارة المالية للمستخدم:",
     "totalUnpaidDebts": "مجموع الديون غير المسددة",
     "allDepartmentsSummaryDesc": "هذا ملخص مالي مجمع لجميع أقسامك: {departments}.",
-    "allDepartments": "الزراعة، المواشي، الدواجن، الأسماك"
+    "allDepartments": "الزراعة، المواشي، الدواجن، الأسماك",
+    "archive": "الأرشيف",
+    "archivePageTitle": "الأرشيف",
+    "archivePageDesc": "عرض السجلات المكتملة والمحذوفة.",
+    "archivedSales": "المبيعات المحذوفة",
+    "archivedExpenses": "المصروفات المحذوفة",
+    "archivedDebts": "الديون المحذوفة",
+    "noArchivedItems": "لا توجد عناصر مؤرشفة في هذا القسم.",
+    "archivedAt": "تاريخ الأرشفة",
+    "department": "القسم",
+    "itemArchived": "تمت الأرشفة!",
+    "itemArchivedDesc": "تم نقل البند إلى الأرشيف بنجاح."
 }

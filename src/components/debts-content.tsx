@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, getDocs, doc, Timestamp, deleteDoc, updateDoc, arrayUnion, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, deleteDoc, updateDoc, arrayUnion, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,10 +53,25 @@ async function addDebt(departmentId: string, data: DebtItemData): Promise<string
     return docRef.id;
 }
 
-async function deleteDebt(departmentId: string, debtId: string): Promise<void> {
-    const collectionName = `${departmentId}_debts`;
-    const debtDocRef = doc(db, collectionName, debtId);
-    await deleteDoc(debtDocRef);
+async function archiveDebt(departmentId: string, debt: DebtItem): Promise<void> {
+    const batch = writeBatch(db);
+
+    const originalDebtRef = doc(db, `${departmentId}_debts`, debt.id);
+    batch.delete(originalDebtRef);
+
+    const archiveCollectionName = `archive_debts`;
+    const archiveDebtRef = doc(collection(db, archiveCollectionName));
+
+    const archivedData = {
+        ...debt,
+        archivedAt: Timestamp.now(),
+        departmentId: departmentId
+    };
+    delete (archivedData as any).id;
+
+    batch.set(archiveDebtRef, archivedData);
+
+    await batch.commit();
 }
 
 
@@ -161,13 +176,15 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     }
     
     async function handleDelete(debtId: string) {
+        const debtToArchive = debts.find(item => item.id === debtId);
+        if (!debtToArchive) return;
         try {
-            await deleteDebt(departmentId, debtId);
+            await archiveDebt(departmentId, debtToArchive);
             setDebts(prev => prev.filter(d => d.id !== debtId));
-            toast({ title: t('debtDeleted') });
+            toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
-            console.error("Error deleting debt: ", e);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to delete debt." });
+            console.error("Error archiving debt: ", e);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to archive debt." });
         }
     }
 

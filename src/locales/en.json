@@ -412,5 +412,16 @@
     "financialManagementFor": "Financial Management for:",
     "totalUnpaidDebts": "Total Unpaid Debts",
     "allDepartmentsSummaryDesc": "This is a combined financial summary for all your departments: {departments}.",
-    "allDepartments": "Agriculture, Livestock, Poultry, Fish"
+    "allDepartments": "Agriculture, Livestock, Poultry, Fish",
+    "archive": "Archive",
+    "archivePageTitle": "Archive",
+    "archivePageDesc": "View completed and deleted records.",
+    "archivedSales": "Deleted Sales",
+    "archivedExpenses": "Deleted Expenses",
+    "archivedDebts": "Deleted Debts",
+    "noArchivedItems": "There are no archived items in this section.",
+    "archivedAt": "Archived At",
+    "department": "Department",
+    "itemArchived": "Item Archived!",
+    "itemArchivedDesc": "The item has been successfully moved to the archive."
 }
