@@ -418,5 +418,8 @@
     "archivedAt": "Archived At",
     "department": "Department",
     "itemArchived": "Item Archived!",
-    "itemArchivedDesc": "The item has been successfully moved to the archive."
+    "itemArchivedDesc": "The item has been successfully moved to the archive.",
+    "fromMonths": "from months"
 }
+
+    

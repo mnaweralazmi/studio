@@ -418,5 +418,8 @@
     "archivedAt": "تاريخ الأرشفة",
     "department": "القسم",
     "itemArchived": "تمت الأرشفة!",
-    "itemArchivedDesc": "تم نقل البند إلى الأرشيف بنجاح."
+    "itemArchivedDesc": "تم نقل البند إلى الأرشيف بنجاح.",
+    "fromMonths": "من الأشهر"
 }
+
+    
