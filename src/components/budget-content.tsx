@@ -101,18 +101,23 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     setIsDataLoading(true);
     const collectionName = `${departmentId}_sales`;
-    
-    getDataForUser<SalesItem>(collectionName, authUser.uid)
-      .then(data => {
-        setSalesItems(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
-      })
-      .catch(error => {
-        console.error("Error fetching sales: ", error);
-        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-      })
-      .finally(() => {
-        setIsDataLoading(false);
-      });
+    const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        getDataForUser<SalesItem>(collectionName, authUser.uid)
+          .then(data => {
+            setSalesItems(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+          })
+          .catch(error => {
+            console.error("Error fetching sales: ", error);
+            toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
+          })
+          .finally(() => {
+            setIsDataLoading(false);
+          });
+    });
+
+    return () => unsubscribe();
 
   }, [departmentId, authUser, isAuthLoading, toast, t]);
 
@@ -146,8 +151,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        const newSaleId = await addSale(departmentId, submissionData);
-        setSalesItems(prev => [{...submissionData, id: newSaleId, date: new Date()}, ...prev]);
+        await addSale(departmentId, submissionData);
+        // Data will be re-fetched by the onSnapshot listener, no need to set state manually
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
@@ -178,7 +183,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     if (!saleToArchive) return;
     try {
         await archiveSale(departmentId, saleToArchive);
-        setSalesItems(prev => prev.filter(item => item.id !== saleId));
+        // Data will be re-fetched by the onSnapshot listener, no need to set state manually
         toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
     } catch (e) {
         console.error("Error archiving sale: ", e);
@@ -376,3 +381,5 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
+
+    

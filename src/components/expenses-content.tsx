@@ -109,18 +109,23 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
         setIsDataLoading(true);
         const collectionName = `${departmentId}_expenses`;
+        const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
         
-        getDataForUser<ExpenseItem>(collectionName, authUser.uid)
-            .then(data => {
-                setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
-            })
-            .catch(error => {
-                console.error("Error fetching expenses: ", error);
-                toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-            })
-            .finally(() => {
-                setIsDataLoading(false);
-            });
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            getDataForUser<ExpenseItem>(collectionName, authUser.uid)
+                .then(data => {
+                    setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+                })
+                .catch(error => {
+                    console.error("Error fetching expenses: ", error);
+                    toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
+                })
+                .finally(() => {
+                    setIsDataLoading(false);
+                });
+        });
+
+        return () => unsubscribe();
 
     }, [authUser, departmentId, isAuthLoading, toast, t]);
     
@@ -154,8 +159,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            const newExpenseId = await addExpense(departmentId, newExpenseData);
-            setExpenses(prev => [{...newExpenseData, id: newExpenseId, date: new Date()}, ...prev]);
+            await addExpense(departmentId, newExpenseData);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
@@ -170,7 +174,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         if (!expenseToArchive) return;
         try {
             await archiveExpense(departmentId, expenseToArchive);
-            setExpenses(prev => prev.filter(e => e.id !== expenseId));
             toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
             console.error("Error archiving expense: ", e);
@@ -344,3 +347,5 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
+
+    

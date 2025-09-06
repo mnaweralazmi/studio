@@ -33,7 +33,6 @@ export async function getDataForUser<T extends { id: string, ownerId?: string }>
         });
     }
 
-    // Fallback for legacy data
     const q2 = query(colRef, where("ownerId", "==", null));
     const legacySnapshot = await getDocs(q2);
      if (!legacySnapshot.empty) {
@@ -63,12 +62,24 @@ export function BudgetSummary() {
     
 
     React.useEffect(() => {
+        if (!authUser) {
+            if (!authLoading) setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+        
+        const unsubscribes = departments.flatMap(deptId => {
+            const collectionNames = [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`];
+            return collectionNames.map(colName => 
+                onSnapshot(query(collection(db, colName), where("ownerId", "==", authUser.uid)), () => {
+                    fetchAllData();
+                })
+            );
+        });
+
         const fetchAllData = async () => {
-            if (!authUser) {
-                setIsLoading(false);
-                return;
-            }
-            setIsLoading(true);
+            if (!authUser) return;
 
             try {
                 let allSales: SalesItem[] = [];
@@ -118,11 +129,10 @@ export function BudgetSummary() {
             }
         };
         
-        if (authUser) {
-            fetchAllData();
-        } else if (!authLoading) {
-            setIsLoading(false);
-        }
+        fetchAllData();
+
+        return () => unsubscribes.forEach(unsub => unsub());
+
     }, [authUser, authLoading]);
 
 
@@ -182,3 +192,5 @@ export function BudgetSummary() {
         </div>
     )
 }
+
+    

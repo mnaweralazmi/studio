@@ -52,17 +52,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         
         unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-          if (doc.exists()) {
-            const userData = doc.data();
-            const combinedUser: AppUser = {
+          const combinedUser: AppUser = {
               ...firebaseUser,
-              ...userData,
-            };
-            setUser(combinedUser);
-          } else {
-             // If no user document, just use the auth user.
-            setUser(firebaseUser);
-          }
+              ...(doc.exists() && doc.data()),
+              // Ensure displayName and photoURL from auth are prioritized if they exist
+              displayName: firebaseUser.displayName || doc.data()?.name,
+              photoURL: firebaseUser.photoURL || doc.data()?.photoURL
+          };
+          setUser(combinedUser);
           setLoading(false);
         }, (error) => {
           console.error("Error with onSnapshot, falling back to auth user:", error);
@@ -98,3 +95,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

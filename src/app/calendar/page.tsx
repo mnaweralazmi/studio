@@ -146,8 +146,9 @@ export default function CalendarPage() {
 
     setIsTasksLoading(true);
     const tasksCollectionRef = collection(db, 'tasks');
-    
-    const handleSnapshot = (querySnapshot: any) => {
+    const q = query(tasksCollectionRef, where("ownerId", "==", user.uid));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const fetchedTasks = querySnapshot.docs.map((docSnap: any) => {
             const data = docSnap.data();
             return {
@@ -156,26 +157,32 @@ export default function CalendarPage() {
                 dueDate: (data.dueDate as unknown as Timestamp).toDate(),
             } as Task;
         });
-        setTasks(fetchedTasks);
-        setIsTasksLoading(false);
-    };
 
-    const handleError = (error: any) => {
+        if (fetchedTasks.length === 0) {
+            // Fallback for legacy data
+            const legacyQ = query(tasksCollectionRef, where("ownerId", "==", null));
+            const unsubscribeLegacy = onSnapshot(legacyQ, (legacySnapshot) => {
+                 const legacyTasks = legacySnapshot.docs.map((docSnap: any) => {
+                    const data = docSnap.data();
+                    return {
+                        id: docSnap.id,
+                        ...data,
+                        dueDate: (data.dueDate as unknown as Timestamp).toDate(),
+                    } as Task;
+                });
+                setTasks(legacyTasks);
+                setIsTasksLoading(false);
+            });
+            return () => unsubscribeLegacy();
+        } else {
+            setTasks(fetchedTasks);
+            setIsTasksLoading(false);
+        }
+    }, (error) => {
         console.error("Failed to fetch tasks:", error);
         toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
         setIsTasksLoading(false);
-    };
-    
-    const q1 = query(tasksCollectionRef, where("ownerId", "==", user.uid));
-    
-    const unsubscribe = onSnapshot(q1, (querySnapshot) => {
-        if (!querySnapshot.empty) {
-            handleSnapshot(querySnapshot);
-        } else {
-            const q2 = query(tasksCollectionRef, where("ownerId", "==", null));
-             onSnapshot(q2, handleSnapshot, handleError);
-        }
-    }, handleError);
+    });
 
     return () => unsubscribe();
   }, [user, loading, t, toast]);
@@ -309,5 +316,7 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    
 
     

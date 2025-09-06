@@ -93,24 +93,30 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const collectionName = `${departmentId}_workers`;
-        getDataForUser<Worker>(collectionName, authUser.uid)
-            .then(data => {
-                const fetchedWorkers = data.map(d => ({
-                    ...d,
-                    transactions: (d.transactions || []).map((t: any) => ({
-                        ...t,
-                        date: new Date(t.date).toISOString()
-                    }))
-                }));
-                setWorkers(fetchedWorkers);
-            })
-            .catch(error => {
-                console.error("Error fetching workers: ", error);
-                toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
-            })
-            .finally(() => {
-                setIsDataLoading(false);
-            });
+        const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            getDataForUser<Worker>(collectionName, authUser.uid)
+                .then(data => {
+                    const fetchedWorkers = data.map(d => ({
+                        ...d,
+                        transactions: (d.transactions || []).map((t: any) => ({
+                            ...t,
+                            date: new Date(t.date).toISOString()
+                        }))
+                    }));
+                    setWorkers(fetchedWorkers);
+                })
+                .catch(error => {
+                    console.error("Error fetching workers: ", error);
+                    toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
+                })
+                .finally(() => {
+                    setIsDataLoading(false);
+                });
+        });
+
+        return () => unsubscribe();
         
     }, [authUser, departmentId, isAuthLoading, t, toast]);
     
@@ -130,12 +136,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         try {
             if (workerId) {
                 await updateWorker(departmentId, workerId, data);
-                setWorkers(prev => prev.map(w => w.id === workerId ? {...w, ...data} : w));
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
                 const newWorkerData = { ...data, ownerId: authUser.uid };
-                const newId = await addWorker(departmentId, newWorkerData);
-                setWorkers(prev => [...prev, {...newWorkerData, id: newId, paidMonths: [], transactions: []}]);
+                await addWorker(departmentId, newWorkerData);
                 toast({ title: t('workerAddedSuccess') });
             }
         } catch (e) {
@@ -155,11 +159,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 year,
             };
             await paySalary(departmentId, workerId, {year, month}, transaction);
-             setWorkers(prev => prev.map(w => w.id === workerId ? {
-                ...w, 
-                paidMonths: [...w.paidMonths, {year, month}],
-                transactions: [...w.transactions, {...transaction, id: new Date().toISOString(), date: new Date().toISOString()}]
-            } : w));
             toast({ title: t('salaryPaidSuccess') });
         } catch (e) {
             console.error("Error paying salary: ", e);
@@ -177,11 +176,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            const newId = await addTransaction(departmentId, workerId, newTransactionData);
-            setWorkers(prev => prev.map(w => w.id === workerId ? {
-                ...w,
-                transactions: [...w.transactions, {...newTransactionData, id: newId, date: new Date().toISOString()}]
-            } : w));
+            await addTransaction(departmentId, workerId, newTransactionData);
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
@@ -193,7 +188,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     async function handleDeleteWorker(workerId: string) {
         try {
             await deleteWorker(departmentId, workerId);
-            setWorkers(prev => prev.filter(w => w.id !== workerId));
             toast({ title: t('workerDeleted') });
         } catch(e) {
             console.error("Error deleting worker: ", e);
@@ -204,7 +198,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const getWorkerBalance = (worker: Worker) => {
         return (worker.transactions || []).reduce((acc, t) => {
              if (t.type === 'bonus') return acc + t.amount;
-             if (t.type === 'deduction') return acc - t.amount;
+             if (t.type === 'deduction' || t.type === 'salary') return acc - t.amount;
              return acc;
         }, 0);
     }
@@ -360,3 +354,5 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
+
+    

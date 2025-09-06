@@ -24,27 +24,28 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     const topicsCollectionRef = collection(db, 'data');
     
-    const unsubscribe = onSnapshot(topicsCollectionRef, (querySnapshot) => {
-        if (!querySnapshot.empty) {
-            const fetchedTopics: AgriculturalSection[] = querySnapshot.docs.map(doc => ({
+    const processSnapshot = (snapshot: any) => {
+        if (!snapshot.empty) {
+            const fetchedTopics: AgriculturalSection[] = snapshot.docs.map((doc: any) => ({
                 id: doc.id,
                 ...doc.data()
             })) as AgriculturalSection[];
             
-            // This ensures all global topics are included, plus any user-specific ones.
             const userTopics = fetchedTopics.filter(topic => !topic.ownerId || (user && topic.ownerId === user.uid));
             setTopics(userTopics);
-
         } else {
-             // If the 'data' collection is empty, fall back to initial static data.
              setTopics(initialAgriculturalSections);
         }
         setLoading(false);
-    }, (error) => {
+    };
+    
+    const handleError = (error: any) => {
         console.error("Error fetching topics, falling back to initial data: ", error);
         setTopics(initialAgriculturalSections);
         setLoading(false);
-    });
+    };
+
+    const unsubscribe = onSnapshot(topicsCollectionRef, processSnapshot, handleError);
 
     return () => unsubscribe();
   }, [user]);

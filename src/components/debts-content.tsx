@@ -116,22 +116,27 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         setIsDataLoading(true);
         const collectionName = `${departmentId}_debts`;
-        
-        getDataForUser<DebtItem>(collectionName, authUser.uid)
-            .then(data => {
-                const fetchedDebts = data.map(d => ({
-                    ...d,
-                    payments: (d.payments || []).map(p => ({...p, date: new Date(p.date)}))
-                }));
-                setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
-            })
-            .catch(error => {
-                console.error("Error fetching debts: ", error);
-                toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
-            })
-            .finally(() => {
-                setIsDataLoading(false);
-            });
+        const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            getDataForUser<DebtItem>(collectionName, authUser.uid)
+                .then(data => {
+                    const fetchedDebts = data.map(d => ({
+                        ...d,
+                        payments: (d.payments || []).map(p => ({...p, date: new Date(p.date)}))
+                    }));
+                    setDebts(fetchedDebts.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
+                })
+                .catch(error => {
+                    console.error("Error fetching debts: ", error);
+                    toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
+                })
+                .finally(() => {
+                    setIsDataLoading(false);
+                });
+        });
+
+        return () => unsubscribe();
 
     }, [authUser, departmentId, isAuthLoading, t, toast]);
 
@@ -163,8 +168,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            const newDebtId = await addDebt(departmentId, newDebtData);
-            setDebts(prev => [...prev, { ...newDebtData, id: newDebtId, status: 'unpaid', payments: []}].sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
+            await addDebt(departmentId, newDebtData);
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -180,7 +184,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         if (!debtToArchive) return;
         try {
             await archiveDebt(departmentId, debtToArchive);
-            setDebts(prev => prev.filter(d => d.id !== debtId));
             toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
             console.error("Error archiving debt: ", e);
@@ -198,22 +201,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             const newPayment = { amount: paymentAmount, date: new Date() };
             await addDebtPayment(departmentId, debtId, newPayment);
             
-            const updatedDebts = debts.map(d => {
-                if (d.id === debtId) {
-                    const totalPaid = d.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
-                    const newStatus: DebtItem['status'] = totalPaid >= d.amount ? 'paid' : 'partially-paid';
-                     if (newStatus !== d.status) {
-                        updateDebtStatus(departmentId, debtId, newStatus);
-                    }
-                    return {
-                        ...d,
-                        payments: [...d.payments, {...newPayment, id: new Date().toISOString()}],
-                        status: newStatus
-                    };
-                }
-                return d;
-            });
-            setDebts(updatedDebts);
+            const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
+            const newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
+            if (newStatus !== debt.status) {
+                await updateDebtStatus(departmentId, debtId, newStatus);
+            }
             
             toast({ title: t('paymentRecordedSuccess') });
         } catch (e) {
@@ -352,3 +344,5 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
+
+    
