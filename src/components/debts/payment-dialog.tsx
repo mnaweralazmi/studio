@@ -15,11 +15,10 @@ import { Label } from '../ui/label';
 
 interface PaymentDialogProps {
     debt: DebtItem;
-    departmentId: string;
     onConfirm: (debtId: string, amount: number) => void;
 }
 
-export function PaymentDialog({ debt, departmentId, onConfirm }: PaymentDialogProps) {
+export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
     const { t } = useLanguage();
     const { toast } = useToast();
     const [isOpen, setIsOpen] = React.useState(false);

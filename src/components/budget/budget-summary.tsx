@@ -15,10 +15,8 @@ import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
 
-const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
-
-const useAllDepartmentsData = <T extends DocumentData>(
-  collectionSuffix: string
+const useCollectionData = <T extends DocumentData>(
+  collectionName: string
 ): [T[], boolean] => {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = React.useState<T[]>([]);
@@ -34,37 +32,28 @@ const useAllDepartmentsData = <T extends DocumentData>(
     }
 
     setLoading(true);
-    let isMounted = true;
+    const q = query(collection(db, 'users', user.uid, collectionName));
     
-    const runQueries = async () => {
-         try {
-           const allData: T[] = [];
-           const departmentSuffixes = departments.map(dept => `${dept}_${collectionSuffix}`);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedData = snapshot.docs.map(doc => {
+          const docData = doc.data();
+          const mappedData: any = { id: doc.id, ...docData };
+           if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
+           if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
+           if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
+           if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate().toISOString()}));
+          return mappedData as T;
+      });
+      setData(fetchedData);
+      setLoading(false);
+    }, (error) => {
+      console.error(`Error fetching ${collectionName}:`, error);
+      setData([]);
+      setLoading(false);
+    });
 
-           for (const suffix of departmentSuffixes) {
-             const q = query(collection(db, 'users', user.uid, suffix));
-             const snapshot = await getDocs(q);
-             const departmentId = suffix.split('_')[0] as Department;
-             snapshot.forEach(doc => {
-               allData.push({ id: doc.id, ...doc.data(), departmentId } as T & { departmentId: Department })
-             });
-           }
-           if (isMounted) {
-            setData(allData);
-           }
-         } catch (error) {
-           console.error("Failed to fetch all department data for suffix:", collectionSuffix, error);
-           if(isMounted) setData([]);
-         } finally {
-            if(isMounted) setLoading(false);
-         }
-    };
-    runQueries();
-
-    return () => {
-        isMounted = false;
-    }
-  }, [user, authLoading, collectionSuffix]);
+    return () => unsubscribe();
+  }, [user, authLoading, collectionName]);
 
   return [data, loading || authLoading];
 };
@@ -73,10 +62,10 @@ const useAllDepartmentsData = <T extends DocumentData>(
 export function BudgetSummary() {
     const { t } = useLanguage();
     
-    const [allSales, salesLoading] = useAllDepartmentsData<SalesItem>('sales');
-    const [allExpenses, expensesLoading] = useAllDepartmentsData<ExpenseItem>('expenses');
-    const [allDebts, debtsLoading] = useAllDepartmentsData<DebtItem>('debts');
-    const [allWorkers, workersLoading] = useAllDepartments_WorkersData();
+    const [allSales, salesLoading] = useCollectionData<SalesItem>('sales');
+    const [allExpenses, expensesLoading] = useCollectionData<ExpenseItem>('expenses');
+    const [allDebts, debtsLoading] = useCollectionData<DebtItem>('debts');
+    const [allWorkers, workersLoading] = useCollectionData<Worker>('workers');
 
     const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
 
@@ -153,47 +142,3 @@ export function BudgetSummary() {
         </div>
     )
 }
-
-// Special hook for workers since its name doesn't have department prefix
-const useAllDepartments_WorkersData = (): [Worker[], boolean] => {
-  const { user, loading: authLoading } = useAuth();
-  const [data, setData] = React.useState<Worker[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!user) {
-      if (!authLoading) {
-        setData([]);
-        setLoading(false);
-      }
-      return;
-    }
-
-    setLoading(true);
-    const q = query(collection(db, 'users', user.uid, `workers`));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedData = snapshot.docs.map(doc => {
-          const docData = doc.data();
-          return {
-              id: doc.id,
-              ...docData,
-              transactions: (docData.transactions || []).map((t: any) => ({
-                  ...t,
-                  date: (t.date as Timestamp).toDate().toISOString()
-              }))
-          } as Worker;
-      });
-      setData(fetchedData);
-      setLoading(false);
-    }, (error) => {
-      console.error(`Error fetching workers:`, error);
-      setData([]);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, authLoading]);
-
-  return [data, loading || authLoading];
-};

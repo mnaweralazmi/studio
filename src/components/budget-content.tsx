@@ -43,8 +43,8 @@ export type SalesItem = {
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-async function addSale(userId: string, departmentId: string, data: SalesItemData): Promise<string> {
-    const collectionName = `${departmentId}_sales`;
+async function addSale(userId: string, data: SalesItemData): Promise<string> {
+    const collectionName = `sales`;
     const salesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
@@ -53,10 +53,10 @@ async function addSale(userId: string, departmentId: string, data: SalesItemData
     return docRef.id;
 }
 
-async function archiveSale(userId: string, departmentId: string, sale: SalesItem): Promise<void> {
+async function archiveSale(userId: string, sale: SalesItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalSaleRef = doc(db, 'users', userId, `${departmentId}_sales`, sale.id);
+    const originalSaleRef = doc(db, 'users', userId, `sales`, sale.id);
     batch.delete(originalSaleRef);
 
     const archiveCollectionName = `archive_sales`;
@@ -64,7 +64,7 @@ async function archiveSale(userId: string, departmentId: string, sale: SalesItem
     const archivedSaleData = {
         ...sale,
         archivedAt: Timestamp.now(),
-        departmentId: departmentId
+        departmentId: 'agriculture' // Default for now
     };
     delete (archivedSaleData as any).id;
     batch.set(archiveSaleRef, archivedSaleData);
@@ -100,7 +100,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
-    const collectionName = `${departmentId}_sales`;
+    const collectionName = `sales`;
     const q = query(
         collection(db, 'users', authUser.uid, collectionName)
     );
@@ -124,7 +124,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     return () => unsubscribe();
 
-  }, [departmentId, authUser, isAuthLoading, toast, t]);
+  }, [authUser, isAuthLoading, toast, t]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,7 +156,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        await addSale(authUser.uid, departmentId, submissionData);
+        await addSale(authUser.uid, submissionData);
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
@@ -187,7 +187,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     const saleToArchive = salesItems.find(item => item.id === saleId);
     if (!saleToArchive) return;
     try {
-        await archiveSale(authUser.uid, departmentId, saleToArchive);
+        await archiveSale(authUser.uid, saleToArchive);
         toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
     } catch (e) {
         console.error("Error archiving sale: ", e);
