@@ -347,3 +347,5 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </>
     );
 }
+
+    
