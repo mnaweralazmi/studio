@@ -346,6 +346,7 @@
     "financialManagementDesc": "نظرة شاملة على أدواتك لإدارة الأقسام المختلفة في مزرعتك.",
     "departmentalManagement": "إدارة الأقسام",
     "selectDepartmentToManage": "اختر قسماً لإدارة شؤونه المالية بالتفصيل.",
+    "selectDepartment": "اختيار القسم",
     "budget": "الميزانية",
     "financialSummary": "الملخص المالي",
     "totalIncome": "إجمالي الدخل",
@@ -410,5 +411,6 @@
     "selectUser": "اختر مستخدمًا لعرض بياناته...",
     "financialManagementFor": "الإدارة المالية للمستخدم:",
     "totalUnpaidDebts": "مجموع الديون غير المسددة",
-    "allDepartmentsSummaryDesc": "هذا ملخص مالي مجمع لجميع أقسامك: {departments}."
+    "allDepartmentsSummaryDesc": "هذا ملخص مالي مجمع لجميع أقسامك: {departments}.",
+    "allDepartments": "الزراعة، المواشي، الدواجن، الأسماك"
 }

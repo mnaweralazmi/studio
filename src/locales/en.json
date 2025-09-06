@@ -346,6 +346,7 @@
     "financialManagementDesc": "A comprehensive overview of your tools for managing the different departments of your farm.",
     "departmentalManagement": "Departmental Management",
     "selectDepartmentToManage": "Select a department to manage its finances in detail.",
+    "selectDepartment": "Select Department",
     "budget": "Budget",
     "financialSummary": "Financial Summary",
     "totalIncome": "Total Income",
@@ -410,5 +411,6 @@
     "selectUser": "Select a user to view their data...",
     "financialManagementFor": "Financial Management for:",
     "totalUnpaidDebts": "Total Unpaid Debts",
-    "allDepartmentsSummaryDesc": "This is a combined financial summary for all your departments: {departments}."
+    "allDepartmentsSummaryDesc": "This is a combined financial summary for all your departments: {departments}.",
+    "allDepartments": "Agriculture, Livestock, Poultry, Fish"
 }
