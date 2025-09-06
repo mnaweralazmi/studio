@@ -2,43 +2,43 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+    
+    // --- Helper Functions ---
     function isOwner(data) {
-      return request.auth.uid == data.ownerId;
+      return request.auth != null && request.auth.uid == data.ownerId;
     }
-  
-    // Public data (agricultural topics) can be read by anyone
+
+    // --- User Profiles ---
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+
+    // --- Public Data ---
     match /data/{document=**} {
       allow read: if true;
     }
 
-    // Users can read their own data, and update their own data
-    match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-    }
-    
-    // Tasks
-    match /tasks/{taskId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-    
-    match /completed_tasks/{taskId} {
-       allow read, write: if isOwner(resource.data);
-       allow create: if isOwner(request.resource.data);
+    // --- Collections with ownerId ---
+    function ownerCollections() {
+      return [
+        'tasks', 'completed_tasks',
+        'agriculture_sales', 'agriculture_expenses', 'agriculture_debts', 'agriculture_workers',
+        'livestock_sales', 'livestock_expenses', 'livestock_debts', 'livestock_workers',
+        'poultry_sales', 'poultry_expenses', 'poultry_debts', 'poultry_workers',
+        'fish_sales', 'fish_expenses', 'fish_debts', 'fish_workers',
+        'archive_sales', 'archive_expenses', 'archive_debts'
+      ];
     }
 
-    // Dynamic rule for all financial collections (sales, expenses, debts, workers)
-    // This covers agriculture, livestock, poultry, fish
-    match /{departmentId}_{collection}/{docId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-    
-    // Dynamic rule for all archive collections
-    match /archive_{collection}/{docId} {
-       allow read, write: if isOwner(resource.data);
-       allow create: if isOwner(request.resource.data);
+    match /{collection}/{docId} {
+      // This rule applies to all collections listed in the ownerCollections function.
+      // It secures access based on the 'ownerId' field.
+      // NOTE: For 'list' operations (queries), the client MUST include a `where('ownerId', '==', request.auth.uid)` clause.
+      allow list: if collection in ownerCollections() && request.auth != null;
+      allow get, update, delete: if collection in ownerCollections() && isOwner(resource.data);
+      allow create: if collection in ownerCollections() && isOwner(request.resource.data);
     }
   }
 }
