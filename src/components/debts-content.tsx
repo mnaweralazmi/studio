@@ -62,12 +62,16 @@ async function archiveDebt(userId: string, departmentId: string, debt: DebtItem)
     const archiveCollectionName = `archive_debts`;
     const archiveDebtRef = doc(collection(db, 'users', userId, archiveCollectionName));
 
-    const archivedData = {
+    const archivedData: any = {
         ...debt,
         archivedAt: Timestamp.now(),
-        departmentId: departmentId
+        departmentId: departmentId,
     };
-    delete (archivedData as any).id;
+    delete archivedData.id;
+
+    if (archivedData.dueDate === undefined) {
+        delete archivedData.dueDate;
+    }
 
     batch.set(archiveDebtRef, archivedData);
 
