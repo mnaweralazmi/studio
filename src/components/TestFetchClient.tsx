@@ -1,51 +1,53 @@
 // src/components/TestFetchClient.tsx
 "use client";
 import React, { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase"; // تم تعديل المسار ليتوافق مع مشروعك
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+import { fetchUserDoc, fetchUserSubcollection } from "@/lib/api/user-db";
+
 
 export default function TestFetchClient() {
-  const [status, setStatus] = useState("starting...");
+  const [status, setStatus] = useState("starting test...");
+
   useEffect(() => {
-    (async () => {
-      try {
-        // Wait for auth to initialize
+    const runTest = async () => {
+        // انتظر حتى تتم تهيئة المصادقة
         await new Promise(resolve => {
             const unsubscribe = auth.onAuthStateChanged(user => {
-                if (user) {
-                    resolve(user);
-                } else {
-                    setStatus("auth.currentUser is null. Please sign in first.");
-                    resolve(null);
-                }
+                resolve(user);
                 unsubscribe();
             });
         });
 
         const user = auth.currentUser;
+        console.log("UID:", user?.uid);
+        setStatus("auth.currentUser: " + (user ? user.uid : "null"));
+        
         if (!user) {
+          setStatus((s) => s + "  -> Not signed in. Please sign in first.");
           return;
         }
-        
-        setStatus("auth.currentUser: " + user.uid);
-        
-        // 1) جلب مستند المستخدم
-        setStatus(s => s + " | Fetching user doc...");
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        console.log("DEBUG userDoc snap:", userSnap.exists() ? userSnap.data() : null);
-        setStatus((s) => s + ` | userDoc.exists=${userSnap.exists()}`);
 
-        // 2) جلب ساب-كلكشن workers كمثال
-        setStatus(s => s + " | Fetching users/{uid}/workers ...");
-        const workersSnap = await getDocs(collection(db, "users", user.uid, "workers"));
-        console.log("DEBUG workers:", workersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setStatus((s) => s + ` | workersCount=${workersSnap.size}`);
+        try {
+            // 1) جلب مستند المستخدم
+            setStatus(s => s + " | Fetching user doc...");
+            const userDoc = await fetchUserDoc();
+            console.log("DEBUG userDoc:", userDoc);
+            setStatus((s) => s + ` | userDoc.exists=${!!userDoc}`);
 
-      } catch (err: any) {
-        console.error("FETCH ERROR:", err);
-        setStatus("ERROR: " + (err?.message || String(err)));
-      }
-    })();
+            // 2) جلب ساب-كلكشن workers كمثال
+            setStatus(s => s + " | Fetching users/{uid}/workers...");
+            const workersCollection = await fetchUserSubcollection("workers");
+            console.log("DEBUG workers:", workersCollection);
+            setStatus((s) => s + ` | workersCount=${workersCollection.length}`);
+            setStatus(s => s + " | Test Finished.");
+
+        } catch (err: any) {
+            console.error("FETCH ERROR:", err);
+            setStatus("ERROR: " + (err?.message || String(err)));
+        }
+    };
+
+    runTest();
   }, []);
 
   return (

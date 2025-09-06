@@ -1,6 +1,5 @@
 // src/lib/api/user-db.ts
-
-import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, type DocumentData } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 /**
@@ -8,7 +7,7 @@ import { auth, db } from "@/lib/firebase";
  * @param uid - معرف المستخدم (اختياري). إذا لم يتم توفيره، يستخدم المستخدم الحالي.
  * @returns بيانات المستخدم أو null إذا لم يوجد.
  */
-export async function fetchUserDoc(uid?: string) {
+export async function fetchUserDoc(uid?: string): Promise<Record<string, any> | null> {
   const userId = uid ?? auth.currentUser?.uid;
   if (!userId) {
     throw new Error("المستخدم غير مسجل الدخول أو لم يتم توفير UID.");
@@ -24,7 +23,7 @@ export async function fetchUserDoc(uid?: string) {
  * @param uid - معرف المستخدم (اختياري). إذا لم يتم توفيره، يستخدم المستخدم الحالي.
  * @returns مصفوفة من المستندات الموجودة في المجموعة الفرعية.
  */
-export async function fetchUserCollection(collectionName: string, uid?: string) {
+export async function fetchUserSubcollection(collectionName: string, uid?: string): Promise<DocumentData[]> {
   const userId = uid ?? auth.currentUser?.uid;
   if (!userId) {
     throw new Error("المستخدم غير مسجل الدخول أو لم يتم توفير UID.");

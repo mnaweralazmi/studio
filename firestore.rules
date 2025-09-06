@@ -3,21 +3,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // القاعدة الأساسية: السماح للمستخدم بالوصول لمستنداته الخاصة فقط
-    match /users/{userId}/{documents=**} {
+    // السماح للمستخدم المصادق بالوصول الكامل لمستنداته ومجموعاته الفرعية فقط
+    match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // القاعدة الثانية: السماح بقراءة عامة للمواضيع أو البيانات العامة
+    // السماح بالقراءة العامة لمجموعة البيانات العامة
     match /data/{docId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
-    }
-
-    // القاعدة الثالثة: قفل أي وصول آخر كإجراء أمني افتراضي
-    // هذه القاعدة مهمة لمنع الوصول غير المقصود لأي مجموعات مستقبلية
-    match /{document=**} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }
