@@ -408,5 +408,7 @@
     "adminDashboard": "لوحة تحكم الأدمن",
     "adminDashboardDesc": "عرض وإدارة بيانات المستخدمين.",
     "selectUser": "اختر مستخدمًا لعرض بياناته...",
-    "financialManagementFor": "الإدارة المالية للمستخدم:"
+    "financialManagementFor": "الإدارة المالية للمستخدم:",
+    "totalUnpaidDebts": "مجموع الديون غير المسددة",
+    "allDepartmentsSummaryDesc": "هذا ملخص مالي مجمع لجميع أقسامك: {departments}."
 }

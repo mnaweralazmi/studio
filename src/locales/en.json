@@ -408,5 +408,7 @@
     "adminDashboard": "Admin Dashboard",
     "adminDashboardDesc": "View and manage user data.",
     "selectUser": "Select a user to view their data...",
-    "financialManagementFor": "Financial Management for:"
+    "financialManagementFor": "Financial Management for:",
+    "totalUnpaidDebts": "Total Unpaid Debts",
+    "allDepartmentsSummaryDesc": "This is a combined financial summary for all your departments: {departments}."
 }

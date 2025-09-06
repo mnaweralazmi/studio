@@ -8,7 +8,7 @@ import { BudgetContent } from '@/components/budget-content';
 import { ExpensesContent } from '@/components/expenses-content';
 import { DebtsContent } from '@/components/debts-content';
 import { WorkersContent } from '@/components/workers-content';
-import { Wallet, CreditCard, Landmark, Users, Leaf, PawPrint, Bird, Fish } from 'lucide-react';
+import { Wallet, CreditCard, Landmark, Users, Leaf, PawPrint, Bird, Fish, BarChart, Building } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { BudgetSummary } from '@/components/budget/budget-summary';
 
@@ -41,53 +41,65 @@ export default function FinancialsPage() {
                     <p className="text-muted-foreground">{t('financialManagementDesc')}</p>
                 </div>
                 
-                <BudgetSummary departmentId={activeDepartment} />
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t('departmentalManagement')}</CardTitle>
-                        <CardDescription>{t('selectDepartmentToManage')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs value={activeDepartment} onValueChange={(value) => setActiveDepartment(value as Department)} className="w-full">
-                            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
-                                {(Object.keys(departmentIcons) as Department[]).map(dept => {
-                                    const Icon = departmentIcons[dept];
-                                    return (
-                                        <TabsTrigger key={dept} value={dept} className="flex-col h-16 gap-1">
-                                            <Icon className="h-5 w-5" />
-                                            <span>{departmentTitles[dept]}</span>
-                                        </TabsTrigger>
-                                    )
-                                })}
-                            </TabsList>
-                        </Tabs>
-                    </CardContent>
-                </Card>
-
-                <Tabs defaultValue="sales" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="sales"><Wallet className="mr-2 h-4 w-4" />{t('sales')}</TabsTrigger>
-                        <TabsTrigger value="expenses"><CreditCard className="mr-2 h-4 w-4" />{t('expenses')}</TabsTrigger>
-                        <TabsTrigger value="debts"><Landmark className="mr-2 h-4 w-4" />{t('debts')}</TabsTrigger>
-                        <TabsTrigger value="workers"><Users className="mr-2 h-4 w-4" />{t('workers')}</TabsTrigger>
+                <Tabs defaultValue="summary" className="w-full">
+                     <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="summary"><BarChart className="mr-2 h-4 w-4" />{t('financialSummary')}</TabsTrigger>
+                        <TabsTrigger value="departments"><Building className="mr-2 h-4 w-4" />{t('departmentalManagement')}</TabsTrigger>
                     </TabsList>
-                    
-                    <div className="mt-6 space-y-6">
-                        <TabsContent value="sales">
-                            <BudgetContent departmentId={activeDepartment} />
-                        </TabsContent>
-                        <TabsContent value="expenses">
-                            <ExpensesContent departmentId={activeDepartment} />
-                        </TabsContent>
-                        <TabsContent value="debts">
-                            <DebtsContent departmentId={activeDepartment} />
-                        </TabsContent>
-                        <TabsContent value="workers">
-                            <WorkersContent departmentId={activeDepartment} />
-                        </TabsContent>
-                    </div>
+
+                    <TabsContent value="summary" className="mt-6">
+                        <BudgetSummary />
+                    </TabsContent>
+
+                    <TabsContent value="departments" className="mt-6 space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('departmentalManagement')}</CardTitle>
+                                <CardDescription>{t('selectDepartmentToManage')}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Tabs value={activeDepartment} onValueChange={(value) => setActiveDepartment(value as Department)} className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+                                        {(Object.keys(departmentIcons) as Department[]).map(dept => {
+                                            const Icon = departmentIcons[dept];
+                                            return (
+                                                <TabsTrigger key={dept} value={dept} className="flex-col h-16 gap-1">
+                                                    <Icon className="h-5 w-5" />
+                                                    <span>{departmentTitles[dept]}</span>
+                                                </TabsTrigger>
+                                            )
+                                        })}
+                                    </TabsList>
+                                </Tabs>
+                            </CardContent>
+                        </Card>
+
+                        <Tabs defaultValue="sales" className="w-full">
+                            <TabsList className="grid w-full grid-cols-4">
+                                <TabsTrigger value="sales"><Wallet className="mr-2 h-4 w-4" />{t('sales')}</TabsTrigger>
+                                <TabsTrigger value="expenses"><CreditCard className="mr-2 h-4 w-4" />{t('expenses')}</TabsTrigger>
+                                <TabsTrigger value="debts"><Landmark className="mr-2 h-4 w-4" />{t('debts')}</TabsTrigger>
+                                <TabsTrigger value="workers"><Users className="mr-2 h-4 w-4" />{t('workers')}</TabsTrigger>
+                            </TabsList>
+                            
+                            <div className="mt-6 space-y-6">
+                                <TabsContent value="sales">
+                                    <BudgetContent departmentId={activeDepartment} />
+                                </TabsContent>
+                                <TabsContent value="expenses">
+                                    <ExpensesContent departmentId={activeDepartment} />
+                                </TabsContent>
+                                <TabsContent value="debts">
+                                    <DebtsContent departmentId={activeDepartment} />
+                                </TabsContent>
+                                <TabsContent value="workers">
+                                    <WorkersContent departmentId={activeDepartment} />
+                                </TabsContent>
+                            </div>
+                        </Tabs>
+                    </TabsContent>
                 </Tabs>
+
             </div>
         </main>
     );
