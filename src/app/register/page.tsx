@@ -14,7 +14,6 @@ import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { initialAgriculturalSections } from '@/lib/topics-data';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -40,14 +39,6 @@ const createNewUserDocument = async (user: User, name: string | null) => {
             level: 1,
             badges: [],
         });
-        
-        const batch = writeBatch(db);
-        const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
-        initialAgriculturalSections.forEach(topic => {
-            const newTopicRef = doc(topicsCollectionRef, topic.id);
-            batch.set(newTopicRef, topic);
-        });
-        await batch.commit();
     }
 }
 
@@ -185,3 +176,5 @@ export default function RegisterPage() {
     </main>
   );
 }
+
+    

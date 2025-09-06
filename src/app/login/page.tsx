@@ -14,7 +14,6 @@ import { Separator } from '@/components/ui/separator';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, writeBatch, collection } from 'firebase/firestore';
-import { initialAgriculturalSections } from '@/lib/topics-data';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -39,15 +38,6 @@ const handleUserSignIn = async (user: User) => {
             level: 1,
             badges: [],
         });
-        
-        const batch = writeBatch(db);
-        const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
-        initialAgriculturalSections.forEach(topic => {
-            const newTopicRef = doc(topicsCollectionRef, topic.id);
-            batch.set(newTopicRef, topic);
-        });
-        await batch.commit();
-
     }
 }
 
@@ -167,3 +157,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
