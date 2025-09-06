@@ -2,11 +2,11 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp, runTransaction, deleteDoc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
+import { addDoc, getDocs, doc, Timestamp, runTransaction, deleteDoc, collection, query, where, onSnapshot, writeBatch, updateDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { PlusCircle, Wallet, Trash2 } from 'lucide-react';
+import { PlusCircle, Wallet, Trash2, Edit } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
@@ -71,6 +71,7 @@ async function archiveSale(userId: string, departmentId: string, sale: SalesItem
 
     await batch.commit();
 }
+
 
 interface BudgetContentProps {
     departmentId: Department;
@@ -342,7 +343,12 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
               {t('sales')}
             </CardTitle>
             <CardDescription>
-             {t(`${departmentId}SalesDesc` as any)}
+             {t(`${departmentId}SalesDesc` as any, {
+                agricultureSalesDesc: t('agricultureSalesDesc'),
+                livestockSalesDesc: t('livestockSalesDesc'),
+                poultrySalesDesc: t('poultrySalesDesc'),
+                fishSalesDesc: t('fishSalesDesc'),
+             })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -393,7 +399,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-
-    
-
-    

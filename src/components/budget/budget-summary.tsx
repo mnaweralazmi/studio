@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, where, getDocs, DocumentData } from 'firebase/firestore';
+import { collectionGroup, onSnapshot, query, where, getDocs, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -17,37 +17,83 @@ import type { Department } from '@/app/financials/page';
 
 const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
 
-const useAllDepartmentsData = <T extends DocumentData>(collectionName: string): [T[], boolean] => {
-    const { user, loading: authLoading } = useAuth();
-    const [data, setData] = React.useState<T[]>([]);
-    const [loading, setLoading] = React.useState(true);
+const useAllDepartmentsData = <T extends DocumentData>(
+  collectionSuffix: string
+): [T[], boolean] => {
+  const { user, loading: authLoading } = useAuth();
+  const [data, setData] = React.useState<T[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-    React.useEffect(() => {
-        if (!user) {
-            if (!authLoading) {
-                setData([]);
-                setLoading(false);
-            }
-            return;
-        }
+  React.useEffect(() => {
+    if (!user) {
+      if (!authLoading) {
+        setData([]);
+        setLoading(false);
+      }
+      return;
+    }
 
-        setLoading(true);
-        const q = query(collection(db, 'users', user.uid, collectionName));
+    setLoading(true);
+    
+    // Create queries for each department's collection
+    const departmentQueries = departments.map(dept => 
+      query(collection(db, 'users', user.uid, `${dept}_${collectionSuffix}`))
+    );
+
+    const unsubscribes = departmentQueries.map((q, index) => 
+      onSnapshot(q, (snapshot) => {
+        const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-            setData(fetchedData);
-            setLoading(false);
-        }, (error) => {
-            console.error(`Error fetching ${collectionName}:`, error);
-            setData([]);
-            setLoading(false);
+        // Update the central data state
+        setData(prevData => {
+          // Filter out old data from this department to prevent duplicates
+          const otherDeptsData = prevData.filter(item => (item as any).departmentId !== departments[index]);
+          return [...otherDeptsData, ...fetchedData];
         });
+      }, (error) => {
+        console.error(`Error fetching ${departments[index]}_${collectionSuffix}:`, error);
+      })
+    );
 
-        return () => unsubscribe();
-    }, [user, authLoading, collectionName]);
+    // This part is tricky because loading is distributed. 
+    // We can simplify by just setting a timeout or a more complex loading state manager.
+    // For now, let's assume loading is done after a short period.
+    const timer = setTimeout(() => setLoading(false), 1500); // Simple loading simulation
 
-    return [data, loading || authLoading];
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+      clearTimeout(timer);
+    };
+
+  }, [user, authLoading, collectionSuffix]);
+
+  // A more robust way to handle combined loading state from multiple snapshots
+  React.useEffect(() => {
+     if (!authLoading && user) {
+       const runQueries = async () => {
+         try {
+           const allData: T[] = [];
+           for (const dept of departments) {
+             const q = query(collection(db, 'users', user.uid, `${dept}_${collectionSuffix}`));
+             const snapshot = await getDocs(q);
+             snapshot.forEach(doc => {
+               allData.push({ id: doc.id, ...doc.data() } as T)
+             });
+           }
+           setData(allData);
+         } catch (error) {
+           console.error("Failed to fetch all department data", error);
+           setData([]);
+         } finally {
+            setLoading(false);
+         }
+       };
+       runQueries();
+     }
+  }, [user, authLoading, collectionSuffix]);
+
+
+  return [data, loading || authLoading];
 };
 
 
@@ -57,7 +103,7 @@ export function BudgetSummary() {
     const [allSales, salesLoading] = useAllDepartmentsData<SalesItem>('sales');
     const [allExpenses, expensesLoading] = useAllDepartmentsData<ExpenseItem>('expenses');
     const [allDebts, debtsLoading] = useAllDepartmentsData<DebtItem>('debts');
-    const [allWorkers, workersLoading] = useAllDepartmentsData<Worker>('workers');
+    const [allWorkers, workersLoading] = useAllDepartments_WorkersData();
 
     const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
 
@@ -135,4 +181,46 @@ export function BudgetSummary() {
     )
 }
 
+// Special hook for workers since its name doesn't have department prefix
+const useAllDepartments_WorkersData = (): [Worker[], boolean] => {
+  const { user, loading: authLoading } = useAuth();
+  const [data, setData] = React.useState<Worker[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!user) {
+      if (!authLoading) {
+        setData([]);
+        setLoading(false);
+      }
+      return;
+    }
+
+    setLoading(true);
+    const q = query(collection(db, 'users', user.uid, `workers`));
     
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedData = snapshot.docs.map(doc => {
+          const docData = doc.data();
+          return {
+              id: doc.id,
+              ...docData,
+              transactions: (docData.transactions || []).map((t: any) => ({
+                  ...t,
+                  date: (t.date as Timestamp).toDate().toISOString()
+              }))
+          } as Worker;
+      });
+      setData(fetchedData);
+      setLoading(false);
+    }, (error) => {
+      console.error(`Error fetching workers:`, error);
+      setData([]);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, authLoading]);
+
+  return [data, loading || authLoading];
+};

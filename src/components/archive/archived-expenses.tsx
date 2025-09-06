@@ -41,13 +41,17 @@ export function ArchivedExpenses() {
         setIsLoading(true);
         const q = query(
             collection(db, 'users', user.uid, "archive_expenses"),
-            where("ownerId", "==", user.uid)
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const items: ArchivedExpense[] = [];
             querySnapshot.forEach((doc) => {
-                items.push({ id: doc.id, ...doc.data() } as ArchivedExpense);
+                const data = doc.data();
+                items.push({ 
+                    id: doc.id,
+                    ...data,
+                    date: data.date.toDate(),
+                } as ArchivedExpense);
             });
             setArchivedItems(items.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));
             setIsLoading(false);
@@ -99,5 +103,3 @@ export function ArchivedExpenses() {
         </Card>
     );
 }
-
-    

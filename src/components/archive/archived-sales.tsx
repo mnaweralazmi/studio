@@ -41,13 +41,17 @@ export function ArchivedSales() {
         setIsLoading(true);
         const q = query(
             collection(db, 'users', user.uid, "archive_sales"),
-            where("ownerId", "==", user.uid)
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const items: ArchivedSale[] = [];
             querySnapshot.forEach((doc) => {
-                items.push({ id: doc.id, ...doc.data() } as ArchivedSale);
+                const data = doc.data();
+                items.push({ 
+                    id: doc.id, 
+                    ...data,
+                    date: data.date.toDate(),
+                 } as ArchivedSale);
             });
             setArchivedItems(items.sort((a, b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));
             setIsLoading(false);
@@ -97,5 +101,3 @@ export function ArchivedSales() {
         </Card>
     );
 }
-
-    

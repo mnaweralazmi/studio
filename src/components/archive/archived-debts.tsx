@@ -42,13 +42,18 @@ export function ArchivedDebts() {
         setIsLoading(true);
         const q = query(
             collection(db, 'users', user.uid, "archive_debts"),
-            where("ownerId", "==", user.uid)
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const items: ArchivedDebt[] = [];
             querySnapshot.forEach((doc) => {
-                items.push({ id: doc.id, ...doc.data() } as ArchivedDebt);
+                const data = doc.data();
+                items.push({ 
+                    id: doc.id,
+                    ...data,
+                    dueDate: data.dueDate ? data.dueDate.toDate() : undefined,
+                    payments: (data.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })),
+                } as ArchivedDebt);
             });
             setArchivedItems(items.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));
             setIsLoading(false);
@@ -98,5 +103,3 @@ export function ArchivedDebts() {
         </Card>
     );
 }
-
-    
