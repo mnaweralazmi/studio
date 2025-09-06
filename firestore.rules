@@ -4,23 +4,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // القواعد الخاصة بمجموعة المستخدمين
-    // يسمح للمستخدم المصادق فقط بالوصول إلى مستنداته ومجموعاته الفرعية
-    match /users/{userId}/{documents=**} {
+    // Users can only read and write their own documents and subcollections.
+    match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // القواعد الخاصة بالبيانات العامة للقراءة فقط
-    // يسمح لأي شخص (سواء مصادق أو لا) بقراءة هذه البيانات
-    match /data/{docId} {
-      allow get, list: if true;
-      allow write: if false; // لا يسمح بالكتابة نهائياً
-    }
-
-    // قاعدة افتراضية: قفل أي مسار آخر لم يتم تحديده أعلاه
-    // هذا يمنع أي وصول غير مقصود إلى مجموعات أخرى قد تُضاف مستقبلاً
-    match /{path=**} {
-      allow read, write: if false;
-    }
+    // Default deny all other reads and writes
   }
 }
