@@ -18,8 +18,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/', label: t('home'), icon: Home },
     { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays },
-    { href: '/summary', label: t('financialSummary'), icon: BarChart },
     { href: '/financials', label: t('departmentalManagement'), icon: ClipboardPen },
+    { href: '/summary', label: t('financialSummary'), icon: BarChart },
     { href: '/settings', label: t('settings'), icon: Settings },
   ];
 
