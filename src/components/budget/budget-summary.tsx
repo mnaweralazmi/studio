@@ -37,7 +37,6 @@ export function BudgetSummary() {
         setIsLoading(true);
         
         const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
-        const q = query(collection(db, "users"), where("uid", "==", authUser.uid));
         
         const unsubscribes = collectionNames.map(colName => {
             const q = query(collection(db, colName), where("ownerId", "==", authUser.uid));
