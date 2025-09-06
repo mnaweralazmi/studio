@@ -3,9 +3,10 @@
 
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import { type AgriculturalSection } from '@/lib/topics-data';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './auth-context';
+import { initialAgriculturalSections } from '@/lib/topics-data';
 
 interface TopicsContextType {
   topics: AgriculturalSection[];
@@ -30,18 +31,31 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
     
-    const unsubscribe = onSnapshot(topicsCollectionRef, (snapshot) => {
-        if (!snapshot.empty) {
+    const unsubscribe = onSnapshot(topicsCollectionRef, async (snapshot) => {
+        if (snapshot.empty) {
+            // If the user has no topics, populate them from initial data
+            try {
+                const batch = writeBatch(db);
+                initialAgriculturalSections.forEach(topic => {
+                    const newTopicRef = doc(topicsCollectionRef, topic.id);
+                    batch.set(newTopicRef, { ...topic, ownerId: user.uid });
+                });
+                await batch.commit();
+                // Data will be refetched by the snapshot listener automatically
+            } catch (error) {
+                console.error("Error populating initial topics:", error);
+                setTopics([]);
+                setLoading(false);
+            }
+        } else {
             const fetchedTopics: AgriculturalSection[] = snapshot.docs.map((doc: any) => ({
                 id: doc.id,
                 ...doc.data()
             })) as AgriculturalSection[];
             
             setTopics(fetchedTopics);
-        } else {
-             setTopics([]);
+            setLoading(false);
         }
-        setLoading(false);
     }, (error) => {
         console.error("Error fetching user topics: ", error);
         setTopics([]); // Set to empty on error
