@@ -1,3 +1,4 @@
+
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
@@ -11,12 +12,12 @@ import { getStorage } from "firebase/storage";
 // ANYONE CAN VIEW THIS INFORMATION. SECURITY MUST BE ENFORCED
 // BY FIRESTORE SECURITY RULES AND FIREBASE APP CHECK.
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY_HERE", // استخدم القيمة من مشروعك
-  authDomain: "YOUR_AUTH_DOMAIN_HERE", // استخدم القيمة من مشروعك
-  projectId: "YOUR_PROJECT_ID_HERE", // استخدم القيمة من مشروعك
-  storageBucket: "YOUR_STORAGE_BUCKET_HERE", // استخدم القيمة من مشروعك
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE", // استخدم القيمة من مشروعك
-  appId: "YOUR_APP_ID_HERE", // استخدم القيمة من مشروعك
+  "projectId": "kuwaity-farm",
+  "appId": "1:433160071015:web:2a2434f18a7fdc7bddb1c2",
+  "storageBucket": "kuwaity-farm.appspot.com",
+  "apiKey": "AIzaSyCLB7Dfw5jpDQsVvep-OWVeNv9Hq_nQZSs",
+  "authDomain": "kuwaity-farm.firebaseapp.com",
+  "messagingSenderId": "433160071015"
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
