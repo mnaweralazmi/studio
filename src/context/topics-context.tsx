@@ -1,7 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onSnapshot, collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import {
+  onSnapshot,
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  Unsubscribe,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
 
@@ -11,10 +19,17 @@ type Topic = {
   [k: string]: any;
 };
 
+type UserDoc = Record<string, any> | null;
+
 type TopicsContextType = {
   topics: Topic[];
-  loading: boolean;
-  error: string | null;
+  topicsLoading: boolean;
+  topicsError: string | null;
+
+  userData: UserDoc;
+  userLoading: boolean;
+  userError: string | null;
+
   addTopic: (data: Omit<Topic, "id">) => Promise<string>;
   deleteTopic: (id: string) => Promise<void>;
 };
@@ -23,50 +38,86 @@ const TopicsContext = createContext<TopicsContextType | undefined>(undefined);
 
 export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
+
+  // Topics state
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [topicsLoading, setTopicsLoading] = useState<boolean>(true);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
+
+  // User doc state
+  const [userData, setUserData] = useState<UserDoc>(null);
+  const [userLoading, setUserLoading] = useState<boolean>(true);
+  const [userError, setUserError] = useState<string | null>(null);
 
   useEffect(() => {
-    // لا نفعل شيئاً حتى تنتهي حالة المصادقة أو يوجد مستخدم
+    // until auth state resolved, show loading
     if (authLoading) {
-      setLoading(true);
+      setTopicsLoading(true);
+      setUserLoading(true);
       return;
     }
 
-    // إذا لا يوجد مستخدم: نفرّغ البيانات ونوقف الانتظار
+    // if not signed in -> clear everything and stop
     if (!user) {
       setTopics([]);
-      setLoading(false);
-      setError(null);
+      setTopicsLoading(false);
+      setTopicsError(null);
+
+      setUserData(null);
+      setUserLoading(false);
+      setUserError(null);
       return;
     }
 
-    // الآن المستخدم موجود — استمع للمجموعة الفرعية الخاصة بالمستخدم
-    const colRef = collection(db, "users", user.uid, "topics");
-    setLoading(true);
-    setError(null);
+    // signed in: set up listeners for user doc and user's topics subcollection
+    const unsubscribes: Unsubscribe[] = [];
 
-    const unsub = onSnapshot(
-      colRef,
+    // 1) user doc listener (users/{uid})
+    setUserLoading(true);
+    setUserError(null);
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubUser = onSnapshot(
+      userDocRef,
+      (snap) => {
+        setUserData(snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as UserDoc) : null);
+        setUserLoading(false);
+      },
+      (err) => {
+        console.error("userDoc onSnapshot error:", err);
+        setUserError(err?.message ?? "خطأ جلب بيانات المستخدم");
+        setUserData(null);
+        setUserLoading(false);
+      }
+    );
+    unsubscribes.push(unsubUser);
+
+    // 2) topics subcollection listener (users/{uid}/topics)
+    setTopicsLoading(true);
+    setTopicsError(null);
+    const topicsColRef = collection(db, "users", user.uid, "topics");
+    const unsubTopics = onSnapshot(
+      topicsColRef,
       (snap) => {
         const items: Topic[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         setTopics(items);
-        setLoading(false);
+        setTopicsLoading(false);
       },
       (err) => {
         console.error("topics onSnapshot error:", err);
-        setError(err?.message ?? "خطأ جلب المواضيع");
+        setTopicsError(err?.message ?? "خطأ جلب المواضيع");
         setTopics([]);
-        setLoading(false);
+        setTopicsLoading(false);
       }
     );
+    unsubscribes.push(unsubTopics);
 
+    // cleanup
     return () => {
-      unsub();
+      unsubscribes.forEach((u) => u());
     };
   }, [user, authLoading]);
 
+  // addTopic & deleteTopic محافظتان على تحقق user
   async function addTopic(data: Omit<Topic, "id">) {
     if (!user) throw new Error("Not signed in");
     const colRef = collection(db, "users", user.uid, "topics");
@@ -80,7 +131,18 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <TopicsContext.Provider value={{ topics, loading, error, addTopic, deleteTopic }}>
+    <TopicsContext.Provider
+      value={{
+        topics,
+        topicsLoading,
+        topicsError,
+        userData,
+        userLoading,
+        userError,
+        addTopic,
+        deleteTopic,
+      }}
+    >
       {children}
     </TopicsContext.Provider>
   );

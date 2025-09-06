@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { initialAgriculturalSections } from '@/lib/topics-data';
+import { initialAgriculturalSections } from '@/lib/initial-data';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -189,5 +189,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-
-    

@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { AgriculturalSection, SubTopic, VideoSection } from '@/lib/topics-data';
+import type { AgriculturalSection, SubTopic, VideoSection } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/context/language-context';
@@ -18,7 +18,7 @@ export default function TopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, loading } = useTopics();
+  const { topics, topicsLoading } = useTopics();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   
   const { user } = useAuth();
@@ -31,7 +31,7 @@ export default function TopicDetailsPage() {
     }
   }, [params.topicId, topics]);
   
-  if (loading || !topic) {
+  if (topicsLoading || !topic) {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
             <div className="w-full max-w-5xl mx-auto flex flex-col gap-12">

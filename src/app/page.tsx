@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   const { t } = useLanguage();
-  const { topics, loading } = useTopics();
+  const { topics, topicsLoading } = useTopics();
   const { user } = useAuth();
   
   return (
@@ -38,7 +38,7 @@ export default function Home() {
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-3xl font-bold">{t('agriculturalTopics')}</h2>
             </div>
-             {loading ? (
+             {topicsLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-96 w-full" />)}
                 </div>

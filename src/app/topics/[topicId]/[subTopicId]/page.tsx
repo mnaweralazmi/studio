@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { AgriculturalSection, SubTopic } from '@/lib/topics-data';
+import type { AgriculturalSection, SubTopic } from '@/lib/types';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import { useTopics } from '@/context/topics-context';
@@ -20,7 +20,7 @@ export default function SubTopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, loading: topicsLoading } = useTopics();
+  const { topics, topicsLoading } = useTopics();
   const { user } = useAuth();
   const { toast } = useToast();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
