@@ -10,10 +10,9 @@ import { useLanguage } from '@/context/language-context';
 interface DeleteWorkerAlertProps {
     workerName: string;
     onConfirm: () => void;
-    departmentId: string;
 }
 
-function DeleteWorkerAlertComponent({ workerName, onConfirm, departmentId }: DeleteWorkerAlertProps) {
+function DeleteWorkerAlertComponent({ workerName, onConfirm }: DeleteWorkerAlertProps) {
     const { t } = useLanguage();
 
     return (

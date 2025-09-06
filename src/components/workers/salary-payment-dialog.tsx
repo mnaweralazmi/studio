@@ -14,11 +14,10 @@ const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February'
 
 interface SalaryPaymentDialogProps {
     worker: Worker;
-    departmentId: string;
     onConfirm: (workerId: string, month: number, year: number, amount: number) => void;
 }
 
-function SalaryPaymentDialogComponent({ worker, departmentId, onConfirm }: SalaryPaymentDialogProps) {
+function SalaryPaymentDialogComponent({ worker, onConfirm }: SalaryPaymentDialogProps) {
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
     const [isOpen, setIsOpen] = React.useState(false);

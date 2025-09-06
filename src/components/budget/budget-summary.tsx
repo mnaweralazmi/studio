@@ -42,12 +42,18 @@ const useAllDepartmentsData = <T extends DocumentData>(
 
     const unsubscribes = departmentQueries.map((q, index) => 
       onSnapshot(q, (snapshot) => {
-        const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+        const department = departments[index];
+        const fetchedData = snapshot.docs.map(doc => ({ 
+            id: doc.id, 
+            ...doc.data(), 
+            // Add departmentId to each item for easier filtering
+            departmentId: department 
+        } as T & { departmentId: Department }));
         
         // Update the central data state
         setData(prevData => {
           // Filter out old data from this department to prevent duplicates
-          const otherDeptsData = prevData.filter(item => (item as any).departmentId !== departments[index]);
+          const otherDeptsData = prevData.filter(item => (item as any).departmentId !== department);
           return [...otherDeptsData, ...fetchedData];
         });
       }, (error) => {
@@ -77,7 +83,7 @@ const useAllDepartmentsData = <T extends DocumentData>(
              const q = query(collection(db, 'users', user.uid, `${dept}_${collectionSuffix}`));
              const snapshot = await getDocs(q);
              snapshot.forEach(doc => {
-               allData.push({ id: doc.id, ...doc.data() } as T)
+               allData.push({ id: doc.id, ...doc.data(), departmentId: dept } as T & { departmentId: Department })
              });
            }
            setData(allData);

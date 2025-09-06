@@ -22,7 +22,7 @@ import type { Department } from '@/app/financials/page';
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
-async function addWorker(userId: string, departmentId: string, data: WorkerFormValues & { ownerId: string }): Promise<string> {
+async function addWorker(userId: string, data: WorkerFormValues & { ownerId: string; departmentId: string }): Promise<string> {
     const collectionName = `workers`;
     const workersColRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(workersColRef, {
@@ -30,17 +30,18 @@ async function addWorker(userId: string, departmentId: string, data: WorkerFormV
         paidMonths: [],
         transactions: [],
         ownerId: data.ownerId,
+        departmentId: data.departmentId,
     });
     return docRef.id;
 }
 
-async function updateWorker(userId: string, departmentId: string, workerId: string, data: Partial<WorkerFormValues>) {
+async function updateWorker(userId: string, workerId: string, data: Partial<WorkerFormValues>) {
     const collectionName = `workers`;
     const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
     await updateDoc(workerDocRef, data);
 }
 
-async function paySalary(userId: string, departmentId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
+async function paySalary(userId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
     const collectionName = `workers`;
     const workerRef = doc(db, 'users', userId, collectionName, workerId);
     await updateDoc(workerRef, {
@@ -49,7 +50,7 @@ async function paySalary(userId: string, departmentId: string, workerId: string,
     });
 }
 
-async function addTransaction(userId: string, departmentId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
+async function addTransaction(userId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
     const collectionName = `workers`;
     const workerRef = doc(db, 'users', userId, collectionName, workerId);
     const newTransaction = {
@@ -63,7 +64,7 @@ async function addTransaction(userId: string, departmentId: string, workerId: st
     return newTransaction.id;
 }
 
-async function deleteWorker(userId: string, departmentId: string, workerId: string) {
+async function deleteWorker(userId: string, workerId: string) {
     const collectionName = `workers`;
     const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
     await deleteDoc(workerDocRef);
@@ -93,9 +94,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const collectionName = `workers`;
-        const q = query(
-            collection(db, 'users', authUser.uid, collectionName)
-        );
+        const q = query(collection(db, 'users', authUser.uid, collectionName));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => {
@@ -119,7 +118,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         return () => unsubscribe();
         
-    }, [authUser, departmentId, isAuthLoading, t, toast]);
+    }, [authUser, isAuthLoading, t, toast]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
@@ -136,11 +135,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         try {
             if (workerId) {
-                await updateWorker(authUser.uid, departmentId, workerId, data);
+                await updateWorker(authUser.uid, workerId, data);
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
-                const newWorkerData = { ...data, ownerId: authUser.uid };
-                await addWorker(authUser.uid, departmentId, newWorkerData);
+                const newWorkerData = { ...data, ownerId: authUser.uid, departmentId: departmentId };
+                await addWorker(authUser.uid, newWorkerData);
                 toast({ title: t('workerAddedSuccess') });
             }
         } catch (e) {
@@ -159,7 +158,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 month,
                 year,
             };
-            await paySalary(authUser.uid, departmentId, workerId, {year, month}, transaction);
+            await paySalary(authUser.uid, workerId, {year, month}, transaction);
             toast({ title: t('salaryPaidSuccess') });
         } catch (e) {
             console.error("Error paying salary: ", e);
@@ -177,7 +176,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            await addTransaction(authUser.uid, departmentId, workerId, newTransactionData);
+            await addTransaction(authUser.uid, workerId, newTransactionData);
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
@@ -189,7 +188,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     async function handleDeleteWorker(workerId: string) {
         if(!authUser) return;
         try {
-            await deleteWorker(authUser.uid, departmentId, workerId);
+            await deleteWorker(authUser.uid, workerId);
             toast({ title: t('workerDeleted') });
         } catch(e) {
             console.error("Error deleting worker: ", e);
@@ -212,18 +211,20 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
 
-    const totalUnpaidSalariesThisMonth = workers
+    const workersForDepartment = workers.filter(w => w.departmentId === departmentId);
+    
+    const totalUnpaidSalariesThisMonth = workersForDepartment
         .filter(w => !getMonthStatus(w, currentMonth, currentYear))
         .reduce((sum, w) => sum + w.baseSalary, 0);
 
-    const totalSalariesThisYear = workers.reduce((total, worker) => {
+    const totalSalariesThisYear = workersForDepartment.reduce((total, worker) => {
         const yearSalaries = (worker.transactions || [])
             .filter(t => t.type === 'salary' && t.year === currentYear && (t.month || 0) >= 1 && (t.month || 0) <= 8)
             .reduce((sum, t) => sum + t.amount, 0);
         return total + yearSalaries;
     }, 0);
     
-    const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
+    const totalAnnualBaseSalaries = workersForDepartment.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
 
     if (isAuthLoading) {
         return (
@@ -256,7 +257,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{workers.length}</div>
+                    <div className="text-2xl font-bold">{workersForDepartment.length}</div>
                     <p className="text-xs text-muted-foreground">{t('totalWorkersDesc')}</p>
                 </CardContent>
             </Card>
@@ -317,7 +318,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                   <TableBody>
                     {isDataLoading ? (
                         <TableRow><TableCell colSpan={5} className="h-24 text-center"><Skeleton className="w-full h-8" /></TableCell></TableRow>
-                    ) : workers.length > 0 ? workers.map((worker) => {
+                    ) : workersForDepartment.length > 0 ? workersForDepartment.map((worker) => {
                       const isPaidThisMonth = getMonthStatus(worker, currentMonth, currentYear);
                       const balance = getWorkerBalance(worker);
                       return (
@@ -332,12 +333,12 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                         </TableCell>
                         <TableCell>
                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                                <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} departmentId={departmentId} />
-                                <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} departmentId={departmentId} />
+                                <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
+                                <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
                                 <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>
                                     <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                                 </AddWorkerDialog>
-                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} departmentId={departmentId} />
+                                <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
                             </div>
                         </TableCell>
                       </TableRow>
@@ -356,7 +357,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-
-    
-
-    
