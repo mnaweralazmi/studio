@@ -20,6 +20,7 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // لا تقم بأي عملية جلب إذا لم يتم تحديد المستخدم بعد
     if (!user) {
         setLoading(false);
         setTopics([]);
