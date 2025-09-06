@@ -44,20 +44,15 @@ const createNewUserDocument = async (user: User, name: string | null) => {
             badges: [],
         });
         
-        // 2. Populate initial topics for the user
-        const topicsCollectionRef = collection(db, "users", user.uid, "topics");
-        initialAgriculturalSections.forEach(topic => {
-            const newTopicRef = doc(topicsCollectionRef, topic.id);
-            batch.set(newTopicRef, { ...topic, ownerId: user.uid });
-        });
-        
-        // 3. Populate public topics if they don't exist
+        // 2. Populate public topics if they don't exist (run only once for the first user)
         const publicTopicsColRef = collection(db, 'public_topics');
         const publicTopicsSnap = await getDocs(publicTopicsColRef);
         if (publicTopicsSnap.empty) {
             initialAgriculturalSections.forEach(topic => {
                 const newTopicRef = doc(publicTopicsColRef, topic.id);
-                batch.set(newTopicRef, topic);
+                // We don't need ownerId for public topics
+                const { ownerId, ...publicTopicData } = topic;
+                batch.set(newTopicRef, publicTopicData);
             });
         }
 
@@ -200,3 +195,5 @@ export default function RegisterPage() {
     </main>
   );
 }
+
+    
