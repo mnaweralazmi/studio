@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
@@ -12,122 +13,70 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
+import type { AgriculturalSection } from "@/lib/types";
 
-type Topic = {
-  id: string;
-  title?: string;
-  [k: string]: any;
-};
-
-type UserDoc = Record<string, any> | null;
+type Topic = AgriculturalSection;
 
 type TopicsContextType = {
   topics: Topic[];
   topicsLoading: boolean;
   topicsError: string | null;
-
-  userData: UserDoc;
-  userLoading: boolean;
-  userError: string | null;
-
-  addTopic: (data: Omit<Topic, "id">) => Promise<string>;
+  addTopic: (data: Omit<Topic, "id" | "subTopics" | "videos">) => Promise<string>;
   deleteTopic: (id: string) => Promise<void>;
 };
 
 const TopicsContext = createContext<TopicsContextType | undefined>(undefined);
 
 export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading: authLoading } = useAuth();
-
-  // Topics state
+  const { user } = useAuth();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [topicsLoading, setTopicsLoading] = useState<boolean>(true);
   const [topicsError, setTopicsError] = useState<string | null>(null);
 
-  // User doc state
-  const [userData, setUserData] = useState<UserDoc>(null);
-  const [userLoading, setUserLoading] = useState<boolean>(true);
-  const [userError, setUserError] = useState<string | null>(null);
-
   useEffect(() => {
-    // until auth state resolved, show loading
-    if (authLoading) {
-      setTopicsLoading(true);
-      setUserLoading(true);
-      return;
-    }
-
-    // if not signed in -> clear everything and stop
-    if (!user) {
-      setTopics([]);
-      setTopicsLoading(false);
-      setTopicsError(null);
-
-      setUserData(null);
-      setUserLoading(false);
-      setUserError(null);
-      return;
-    }
-
-    // signed in: set up listeners for user doc and user's topics subcollection
-    const unsubscribes: Unsubscribe[] = [];
-
-    // 1) user doc listener (users/{uid})
-    setUserLoading(true);
-    setUserError(null);
-    const userDocRef = doc(db, "users", user.uid);
-    const unsubUser = onSnapshot(
-      userDocRef,
-      (snap) => {
-        setUserData(snap.exists() ? ({ id: snap.id, ...(snap.data() as any) } as UserDoc) : null);
-        setUserLoading(false);
-      },
-      (err) => {
-        console.error("userDoc onSnapshot error:", err);
-        setUserError(err?.message ?? "خطأ جلب بيانات المستخدم");
-        setUserData(null);
-        setUserLoading(false);
-      }
-    );
-    unsubscribes.push(unsubUser);
-
-    // 2) topics subcollection listener (users/{uid}/topics)
+    // Fetch public topics regardless of auth state
     setTopicsLoading(true);
     setTopicsError(null);
-    const topicsColRef = collection(db, "users", user.uid, "topics");
-    const unsubTopics = onSnapshot(
+    const topicsColRef = collection(db, "public_topics");
+
+    const unsubscribe = onSnapshot(
       topicsColRef,
       (snap) => {
-        const items: Topic[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        const items: Topic[] = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Topic));
         setTopics(items);
         setTopicsLoading(false);
       },
       (err) => {
-        console.error("topics onSnapshot error:", err);
-        setTopicsError(err?.message ?? "خطأ جلب المواضيع");
+        console.error("public_topics onSnapshot error:", err);
+        setTopicsError(err?.message ?? "خطأ في جلب المواضيع");
         setTopics([]);
         setTopicsLoading(false);
       }
     );
-    unsubscribes.push(unsubTopics);
 
-    // cleanup
-    return () => {
-      unsubscribes.forEach((u) => u());
-    };
-  }, [user, authLoading]);
+    return () => unsubscribe();
+  }, []);
 
-  // addTopic & deleteTopic محافظتان على تحقق user
-  async function addTopic(data: Omit<Topic, "id">) {
+  // Functions for adding/deleting topics should still be protected
+  async function addTopic(data: Omit<Topic, "id" | "subTopics" | "videos">) {
     if (!user) throw new Error("Not signed in");
-    const colRef = collection(db, "users", user.uid, "topics");
-    const docRef = await addDoc(colRef, { ...data, ownerId: user.uid, createdAt: serverTimestamp() });
+    // Decide where to add topics, maybe a user-specific collection or a protected public one
+    // For now, let's assume adding is a protected action to the public list.
+    const colRef = collection(db, "public_topics");
+    const docRef = await addDoc(colRef, {
+      ...data,
+      ownerId: user.uid, // still track owner for admin purposes
+      createdAt: serverTimestamp(),
+      subTopics: [],
+      videos: [],
+    });
     return docRef.id;
   }
 
   async function deleteTopic(id: string) {
     if (!user) throw new Error("Not signed in");
-    await deleteDoc(doc(db, "users", user.uid, "topics", id));
+    // Add logic to check if user has permission to delete if needed
+    await deleteDoc(doc(db, "public_topics", id));
   }
 
   return (
@@ -136,9 +85,6 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
         topics,
         topicsLoading,
         topicsError,
-        userData,
-        userLoading,
-        userError,
         addTopic,
         deleteTopic,
       }}

@@ -86,7 +86,7 @@ export default function SubTopicDetailsPage() {
 
     if (user && subTopic) {
       awardPoints();
-    } else if (!user) {
+    } else { // if no user, no points to award
       setIsPointsLoading(false);
     }
   }, [user, subTopic, toast, t]);
@@ -109,7 +109,7 @@ export default function SubTopicDetailsPage() {
   }
 
   if (!topic || !subTopic) {
-    return <div>{t('loading')}</div>; 
+    return <div className="flex items-center justify-center h-screen">{t('loading')}</div>; 
   }
 
   const title = subTopic.titleKey === 'custom' ? subTopic.title : t(subTopic.titleKey as any);

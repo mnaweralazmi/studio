@@ -12,8 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Leaf, UserPlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, writeBatch, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { initialAgriculturalSections } from '@/lib/initial-data';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -30,7 +31,10 @@ const createNewUserDocument = async (user: User, name: string | null) => {
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
-        await setDoc(userDocRef, {
+        const batch = writeBatch(db);
+
+        // 1. Create user document
+        batch.set(userDocRef, {
             name: name,
             email: user.email,
             role: 'user', // Default role
@@ -39,6 +43,26 @@ const createNewUserDocument = async (user: User, name: string | null) => {
             level: 1,
             badges: [],
         });
+        
+        // 2. Populate initial topics for the user
+        const topicsCollectionRef = collection(db, "users", user.uid, "topics");
+        initialAgriculturalSections.forEach(topic => {
+            const newTopicRef = doc(topicsCollectionRef, topic.id);
+            batch.set(newTopicRef, { ...topic, ownerId: user.uid });
+        });
+        
+        // 3. Populate public topics if they don't exist
+        const publicTopicsColRef = collection(db, 'public_topics');
+        const publicTopicsSnap = await getDocs(publicTopicsColRef);
+        if (publicTopicsSnap.empty) {
+            initialAgriculturalSections.forEach(topic => {
+                const newTopicRef = doc(publicTopicsColRef, topic.id);
+                batch.set(newTopicRef, topic);
+            });
+        }
+
+
+        await batch.commit();
     }
 }
 
@@ -176,5 +200,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-
-    
