@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -17,84 +17,85 @@ import type { Department } from '@/app/financials/page';
 
 const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
 
-export function BudgetSummary() {
-    const { user: authUser, loading: authLoading } = useAuth();
-    const { t } = useLanguage();
-    
-    const [totalSales, setTotalSales] = React.useState(0);
-    const [totalExpenses, setTotalExpenses] = React.useState(0);
-    const [totalDebts, setTotalDebts] = React.useState(0);
-    const [totalSalaries, setTotalSalaries] = React.useState(0);
-    
+const useAllDepartmentsData = <T extends DocumentData>(collectionSuffix: string): [T[], boolean] => {
+    const { user, loading: authLoading } = useAuth();
+    const [data, setData] = React.useState<T[]>([]);
     const [loading, setLoading] = React.useState(true);
 
-    const fetchAllData = React.useCallback(async (userId: string) => {
-        try {
-            setLoading(true);
-            let salesTotal = 0;
-            let expensesTotal = 0;
-            let debtsTotal = 0;
-            let salariesTotal = 0;
-
-            for (const dept of departments) {
-                // Sales
-                const salesSnapshot = await getDocs(collection(db, 'users', userId, `${dept}_sales`));
-                salesTotal += salesSnapshot.docs.map(doc => doc.data() as SalesItem).reduce((sum, item) => sum + item.total, 0);
-
-                // Expenses
-                const expensesSnapshot = await getDocs(collection(db, 'users', userId, `${dept}_expenses`));
-                expensesTotal += expensesSnapshot.docs.map(doc => doc.data() as ExpenseItem).reduce((sum, item) => sum + item.amount, 0);
-                
-                // Workers (Salaries)
-                const workersSnapshot = await getDocs(collection(db, 'users', userId, `${dept}_workers`));
-                salariesTotal += workersSnapshot.docs.map(doc => doc.data() as Worker).reduce((workerSum, worker) => {
-                    const salaries = (worker.transactions || []).filter(t => t.type === 'salary').reduce((sum, t) => sum + t.amount, 0);
-                    return workerSum + salaries;
-                }, 0);
-
-                // Debts
-                const debtsSnapshot = await getDocs(collection(db, 'users', userId, `${dept}_debts`));
-                debtsTotal += debtsSnapshot.docs.map(doc => doc.data() as DebtItem)
-                    .filter(d => d.status !== 'paid')
-                    .reduce((sum, item) => {
-                        const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-                        return sum + (item.amount - paidAmount);
-                    }, 0);
-            }
-
-            setTotalSales(salesTotal);
-            setTotalExpenses(expensesTotal);
-            setTotalDebts(debtsTotal);
-            setTotalSalaries(salariesTotal);
-        } catch (error) {
-            console.error("Error fetching budget summary:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     React.useEffect(() => {
-        if (!authUser) {
-            if (!authLoading) setLoading(false);
+        if (!user) {
+            if (!authLoading) {
+                setData([]);
+                setLoading(false);
+            }
             return;
         }
-        
-        fetchAllData(authUser.uid);
 
-        // Set up listeners for real-time updates
-        const unsubscribes = departments.flatMap(dept => [
-            onSnapshot(collection(db, 'users', authUser.uid, `${dept}_sales`), () => fetchAllData(authUser.uid)),
-            onSnapshot(collection(db, 'users', authUser.uid, `${dept}_expenses`), () => fetchAllData(authUser.uid)),
-            onSnapshot(collection(db, 'users', authUser.uid, `${dept}_workers`), () => fetchAllData(authUser.uid)),
-            onSnapshot(collection(db, 'users', authUser.uid, `${dept}_debts`), () => fetchAllData(authUser.uid)),
-        ]);
+        setLoading(true);
+        const unsubscribes = departments.map(dept => {
+            const collectionName = `${dept}_${collectionSuffix}`;
+            const q = query(collection(db, 'users', user.uid, collectionName));
+            return onSnapshot(q, () => {
+                // When any department changes, refetch all data to recalculate totals
+                fetchAllData();
+            });
+        });
+        
+        const fetchAllData = async () => {
+            try {
+                const allDataPromises = departments.map(async dept => {
+                    const collectionName = `${dept}_${collectionSuffix}`;
+                    const q = query(collection(db, 'users', user.uid, collectionName));
+                    const snapshot = await getDocs(q);
+                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+                });
+                
+                const allDataArrays = await Promise.all(allDataPromises);
+                setData(allDataArrays.flat());
+
+            } catch (error) {
+                console.error(`Error fetching ${collectionSuffix}:`, error);
+                setData([]);
+            } finally {
+                 // Set loading to false only after the first fetch is complete.
+                if(loading) setLoading(false);
+            }
+        };
+
+        fetchAllData();
 
         return () => unsubscribes.forEach(unsub => unsub());
+    }, [user, authLoading, collectionSuffix]);
 
-    }, [authUser, authLoading, fetchAllData]);
+    return [data, loading || authLoading];
+};
 
 
-    if (loading || authLoading) {
+export function BudgetSummary() {
+    const { t } = useLanguage();
+    
+    const [allSales, salesLoading] = useAllDepartmentsData<SalesItem>('sales');
+    const [allExpenses, expensesLoading] = useAllDepartmentsData<ExpenseItem>('expenses');
+    const [allDebts, debtsLoading] = useAllDepartmentsData<DebtItem>('debts');
+    const [allWorkers, workersLoading] = useAllDepartmentsData<Worker>('workers');
+
+    const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
+
+    const totalSales = React.useMemo(() => allSales.reduce((sum, item) => sum + item.total, 0), [allSales]);
+    
+    const totalExpenses = React.useMemo(() => allExpenses.reduce((sum, item) => sum + item.amount, 0), [allExpenses]);
+
+    const totalSalaries = React.useMemo(() => allWorkers.reduce((workerSum, worker) => {
+        const salaries = (worker.transactions || []).filter(t => t.type === 'salary').reduce((sum, t) => sum + t.amount, 0);
+        return workerSum + salaries;
+    }, 0), [allWorkers]);
+    
+    const totalDebts = React.useMemo(() => allDebts.filter(d => d.status !== 'paid').reduce((sum, item) => {
+        const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
+        return sum + (item.amount - paidAmount);
+    }, 0), [allDebts]);
+
+    if (loading) {
         return (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <Skeleton className="h-32" />
@@ -153,3 +154,5 @@ export function BudgetSummary() {
         </div>
     )
 }
+
+    

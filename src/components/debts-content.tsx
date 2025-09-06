@@ -21,6 +21,7 @@ import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
+import type { Department } from '@/app/financials/page';
 
 export type Payment = {
   id: string;
@@ -92,7 +93,7 @@ async function updateDebtStatus(userId: string, departmentId: string, debtId: st
 }
 
 interface DebtsContentProps {
-    departmentId: string;
+    departmentId: Department;
 }
 
 export function DebtsContent({ departmentId }: DebtsContentProps) {
@@ -116,8 +117,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         setIsDataLoading(true);
         const collectionName = `${departmentId}_debts`;
         const q = query(
-            collection(db, 'users', authUser.uid, collectionName),
-            where("ownerId", "==", authUser.uid)
+            collection(db, 'users', authUser.uid, collectionName)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -343,7 +343,14 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                     </div>
                 </CardContent>
             </Card>
-            ) : null}
+            ) : (
+                <Card>
+                    <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
+                    <CardContent>
+                        <p className="text-center text-muted-foreground py-4">{t('noArchivedItems')}</p>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

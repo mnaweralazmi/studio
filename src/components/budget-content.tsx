@@ -15,6 +15,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { db } from '@/lib/firebase';
+import type { Department } from '@/app/financials/page';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -72,7 +73,7 @@ async function archiveSale(userId: string, departmentId: string, sale: SalesItem
 }
 
 interface BudgetContentProps {
-    departmentId: 'agriculture' | 'livestock' | 'poultry' | 'fish';
+    departmentId: Department;
 }
 
 export function BudgetContent({ departmentId }: BudgetContentProps) {
@@ -100,8 +101,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     setIsDataLoading(true);
     const collectionName = `${departmentId}_sales`;
     const q = query(
-        collection(db, 'users', authUser.uid, collectionName),
-        where("ownerId", "==", authUser.uid)
+        collection(db, 'users', authUser.uid, collectionName)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -377,9 +377,20 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
               </div>
             </CardContent>
           </Card>
-        ) : null}
+        ) : (
+            <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl sm:text-2xl">{t('salesList')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-center text-muted-foreground py-4">{t('noArchivedItems')}</p>
+                </CardContent>
+            </Card>
+        )}
     </div>
   );
 }
+
+    
 
     

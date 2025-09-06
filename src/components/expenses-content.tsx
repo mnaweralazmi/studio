@@ -15,6 +15,7 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
+import type { Department } from '@/app/financials/page';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -79,7 +80,7 @@ async function archiveExpense(userId: string, departmentId: string, expense: Exp
 }
 
 interface ExpensesContentProps {
-    departmentId: string;
+    departmentId: Department;
 }
 
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
@@ -109,8 +110,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         setIsDataLoading(true);
         const collectionName = `${departmentId}_expenses`;
         const q = query(
-            collection(db, 'users', authUser.uid, collectionName),
-            where("ownerId", "==", authUser.uid)
+            collection(db, 'users', authUser.uid, collectionName)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -346,7 +346,16 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                         )}
                     </CardContent>
                 </Card>
-            ) : null}
+            ) : (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-xl sm:text-2xl">{t('expensesList')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-center text-muted-foreground py-4">{t('noArchivedItems')}</p>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }
