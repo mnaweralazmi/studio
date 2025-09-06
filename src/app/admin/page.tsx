@@ -37,20 +37,24 @@ export default function AdminPage() {
 
         try {
             // Mapping old collections to new department-specific collections
-            const collectionsToMigrate: { old: string; new: string }[] = [
-                { old: 'sales', new: 'agriculture_sales' },
-                { old: 'expenses', new: 'agriculture_expenses' },
-                { old: 'debts', new: 'agriculture_debts' },
-                { old: 'workers', new: 'agriculture_workers' },
+            const collectionsToMigrate: { old: string; new: string; departmentId?: string }[] = [
+                { old: 'sales', new: 'agriculture_sales', departmentId: 'agriculture' },
+                { old: 'expenses', new: 'agriculture_expenses', departmentId: 'agriculture' },
+                { old: 'debts', new: 'agriculture_debts', departmentId: 'agriculture' },
+                { old: 'workers', new: 'workers', departmentId: 'agriculture' }, // All workers go to the unified 'workers' collection
             ];
 
-            for (const { old: oldCollection, new: newCollection } of collectionsToMigrate) {
+            for (const { old: oldCollection, new: newCollection, departmentId } of collectionsToMigrate) {
                 const oldDataSnapshot = await getDocs(collection(db, oldCollection));
                 oldDataSnapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     // IMPORTANT: We only migrate data that doesn't have an ownerId or belongs to the admin
                     if (!data.ownerId || data.ownerId === adminUid) {
-                        const newData = { ...data, ownerId: adminUid };
+                        const newData: any = { ...data, ownerId: adminUid };
+                        // For workers, we need to explicitly set the departmentId
+                        if (newCollection === 'workers' && departmentId) {
+                            newData.departmentId = departmentId;
+                        }
                         const newDocRef = doc(db, 'users', adminUid, newCollection, docSnap.id);
                         batch.set(newDocRef, newData);
                         totalMigrated++;

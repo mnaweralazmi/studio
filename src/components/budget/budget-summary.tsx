@@ -34,70 +34,37 @@ const useAllDepartmentsData = <T extends DocumentData>(
     }
 
     setLoading(true);
+    let isMounted = true;
     
-    // Create queries for each department's collection
-    const departmentQueries = departments.map(dept => 
-      query(collection(db, 'users', user.uid, `${dept}_${collectionSuffix}`))
-    );
-
-    const unsubscribes = departmentQueries.map((q, index) => 
-      onSnapshot(q, (snapshot) => {
-        const department = departments[index];
-        const fetchedData = snapshot.docs.map(doc => ({ 
-            id: doc.id, 
-            ...doc.data(), 
-            // Add departmentId to each item for easier filtering
-            departmentId: department 
-        } as T & { departmentId: Department }));
-        
-        // Update the central data state
-        setData(prevData => {
-          // Filter out old data from this department to prevent duplicates
-          const otherDeptsData = prevData.filter(item => (item as any).departmentId !== department);
-          return [...otherDeptsData, ...fetchedData];
-        });
-      }, (error) => {
-        console.error(`Error fetching ${departments[index]}_${collectionSuffix}:`, error);
-      })
-    );
-
-    // This part is tricky because loading is distributed. 
-    // We can simplify by just setting a timeout or a more complex loading state manager.
-    // For now, let's assume loading is done after a short period.
-    const timer = setTimeout(() => setLoading(false), 1500); // Simple loading simulation
-
-    return () => {
-      unsubscribes.forEach(unsub => unsub());
-      clearTimeout(timer);
-    };
-
-  }, [user, authLoading, collectionSuffix]);
-
-  // A more robust way to handle combined loading state from multiple snapshots
-  React.useEffect(() => {
-     if (!authLoading && user) {
-       const runQueries = async () => {
+    const runQueries = async () => {
          try {
            const allData: T[] = [];
-           for (const dept of departments) {
-             const q = query(collection(db, 'users', user.uid, `${dept}_${collectionSuffix}`));
+           const departmentSuffixes = departments.map(dept => `${dept}_${collectionSuffix}`);
+
+           for (const suffix of departmentSuffixes) {
+             const q = query(collection(db, 'users', user.uid, suffix));
              const snapshot = await getDocs(q);
+             const departmentId = suffix.split('_')[0] as Department;
              snapshot.forEach(doc => {
-               allData.push({ id: doc.id, ...doc.data(), departmentId: dept } as T & { departmentId: Department })
+               allData.push({ id: doc.id, ...doc.data(), departmentId } as T & { departmentId: Department })
              });
            }
-           setData(allData);
+           if (isMounted) {
+            setData(allData);
+           }
          } catch (error) {
-           console.error("Failed to fetch all department data", error);
-           setData([]);
+           console.error("Failed to fetch all department data for suffix:", collectionSuffix, error);
+           if(isMounted) setData([]);
          } finally {
-            setLoading(false);
+            if(isMounted) setLoading(false);
          }
-       };
-       runQueries();
-     }
-  }, [user, authLoading, collectionSuffix]);
+    };
+    runQueries();
 
+    return () => {
+        isMounted = false;
+    }
+  }, [user, authLoading, collectionSuffix]);
 
   return [data, loading || authLoading];
 };
