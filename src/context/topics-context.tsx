@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
-import { initialAgriculturalSections, type AgriculturalSection } from '@/lib/topics-data';
+import { type AgriculturalSection } from '@/lib/topics-data';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './auth-context';
@@ -20,17 +20,9 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // If there's no user, we can fall back to initial data or show nothing.
-    // Let's use initial data for now so guests can see something.
-    if (!user) {
-      setTopics(initialAgriculturalSections);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
-    // Path is now inside the user's document
-    const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
+    // Public data is in the root 'data' collection
+    const topicsCollectionRef = collection(db, 'data');
     
     const unsubscribe = onSnapshot(topicsCollectionRef, (snapshot) => {
         if (!snapshot.empty) {
@@ -41,18 +33,17 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             
             setTopics(fetchedTopics);
         } else {
-             // If the user has no topics of their own, maybe show the initial ones?
-             setTopics(initialAgriculturalSections);
+             setTopics([]);
         }
         setLoading(false);
     }, (error) => {
-        console.error("Error fetching user topics, falling back to initial data: ", error);
-        setTopics(initialAgriculturalSections);
+        console.error("Error fetching public topics: ", error);
+        setTopics([]); // Set to empty on error
         setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   const value = useMemo(() => ({ topics, loading }), [topics, loading]);
 
@@ -70,5 +61,3 @@ export const useTopics = () => {
   }
   return context;
 };
-
-    

@@ -1,25 +1,25 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read and write to their own user document.
+    // Users can read their own user document and update it.
+    // No one can list all users.
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Users can C/R/U/D documents in any subcollection under their own user document.
-    // This covers tasks, all financial data, and archives.
-    match /users/{userId}/{collectionId}/{docId} {
-      allow read, write, create, delete: if request.auth.uid == userId;
+    // Any subcollections under a user's document can only be accessed by that user.
+    // This secures all user-specific data like tasks, finances, etc.
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // The public 'data' collection is readable by any authenticated user.
-    // Writes are disallowed from the client.
-    match /data/{document=**} {
-      allow read: if request.auth.uid != null;
-      allow write: if false;
+    // The 'data' collection is public and can be read by anyone.
+    // No one can write to it directly from the client.
+    match /data/{docId} {
+        allow read: if true;
+        allow write: if false;
     }
   }
 }
