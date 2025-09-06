@@ -41,16 +41,16 @@ export function BudgetSummary() {
 
             try {
                 const allSalesPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_sales`)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_sales`), where("ownerId", "==", authUser.uid)))
                 );
                 const allExpensesPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_expenses`)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_expenses`), where("ownerId", "==", authUser.uid)))
                 );
                 const allDebtsPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_debts`)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_debts`), where("ownerId", "==", authUser.uid)))
                 );
                 const allWorkersPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_workers`)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_workers`), where("ownerId", "==", authUser.uid)))
                 );
 
                 const [salesSnaps, expensesSnaps, debtsSnaps, workersSnaps] = await Promise.all([
@@ -100,7 +100,7 @@ export function BudgetSummary() {
         
         const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
         const unsubscribes = collectionNames.map(colName => {
-            const q = query(collection(db, 'users', authUser.uid, colName));
+            const q = query(collection(db, 'users', authUser.uid, colName), where("ownerId", "==", authUser.uid));
             return onSnapshot(q, fetchAllData, (err) => console.error(`Listener failed for ${colName}:`, err));
         });
 

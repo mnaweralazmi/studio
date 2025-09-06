@@ -40,7 +40,10 @@ export function ArchivedDebts() {
         }
 
         setIsLoading(true);
-        const q = query(collection(db, 'users', user.uid, "archive_debts"));
+        const q = query(
+            collection(db, 'users', user.uid, "archive_debts"),
+            where("ownerId", "==", user.uid)
+        );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const items: ArchivedDebt[] = [];

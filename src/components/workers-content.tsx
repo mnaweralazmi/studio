@@ -92,7 +92,10 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const collectionName = `${departmentId}_workers`;
-        const q = query(collection(db, 'users', authUser.uid, collectionName));
+        const q = query(
+            collection(db, 'users', authUser.uid, collectionName),
+            where("ownerId", "==", authUser.uid)
+        );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => {

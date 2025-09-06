@@ -99,7 +99,10 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     setIsDataLoading(true);
     const collectionName = `${departmentId}_sales`;
-    const q = query(collection(db, 'users', authUser.uid, collectionName));
+    const q = query(
+        collection(db, 'users', authUser.uid, collectionName),
+        where("ownerId", "==", authUser.uid)
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => ({

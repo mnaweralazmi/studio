@@ -39,7 +39,10 @@ export function ArchivedSales() {
         }
 
         setIsLoading(true);
-        const q = query(collection(db, 'users', user.uid, "archive_sales"));
+        const q = query(
+            collection(db, 'users', user.uid, "archive_sales"),
+            where("ownerId", "==", user.uid)
+        );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const items: ArchivedSale[] = [];

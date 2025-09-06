@@ -39,7 +39,10 @@ export function ArchivedExpenses() {
         }
 
         setIsLoading(true);
-        const q = query(collection(db, 'users', user.uid, "archive_expenses"));
+        const q = query(
+            collection(db, 'users', user.uid, "archive_expenses"),
+            where("ownerId", "==", user.uid)
+        );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const items: ArchivedExpense[] = [];
