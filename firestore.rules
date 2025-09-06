@@ -3,28 +3,57 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check ownership
     function isOwner(data) {
-      return request.auth != null && request.auth.uid == data.ownerId;
+      return request.auth.uid == data.ownerId;
     }
-
-    // Users can read any profile, but only write to their own.
+    
+    // --- USERS ---
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth.uid == userId;
     }
 
-    // Public data readable by anyone.
+    // --- GENERAL DATA (Public) ---
     match /data/{document=**} {
       allow read: if true;
     }
 
-    // Rules for all department-specific and archive collections
-    // This single rule block covers all collections that follow the pattern of having an ownerId.
-    // This works because all our client-side queries now correctly include `where('ownerId', '==', user.uid)`.
-    match /{collection}/{docId} {
-      allow read, update, delete: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
+    // --- FINANCIAL, TASKS, ARCHIVE (Owner-based) ---
+    function ownerOnlyRules() {
+      return {
+        'read': isOwner(resource.data),
+        'write': isOwner(resource.data),
+        'create': isOwner(request.resource.data)
+      };
     }
+    
+    match /agriculture_sales/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /livestock_sales/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /poultry_sales/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /fish_sales/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    
+    match /agriculture_expenses/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /livestock_expenses/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /poultry_expenses/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /fish_expenses/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    
+    match /agriculture_debts/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /livestock_debts/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /poultry_debts/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /fish_debts/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    
+    match /agriculture_workers/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /livestock_workers/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /poultry_workers/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /fish_workers/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+
+    match /tasks/{taskId} {
+      allow get, list, create, update, delete: if request.auth != null;
+    }
+    
+    match /completed_tasks/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /archive_sales/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /archive_expenses/{docId} { allow get, list, create, update, delete: if request.auth != null; }
+    match /archive_debts/{docId} { allow get, list, create, update, delete: if request.auth != null; }
   }
 }
