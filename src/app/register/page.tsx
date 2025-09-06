@@ -26,6 +26,31 @@ const GoogleIcon = () => (
 );
 
 
+const createNewUserDocument = async (user: User, name: string | null) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, {
+            name: name,
+            email: user.email,
+            role: 'user', // Default role
+            createdAt: new Date(),
+            points: 0,
+            level: 1,
+            badges: [],
+        });
+        
+        const batch = writeBatch(db);
+        const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
+        initialAgriculturalSections.forEach(topic => {
+            const newTopicRef = doc(topicsCollectionRef, topic.id);
+            batch.set(newTopicRef, topic);
+        });
+        await batch.commit();
+    }
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -36,34 +61,6 @@ export default function RegisterPage() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-
-
-  const createNewUserDocument = async (user: User, name: string | null) => {
-    const userDocRef = doc(db, "users", user.uid);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (!userDocSnap.exists()) {
-        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
-        await setDoc(userDocRef, {
-            name: name,
-            email: user.email,
-            role: isAdmin ? 'admin' : 'user',
-            createdAt: new Date(),
-            points: 0,
-            level: 1,
-            badges: [],
-        });
-        
-        // Add initial topics for the new user
-        const batch = writeBatch(db);
-        const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
-        initialAgriculturalSections.forEach(topic => {
-            const newTopicRef = doc(topicsCollectionRef, topic.id);
-            batch.set(newTopicRef, topic);
-        });
-        await batch.commit();
-    }
-  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -82,10 +79,7 @@ export default function RegisterPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        await updateProfile(user, {
-            displayName: name
-        });
-
+        await updateProfile(user, { displayName: name });
         await createNewUserDocument(user, name);
         
         toast({

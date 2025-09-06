@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export interface Badge {
@@ -40,16 +40,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseUser) {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-          const userData = doc.data();
-          setUser({ ...firebaseUser, ...userData } as AppUser);
-          setLoading(false); // Set loading to false once user data is fetched
+          if (doc.exists()) {
+            const userData = doc.data();
+            setUser({ ...firebaseUser, ...userData } as AppUser);
+          } else {
+             // Fallback to auth user if firestore doc doesn't exist yet
+            setUser(firebaseUser as AppUser);
+          }
+          setLoading(false);
         }, (error) => {
            console.error("Error fetching user data:", error);
-           setUser(firebaseUser as AppUser); // Fallback to auth user
+           setUser(firebaseUser as AppUser); // Fallback to auth user on error
            setLoading(false);
         });
         
-        // Return the snapshot unsubscriber when the component unmounts or user changes
         return () => unsubscribeSnapshot();
       } else {
         setUser(null);
@@ -57,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    return () => unsubscribeAuth(); // Cleanup subscription on unmount
+    return () => unsubscribeAuth();
   }, []);
 
 

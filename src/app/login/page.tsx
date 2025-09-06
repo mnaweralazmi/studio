@@ -25,6 +25,40 @@ const GoogleIcon = () => (
     </svg>
 )
 
+const handleUserSignIn = async (user: User) => {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
+
+    if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, {
+            name: user.displayName,
+            email: user.email,
+            role: isAdmin ? 'admin' : 'user',
+            createdAt: new Date(),
+            points: 0,
+            level: 1,
+            badges: [],
+        });
+        
+        const batch = writeBatch(db);
+        const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
+        initialAgriculturalSections.forEach(topic => {
+            const newTopicRef = doc(topicsCollectionRef, topic.id);
+            batch.set(newTopicRef, topic);
+        });
+        await batch.commit();
+
+    } else {
+        const userData = userDocSnap.data();
+        if (isAdmin && userData.role !== 'admin') {
+              await setDoc(userDocRef, { role: 'admin' }, { merge: true });
+        }
+    }
+}
+
+
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -34,42 +68,6 @@ export default function LoginPage() {
   
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
-
-  const handleUserSignIn = async (user: User) => {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
-
-      if (!userDocSnap.exists()) {
-          // If user doesn't exist, create them.
-          await setDoc(userDocRef, {
-              name: user.displayName,
-              email: user.email,
-              role: isAdmin ? 'admin' : 'user',
-              createdAt: new Date(),
-              points: 0,
-              level: 1,
-              badges: [],
-          });
-          
-          // Add initial topics for the new user
-          const batch = writeBatch(db);
-          const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
-          initialAgriculturalSections.forEach(topic => {
-              const newTopicRef = doc(topicsCollectionRef, topic.id);
-              batch.set(newTopicRef, topic);
-          });
-          await batch.commit();
-
-      } else {
-          // If user exists, check if their role needs to be updated to admin.
-          const userData = userDocSnap.data();
-          if (isAdmin && userData.role !== 'admin') {
-                await setDoc(userDocRef, { role: 'admin' }, { merge: true });
-          }
-      }
-  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
