@@ -36,6 +36,17 @@ export function BudgetSummary() {
 
         setIsLoading(true);
         
+        const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
+        const q = query(collection(db, "users"), where("uid", "==", authUser.uid));
+        
+        const unsubscribes = collectionNames.map(colName => {
+            const q = query(collection(db, colName), where("ownerId", "==", authUser.uid));
+            return onSnapshot(q, () => {
+                // We just need a trigger, the actual data fetch happens below
+                fetchAllData();
+            });
+        });
+
         const fetchAllData = async () => {
             if (!authUser) return;
 
@@ -54,10 +65,11 @@ export function BudgetSummary() {
                 let allDebts: DebtItem[] = [];
                 let allWorkers: Worker[] = [];
 
-                for (let i = 0; i < allSnapshots.length; i += 4) {
-                    allSales.push(...allSnapshots[i].docs.map(doc => doc.data() as SalesItem));
-                    allExpenses.push(...allSnapshots[i+1].docs.map(doc => doc.data() as ExpenseItem));
-                    const debtsData = allSnapshots[i+2].docs.map(doc => {
+                let snapshotIndex = 0;
+                for (const deptId of departments) {
+                    allSales.push(...allSnapshots[snapshotIndex++].docs.map(doc => doc.data() as SalesItem));
+                    allExpenses.push(...allSnapshots[snapshotIndex++].docs.map(doc => doc.data() as ExpenseItem));
+                    const debtsData = allSnapshots[snapshotIndex++].docs.map(doc => {
                         const data = doc.data();
                         return {
                             ...data,
@@ -65,7 +77,7 @@ export function BudgetSummary() {
                         } as DebtItem;
                     });
                     allDebts.push(...debtsData);
-                    allWorkers.push(...allSnapshots[i+3].docs.map(doc => doc.data() as Worker));
+                    allWorkers.push(...allSnapshots[snapshotIndex++].docs.map(doc => doc.data() as Worker));
                 }
                 
                 const totalSales = allSales.reduce((sum, doc) => sum + doc.total, 0);
@@ -98,9 +110,6 @@ export function BudgetSummary() {
         };
         
         fetchAllData();
-
-        const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
-        const unsubscribes = collectionNames.map(colName => onSnapshot(query(collection(db, colName), where("ownerId", "==", authUser.uid)), fetchAllData));
 
         return () => unsubscribes.forEach(unsub => unsub());
 

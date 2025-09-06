@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -8,58 +7,33 @@ service cloud.firestore {
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-
-    // Admins can read/write anything
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
     
-    // Users can read their own user document
+    // USERS: Users can read/update their own profile.
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId || isAdmin();
+      allow create: if request.auth.uid == userId;
     }
-    
-    // Users can read public data
+
+    // DATA: Public agricultural topics can be read by anyone.
     match /data/{docId} {
         allow read: if true;
+        allow write: if isAdmin();
     }
     
-    // --- Application-specific rules ---
-    function isOwner(doc) {
-      return request.auth.uid == doc.data.ownerId;
+    // --- Helper function for secure access ---
+    function isOwner(collectionName) {
+      return request.auth != null && request.auth.uid == resource.data.ownerId;
     }
 
-    function isCreatingOwn(doc) {
-      return request.auth.uid == doc.data.ownerId;
+    function isCreatingOwnContent() {
+      return request.auth != null && request.auth.uid == request.resource.data.ownerId;
     }
-
-    // All financial collections and tasks follow the same ownership pattern
-    match /agriculture_sales/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /agriculture_expenses/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /agriculture_debts/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /agriculture_workers/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
     
-    match /livestock_sales/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /livestock_expenses/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /livestock_debts/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /livestock_workers/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    
-    match /poultry_sales/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /poultry_expenses/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /poultry_debts/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /poultry_workers/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    
-    match /fish_sales/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /fish_expenses/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /fish_debts/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /fish_workers/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-
-    match /tasks/{docId} { allow read, write: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    
-    match /archive_sales/{docId} { allow read: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /archive_expenses/{docId} { allow read: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /archive_debts/{docId} { allow read: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    match /completed_tasks/{docId} { allow read: if isOwner(resource); allow create: if isCreatingOwn(request.resource); }
-    
+    // --- All department-specific and archive collections ---
+    // This single rule applies to all collections that follow the pattern of having an ownerId.
+    match /{path=**}/{document} {
+      allow read, write: if isOwner(path);
+      allow create: if isCreatingOwnContent();
+    }
   }
 }

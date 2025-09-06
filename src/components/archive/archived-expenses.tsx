@@ -48,6 +48,9 @@ export function ArchivedExpenses() {
             });
             setArchivedItems(items.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));
             setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching archived expenses:", error);
+            setIsLoading(false);
         });
 
         return () => unsubscribe();

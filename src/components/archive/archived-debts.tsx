@@ -49,6 +49,9 @@ export function ArchivedDebts() {
             });
             setArchivedItems(items.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));
             setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching archived debts:", error);
+            setIsLoading(false);
         });
 
         return () => unsubscribe();
