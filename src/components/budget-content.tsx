@@ -150,7 +150,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     try {
         await addSale(departmentId, submissionData);
-        // Data will be re-fetched by the onSnapshot listener, no need to set state manually
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
@@ -181,7 +180,6 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     if (!saleToArchive) return;
     try {
         await archiveSale(departmentId, saleToArchive);
-        // Data will be re-fetched by the onSnapshot listener, no need to set state manually
         toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
     } catch (e) {
         console.error("Error archiving sale: ", e);

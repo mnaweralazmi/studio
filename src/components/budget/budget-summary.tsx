@@ -5,7 +5,7 @@ import * as React from 'react';
 import { getDocs, query, collection, Timestamp, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
 import type { SalesItem } from '../budget-content';
@@ -36,48 +36,37 @@ export function BudgetSummary() {
 
         setIsLoading(true);
         
-        const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
-        
-        const unsubscribes = collectionNames.map(colName => {
-            const q = query(collection(db, colName), where("ownerId", "==", authUser.uid));
-            return onSnapshot(q, () => {
-                // We just need a trigger, the actual data fetch happens below
-                fetchAllData();
-            });
-        });
-
         const fetchAllData = async () => {
-            if (!authUser) return;
+             if (!authUser) return;
 
             try {
-                const allDataPromises = departments.flatMap(deptId => [
-                    getDocs(query(collection(db, `${deptId}_sales`), where("ownerId", "==", authUser.uid))),
-                    getDocs(query(collection(db, `${deptId}_expenses`), where("ownerId", "==", authUser.uid))),
-                    getDocs(query(collection(db, `${deptId}_debts`), where("ownerId", "==", authUser.uid))),
+                const allSalesPromises = departments.map(deptId => 
+                    getDocs(query(collection(db, `${deptId}_sales`), where("ownerId", "==", authUser.uid)))
+                );
+                const allExpensesPromises = departments.map(deptId => 
+                    getDocs(query(collection(db, `${deptId}_expenses`), where("ownerId", "==", authUser.uid)))
+                );
+                const allDebtsPromises = departments.map(deptId => 
+                    getDocs(query(collection(db, `${deptId}_debts`), where("ownerId", "==", authUser.uid)))
+                );
+                const allWorkersPromises = departments.map(deptId => 
                     getDocs(query(collection(db, `${deptId}_workers`), where("ownerId", "==", authUser.uid)))
+                );
+
+                const [salesSnaps, expensesSnaps, debtsSnaps, workersSnaps] = await Promise.all([
+                    Promise.all(allSalesPromises),
+                    Promise.all(allExpensesPromises),
+                    Promise.all(allDebtsPromises),
+                    Promise.all(allWorkersPromises),
                 ]);
 
-                const allSnapshots = await Promise.all(allDataPromises);
-
-                let allSales: SalesItem[] = [];
-                let allExpenses: ExpenseItem[] = [];
-                let allDebts: DebtItem[] = [];
-                let allWorkers: Worker[] = [];
-
-                let snapshotIndex = 0;
-                for (const deptId of departments) {
-                    allSales.push(...allSnapshots[snapshotIndex++].docs.map(doc => doc.data() as SalesItem));
-                    allExpenses.push(...allSnapshots[snapshotIndex++].docs.map(doc => doc.data() as ExpenseItem));
-                    const debtsData = allSnapshots[snapshotIndex++].docs.map(doc => {
-                        const data = doc.data();
-                        return {
-                            ...data,
-                            payments: (data.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}))
-                        } as DebtItem;
-                    });
-                    allDebts.push(...debtsData);
-                    allWorkers.push(...allSnapshots[snapshotIndex++].docs.map(doc => doc.data() as Worker));
-                }
+                const allSales = salesSnaps.flatMap(snap => snap.docs.map(doc => doc.data() as SalesItem));
+                const allExpenses = expensesSnaps.flatMap(snap => snap.docs.map(doc => doc.data() as ExpenseItem));
+                const allDebts = debtsSnaps.flatMap(snap => snap.docs.map(doc => {
+                    const data = doc.data();
+                    return { ...data, payments: (data.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()})) } as DebtItem;
+                }));
+                const allWorkers = workersSnaps.flatMap(snap => snap.docs.map(doc => doc.data() as Worker));
                 
                 const totalSales = allSales.reduce((sum, doc) => sum + doc.total, 0);
                 const totalExpensesItems = allExpenses.reduce((sum, doc) => sum + doc.amount, 0);
@@ -107,8 +96,16 @@ export function BudgetSummary() {
                 setIsLoading(false);
             }
         };
-        
+
         fetchAllData();
+
+        // Setup listeners to re-fetch data on change
+        const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
+        const unsubscribes = collectionNames.map(colName => {
+            const q = query(collection(db, colName), where("ownerId", "==", authUser.uid));
+            return onSnapshot(q, fetchAllData, (err) => console.error(`Listener failed for ${colName}:`, err));
+        });
+
 
         return () => unsubscribes.forEach(unsub => unsub());
 

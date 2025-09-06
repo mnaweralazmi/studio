@@ -213,7 +213,7 @@ export default function CalendarPage() {
     .filter(task => task.isCompleted)
     .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
   
-  if (loading || !user) {
+  if (loading) {
     return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
@@ -261,17 +261,17 @@ export default function CalendarPage() {
                 </Card>
 
                 <TaskSection 
-                    title={t('allUpcomingTasks')} 
-                    tasks={upcomingTasks} 
-                    onComplete={handleCompleteTask} 
-                    language={language} t={t} 
-                />
-                
-                <TaskSection 
                     title={t('tasksForDay')} 
                     tasks={selectedDayTasks} 
                     onComplete={handleCompleteTask} 
                     language={language} t={t}
+                />
+                
+                <TaskSection 
+                    title={t('allUpcomingTasks')} 
+                    tasks={upcomingTasks} 
+                    onComplete={handleCompleteTask} 
+                    language={language} t={t} 
                 />
 
                 <Card>

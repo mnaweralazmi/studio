@@ -35,9 +35,19 @@ export function ArchivedTasks() {
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const tasks: ArchivedTask[] = [];
             querySnapshot.forEach((doc) => {
-                tasks.push({ id: doc.id, ...doc.data() } as ArchivedTask);
+                const data = doc.data();
+                tasks.push({ 
+                    id: doc.id, 
+                    ...data,
+                    // Ensure dueDate is a Date object, even if it's stored differently
+                    dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : new Date(),
+                    completedAt: data.completedAt,
+                } as ArchivedTask);
             });
             setArchivedTasks(tasks.sort((a,b) => b.completedAt.toMillis() - a.completedAt.toMillis()));
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching archived tasks:", error);
             setIsLoading(false);
         });
 
