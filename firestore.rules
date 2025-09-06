@@ -1,44 +1,120 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Helper Functions ---
+
     function isOwner(data) {
-      return request.auth != null && request.auth.uid == data.ownerId;
+      return request.auth.uid == data.ownerId;
     }
-
-    // --- User Profiles ---
+    
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create;
+      allow update: if request.auth.uid == userId;
     }
 
-    // --- Public Data ---
     match /data/{document=**} {
       allow read: if true;
     }
 
-    // --- Collections with ownerId ---
-    function ownerCollections() {
-      return [
-        'tasks', 'completed_tasks',
-        'agriculture_sales', 'agriculture_expenses', 'agriculture_debts', 'agriculture_workers',
-        'livestock_sales', 'livestock_expenses', 'livestock_debts', 'livestock_workers',
-        'poultry_sales', 'poultry_expenses', 'poultry_debts', 'poultry_workers',
-        'fish_sales', 'fish_expenses', 'fish_debts', 'fish_workers',
-        'archive_sales', 'archive_expenses', 'archive_debts'
-      ];
+    function financialDataAccess() {
+      return {
+        'read': request.auth.uid == resource.data.ownerId,
+        'write': request.auth.uid == resource.data.ownerId,
+        'create': request.auth.uid == request.resource.data.ownerId
+      };
     }
 
-    match /{collection}/{docId} {
-      // This rule applies to all collections listed in the ownerCollections function.
-      // It secures access based on the 'ownerId' field.
-      // NOTE: For 'list' operations (queries), the client MUST include a `where('ownerId', '==', request.auth.uid)` clause.
-      allow list: if collection in ownerCollections() && request.auth != null;
-      allow get, update, delete: if collection in ownerCollections() && isOwner(resource.data);
-      allow create: if collection in ownerCollections() && isOwner(request.resource.data);
+    match /agriculture_sales/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /agriculture_expenses/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /agriculture_debts/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /agriculture_workers/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+
+    match /livestock_sales/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /livestock_expenses/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /livestock_debts/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /livestock_workers/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+
+    match /poultry_sales/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /poultry_expenses/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /poultry_debts/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /poultry_workers/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+
+    match /fish_sales/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /fish_expenses/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /fish_debts/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /fish_workers/{docId} {
+      allow read, write: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+
+    match /archive_sales/{docId} {
+      allow read: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /archive_expenses/{docId} {
+      allow read: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    match /archive_debts/{docId} {
+      allow read: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+
+    match /completed_tasks/{docId} {
+      allow read: if financialDataAccess().read;
+      allow create: if financialDataAccess().create;
+    }
+    
+    match /tasks/{taskId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
     }
   }
 }
