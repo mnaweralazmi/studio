@@ -39,6 +39,7 @@ export function BudgetSummary() {
             if (!authLoading) setLoadingSales(false);
             return;
         }
+        setLoadingSales(true);
         const unsubscribes = departments.map(deptId => {
             const q = query(
                 collection(db, 'users', authUser.uid, `${deptId}_sales`),
@@ -65,6 +66,7 @@ export function BudgetSummary() {
              if (!authLoading) setLoadingExpenses(false);
             return;
         }
+        setLoadingExpenses(true);
         const unsubscribes = departments.map(deptId => {
             const q = query(collection(db, 'users', authUser.uid, `${deptId}_expenses`), where("ownerId", "==", authUser.uid));
             return onSnapshot(q, async () => {
@@ -88,6 +90,7 @@ export function BudgetSummary() {
             if (!authLoading) setLoadingWorkers(false);
             return;
         }
+        setLoadingWorkers(true);
         const unsubscribes = departments.map(deptId => {
             const q = query(collection(db, 'users', authUser.uid, `${deptId}_workers`), where("ownerId", "==", authUser.uid));
             return onSnapshot(q, async () => {
@@ -117,6 +120,7 @@ export function BudgetSummary() {
             if (!authLoading) setLoadingDebts(false);
             return;
         }
+        setLoadingDebts(true);
         const unsubscribes = departments.map(deptId => {
             const q = query(collection(db, 'users', authUser.uid, `${deptId}_debts`), where("ownerId", "==", authUser.uid));
             return onSnapshot(q, async () => {
