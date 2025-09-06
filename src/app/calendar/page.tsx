@@ -31,8 +31,8 @@ export interface Task {
 export type TaskData = Omit<Task, 'id'>;
 
 // --- Firestore API Functions ---
-async function addTask(data: TaskData): Promise<string> {
-    const tasksCollectionRef = collection(db, 'tasks');
+async function addTask(userId: string, data: TaskData): Promise<string> {
+    const tasksCollectionRef = collection(db, 'users', userId, 'tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
         dueDate: Timestamp.fromDate(data.dueDate),
@@ -40,16 +40,16 @@ async function addTask(data: TaskData): Promise<string> {
     return docRef.id;
 }
 
-async function updateTask(taskId: string, data: Partial<TaskData>): Promise<void> {
-    const taskDocRef = doc(db, 'tasks', taskId);
+async function updateTask(userId: string, taskId: string, data: Partial<TaskData>): Promise<void> {
+    const taskDocRef = doc(db, 'users', userId, 'tasks', taskId);
     await updateDoc(taskDocRef, {
         ...data,
         ...(data.dueDate && { dueDate: Timestamp.fromDate(data.dueDate) })
     });
 }
 
-async function deleteTask(taskId: string): Promise<void> {
-    const taskDocRef = doc(db, 'tasks', taskId);
+async function deleteTask(userId: string, taskId: string): Promise<void> {
+    const taskDocRef = doc(db, 'users', userId, 'tasks', taskId);
     await deleteDoc(taskDocRef);
 }
 
@@ -145,7 +145,7 @@ export default function CalendarPage() {
     }
 
     setIsTasksLoading(true);
-    const tasksCollectionRef = collection(db, 'tasks');
+    const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
     const q = query(tasksCollectionRef, where("ownerId", "==", user.uid));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -175,7 +175,7 @@ export default function CalendarPage() {
 
     try {
         const batch = writeBatch(db);
-        const originalTaskRef = doc(db, 'tasks', taskId);
+        const originalTaskRef = doc(db, 'users', user.uid, 'tasks', taskId);
         
         if (taskToComplete.isRecurring) {
             // Update the existing task with a new due date
@@ -183,7 +183,7 @@ export default function CalendarPage() {
             batch.update(originalTaskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
         } else {
             // Move to archive and delete from active tasks
-            const archiveRef = doc(collection(db, 'completed_tasks'));
+            const archiveRef = doc(collection(db, 'users', user.uid, 'completed_tasks'));
             const archivedTaskData = {
                 ...taskToComplete,
                 completedAt: Timestamp.now(),

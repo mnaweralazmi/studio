@@ -49,9 +49,9 @@ export type ExpenseItem = {
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-async function addExpense(departmentId: string, data: ExpenseItemData): Promise<string> {
+async function addExpense(userId: string, departmentId: string, data: ExpenseItemData): Promise<string> {
     const collectionName = `${departmentId}_expenses`;
-    const expensesCollectionRef = collection(db, collectionName);
+    const expensesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -59,14 +59,14 @@ async function addExpense(departmentId: string, data: ExpenseItemData): Promise<
     return docRef.id;
 }
 
-async function archiveExpense(departmentId: string, expense: ExpenseItem): Promise<void> {
+async function archiveExpense(userId: string, departmentId: string, expense: ExpenseItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalExpenseRef = doc(db, `${departmentId}_expenses`, expense.id);
+    const originalExpenseRef = doc(db, 'users', userId, `${departmentId}_expenses`, expense.id);
     batch.delete(originalExpenseRef);
 
     const archiveCollectionName = `archive_expenses`;
-    const archiveExpenseRef = doc(collection(db, archiveCollectionName));
+    const archiveExpenseRef = doc(collection(db, 'users', userId, archiveCollectionName));
     const archivedExpenseData = {
         ...expense,
         archivedAt: Timestamp.now(),
@@ -108,7 +108,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
         setIsDataLoading(true);
         const collectionName = `${departmentId}_expenses`;
-        const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
+        const q = query(collection(db, 'users', authUser.uid, collectionName));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
@@ -158,7 +158,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            await addExpense(departmentId, newExpenseData);
+            await addExpense(authUser.uid, departmentId, newExpenseData);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
@@ -169,10 +169,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     }
 
     const handleDelete = async (expenseId: string) => {
+        if (!authUser) return;
         const expenseToArchive = expenses.find(item => item.id === expenseId);
         if (!expenseToArchive) return;
         try {
-            await archiveExpense(departmentId, expenseToArchive);
+            await archiveExpense(authUser.uid, departmentId, expenseToArchive);
             toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
             console.error("Error archiving expense: ", e);

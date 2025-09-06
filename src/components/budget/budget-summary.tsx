@@ -41,16 +41,16 @@ export function BudgetSummary() {
 
             try {
                 const allSalesPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, `${deptId}_sales`), where("ownerId", "==", authUser.uid)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_sales`)))
                 );
                 const allExpensesPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, `${deptId}_expenses`), where("ownerId", "==", authUser.uid)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_expenses`)))
                 );
                 const allDebtsPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, `${deptId}_debts`), where("ownerId", "==", authUser.uid)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_debts`)))
                 );
                 const allWorkersPromises = departments.map(deptId => 
-                    getDocs(query(collection(db, `${deptId}_workers`), where("ownerId", "==", authUser.uid)))
+                    getDocs(query(collection(db, 'users', authUser.uid, `${deptId}_workers`)))
                 );
 
                 const [salesSnaps, expensesSnaps, debtsSnaps, workersSnaps] = await Promise.all([
@@ -97,12 +97,10 @@ export function BudgetSummary() {
             }
         };
 
-        fetchAllData();
-
-        // Setup listeners to re-fetch data on change
+        
         const collectionNames = departments.flatMap(deptId => [`${deptId}_sales`, `${deptId}_expenses`, `${deptId}_debts`, `${deptId}_workers`]);
         const unsubscribes = collectionNames.map(colName => {
-            const q = query(collection(db, colName), where("ownerId", "==", authUser.uid));
+            const q = query(collection(db, 'users', authUser.uid, colName));
             return onSnapshot(q, fetchAllData, (err) => console.error(`Listener failed for ${colName}:`, err));
         });
 

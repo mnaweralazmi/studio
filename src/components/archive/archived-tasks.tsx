@@ -30,7 +30,7 @@ export function ArchivedTasks() {
         }
 
         setIsLoading(true);
-        const q = query(collection(db, "completed_tasks"), where("ownerId", "==", user.uid));
+        const q = query(collection(db, 'users', user.uid, "completed_tasks"));
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const tasks: ArchivedTask[] = [];

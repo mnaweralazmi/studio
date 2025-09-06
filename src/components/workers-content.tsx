@@ -21,9 +21,9 @@ import { db } from '@/lib/firebase';
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
-async function addWorker(departmentId: string, data: WorkerFormValues & { ownerId: string }): Promise<string> {
+async function addWorker(userId: string, departmentId: string, data: WorkerFormValues & { ownerId: string }): Promise<string> {
     const collectionName = `${departmentId}_workers`;
-    const workersColRef = collection(db, collectionName);
+    const workersColRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(workersColRef, {
         ...data,
         paidMonths: [],
@@ -33,24 +33,24 @@ async function addWorker(departmentId: string, data: WorkerFormValues & { ownerI
     return docRef.id;
 }
 
-async function updateWorker(departmentId: string, workerId: string, data: Partial<WorkerFormValues>) {
+async function updateWorker(userId: string, departmentId: string, workerId: string, data: Partial<WorkerFormValues>) {
     const collectionName = `${departmentId}_workers`;
-    const workerDocRef = doc(db, collectionName, workerId);
+    const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
     await updateDoc(workerDocRef, data);
 }
 
-async function paySalary(departmentId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
+async function paySalary(userId: string, departmentId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
     const collectionName = `${departmentId}_workers`;
-    const workerRef = doc(db, collectionName, workerId);
+    const workerRef = doc(db, 'users', userId, collectionName, workerId);
     await updateDoc(workerRef, {
         paidMonths: arrayUnion(paidMonth),
         transactions: arrayUnion({ ...transactionData, date: Timestamp.now(), id: new Date().getTime().toString() })
     });
 }
 
-async function addTransaction(departmentId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
+async function addTransaction(userId: string, departmentId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
     const collectionName = `${departmentId}_workers`;
-    const workerRef = doc(db, collectionName, workerId);
+    const workerRef = doc(db, 'users', userId, collectionName, workerId);
     const newTransaction = {
         ...transactionData,
         date: Timestamp.now(),
@@ -62,9 +62,9 @@ async function addTransaction(departmentId: string, workerId: string, transactio
     return newTransaction.id;
 }
 
-async function deleteWorker(departmentId: string, workerId: string) {
+async function deleteWorker(userId: string, departmentId: string, workerId: string) {
     const collectionName = `${departmentId}_workers`;
-    const workerDocRef = doc(db, collectionName, workerId);
+    const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
     await deleteDoc(workerDocRef);
 }
 
@@ -92,7 +92,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const collectionName = `${departmentId}_workers`;
-        const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
+        const q = query(collection(db, 'users', authUser.uid, collectionName));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => {
@@ -133,11 +133,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         try {
             if (workerId) {
-                await updateWorker(departmentId, workerId, data);
+                await updateWorker(authUser.uid, departmentId, workerId, data);
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
                 const newWorkerData = { ...data, ownerId: authUser.uid };
-                await addWorker(departmentId, newWorkerData);
+                await addWorker(authUser.uid, departmentId, newWorkerData);
                 toast({ title: t('workerAddedSuccess') });
             }
         } catch (e) {
@@ -156,7 +156,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 month,
                 year,
             };
-            await paySalary(departmentId, workerId, {year, month}, transaction);
+            await paySalary(authUser.uid, departmentId, workerId, {year, month}, transaction);
             toast({ title: t('salaryPaidSuccess') });
         } catch (e) {
             console.error("Error paying salary: ", e);
@@ -174,7 +174,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            await addTransaction(departmentId, workerId, newTransactionData);
+            await addTransaction(authUser.uid, departmentId, workerId, newTransactionData);
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
@@ -184,8 +184,9 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
 
     async function handleDeleteWorker(workerId: string) {
+        if(!authUser) return;
         try {
-            await deleteWorker(departmentId, workerId);
+            await deleteWorker(authUser.uid, departmentId, workerId);
             toast({ title: t('workerDeleted') });
         } catch(e) {
             console.error("Error deleting worker: ", e);

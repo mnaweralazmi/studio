@@ -40,9 +40,9 @@ export type DebtItem = {
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-async function addDebt(departmentId: string, data: DebtItemData): Promise<string> {
+async function addDebt(userId: string, departmentId: string, data: DebtItemData): Promise<string> {
     const collectionName = `${departmentId}_debts`;
-    const debtsCollectionRef = collection(db, collectionName);
+    const debtsCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
@@ -52,14 +52,14 @@ async function addDebt(departmentId: string, data: DebtItemData): Promise<string
     return docRef.id;
 }
 
-async function archiveDebt(departmentId: string, debt: DebtItem): Promise<void> {
+async function archiveDebt(userId: string, departmentId: string, debt: DebtItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalDebtRef = doc(db, `${departmentId}_debts`, debt.id);
+    const originalDebtRef = doc(db, 'users', userId, `${departmentId}_debts`, debt.id);
     batch.delete(originalDebtRef);
 
     const archiveCollectionName = `archive_debts`;
-    const archiveDebtRef = doc(collection(db, archiveCollectionName));
+    const archiveDebtRef = doc(collection(db, 'users', userId, archiveCollectionName));
 
     const archivedData = {
         ...debt,
@@ -74,9 +74,9 @@ async function archiveDebt(departmentId: string, debt: DebtItem): Promise<void> 
 }
 
 
-async function addDebtPayment(departmentId: string, debtId: string, paymentData: Omit<Payment, 'id'>) {
+async function addDebtPayment(userId: string, departmentId: string, debtId: string, paymentData: Omit<Payment, 'id'>) {
     const collectionName = `${departmentId}_debts`;
-    const debtRef = doc(db, collectionName, debtId);
+    const debtRef = doc(db, 'users', userId, collectionName, debtId);
     await updateDoc(debtRef, {
         payments: arrayUnion({
             ...paymentData,
@@ -85,9 +85,9 @@ async function addDebtPayment(departmentId: string, debtId: string, paymentData:
     });
 }
 
-async function updateDebtStatus(departmentId: string, debtId: string, status: DebtItem['status']) {
+async function updateDebtStatus(userId: string, departmentId: string, debtId: string, status: DebtItem['status']) {
     const collectionName = `${departmentId}_debts`;
-    const debtRef = doc(db, collectionName, debtId);
+    const debtRef = doc(db, 'users', userId, collectionName, debtId);
     await updateDoc(debtRef, { status });
 }
 
@@ -115,7 +115,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         setIsDataLoading(true);
         const collectionName = `${departmentId}_debts`;
-        const q = query(collection(db, collectionName), where("ownerId", "==", authUser.uid));
+        const q = query(collection(db, 'users', authUser.uid, collectionName));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => {
@@ -167,7 +167,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            await addDebt(departmentId, newDebtData);
+            await addDebt(authUser.uid, departmentId, newDebtData);
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -179,10 +179,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     }
     
     async function handleDelete(debtId: string) {
+        if (!authUser) return;
         const debtToArchive = debts.find(item => item.id === debtId);
         if (!debtToArchive) return;
         try {
-            await archiveDebt(departmentId, debtToArchive);
+            await archiveDebt(authUser.uid, departmentId, debtToArchive);
             toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
             console.error("Error archiving debt: ", e);
@@ -198,12 +199,12 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         try {
             const newPayment = { amount: paymentAmount, date: new Date() };
-            await addDebtPayment(departmentId, debtId, newPayment);
+            await addDebtPayment(authUser.uid, departmentId, debtId, newPayment);
             
             const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             const newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
             if (newStatus !== debt.status) {
-                await updateDebtStatus(departmentId, debtId, newStatus);
+                await updateDebtStatus(authUser.uid, departmentId, debtId, newStatus);
             }
             
             toast({ title: t('paymentRecordedSuccess') });

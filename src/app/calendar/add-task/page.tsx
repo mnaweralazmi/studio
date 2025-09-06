@@ -44,8 +44,8 @@ export interface Task {
 
 export type TaskData = Omit<Task, 'id'>;
 
-async function addTask(data: TaskData): Promise<string> {
-    const tasksCollectionRef = collection(db, 'tasks');
+async function addTask(userId: string, data: TaskData): Promise<string> {
+    const tasksCollectionRef = collection(db, 'users', userId, 'tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
         dueDate: Timestamp.fromDate(data.dueDate),
@@ -122,7 +122,7 @@ export default function AddTaskPage() {
             ownerId: user.uid,
         };
 
-        await addTask(taskData);
+        await addTask(user.uid, taskData);
 
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
