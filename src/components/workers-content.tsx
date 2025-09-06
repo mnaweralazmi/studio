@@ -211,7 +211,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
 
-    const workersForDepartment = workers.filter(w => w.departmentId === departmentId);
+    const workersForDepartment = workers;
     
     const totalUnpaidSalariesThisMonth = workersForDepartment
         .filter(w => !getMonthStatus(w, currentMonth, currentYear))
@@ -357,3 +357,4 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
+
