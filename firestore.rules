@@ -2,11 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+  
     function isOwner(data) {
       return request.auth != null && request.auth.uid == data.ownerId;
     }
-
+  
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth.uid == userId;
@@ -15,52 +15,63 @@ service cloud.firestore {
     match /data/{document=**} {
       allow read: if true;
     }
-
-    // --- All user-specific data must have an ownerId ---
-
-    match /tasks/{taskId} {
+    
+    match /completed_tasks/{docId} {
       allow read, write: if isOwner(resource.data);
       allow create: if isOwner(request.resource.data);
     }
     
-    match /completed_tasks/{taskId} {
+    match /tasks/{docId} {
       allow read, write: if isOwner(resource.data);
       allow create: if isOwner(request.resource.data);
     }
-    
+
+    // --- Financials ---
     function financialDataAccessRules() {
       return {
-        'list': (resource) => request.auth != null,
-        'get': (resource) => isOwner(resource.data),
-        'create': (resource) => isOwner(request.resource.data),
-        'update': (resource) => isOwner(resource.data),
-        'delete': (resource) => isOwner(resource.data)
+        'read': isOwner(resource.data),
+        'write': isOwner(resource.data),
+        'create': isOwner(request.resource.data),
+        'list': request.auth != null
       }
     }
-    
-    match /agriculture_sales/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /agriculture_expenses/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /agriculture_debts/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /agriculture_workers/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
 
-    match /livestock_sales/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /livestock_expenses/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /livestock_debts/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /livestock_workers/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    
-    match /poultry_sales/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /poultry_expenses/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /poultry_debts/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /poultry_workers/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
+    match /{departmentId}_sales/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+      allow list: if request.auth != null;
+    }
+    match /{departmentId}_expenses/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+      allow list: if request.auth != null;
+    }
+    match /{departmentId}_debts/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+      allow list: if request.auth != null;
+    }
+    match /{departmentId}_workers/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+      allow list: if request.auth != null;
+    }
 
-    match /fish_sales/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /fish_expenses/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /fish_debts/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /fish_workers/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-
-    match /archive_sales/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /archive_expenses/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-    match /archive_debts/{docId} { allow read: if financialDataAccessRules().get(resource) || financialDataAccessRules().list(resource); allow write: if financialDataAccessRules().create(resource) || financialDataAccessRules().update(resource) || financialDataAccessRules().delete(resource); }
-
+    // --- Archive ---
+    match /archive_sales/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+      allow list: if request.auth != null;
+    }
+    match /archive_expenses/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+      allow list: if request.auth != null;
+    }
+    match /archive_debts/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+      allow list: if request.auth != null;
+    }
   }
 }
