@@ -2,9 +2,9 @@
 "use client";
 
 import * as React from 'react';
-import { format, isToday, addDays, isSameDay } from 'date-fns';
+import { format, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { getDocs, Timestamp, addDoc, doc, updateDoc, deleteDoc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
+import { Timestamp, doc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,29 +29,6 @@ export interface Task {
 }
 
 export type TaskData = Omit<Task, 'id'>;
-
-// --- Firestore API Functions ---
-async function addTask(userId: string, data: TaskData): Promise<string> {
-    const tasksCollectionRef = collection(db, 'users', userId, 'tasks');
-    const docRef = await addDoc(tasksCollectionRef, {
-        ...data,
-        dueDate: Timestamp.fromDate(data.dueDate),
-    });
-    return docRef.id;
-}
-
-async function updateTask(userId: string, taskId: string, data: Partial<TaskData>): Promise<void> {
-    const taskDocRef = doc(db, 'users', userId, 'tasks', taskId);
-    await updateDoc(taskDocRef, {
-        ...data,
-        ...(data.dueDate && { dueDate: Timestamp.fromDate(data.dueDate) })
-    });
-}
-
-async function deleteTask(userId: string, taskId: string): Promise<void> {
-    const taskDocRef = doc(db, 'users', userId, 'tasks', taskId);
-    await deleteDoc(taskDocRef);
-}
 
 
 const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {

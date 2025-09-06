@@ -26,124 +26,79 @@ export function BudgetSummary() {
     const [totalDebts, setTotalDebts] = React.useState(0);
     const [totalSalaries, setTotalSalaries] = React.useState(0);
     
-    const [loadingSales, setLoadingSales] = React.useState(true);
-    const [loadingExpenses, setLoadingExpenses] = React.useState(true);
-    const [loadingDebts, setLoadingDebts] = React.useState(true);
-    const [loadingWorkers, setLoadingWorkers] = React.useState(true);
+    const [loading, setLoading] = React.useState(true);
 
-    const isLoading = loadingSales || loadingExpenses || loadingDebts || loadingWorkers;
-
-    // Fetch Sales
     React.useEffect(() => {
         if (!authUser) {
-            if (!authLoading) setLoadingSales(false);
+            if (!authLoading) setLoading(false);
             return;
         }
-        setLoadingSales(true);
-        const unsubscribes = departments.map(deptId => {
-            const q = query(
-                collection(db, 'users', authUser.uid, `${deptId}_sales`),
-                where("ownerId", "==", authUser.uid)
-            );
-            return onSnapshot(q, async () => { 
-                let currentTotal = 0;
+        setLoading(true);
+
+        const fetchAllData = async () => {
+            try {
+                let salesTotal = 0;
+                let expensesTotal = 0;
+                let debtsTotal = 0;
+                let salariesTotal = 0;
+
                 for (const dept of departments) {
+                    // Sales
                     const salesQuery = query(collection(db, 'users', authUser.uid, `${dept}_sales`), where("ownerId", "==", authUser.uid));
                     const salesSnapshot = await getDocs(salesQuery);
-                    const salesItems = salesSnapshot.docs.map(doc => doc.data() as SalesItem);
-                    currentTotal += salesItems.reduce((sum, item) => sum + item.total, 0);
-                }
-                setTotalSales(currentTotal);
-                setLoadingSales(false);
-            });
-        });
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [authUser, authLoading]);
+                    salesTotal += salesSnapshot.docs.map(doc => doc.data() as SalesItem).reduce((sum, item) => sum + item.total, 0);
 
-    // Fetch Expenses
-    React.useEffect(() => {
-        if (!authUser) {
-             if (!authLoading) setLoadingExpenses(false);
-            return;
-        }
-        setLoadingExpenses(true);
-        const unsubscribes = departments.map(deptId => {
-            const q = query(collection(db, 'users', authUser.uid, `${deptId}_expenses`), where("ownerId", "==", authUser.uid));
-            return onSnapshot(q, async () => {
-                 let currentTotal = 0;
-                 for (const dept of departments) {
+                    // Expenses
                     const expensesQuery = query(collection(db, 'users', authUser.uid, `${dept}_expenses`), where("ownerId", "==", authUser.uid));
                     const expensesSnapshot = await getDocs(expensesQuery);
-                    const expenseItems = expensesSnapshot.docs.map(doc => doc.data() as ExpenseItem);
-                    currentTotal += expenseItems.reduce((sum, item) => sum + item.amount, 0);
-                 }
-                setTotalExpenses(currentTotal);
-                setLoadingExpenses(false);
-            });
-        });
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [authUser, authLoading]);
-    
-     // Fetch Workers (for salaries)
-    React.useEffect(() => {
-        if (!authUser) {
-            if (!authLoading) setLoadingWorkers(false);
-            return;
-        }
-        setLoadingWorkers(true);
-        const unsubscribes = departments.map(deptId => {
-            const q = query(collection(db, 'users', authUser.uid, `${deptId}_workers`), where("ownerId", "==", authUser.uid));
-            return onSnapshot(q, async () => {
-                let totalSalariesPaid = 0;
-                for (const dept of departments) {
+                    expensesTotal += expensesSnapshot.docs.map(doc => doc.data() as ExpenseItem).reduce((sum, item) => sum + item.amount, 0);
+                    
+                    // Workers (Salaries)
                     const workersQuery = query(collection(db, 'users', authUser.uid, `${dept}_workers`), where("ownerId", "==", authUser.uid));
                     const workersSnapshot = await getDocs(workersQuery);
-                    const workers = workersSnapshot.docs.map(doc => doc.data() as Worker);
-                    totalSalariesPaid += workers.reduce((workerSum, worker) => {
-                        const salaries = (worker.transactions || [])
-                            .filter(t => t.type === 'salary')
-                            .reduce((sum, t) => sum + t.amount, 0);
+                    salariesTotal += workersSnapshot.docs.map(doc => doc.data() as Worker).reduce((workerSum, worker) => {
+                        const salaries = (worker.transactions || []).filter(t => t.type === 'salary').reduce((sum, t) => sum + t.amount, 0);
                         return workerSum + salaries;
                     }, 0);
-                }
-                setTotalSalaries(totalSalariesPaid);
-                setLoadingWorkers(false);
-            });
-        });
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [authUser, authLoading]);
 
-
-    // Fetch Debts
-    React.useEffect(() => {
-        if (!authUser) {
-            if (!authLoading) setLoadingDebts(false);
-            return;
-        }
-        setLoadingDebts(true);
-        const unsubscribes = departments.map(deptId => {
-            const q = query(collection(db, 'users', authUser.uid, `${deptId}_debts`), where("ownerId", "==", authUser.uid));
-            return onSnapshot(q, async () => {
-                let totalOutstanding = 0;
-                for (const dept of departments) {
+                    // Debts
                     const debtsQuery = query(collection(db, 'users', authUser.uid, `${dept}_debts`), where("ownerId", "==", authUser.uid));
                     const debtsSnapshot = await getDocs(debtsQuery);
-                    const debtItems = debtsSnapshot.docs.map(doc => doc.data() as DebtItem);
-                    totalOutstanding += debtItems
+                    debtsTotal += debtsSnapshot.docs.map(doc => doc.data() as DebtItem)
                         .filter(d => d.status !== 'paid')
                         .reduce((sum, item) => {
                             const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
                             return sum + (item.amount - paidAmount);
                         }, 0);
                 }
-                setTotalDebts(totalOutstanding);
-                setLoadingDebts(false);
-            });
-        });
+
+                setTotalSales(salesTotal);
+                setTotalExpenses(expensesTotal);
+                setTotalDebts(debtsTotal);
+                setTotalSalaries(salariesTotal);
+            } catch (error) {
+                console.error("Error fetching budget summary:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllData();
+
+        // Set up listeners for real-time updates
+        const unsubscribes = departments.flatMap(dept => [
+            onSnapshot(query(collection(db, 'users', authUser.uid, `${dept}_sales`), where("ownerId", "==", authUser.uid)), fetchAllData),
+            onSnapshot(query(collection(db, 'users', authUser.uid, `${dept}_expenses`), where("ownerId", "==", authUser.uid)), fetchAllData),
+            onSnapshot(query(collection(db, 'users', authUser.uid, `${dept}_workers`), where("ownerId", "==", authUser.uid)), fetchAllData),
+            onSnapshot(query(collection(db, 'users', authUser.uid, `${dept}_debts`), where("ownerId", "==", authUser.uid)), fetchAllData),
+        ]);
+
         return () => unsubscribes.forEach(unsub => unsub());
+
     }, [authUser, authLoading]);
 
-    if (isLoading || authLoading) {
+
+    if (loading || authLoading) {
         return (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <Skeleton className="h-32" />
