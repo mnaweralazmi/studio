@@ -37,7 +37,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto pb-24">{children}</main>
       
       <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t border-border/20 bg-background/80 backdrop-blur-md">
-        <div className={`mx-auto grid h-full w-full font-medium grid-cols-${navItems.length}`}>
+        <div className="flex h-full w-full items-center justify-around font-medium">
           {navItems.map(item => {
             const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             return (
@@ -45,7 +45,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group inline-flex flex-col items-center justify-center px-2 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                  "group inline-flex flex-col items-center justify-center p-2 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground rounded-md w-20 h-16 transition-colors",
                   isActive && "text-primary"
                 )}
               >
