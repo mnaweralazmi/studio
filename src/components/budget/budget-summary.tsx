@@ -17,7 +17,7 @@ import type { Department } from '@/app/financials/page';
 
 const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
 
-const useAllDepartmentsData = <T extends DocumentData>(collectionSuffix: string): [T[], boolean] => {
+const useAllDepartmentsData = <T extends DocumentData>(collectionName: string): [T[], boolean] => {
     const { user, loading: authLoading } = useAuth();
     const [data, setData] = React.useState<T[]>([]);
     const [loading, setLoading] = React.useState(true);
@@ -32,40 +32,20 @@ const useAllDepartmentsData = <T extends DocumentData>(collectionSuffix: string)
         }
 
         setLoading(true);
-        const unsubscribes = departments.map(dept => {
-            const collectionName = `${dept}_${collectionSuffix}`;
-            const q = query(collection(db, 'users', user.uid, collectionName));
-            return onSnapshot(q, () => {
-                // When any department changes, refetch all data to recalculate totals
-                fetchAllData();
-            });
-        });
+        const q = query(collection(db, 'users', user.uid, collectionName));
         
-        const fetchAllData = async () => {
-            try {
-                const allDataPromises = departments.map(async dept => {
-                    const collectionName = `${dept}_${collectionSuffix}`;
-                    const q = query(collection(db, 'users', user.uid, collectionName));
-                    const snapshot = await getDocs(q);
-                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-                });
-                
-                const allDataArrays = await Promise.all(allDataPromises);
-                setData(allDataArrays.flat());
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+            setData(fetchedData);
+            setLoading(false);
+        }, (error) => {
+            console.error(`Error fetching ${collectionName}:`, error);
+            setData([]);
+            setLoading(false);
+        });
 
-            } catch (error) {
-                console.error(`Error fetching ${collectionSuffix}:`, error);
-                setData([]);
-            } finally {
-                 // Set loading to false only after the first fetch is complete.
-                if(loading) setLoading(false);
-            }
-        };
-
-        fetchAllData();
-
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [user, authLoading, collectionSuffix]);
+        return () => unsubscribe();
+    }, [user, authLoading, collectionName]);
 
     return [data, loading || authLoading];
 };

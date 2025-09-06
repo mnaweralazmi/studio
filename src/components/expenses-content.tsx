@@ -51,7 +51,7 @@ export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
 async function addExpense(userId: string, departmentId: string, data: ExpenseItemData): Promise<string> {
-    const collectionName = `${departmentId}_expenses`;
+    const collectionName = `expenses`;
     const expensesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
@@ -63,7 +63,7 @@ async function addExpense(userId: string, departmentId: string, data: ExpenseIte
 async function archiveExpense(userId: string, departmentId: string, expense: ExpenseItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalExpenseRef = doc(db, 'users', userId, `${departmentId}_expenses`, expense.id);
+    const originalExpenseRef = doc(db, 'users', userId, `expenses`, expense.id);
     batch.delete(originalExpenseRef);
 
     const archiveCollectionName = `archive_expenses`;
@@ -108,7 +108,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
 
         setIsDataLoading(true);
-        const collectionName = `${departmentId}_expenses`;
+        const collectionName = `expenses`;
         const q = query(
             collection(db, 'users', authUser.uid, collectionName)
         );

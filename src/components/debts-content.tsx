@@ -42,7 +42,7 @@ export type DebtItem = {
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
 async function addDebt(userId: string, departmentId: string, data: DebtItemData): Promise<string> {
-    const collectionName = `${departmentId}_debts`;
+    const collectionName = `debts`;
     const debtsCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
@@ -56,7 +56,7 @@ async function addDebt(userId: string, departmentId: string, data: DebtItemData)
 async function archiveDebt(userId: string, departmentId: string, debt: DebtItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalDebtRef = doc(db, 'users', userId, `${departmentId}_debts`, debt.id);
+    const originalDebtRef = doc(db, 'users', userId, `debts`, debt.id);
     batch.delete(originalDebtRef);
 
     const archiveCollectionName = `archive_debts`;
@@ -76,7 +76,7 @@ async function archiveDebt(userId: string, departmentId: string, debt: DebtItem)
 
 
 async function addDebtPayment(userId: string, departmentId: string, debtId: string, paymentData: Omit<Payment, 'id'>) {
-    const collectionName = `${departmentId}_debts`;
+    const collectionName = `debts`;
     const debtRef = doc(db, 'users', userId, collectionName, debtId);
     await updateDoc(debtRef, {
         payments: arrayUnion({
@@ -88,7 +88,7 @@ async function addDebtPayment(userId: string, departmentId: string, debtId: stri
 }
 
 async function updateDebtStatus(userId: string, departmentId: string, debtId: string, status: DebtItem['status']) {
-    const collectionName = `${departmentId}_debts`;
+    const collectionName = `debts`;
     const debtRef = doc(db, 'users', userId, collectionName, debtId);
     await updateDoc(debtRef, { status });
 }
@@ -116,7 +116,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
 
         setIsDataLoading(true);
-        const collectionName = `${departmentId}_debts`;
+        const collectionName = `debts`;
         const q = query(
             collection(db, 'users', authUser.uid, collectionName)
         );

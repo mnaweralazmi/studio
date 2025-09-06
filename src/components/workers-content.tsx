@@ -23,7 +23,7 @@ const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبر
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
 async function addWorker(userId: string, departmentId: string, data: WorkerFormValues & { ownerId: string }): Promise<string> {
-    const collectionName = `${departmentId}_workers`;
+    const collectionName = `workers`;
     const workersColRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(workersColRef, {
         ...data,
@@ -35,13 +35,13 @@ async function addWorker(userId: string, departmentId: string, data: WorkerFormV
 }
 
 async function updateWorker(userId: string, departmentId: string, workerId: string, data: Partial<WorkerFormValues>) {
-    const collectionName = `${departmentId}_workers`;
+    const collectionName = `workers`;
     const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
     await updateDoc(workerDocRef, data);
 }
 
 async function paySalary(userId: string, departmentId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
-    const collectionName = `${departmentId}_workers`;
+    const collectionName = `workers`;
     const workerRef = doc(db, 'users', userId, collectionName, workerId);
     await updateDoc(workerRef, {
         paidMonths: arrayUnion(paidMonth),
@@ -50,7 +50,7 @@ async function paySalary(userId: string, departmentId: string, workerId: string,
 }
 
 async function addTransaction(userId: string, departmentId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
-    const collectionName = `${departmentId}_workers`;
+    const collectionName = `workers`;
     const workerRef = doc(db, 'users', userId, collectionName, workerId);
     const newTransaction = {
         ...transactionData,
@@ -64,7 +64,7 @@ async function addTransaction(userId: string, departmentId: string, workerId: st
 }
 
 async function deleteWorker(userId: string, departmentId: string, workerId: string) {
-    const collectionName = `${departmentId}_workers`;
+    const collectionName = `workers`;
     const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
     await deleteDoc(workerDocRef);
 }
@@ -92,7 +92,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         }
         
         setIsDataLoading(true);
-        const collectionName = `${departmentId}_workers`;
+        const collectionName = `workers`;
         const q = query(
             collection(db, 'users', authUser.uid, collectionName)
         );

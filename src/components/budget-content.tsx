@@ -44,7 +44,7 @@ export type SalesItem = {
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
 async function addSale(userId: string, departmentId: string, data: SalesItemData): Promise<string> {
-    const collectionName = `${departmentId}_sales`;
+    const collectionName = `sales`;
     const salesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
@@ -56,7 +56,7 @@ async function addSale(userId: string, departmentId: string, data: SalesItemData
 async function archiveSale(userId: string, departmentId: string, sale: SalesItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalSaleRef = doc(db, 'users', userId, `${departmentId}_sales`, sale.id);
+    const originalSaleRef = doc(db, 'users', userId, `sales`, sale.id);
     batch.delete(originalSaleRef);
 
     const archiveCollectionName = `archive_sales`;
@@ -99,7 +99,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
-    const collectionName = `${departmentId}_sales`;
+    const collectionName = `sales`;
     const q = query(
         collection(db, 'users', authUser.uid, collectionName)
     );
