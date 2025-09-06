@@ -20,9 +20,14 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+        setLoading(false);
+        setTopics([]);
+        return;
+    }
+
     setLoading(true);
-    // Public data is in the root 'data' collection
-    const topicsCollectionRef = collection(db, 'data');
+    const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
     
     const unsubscribe = onSnapshot(topicsCollectionRef, (snapshot) => {
         if (!snapshot.empty) {
@@ -37,13 +42,13 @@ export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
         setLoading(false);
     }, (error) => {
-        console.error("Error fetching public topics: ", error);
+        console.error("Error fetching user topics: ", error);
         setTopics([]); // Set to empty on error
         setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const value = useMemo(() => ({ topics, loading }), [topics, loading]);
 
