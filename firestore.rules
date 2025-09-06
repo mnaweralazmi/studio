@@ -2,27 +2,63 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helpers
-    function authed() { return request.auth != null; }
-    function isOwnerExisting() { return authed() && resource.data.ownerId == request.auth.uid; }
-    function isOwnerNew() { return authed() && request.resource.data.ownerId == request.auth.uid; }
-
-    // Public read-only collection: data (agricultural topics)
-    match /data/{docId} {
-      allow read: if true;   // anyone can read
-      allow write: if false; // no writes
+    // Users can read their own user document, and any user can create one.
+    match /users/{userId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
-    // User-scoped root collections (tasks, sales, expenses, workers, ...):
-    match /{collection}/{docId} {
-      allow get, list: if isOwnerExisting();   // read only own docs
-      allow create: if isOwnerNew();           // create only with ownerId = uid
-      allow update, delete: if isOwnerExisting();
+    // Allow users to read agricultural topics data.
+    match /data/{topicId} {
+        allow read: if true; // Accessible to all users
+        allow write: if false; // Data is pre-seeded
     }
 
-    // Fallback: deny everything else
-    match /{path=**} {
-      allow read, write: if false;
+    // Rules for financial and task data, scoped per-department or feature.
+    // This helper function checks if the user is the owner of the document.
+    function isOwner() {
+      return request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+    
+    function isCreatingOwnContent() {
+      return request.auth != null && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    // Departmental Sales
+    match /agriculture_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /livestock_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /poultry_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /fish_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /archive_sales/{saleId} { allow read: if isOwner(); allow create: if isCreatingOwnContent(); }
+
+    // Departmental Expenses
+    match /agriculture_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /livestock_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /poultry_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /fish_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /archive_expenses/{expenseId} { allow read: if isOwner(); allow create: if isCreatingOwnContent(); }
+
+    // Departmental Debts
+    match /agriculture_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /livestock_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    `poultry_debts`poultry_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /fish_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /archive_debts/{debtId} { allow read: if isOwner(); allow create: if isCreatingOwnContent(); }
+
+    // Departmental Workers
+    match /agriculture_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /livestock_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /poultry_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+    match /fish_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
+
+    // Tasks
+    match /tasks/{taskId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isCreatingOwnContent();
+    }
+    match /completed_tasks/{taskId} {
+       allow read: if isOwner();
+       allow create: if isCreatingOwnContent();
     }
   }
 }
