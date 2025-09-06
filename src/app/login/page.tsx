@@ -29,13 +29,11 @@ const handleUserSignIn = async (user: User) => {
     const userDocRef = doc(db, 'users', user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
-    const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
-
     if (!userDocSnap.exists()) {
         await setDoc(userDocRef, {
             name: user.displayName,
             email: user.email,
-            role: isAdmin ? 'admin' : 'user',
+            role: 'user',
             createdAt: new Date(),
             points: 0,
             level: 1,
@@ -50,11 +48,6 @@ const handleUserSignIn = async (user: User) => {
         });
         await batch.commit();
 
-    } else {
-        const userData = userDocSnap.data();
-        if (isAdmin && userData.role !== 'admin') {
-              await setDoc(userDocRef, { role: 'admin' }, { merge: true });
-        }
     }
 }
 

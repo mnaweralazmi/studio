@@ -23,10 +23,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/archive', label: t('archive'), icon: Archive },
     { href: '/settings', label: t('settings'), icon: Settings },
   ];
-  
-  if (user?.role === 'admin') {
-      navItems.push({ href: '/admin', label: t('adminDashboard'), icon: Shield });
-  }
 
   if (loading || !user) {
     return (
