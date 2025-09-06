@@ -1,83 +1,93 @@
-
 "use client";
 
-import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
-import { type AgriculturalSection } from '@/lib/topics-data';
-import { collection, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from './auth-context';
-import { initialAgriculturalSections } from '@/lib/topics-data';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { onSnapshot, collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/auth-context";
 
-interface TopicsContextType {
-  topics: AgriculturalSection[];
+type Topic = {
+  id: string;
+  title?: string;
+  [k: string]: any;
+};
+
+type TopicsContextType = {
+  topics: Topic[];
   loading: boolean;
-}
+  error: string | null;
+  addTopic: (data: Omit<Topic, "id">) => Promise<string>;
+  deleteTopic: (id: string) => Promise<void>;
+};
 
 const TopicsContext = createContext<TopicsContextType | undefined>(undefined);
 
-export const TopicsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-  const [loading, setLoading] = useState(true);
+export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading: authLoading } = useAuth();
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // لا تقم بأي عملية جلب إذا لم يتم تحديد المستخدم بعد
-    if (!user) {
-        setLoading(false);
-        setTopics([]);
-        return;
+    // لا نفعل شيئاً حتى تنتهي حالة المصادقة أو يوجد مستخدم
+    if (authLoading) {
+      setLoading(true);
+      return;
     }
 
+    // إذا لا يوجد مستخدم: نفرّغ البيانات ونوقف الانتظار
+    if (!user) {
+      setTopics([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    // الآن المستخدم موجود — استمع للمجموعة الفرعية الخاصة بالمستخدم
+    const colRef = collection(db, "users", user.uid, "topics");
     setLoading(true);
-    const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
-    
-    const unsubscribe = onSnapshot(topicsCollectionRef, async (snapshot) => {
-        if (snapshot.empty) {
-            // If the user has no topics, populate them from initial data
-            try {
-                const batch = writeBatch(db);
-                initialAgriculturalSections.forEach(topic => {
-                    const newTopicRef = doc(topicsCollectionRef, topic.id);
-                    batch.set(newTopicRef, { ...topic, ownerId: user.uid });
-                });
-                await batch.commit();
-                // Data will be refetched by the snapshot listener automatically
-            } catch (error) {
-                console.error("Error populating initial topics:", error);
-                setTopics([]);
-                setLoading(false);
-            }
-        } else {
-            const fetchedTopics: AgriculturalSection[] = snapshot.docs.map((doc: any) => ({
-                id: doc.id,
-                ...doc.data()
-            })) as AgriculturalSection[];
-            
-            setTopics(fetchedTopics);
-            setLoading(false);
-        }
-    }, (error) => {
-        console.error("Error fetching user topics: ", error);
-        setTopics([]); // Set to empty on error
+    setError(null);
+
+    const unsub = onSnapshot(
+      colRef,
+      (snap) => {
+        const items: Topic[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        setTopics(items);
         setLoading(false);
-    });
+      },
+      (err) => {
+        console.error("topics onSnapshot error:", err);
+        setError(err?.message ?? "خطأ جلب المواضيع");
+        setTopics([]);
+        setLoading(false);
+      }
+    );
 
-    return () => unsubscribe();
-  }, [user]);
+    return () => {
+      unsub();
+    };
+  }, [user, authLoading]);
 
-  const value = useMemo(() => ({ topics, loading }), [topics, loading]);
+  async function addTopic(data: Omit<Topic, "id">) {
+    if (!user) throw new Error("Not signed in");
+    const colRef = collection(db, "users", user.uid, "topics");
+    const docRef = await addDoc(colRef, { ...data, ownerId: user.uid, createdAt: serverTimestamp() });
+    return docRef.id;
+  }
+
+  async function deleteTopic(id: string) {
+    if (!user) throw new Error("Not signed in");
+    await deleteDoc(doc(db, "users", user.uid, "topics", id));
+  }
 
   return (
-    <TopicsContext.Provider value={value}>
+    <TopicsContext.Provider value={{ topics, loading, error, addTopic, deleteTopic }}>
       {children}
     </TopicsContext.Provider>
   );
 };
 
-export const useTopics = () => {
-  const context = useContext(TopicsContext);
-  if (context === undefined) {
-    throw new Error('useTopics must be used within a TopicsProvider');
-  }
-  return context;
-};
+export function useTopics() {
+  const ctx = useContext(TopicsContext);
+  if (!ctx) throw new Error("useTopics must be used within TopicsProvider");
+  return ctx;
+}
