@@ -1,64 +1,62 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read their own user document, and any user can create one.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
     match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+      allow read, update: if isOwner(userId);
+      allow create: if request.auth.uid != null;
     }
 
-    // Allow users to read agricultural topics data.
     match /data/{topicId} {
-        allow read: if true; // Accessible to all users
-        allow write: if false; // Data is pre-seeded
-    }
-
-    // Rules for financial and task data, scoped per-department or feature.
-    // This helper function checks if the user is the owner of the document.
-    function isOwner() {
-      return request.auth != null && request.auth.uid == resource.data.ownerId;
+        allow read: if true;
+        allow write: if false; // Prevent client-side writes
     }
     
-    function isCreatingOwnContent() {
-      return request.auth != null && request.resource.data.ownerId == request.auth.uid;
-    }
-
-    // Departmental Sales
-    match /agriculture_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /livestock_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /poultry_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /fish_sales/{saleId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /archive_sales/{saleId} { allow read: if isOwner(); allow create: if isCreatingOwnContent(); }
-
-    // Departmental Expenses
-    match /agriculture_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /livestock_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /poultry_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /fish_expenses/{expenseId} { allow read, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /archive_expenses/{expenseId} { allow read: if isOwner(); allow create: if isCreatingOwnContent(); }
-
-    // Departmental Debts
-    match /agriculture_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /livestock_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    `poultry_debts`poultry_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /fish_debts/{debtId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /archive_debts/{debtId} { allow read: if isOwner(); allow create: if isCreatingOwnContent(); }
-
-    // Departmental Workers
-    match /agriculture_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /livestock_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /poultry_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-    match /fish_workers/{workerId} { allow read, update, delete: if isOwner(); allow create: if isCreatingOwnContent(); }
-
-    // Tasks
     match /tasks/{taskId} {
-      allow read, update, delete: if isOwner();
-      allow create: if isCreatingOwnContent();
+      allow read, write: if request.auth.uid == request.resource.data.ownerId;
     }
+
     match /completed_tasks/{taskId} {
-       allow read: if isOwner();
-       allow create: if isCreatingOwnContent();
+       allow read, create: if request.auth.uid == request.resource.data.ownerId;
+       allow update, delete: if false;
     }
+
+    function canAccessDepartmentalData() {
+      return request.auth.uid == request.resource.data.ownerId;
+    }
+    
+    // --- Agriculture ---
+    match /agriculture_sales/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /agriculture_expenses/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /agriculture_debts/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /agriculture_workers/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    
+    // --- Livestock ---
+    match /livestock_sales/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /livestock_expenses/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /livestock_debts/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /livestock_workers/{docId} { allow read, write: if canAccessDepartmentalData(); }
+
+    // --- Poultry ---
+    match /poultry_sales/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /poultry_expenses/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /poultry_debts/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /poultry_workers/{docId} { allow read, write: if canAccessDepartmentalData(); }
+
+    // --- Fish ---
+    match /fish_sales/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /fish_expenses/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /fish_debts/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    match /fish_workers/{docId} { allow read, write: if canAccessDepartmentalData(); }
+    
+    // --- Archive ---
+    match /archive_sales/{docId} { allow read, create: if request.auth.uid == request.resource.data.ownerId; }
+    match /archive_expenses/{docId} { allow read, create: if request.auth.uid == request.resource.data.ownerId; }
+    match /archive_debts/{docId} { allow read, create: if request.auth.uid == request.resource.data.ownerId; }
   }
 }
