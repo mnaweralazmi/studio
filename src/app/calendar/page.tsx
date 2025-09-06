@@ -131,7 +131,7 @@ export default function CalendarPage() {
             return {
                 id: docSnap.id,
                 ...data,
-                dueDate: (data.dueDate as unknown as Timestamp).toDate(),
+                dueDate: (data.dueDate as Timestamp).toDate(),
             } as Task;
         });
         setTasks(fetchedTasks);

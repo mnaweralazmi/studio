@@ -81,6 +81,7 @@ async function addDebtPayment(userId: string, departmentId: string, debtId: stri
     await updateDoc(debtRef, {
         payments: arrayUnion({
             ...paymentData,
+            date: Timestamp.fromDate(paymentData.date),
             id: new Date().getTime().toString() // Simple unique ID
         })
     });

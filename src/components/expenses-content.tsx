@@ -114,11 +114,14 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                date: (doc.data().date as Timestamp).toDate()
-            }) as ExpenseItem);
+            const data = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                return {
+                    id: doc.id,
+                    ...docData,
+                    date: (docData.date as Timestamp).toDate()
+                } as ExpenseItem;
+            });
             setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
             setIsDataLoading(false);
         }, (error) => {
