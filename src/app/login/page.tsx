@@ -11,9 +11,10 @@ import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { Leaf, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, writeBatch, collection } from 'firebase/firestore';
+import { initialAgriculturalSections } from '@/lib/topics-data';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -34,12 +35,48 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
+  const handleUserSignIn = async (user: User) => {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
+
+      if (!userDocSnap.exists()) {
+          // If user doesn't exist, create them.
+          await setDoc(userDocRef, {
+              name: user.displayName,
+              email: user.email,
+              role: isAdmin ? 'admin' : 'user',
+              createdAt: new Date(),
+              points: 0,
+              level: 1,
+              badges: [],
+          });
+          
+          // Add initial topics for the new user
+          const batch = writeBatch(db);
+          const topicsCollectionRef = collection(db, 'users', user.uid, 'topics');
+          initialAgriculturalSections.forEach(topic => {
+              const newTopicRef = doc(topicsCollectionRef, topic.id);
+              batch.set(newTopicRef, topic);
+          });
+          await batch.commit();
+
+      } else {
+          // If user exists, check if their role needs to be updated to admin.
+          const userData = userDocSnap.data();
+          if (isAdmin && userData.role !== 'admin') {
+                await setDoc(userDocRef, { role: 'admin' }, { merge: true });
+          }
+      }
+  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await handleUserSignIn(userCredential.user);
       toast({ title: "تم تسجيل الدخول بنجاح!" });
       router.push('/');
     } catch (error: any) {
@@ -58,28 +95,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        const isAdmin = user.uid === 'l8M3vFpBqNg0dKda2RxmjcizOjg2';
-
-        if (!userDocSnap.exists()) {
-            // If user doesn't exist, create them.
-            await setDoc(userDocRef, {
-                name: user.displayName,
-                email: user.email,
-                role: isAdmin ? 'admin' : 'user',
-                createdAt: new Date()
-            });
-        } else {
-            // If user exists, check if their role needs to be updated to admin.
-            const userData = userDocSnap.data();
-            if (isAdmin && userData.role !== 'admin') {
-                 await setDoc(userDocRef, { role: 'admin' }, { merge: true });
-            }
-        }
+        await handleUserSignIn(result.user);
         
         toast({ title: "تم تسجيل الدخول بنجاح!" });
         router.push('/');
