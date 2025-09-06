@@ -2,127 +2,48 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    
+    // --- Utility Function: Is the user authenticated? ---
+    function isSignedIn() {
+      return request.auth != null;
     }
     
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // --- Utility Function: Does the incoming data's ownerId match the user's UID? ---
+    function isOwner(docData) {
+      return isSignedIn() && request.auth.uid == docData.ownerId;
+    }
+    
+    // --- Utility Function: Does the existing resource's ownerId match the user's UID? ---
+    function isExistingOwner(resource) {
+        return isSignedIn() && request.auth.uid == resource.data.ownerId;
     }
 
+    // --- Users Collection Rules ---
+    // Users can read their own data and update their own data.
+    // No one can create or delete user profiles directly through client-side requests.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
-    }
-    
-    match /data/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, update: if isSignedIn() && request.auth.uid == userId;
     }
 
-    match /tasks/{taskId} {
-      allow read, write: if request.auth.uid == resource.data.ownerId || isAdmin();
+    // --- Data (Topics) Collection Rules ---
+    // Anyone can read agricultural topics. Only admins can write.
+    match /data/{docId} {
+        allow read: true;
+        allow write: if false; // To be managed from a secure backend if needed
     }
 
-    match /completed_tasks/{document=**} {
-       allow read, write: if request.auth.uid == resource.data.ownerId || isAdmin();
-    }
+    // --- Dynamic Rules for Departmental and Archive Data ---
+    // This single rule covers all financial and archive collections.
+    // It works for collections like: agriculture_sales, livestock_expenses, archive_debts, etc.
+    match /{collectionId}/{docId} {
+      // 1. A user can read or delete a document if they are the owner.
+      allow read, delete: if isExistingOwner(resource);
 
-    function canAccessDepartmentData(departmentId) {
-        return request.resource.data.ownerId == request.auth.uid || isAdmin();
-    }
+      // 2. A user can create a document if they are signed in and the new document's ownerId is their own UID.
+      allow create: if isOwner(request.resource.data);
 
-    function canQueryDepartmentData(departmentId) {
-        return request.query.filters.find(f => f[0] == 'ownerId' && f[2] == request.auth.uid) != null || isAdmin();
+      // 3. A user can update a document if they are the owner, and they cannot change the ownerId.
+      allow update: if isExistingOwner(resource) && isOwner(request.resource.data);
     }
-    
-    // --- Agriculture ---
-    match /agriculture_sales/{docId} {
-      allow read: if canQueryDepartmentData('agriculture');
-      allow write: if canAccessDepartmentData('agriculture');
-    }
-    match /agriculture_expenses/{docId} {
-      allow read: if canQueryDepartmentData('agriculture');
-      allow write: if canAccessDepartmentData('agriculture');
-    }
-    match /agriculture_debts/{docId} {
-      allow read: if canQueryDepartmentData('agriculture');
-      allow write: if canAccessDepartmentData('agriculture');
-    }
-    match /agriculture_workers/{docId} {
-      allow read: if canQueryDepartmentData('agriculture');
-      allow write: if canAccessDepartmentData('agriculture');
-    }
-
-    // --- Livestock ---
-    match /livestock_sales/{docId} {
-      allow read: if canQueryDepartmentData('livestock');
-      allow write: if canAccessDepartmentData('livestock');
-    }
-    match /livestock_expenses/{docId} {
-      allow read: if canQueryDepartmentData('livestock');
-      allow write: if canAccessDepartmentData('livestock');
-    }
-    match /livestock_debts/{docId} {
-      allow read: if canQueryDepartmentData('livestock');
-      allow write: if canAccessDepartmentData('livestock');
-    }
-    match /livestock_workers/{docId} {
-      allow read: if canQueryDepartmentData('livestock');
-      allow write: if canAccessDepartmentData('livestock');
-    }
-
-    // --- Poultry ---
-    match /poultry_sales/{docId} {
-      allow read: if canQueryDepartmentData('poultry');
-      allow write: if canAccessDepartmentData('poultry');
-    }
-    match /poultry_expenses/{docId} {
-      allow read: if canQueryDepartmentData('poultry');
-      allow write: if canAccessDepartmentData('poultry');
-    }
-    match /poultry_debts/{docId} {
-      allow read: if canQueryDepartmentData('poultry');
-      allow write: if canAccessDepartmentData('poultry');
-    }
-    match /poultry_workers/{docId} {
-      allow read: if canQueryDepartmentData('poultry');
-      allow write: if canAccessDepartmentData('poultry');
-    }
-
-    // --- Fish ---
-    match /fish_sales/{docId} {
-      allow read: if canQueryDepartmentData('fish');
-      allow write: if canAccessDepartmentData('fish');
-    }
-    match /fish_expenses/{docId} {
-      allow read: if canQueryDepartmentData('fish');
-      allow write: if canAccessDepartmentData('fish');
-    }
-    match /fish_debts/{docId} {
-      allow read: if canQueryDepartmentData('fish');
-      allow write: if canAccessDepartmentData('fish');
-    }
-    match /fish_workers/{docId} {
-      allow read: if canQueryDepartmentData('fish');
-      allow write: if canAccessDepartmentData('fish');
-    }
-
-     // --- Archive ---
-    match /archive_sales/{docId} {
-      allow read: if canQueryDepartmentData('archive');
-      allow write: if canAccessDepartmentData('archive');
-    }
-    match /archive_expenses/{docId} {
-      allow read: if canQueryDepartmentData('archive');
-      allow write: if canAccessDepartmentData('archive');
-    }
-    match /archive_debts/{docId} {
-      allow read: if canQueryDepartmentData('archive');
-      allow write: if canAccessDepartmentData('archive');
-    }
-
   }
 }
