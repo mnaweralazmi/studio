@@ -4,7 +4,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive, Shield } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +23,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/archive', label: t('archive'), icon: Archive },
     { href: '/settings', label: t('settings'), icon: Settings },
   ];
+  
+  if (user?.role === 'admin') {
+      navItems.push({ href: '/admin', label: t('adminDashboard'), icon: Shield });
+  }
 
   if (loading || !user) {
     return (
