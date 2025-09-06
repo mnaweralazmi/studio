@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, Timestamp, where, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -44,21 +44,16 @@ export function BudgetSummary() {
                 collection(db, 'users', authUser.uid, `${deptId}_sales`),
                 where("ownerId", "==", authUser.uid)
             );
-            return onSnapshot(q, () => { // Re-fetch all sales on any change
-                Promise.all(departments.map(d => 
-                    query(collection(db, 'users', authUser.uid, `${d}_sales`), where("ownerId", "==", authUser.uid))
-                )).then(async (queries) => {
-                    const snaps = await Promise.all(queries.map(q => onSnapshot(q, ()=>{
-                    })));
-
-                    let currentTotal = 0;
-                     for (const snap of snaps) {
-                        // const salesItems = snap.docs.map(doc => doc.data() as SalesItem);
-                        // currentTotal += salesItems.reduce((sum, item) => sum + item.total, 0);
-                    }
-                    setTotalSales(currentTotal);
-                    setLoadingSales(false);
-                });
+            return onSnapshot(q, async () => { 
+                let currentTotal = 0;
+                for (const dept of departments) {
+                    const salesQuery = query(collection(db, 'users', authUser.uid, `${dept}_sales`), where("ownerId", "==", authUser.uid));
+                    const salesSnapshot = await getDocs(salesQuery);
+                    const salesItems = salesSnapshot.docs.map(doc => doc.data() as SalesItem);
+                    currentTotal += salesItems.reduce((sum, item) => sum + item.total, 0);
+                }
+                setTotalSales(currentTotal);
+                setLoadingSales(false);
             });
         });
         return () => unsubscribes.forEach(unsub => unsub());
@@ -72,19 +67,16 @@ export function BudgetSummary() {
         }
         const unsubscribes = departments.map(deptId => {
             const q = query(collection(db, 'users', authUser.uid, `${deptId}_expenses`), where("ownerId", "==", authUser.uid));
-            return onSnapshot(q, () => {
-                 Promise.all(departments.map(d => 
-                    query(collection(db, 'users', authUser.uid, `${d}_expenses`), where("ownerId", "==", authUser.uid))
-                )).then(async (queries) => {
-                    const snaps = await Promise.all(queries.map(q => onSnapshot(q, ()=>{})));
-                    let currentTotal = 0;
-                    for (const snap of snaps) {
-                        // const expenseItems = snap.docs.map(doc => doc.data() as ExpenseItem);
-                        // currentTotal += expenseItems.reduce((sum, item) => sum + item.amount, 0);
-                    }
-                    setTotalExpenses(currentTotal);
-                    setLoadingExpenses(false);
-                });
+            return onSnapshot(q, async () => {
+                 let currentTotal = 0;
+                 for (const dept of departments) {
+                    const expensesQuery = query(collection(db, 'users', authUser.uid, `${dept}_expenses`), where("ownerId", "==", authUser.uid));
+                    const expensesSnapshot = await getDocs(expensesQuery);
+                    const expenseItems = expensesSnapshot.docs.map(doc => doc.data() as ExpenseItem);
+                    currentTotal += expenseItems.reduce((sum, item) => sum + item.amount, 0);
+                 }
+                setTotalExpenses(currentTotal);
+                setLoadingExpenses(false);
             });
         });
         return () => unsubscribes.forEach(unsub => unsub());
@@ -98,24 +90,21 @@ export function BudgetSummary() {
         }
         const unsubscribes = departments.map(deptId => {
             const q = query(collection(db, 'users', authUser.uid, `${deptId}_workers`), where("ownerId", "==", authUser.uid));
-            return onSnapshot(q, () => {
-                Promise.all(departments.map(d => 
-                    query(collection(db, 'users', authUser.uid, `${d}_workers`), where("ownerId", "==", authUser.uid))
-                )).then(async (queries) => {
-                    const snaps = await Promise.all(queries.map(q => onSnapshot(q, ()=>{})));
-                    let totalSalariesPaid = 0;
-                    for (const snap of snaps) {
-                        // const workers = snap.docs.map(doc => doc.data() as Worker);
-                        // totalSalariesPaid += workers.reduce((workerSum, worker) => {
-                        //     const salaries = (worker.transactions || [])
-                        //         .filter(t => t.type === 'salary')
-                        //         .reduce((sum, t) => sum + t.amount, 0);
-                        //     return workerSum + salaries;
-                        // }, 0);
-                    }
-                    setTotalSalaries(totalSalariesPaid);
-                    setLoadingWorkers(false);
-                });
+            return onSnapshot(q, async () => {
+                let totalSalariesPaid = 0;
+                for (const dept of departments) {
+                    const workersQuery = query(collection(db, 'users', authUser.uid, `${dept}_workers`), where("ownerId", "==", authUser.uid));
+                    const workersSnapshot = await getDocs(workersQuery);
+                    const workers = workersSnapshot.docs.map(doc => doc.data() as Worker);
+                    totalSalariesPaid += workers.reduce((workerSum, worker) => {
+                        const salaries = (worker.transactions || [])
+                            .filter(t => t.type === 'salary')
+                            .reduce((sum, t) => sum + t.amount, 0);
+                        return workerSum + salaries;
+                    }, 0);
+                }
+                setTotalSalaries(totalSalariesPaid);
+                setLoadingWorkers(false);
             });
         });
         return () => unsubscribes.forEach(unsub => unsub());
@@ -130,24 +119,21 @@ export function BudgetSummary() {
         }
         const unsubscribes = departments.map(deptId => {
             const q = query(collection(db, 'users', authUser.uid, `${deptId}_debts`), where("ownerId", "==", authUser.uid));
-            return onSnapshot(q, () => {
-                 Promise.all(departments.map(d => 
-                    query(collection(db, 'users', authUser.uid, `${d}_debts`), where("ownerId", "==", authUser.uid))
-                )).then(async (queries) => {
-                    const snaps = await Promise.all(queries.map(q => onSnapshot(q,()=>{})));
-                    let totalOutstanding = 0;
-                    for (const snap of snaps) {
-                        // const debtItems = snap.docs.map(doc => doc.data() as DebtItem);
-                        // totalOutstanding += debtItems
-                        //     .filter(d => d.status !== 'paid')
-                        //     .reduce((sum, item) => {
-                        //         const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-                        //         return sum + (item.amount - paidAmount);
-                        //     }, 0);
-                    }
-                    setTotalDebts(totalOutstanding);
-                    setLoadingDebts(false);
-                });
+            return onSnapshot(q, async () => {
+                let totalOutstanding = 0;
+                for (const dept of departments) {
+                    const debtsQuery = query(collection(db, 'users', authUser.uid, `${dept}_debts`), where("ownerId", "==", authUser.uid));
+                    const debtsSnapshot = await getDocs(debtsQuery);
+                    const debtItems = debtsSnapshot.docs.map(doc => doc.data() as DebtItem);
+                    totalOutstanding += debtItems
+                        .filter(d => d.status !== 'paid')
+                        .reduce((sum, item) => {
+                            const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
+                            return sum + (item.amount - paidAmount);
+                        }, 0);
+                }
+                setTotalDebts(totalOutstanding);
+                setLoadingDebts(false);
             });
         });
         return () => unsubscribes.forEach(unsub => unsub());
@@ -212,5 +198,3 @@ export function BudgetSummary() {
         </div>
     )
 }
-
-    
