@@ -3,60 +3,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Helper function to check ownership
     function isOwner(data) {
-      return request.auth != null && request.auth.uid == data.ownerId;
+      return request.auth.uid == data.ownerId;
     }
-    
-    // Users can only read their own user document and admins can read any.
-    match /users/{userId} {
-      allow read, update, write: if request.auth.uid == userId;
-    }
-
-    // Agricultural topics data is public
+  
+    // Public data (agricultural topics) can be read by anyone
     match /data/{document=**} {
       allow read: if true;
     }
+
+    // Users can read their own data, and update their own data
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId;
+    }
     
-    // Generic rules for all financial collections
-    match /{departmentId}_sales/{docId} {
+    // Tasks
+    match /tasks/{taskId} {
       allow read, write: if isOwner(resource.data);
       allow create: if isOwner(request.resource.data);
     }
-    match /{departmentId}_expenses/{docId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-    match /{departmentId}_debts/{docId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-    match /{departmentId}_workers/{docId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-
-    // Rules for all archive collections
-    match /archive_sales/{docId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-     match /archive_expenses/{docId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-     match /archive_debts/{docId} {
-      allow read, write: if isOwner(resource.data);
-      allow create: if isOwner(request.resource.data);
-    }
-
-    // Rules for tasks
-    match /tasks/{docId} {
+    
+    match /completed_tasks/{taskId} {
        allow read, write: if isOwner(resource.data);
        allow create: if isOwner(request.resource.data);
     }
+
+    // Dynamic rule for all financial collections (sales, expenses, debts, workers)
+    // This covers agriculture, livestock, poultry, fish
+    match /{departmentId}_{collection}/{docId} {
+      allow read, write: if isOwner(resource.data);
+      allow create: if isOwner(request.resource.data);
+    }
     
-    match /completed_tasks/{docId} {
+    // Dynamic rule for all archive collections
+    match /archive_{collection}/{docId} {
        allow read, write: if isOwner(resource.data);
        allow create: if isOwner(request.resource.data);
     }
