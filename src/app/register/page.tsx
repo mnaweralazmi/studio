@@ -50,7 +50,7 @@ const createNewUserDocument = async (user: User, name: string | null) => {
         if (publicTopicsSnap.empty) {
             initialAgriculturalSections.forEach(topic => {
                 const newTopicRef = doc(publicTopicsColRef, topic.id);
-                // We don't need ownerId for public topics
+                // We don't need ownerId for public topics, so we remove it.
                 const { ownerId, ...publicTopicData } = topic;
                 batch.set(newTopicRef, publicTopicData);
             });
@@ -195,5 +195,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-
-    
