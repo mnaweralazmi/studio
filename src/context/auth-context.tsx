@@ -34,60 +34,38 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-// This function runs once to provision the initial topics in the root /data collection
-// if it doesn't already exist.
-async function provisionInitialTopics() {
-    const dataCollectionRef = collection(db, "data");
-    const docSnap = await getDoc(doc(dataCollectionRef, initialAgriculturalSections[0].id));
-
-    if (!docSnap.exists()) {
-        const batch = writeBatch(db);
-        initialAgriculturalSections.forEach(topic => {
-            const docRef = doc(dataCollectionRef, topic.id);
-            batch.set(docRef, topic);
-        });
-        await batch.commit();
-        console.log("Initial agricultural topics have been provisioned.");
-    }
-}
-
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubscribeSnapshot: Unsubscribe | null = null;
-    
-    // Provision topics on app start
-    provisionInitialTopics();
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
         unsubscribeSnapshot = null;
       }
 
       if (firebaseUser) {
-        setLoading(true); // Set loading while we fetch Firestore data
+        setLoading(true);
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         
         unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-          const userData = doc.data();
-          const combinedUser: AppUser = {
-            ...firebaseUser,
-            // Ensure properties from both sources are merged correctly
-            name: userData?.name || firebaseUser.displayName || undefined,
-            displayName: userData?.name || firebaseUser.displayName || undefined,
-            photoURL: userData?.photoURL || firebaseUser.photoURL || undefined,
-            // Spread the rest of the userData
-            ...(userData || {}),
-          };
-          setUser(combinedUser);
+          if (doc.exists()) {
+            const userData = doc.data();
+            const combinedUser: AppUser = {
+              ...firebaseUser,
+              ...userData,
+            };
+            setUser(combinedUser);
+          } else {
+             // If no user document, just use the auth user.
+            setUser(firebaseUser);
+          }
           setLoading(false);
         }, (error) => {
           console.error("Error with onSnapshot, falling back to auth user:", error);
-          // IMPORTANT: Still set the user, even if Firestore fails
           setUser(firebaseUser as AppUser); 
           setLoading(false);
         });
