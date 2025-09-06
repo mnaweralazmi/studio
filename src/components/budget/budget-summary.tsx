@@ -41,7 +41,7 @@ const useCollectionData = <T extends DocumentData>(
            if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
            if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
            if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
-           if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate().toISOString()}));
+           if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
           return mappedData as T;
       });
       setData(fetchedData);

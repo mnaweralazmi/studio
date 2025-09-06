@@ -37,6 +37,7 @@ export type DebtItem = {
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
   ownerId?: string;
+  departmentId: string;
 };
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
@@ -65,7 +66,6 @@ async function archiveDebt(userId: string, debt: DebtItem): Promise<void> {
     const archivedData: any = {
         ...debt,
         archivedAt: Timestamp.now(),
-        departmentId: 'agriculture' // Default for now
     };
     delete archivedData.id;
 
@@ -122,7 +122,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         setIsDataLoading(true);
         const collectionName = `debts`;
         const q = query(
-            collection(db, 'users', authUser.uid, collectionName)
+            collection(db, 'users', authUser.uid, collectionName),
+            where("departmentId", "==", departmentId)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -145,7 +146,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         return () => unsubscribe();
 
-    }, [authUser, isAuthLoading, t, toast]);
+    }, [authUser, isAuthLoading, t, toast, departmentId]);
 
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -172,6 +173,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             amount: data.amount,
             dueDate: data.dueDate,
             ownerId: authUser.uid,
+            departmentId: departmentId,
         };
 
         try {

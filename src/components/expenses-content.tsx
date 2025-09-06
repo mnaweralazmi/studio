@@ -45,6 +45,7 @@ export type ExpenseItem = {
   item: string;
   amount: number;
   ownerId?: string;
+  departmentId: string;
 };
 
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
@@ -71,7 +72,6 @@ async function archiveExpense(userId: string, expense: ExpenseItem): Promise<voi
     const archivedExpenseData = {
         ...expense,
         archivedAt: Timestamp.now(),
-        departmentId: 'agriculture' // Default for now
     };
     delete (archivedExpenseData as any).id;
     batch.set(archiveExpenseRef, archivedExpenseData);
@@ -110,7 +110,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         setIsDataLoading(true);
         const collectionName = `expenses`;
         const q = query(
-            collection(db, 'users', authUser.uid, collectionName)
+            collection(db, 'users', authUser.uid, collectionName),
+            where("departmentId", "==", departmentId)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -132,7 +133,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
         return () => unsubscribe();
 
-    }, [authUser, isAuthLoading, toast, t]);
+    }, [authUser, isAuthLoading, toast, t, departmentId]);
     
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -161,6 +162,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             item: data.item,
             amount: data.amount,
             ownerId: authUser.uid,
+            departmentId: departmentId,
         };
 
         try {

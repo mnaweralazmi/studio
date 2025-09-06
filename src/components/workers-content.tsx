@@ -94,7 +94,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const collectionName = `workers`;
-        const q = query(collection(db, 'users', authUser.uid, collectionName));
+        const q = query(collection(db, 'users', authUser.uid, collectionName), where("departmentId", "==", departmentId));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => {
@@ -118,7 +118,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         return () => unsubscribe();
         
-    }, [authUser, isAuthLoading, t, toast]);
+    }, [authUser, isAuthLoading, t, toast, departmentId]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
@@ -219,7 +219,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     const totalSalariesThisYear = workersForDepartment.reduce((total, worker) => {
         const yearSalaries = (worker.transactions || [])
-            .filter(t => t.type === 'salary' && t.year === currentYear && (t.month || 0) >= 1 && (t.month || 0) <= 8)
+            .filter(t => t.type === 'salary' && t.year === currentYear)
             .reduce((sum, t) => sum + t.amount, 0);
         return total + yearSalaries;
     }, 0);
@@ -278,7 +278,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-green-600">{totalSalariesThisYear.toFixed(2)} {t('dinar')}</div>
-                    <p className="text-xs text-muted-foreground">{t('totalSalariesPaidThisYearDesc')} {t('fromMonths')} 1-8, {currentYear}</p>
+                    <p className="text-xs text-muted-foreground">{t('totalSalariesPaidThisYearDesc')} {currentYear}</p>
                 </CardContent>
             </Card>
              <Card>
@@ -357,4 +357,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-

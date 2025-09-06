@@ -39,6 +39,7 @@ export type SalesItem = {
   total: number;
   date: Date;
   ownerId?: string;
+  departmentId: string;
 };
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
@@ -64,7 +65,6 @@ async function archiveSale(userId: string, sale: SalesItem): Promise<void> {
     const archivedSaleData = {
         ...sale,
         archivedAt: Timestamp.now(),
-        departmentId: 'agriculture' // Default for now
     };
     delete (archivedSaleData as any).id;
     batch.set(archiveSaleRef, archivedSaleData);
@@ -102,7 +102,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     setIsDataLoading(true);
     const collectionName = `sales`;
     const q = query(
-        collection(db, 'users', authUser.uid, collectionName)
+        collection(db, 'users', authUser.uid, collectionName),
+        where("departmentId", "==", departmentId)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -124,7 +125,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     return () => unsubscribe();
 
-  }, [authUser, isAuthLoading, toast, t]);
+  }, [authUser, isAuthLoading, toast, t, departmentId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,6 +153,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         total,
         date: new Date(),
         ownerId: authUser.uid,
+        departmentId: departmentId,
         ...(weightPerUnit && { weightPerUnit }),
     };
 
