@@ -201,7 +201,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     }
 
     return (
-        <>
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -347,7 +347,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     </CardContent>
                 </Card>
             ) : null}
-        </>
+        </div>
     );
 }
 
