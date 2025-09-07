@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
+import { useData } from '@/context/data-context';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
@@ -76,51 +77,15 @@ interface WorkersContentProps {
 }
 
 export function WorkersContent({ departmentId }: WorkersContentProps) {
-    const [workers, setWorkers] = React.useState<Worker[]>([]);
-    const [isDataLoading, setIsDataLoading] = React.useState(true);
+    const { allWorkers, loading: isDataLoading } = useData();
     const { toast } = useToast();
     const { user: authUser, loading: isAuthLoading } = useAuth();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
 
-    React.useEffect(() => {
-        if (isAuthLoading) {
-            return;
-        }
-        if (!authUser) {
-            setWorkers([]);
-            setIsDataLoading(false);
-            return;
-        }
-        
-        setIsDataLoading(true);
-        const workersCollectionRef = collection(db, 'users', authUser.uid, 'workers');
-        const q = query(workersCollectionRef);
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const allData = snapshot.docs.map(docSnap => {
-                const docData = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    ...docData,
-                    transactions: (docData.transactions || []).map((t: any) => ({
-                        ...t,
-                        date: (t.date as Timestamp).toDate()
-                    }))
-                } as Worker;
-            });
-            const filteredData = allData.filter(worker => worker.departmentId === departmentId);
-            setWorkers(filteredData);
-            setIsDataLoading(false);
-        }, (error) => {
-            console.error("Error fetching workers: ", error);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load workers data." });
-            setIsDataLoading(false);
-        });
-
-        return () => unsubscribe();
-        
-    }, [authUser, isAuthLoading, t, toast, departmentId]);
+    const workers = React.useMemo(() => {
+        return allWorkers.filter(worker => worker.departmentId === departmentId);
+    }, [allWorkers, departmentId]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {

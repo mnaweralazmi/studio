@@ -10,10 +10,12 @@ import { DebtsContent } from '@/components/debts-content';
 import { WorkersContent } from '@/components/workers-content';
 import { Wallet, CreditCard, Landmark, Users, Leaf, PawPrint, Bird, Fish, Building } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { DataProvider } from '@/context/data-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export type Department = 'agriculture' | 'livestock' | 'poultry' | 'fish';
 
-export default function FinancialsPage() {
+function FinancialsPageContent() {
     const { t } = useLanguage();
     const [activeDepartment, setActiveDepartment] = React.useState<Department>('agriculture');
 
@@ -30,7 +32,6 @@ export default function FinancialsPage() {
         poultry: t('departmentPoultry'),
         fish: t('departmentFish'),
     };
-
 
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-6 md:p-8">
@@ -92,4 +93,13 @@ export default function FinancialsPage() {
             </div>
         </main>
     );
+}
+
+
+export default function FinancialsPage() {
+    return (
+        <DataProvider>
+            <FinancialsPageContent />
+        </DataProvider>
+    )
 }

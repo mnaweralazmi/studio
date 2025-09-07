@@ -86,11 +86,11 @@ export default function RootLayout({
       <head />
       <body>
         <AuthProvider>
-            <LanguageProvider>
+          <LanguageProvider>
             <TopicsProvider>
                 <RootLayoutContent>{children}</RootLayoutContent>
             </TopicsProvider>
-            </LanguageProvider>
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>

@@ -5,8 +5,9 @@ import * as React from 'react';
 import { useLanguage } from '@/context/language-context';
 import { BudgetSummary } from '@/components/budget/budget-summary';
 import { BarChart } from 'lucide-react';
+import { DataProvider } from '@/context/data-context';
 
-export default function SummaryPage() {
+function SummaryPageContent() {
     const { t } = useLanguage();
 
     return (
@@ -24,5 +25,13 @@ export default function SummaryPage() {
                 <BudgetSummary />
             </div>
         </main>
+    );
+}
+
+export default function SummaryPage() {
+    return (
+        <DataProvider>
+            <SummaryPageContent />
+        </DataProvider>
     );
 }

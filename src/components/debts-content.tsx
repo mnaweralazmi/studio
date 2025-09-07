@@ -22,6 +22,7 @@ import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
+import { useData } from '@/context/data-context';
 
 export type Payment = {
   id: string;
@@ -99,51 +100,18 @@ interface DebtsContentProps {
 }
 
 export function DebtsContent({ departmentId }: DebtsContentProps) {
-    const [debts, setDebts] = React.useState<DebtItem[]>([]);
+    const { allDebts, loading: isDataLoading } = useData();
     const { toast } = useToast();
     const { user: authUser, loading: isAuthLoading } = useAuth();
-    const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { language, t } = useLanguage();
     const formRef = React.useRef<HTMLFormElement>(null);
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
-    React.useEffect(() => {
-        if (isAuthLoading) {
-            return;
-        }
-        if (!authUser) {
-            setIsDataLoading(false);
-            setDebts([]);
-            return;
-        }
-
-        setIsDataLoading(true);
-        const debtsCollectionRef = collection(db, 'users', authUser.uid, 'debts');
-        const q = query(debtsCollectionRef);
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const allData = snapshot.docs.map(doc => {
-                const docData = doc.data();
-                return {
-                    id: doc.id,
-                    ...docData,
-                    dueDate: docData.dueDate ? (docData.dueDate as Timestamp).toDate() : undefined,
-                    payments: (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}))
-                } as DebtItem;
-            });
-            const filteredData = allData.filter(item => item.departmentId === departmentId);
-            setDebts(filteredData.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
-            setIsDataLoading(false);
-        }, (error) => {
-            console.error("Error fetching debts: ", error);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load debts data." });
-            setIsDataLoading(false);
-        });
-
-        return () => unsubscribe();
-
-    }, [authUser, isAuthLoading, t, toast, departmentId]);
-
+    const debts = React.useMemo(() => {
+        return allDebts
+            .filter(item => item.departmentId === departmentId)
+            .sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0));
+    }, [allDebts, departmentId]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -248,7 +216,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Landmark className="h-5 w-5 sm:h-6 sm:w-6" />{t('debtManagement')}</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Landmark className="h-5 w-5 sm:h-6 sm:w-6" />{t('debts')}</CardTitle>
                     <CardDescription>{t('debtManagementDesc')}</CardDescription>
                 </CardHeader>
             </Card>

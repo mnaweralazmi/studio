@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -16,6 +16,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
+import { useData } from '@/context/data-context';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -77,10 +78,9 @@ interface BudgetContentProps {
 }
 
 export function BudgetContent({ departmentId }: BudgetContentProps) {
-  const [salesItems, setSalesItems] = React.useState<SalesItem[]>([]);
+  const { allSales, loading: isDataLoading } = useData();
   const { toast } = useToast();
   const { user: authUser, loading: isAuthLoading } = useAuth();
-  const [isDataLoading, setIsDataLoading] = React.useState(true);
   const { language, t } = useLanguage();
   const formRef = React.useRef<HTMLFormElement>(null);
   
@@ -88,42 +88,12 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const livestockList = language === 'ar' ? livestockListAr : livestockListEn;
   const poultryList = language === 'ar' ? poultryListAr : poultryListEn;
   const fishList = language === 'ar' ? fishListAr : fishListEn;
-
-  React.useEffect(() => {
-    if (isAuthLoading) {
-        return;
-    }
-    if (!authUser) {
-      setIsDataLoading(false);
-      setSalesItems([]);
-      return;
-    }
-
-    setIsDataLoading(true);
-    const salesCollectionRef = collection(db, 'users', authUser.uid, 'sales');
-    const q = query(salesCollectionRef);
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const allData = snapshot.docs.map(doc => {
-            const docData = doc.data();
-            return {
-                id: doc.id,
-                ...docData,
-                date: (docData.date as Timestamp).toDate()
-            } as SalesItem;
-        });
-        const filteredData = allData.filter(item => item.departmentId === departmentId);
-        setSalesItems(filteredData.sort((a,b) => b.date.getTime() - a.date.getTime()));
-        setIsDataLoading(false);
-    }, (error) => {
-        console.error("Error fetching sales: ", error);
-        toast({ variant: "destructive", title: t('error'), description: "Failed to load sales data." });
-        setIsDataLoading(false);
-    });
-
-    return () => unsubscribe();
-
-  }, [authUser, isAuthLoading, toast, t, departmentId]);
+  
+  const salesItems = React.useMemo(() => {
+    return allSales
+        .filter(item => item.departmentId === departmentId)
+        .sort((a,b) => b.date.getTime() - a.date.getTime())
+  }, [allSales, departmentId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

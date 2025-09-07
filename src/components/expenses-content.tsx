@@ -16,6 +16,7 @@ import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
+import { useData } from '@/context/data-context';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -83,10 +84,9 @@ interface ExpensesContentProps {
 }
 
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
-    const [expenses, setExpenses] = React.useState<ExpenseItem[]>([]);
+    const { allExpenses, loading: isDataLoading } = useData();
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
-    const [isDataLoading, setIsDataLoading] = React.useState(true);
     const { toast } = useToast();
     const { user: authUser, loading: isAuthLoading } = useAuth();
     const formRef = React.useRef<HTMLFormElement>(null);
@@ -96,43 +96,13 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         setExpenseCategories(getInitialCategories(language, departmentId));
         setSelectedCategory('');
     }, [language, departmentId]);
-
-    React.useEffect(() => {
-        if (isAuthLoading) {
-            return;
-        }
-        if (!authUser) {
-          setIsDataLoading(false);
-          setExpenses([]);
-          return;
-        }
-
-        setIsDataLoading(true);
-        const expensesCollectionRef = collection(db, 'users', authUser.uid, 'expenses');
-        const q = query(expensesCollectionRef);
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const allData = snapshot.docs.map(doc => {
-                const docData = doc.data();
-                return {
-                    id: doc.id,
-                    ...docData,
-                    date: (docData.date as Timestamp).toDate()
-                } as ExpenseItem;
-            });
-            const filteredData = allData.filter(item => item.departmentId === departmentId);
-            setExpenses(filteredData.sort((a,b) => b.date.getTime() - a.date.getTime()));
-            setIsDataLoading(false);
-        }, (error) => {
-            console.error("Error fetching expenses: ", error);
-            toast({ variant: "destructive", title: t('error'), description: "Failed to load expenses data." });
-            setIsDataLoading(false);
-        });
-
-        return () => unsubscribe();
-
-    }, [authUser, isAuthLoading, toast, t, departmentId]);
     
+    const expenses = React.useMemo(() => {
+        return allExpenses
+            .filter(item => item.departmentId === departmentId)
+            .sort((a,b) => b.date.getTime() - a.date.getTime());
+    }, [allExpenses, departmentId]);
+
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!authUser) {

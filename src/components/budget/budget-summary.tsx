@@ -2,73 +2,15 @@
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, DocumentData, Timestamp } from 'firebase/firestore';
-import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
-import type { SalesItem } from '../budget-content';
-import type { ExpenseItem } from '../expenses-content';
-import type { DebtItem } from '../debts-content';
-import type { Worker } from '../workers/types';
-import { db } from '@/lib/firebase';
-
-const useCollectionForUser = <T extends DocumentData>(
-  collectionName: string
-): [T[], boolean] => {
-  const { user, loading: authLoading } = useAuth();
-  const [data, setData] = React.useState<T[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  
-  React.useEffect(() => {
-    if (authLoading) {
-      return; 
-    }
-    if (!user) {
-      setData([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    const dataQuery = query(collection(db, 'users', user.uid, collectionName));
-    
-    const unsubscribe = onSnapshot(dataQuery, (snapshot) => {
-        const fetchedItems = snapshot.docs.map(doc => {
-             const docData = doc.data();
-             const mappedData: any = { id: doc.id, ...docData };
-             // Convert Timestamps to Dates for relevant fields
-             if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
-             if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
-             if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
-             if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
-             return mappedData as T;
-        });
-        setData(fetchedItems);
-        setLoading(false);
-    }, error => {
-        console.error(`Error fetching collection ${collectionName}:`, error);
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
-
-  }, [user, authLoading, collectionName]);
-
-  return [data, loading || authLoading];
-};
-
+import { useData } from '@/context/data-context';
 
 export function BudgetSummary() {
     const { t } = useLanguage();
-    
-    const [allSales, salesLoading] = useCollectionForUser<SalesItem>('sales');
-    const [allExpenses, expensesLoading] = useCollectionForUser<ExpenseItem>('expenses');
-    const [allDebts, debtsLoading] = useCollectionForUser<DebtItem>('debts');
-    const [allWorkers, workersLoading] = useCollectionForUser<Worker>('workers');
-
-    const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
+    const { allSales, allExpenses, allDebts, allWorkers, loading } = useData();
 
     const totalSales = React.useMemo(() => allSales.reduce((sum, item) => sum + item.total, 0), [allSales]);
     
