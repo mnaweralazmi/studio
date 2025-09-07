@@ -30,35 +30,38 @@ const createNewUserDocument = async (user: User, name: string | null) => {
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
-    if (!userDocSnap.exists()) {
-        const batch = writeBatch(db);
-
-        // 1. Create user document
-        batch.set(userDocRef, {
-            name: name,
-            email: user.email,
-            role: 'user', // Default role
-            createdAt: new Date(),
-            points: 0,
-            level: 1,
-            badges: [],
-        });
-        
-        // 2. Populate public topics if they don't exist (run only once for the first user)
-        const dataColRef = collection(db, 'data');
-        const dataSnap = await getDocs(dataColRef);
-        if (dataSnap.empty) {
-            initialAgriculturalSections.forEach(topic => {
-                const newTopicRef = doc(dataColRef, topic.id);
-                // We don't need ownerId for public topics, so we remove it.
-                const { ownerId, ...publicTopicData } = topic;
-                batch.set(newTopicRef, publicTopicData);
-            });
-        }
-
-
-        await batch.commit();
+    if (userDocSnap.exists()) {
+        return; // User document already exists, no need to do anything.
     }
+
+    const batch = writeBatch(db);
+
+    // 1. Create user document
+    batch.set(userDocRef, {
+        name: name,
+        email: user.email,
+        role: 'user', // Default role
+        createdAt: new Date(),
+        points: 0,
+        level: 1,
+        badges: [],
+    });
+    
+    // 2. Populate public topics if they don't exist
+    // This should ideally be a server-side script, but for simplicity, we do it on first user registration.
+    const dataColRef = collection(db, 'data');
+    const dataSnap = await getDocs(dataColRef);
+    if (dataSnap.empty) {
+        console.log("Populating initial agricultural topics...");
+        initialAgriculturalSections.forEach(topic => {
+            const newTopicRef = doc(dataColRef, topic.id);
+            // We don't need ownerId for public topics
+            const { ownerId, ...publicTopicData } = topic;
+            batch.set(newTopicRef, publicTopicData);
+        });
+    }
+
+    await batch.commit();
 }
 
 export default function RegisterPage() {

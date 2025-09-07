@@ -23,37 +23,38 @@ import type { Department } from '@/app/financials/page';
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
+// --- Firestore Service Functions ---
+
 async function addWorker(userId: string, data: WorkerFormValues & { ownerId: string; departmentId: string }): Promise<string> {
-    const collectionName = `workers`;
-    const workersColRef = collection(db, 'users', userId, collectionName);
+    const workersColRef = collection(db, 'users', userId, 'workers');
     const docRef = await addDoc(workersColRef, {
         ...data,
         paidMonths: [],
         transactions: [],
-        ownerId: data.ownerId,
-        departmentId: data.departmentId,
     });
     return docRef.id;
 }
 
 async function updateWorker(userId: string, workerId: string, data: Partial<WorkerFormValues>) {
-    const collectionName = `workers`;
-    const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
+    const workerDocRef = doc(db, 'users', userId, 'workers', workerId);
     await updateDoc(workerDocRef, data);
 }
 
 async function paySalary(userId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
-    const collectionName = `workers`;
-    const workerRef = doc(db, 'users', userId, collectionName, workerId);
+    const workerRef = doc(db, 'users', userId, 'workers', workerId);
+    const newTransaction = { 
+        ...transactionData, 
+        date: Timestamp.now(), 
+        id: new Date().getTime().toString() 
+    };
     await updateDoc(workerRef, {
         paidMonths: arrayUnion(paidMonth),
-        transactions: arrayUnion({ ...transactionData, date: Timestamp.now(), id: new Date().getTime().toString() })
+        transactions: arrayUnion(newTransaction)
     });
 }
 
 async function addTransaction(userId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
-    const collectionName = `workers`;
-    const workerRef = doc(db, 'users', userId, collectionName, workerId);
+    const workerRef = doc(db, 'users', userId, 'workers', workerId);
     const newTransaction = {
         ...transactionData,
         date: Timestamp.now(),
@@ -66,8 +67,7 @@ async function addTransaction(userId: string, workerId: string, transactionData:
 }
 
 async function deleteWorker(userId: string, workerId: string) {
-    const collectionName = `workers`;
-    const workerDocRef = doc(db, 'users', userId, collectionName, workerId);
+    const workerDocRef = doc(db, 'users', userId, 'workers', workerId);
     await deleteDoc(workerDocRef);
 }
 
@@ -94,16 +94,16 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         }
         
         setIsDataLoading(true);
-        const collectionName = `workers`;
+        // Query the unified 'workers' collection
         const q = query(
-            collection(db, 'users', authUser.uid, collectionName)
+            collection(db, 'users', authUser.uid, 'workers')
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => {
-                const docData = doc.data();
+            const data = snapshot.docs.map(docSnap => {
+                const docData = docSnap.data();
                 return {
-                    id: doc.id,
+                    id: docSnap.id,
                     ...docData,
                     transactions: (docData.transactions || []).map((t: any) => ({
                         ...t,
@@ -214,6 +214,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
 
+    // Filter workers by the active departmentId
     const workersForDepartment = workers.filter(w => w.departmentId === departmentId);
     
     const totalUnpaidSalariesThisMonth = workersForDepartment

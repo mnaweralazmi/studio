@@ -15,7 +15,6 @@ import { type DebtItem } from '../debts-content';
 
 interface ArchivedDebt extends DebtItem {
     archivedAt: Timestamp;
-    departmentId: string;
 }
 
 const departmentTitles = {
@@ -40,8 +39,9 @@ export function ArchivedDebts() {
         }
 
         setIsLoading(true);
+        // Correctly query the single archive collection
         const q = query(
-            collection(db, 'users', user.uid, "archive_debts"),
+            collection(db, 'users', user.uid, "archive_debts")
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -53,7 +53,7 @@ export function ArchivedDebts() {
                     ...data,
                     dueDate: data.dueDate ? data.dueDate.toDate() : undefined,
                     payments: (data.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })),
-                    archivedAt: data.archivedAt
+                    archivedAt: data.archivedAt // This should exist on archived items
                 } as ArchivedDebt);
             });
             setArchivedItems(items.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));

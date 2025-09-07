@@ -17,20 +17,12 @@ import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
 
 const useAllDepartmentsData = <T extends DocumentData>(
-  collectionSuffix: string
+  collectionName: string
 ): [T[], boolean] => {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = React.useState<T[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const collectionNames: string[] = React.useMemo(() => {
-    const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
-    if (collectionSuffix === 'workers') {
-        return ['workers'];
-    }
-    return departments.map(dept => `${dept}_${collectionSuffix}`);
-  }, [collectionSuffix]);
-
-
+  
   React.useEffect(() => {
     if (!user || authLoading) {
         if(!authLoading) setLoading(false);
@@ -38,41 +30,29 @@ const useAllDepartmentsData = <T extends DocumentData>(
     }
     setLoading(true);
 
-    const unsubscribers = collectionNames.map(name => {
-        const q = query(collection(db, 'users', user.uid, name));
-        return onSnapshot(q, (snapshot) => {
-            const fetchedItems = snapshot.docs.map(doc => {
-                 const docData = doc.data();
-                 const mappedData: any = { id: doc.id, ...docData };
-                 if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
-                 if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
-                 if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
-                 if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
-                 return mappedData as T;
-            });
-            
-            setData(prevData => {
-                // Filter out old data from this collection and add new
-                const otherData = prevData.filter(item => !(item as any).departmentId || !name.startsWith((item as any).departmentId));
-                return [...otherData, ...fetchedItems];
-            });
-
-        }, error => {
-            console.error(`Error fetching ${name}:`, error);
-        });
-    });
+    const q = query(collectionGroup(db, collectionName), where('ownerId', '==', user.uid));
     
-    // We can't determine global loading state easily with multiple listeners this way
-    // so we just set it to false after a delay. A more robust solution might use Promise.all with getDocs
-    // if real-time updates aren't strictly necessary for the summary.
-    const timer = setTimeout(() => setLoading(false), 1500);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedItems = snapshot.docs.map(doc => {
+             const docData = doc.data();
+             const mappedData: any = { id: doc.id, ...docData };
+             // Convert Timestamps to Dates for relevant fields
+             if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
+             if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
+             if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
+             if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
+             return mappedData as T;
+        });
+        setData(fetchedItems);
+        setLoading(false);
+    }, error => {
+        console.error(`Error fetching collection group ${collectionName}:`, error);
+        setLoading(false);
+    });
 
-    return () => {
-        unsubscribers.forEach(unsub => unsub());
-        clearTimeout(timer);
-    };
+    return () => unsubscribe();
 
-  }, [user, authLoading, collectionNames]);
+  }, [user, authLoading, collectionName]);
 
   return [data, loading || authLoading];
 };
