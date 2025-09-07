@@ -1,15 +1,15 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public topics are readable by anyone, but not writable by clients.
-    match /public_topics/{topicId} {
-      allow read: if true;
-      allow write: if false; // Prevent client-side writes
-    }
-
-    // Users can only read and write their own documents and subcollections.
-    match /users/{userId}/{document=**} {
+    // Users can only read and write their own data.
+    match /users/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Public data is readable by everyone, but not writable.
+    match /data/{allPaths=**} {
+      allow read: if true;
+      allow write: if false; 
     }
   }
 }
