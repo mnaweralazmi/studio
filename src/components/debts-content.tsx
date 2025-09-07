@@ -291,17 +291,12 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                 </CardContent>
             </Card>
             
-            {isDataLoading ? (
-                 <Card>
-                    <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-40 w-full" />
-                    </CardContent>
-                </Card>
-            ) : debts.length > 0 ? (
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
                 <CardContent>
+                    {isDataLoading ? (
+                        <Skeleton className="h-40 w-full" />
+                    ) : debts.length > 0 ? (
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader><TableRow>
@@ -342,16 +337,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                             </TableBody>
                         </Table>
                     </div>
+                     ) : (
+                        <p className="text-center text-muted-foreground py-4">{t('noDebtsYet')}</p>
+                    )}
                 </CardContent>
             </Card>
-            ) : (
-                <Card>
-                    <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
-                    <CardContent>
-                        <p className="text-center text-muted-foreground py-4">{t('noArchivedItems')}</p>
-                    </CardContent>
-                </Card>
-            )}
         </div>
     );
 }

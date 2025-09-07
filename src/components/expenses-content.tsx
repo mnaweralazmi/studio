@@ -286,19 +286,15 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 </CardContent>
             </Card>
             
-            {isDataLoading ? (
-                 <Card>
-                    <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-40 w-full" />
-                    </CardContent>
-                </Card>
-            ) : (fixedExpenses.length > 0 || variableExpenses.length > 0) ? (
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xl sm:text-2xl">{t('expensesList')}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid md:grid-cols-2 gap-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-xl sm:text-2xl">{t('expensesList')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                 {isDataLoading ? (
+                    <Skeleton className="h-40 w-full" />
+                 ) : (fixedExpenses.length > 0 || variableExpenses.length > 0) ? (
+                     <div className="grid md:grid-cols-2 gap-6">
                         {fixedExpenses.length > 0 && (
                         <div>
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</h3>
@@ -345,18 +341,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             </div>
                         </div>
                         )}
-                    </CardContent>
-                </Card>
-            ) : (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xl sm:text-2xl">{t('expensesList')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-center text-muted-foreground py-4">{t('noArchivedItems')}</p>
-                    </CardContent>
-                </Card>
-            )}
+                    </div>
+                 ) : (
+                    <p className="text-center text-muted-foreground py-4">{t('noExpensesYet')}</p>
+                 )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

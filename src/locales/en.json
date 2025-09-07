@@ -355,7 +355,7 @@
     "totalIncome": "Total Income",
     "fromSales": "From sales",
     "totalExpenditure": "Total Expenditure",
-    "expensesAndSalaries": "Expenses, Salaries & Debts",
+    "expensesAndSalaries": "Expenses & Salaries",
     "netProfit": "Net Profit",
     "incomeVsExpenses": "Income vs. Expenses",
     "outstandingDebts": "Outstanding Debts",
@@ -419,5 +419,8 @@
     "department": "Department",
     "itemArchived": "Item Archived!",
     "itemArchivedDesc": "The item has been successfully moved to the archive.",
-    "fromMonths": "from months"
+    "fromMonths": "from months",
+    "noSalesYet": "No sales in this department yet.",
+    "noExpensesYet": "No expenses in this department yet.",
+    "noDebtsYet": "No debts in this department yet."
 }

@@ -78,6 +78,9 @@ export function BudgetSummary() {
         const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
         return sum + (item.amount - paidAmount);
     }, 0), [allDebts]);
+    
+    const totalExpenditure = totalExpenses + totalSalaries;
+    const netProfit = totalSales - totalExpenditure;
 
     if (loading) {
         return (
@@ -90,8 +93,6 @@ export function BudgetSummary() {
         );
     }
     
-    const totalExpenditure = totalExpenses + totalSalaries;
-    const netProfit = totalSales - totalExpenditure;
 
     return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

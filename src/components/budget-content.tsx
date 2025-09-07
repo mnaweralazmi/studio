@@ -357,38 +357,28 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
           </CardContent>
         </Card>
         
-        {isDataLoading ? (
-            <Card>
-                <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
-                <CardContent>
-                    <Skeleton className="h-40 w-full" />
-                </CardContent>
-            </Card>
-        ) : salesItems.length > 0 ? (
-          <Card>
+        <Card>
             <CardHeader>
               <CardTitle className="text-xl sm:text-2xl">{t('salesList')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                {renderTable()}
-              </div>
-              <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
-                <span>{t('totalSales')}:</span>
-                <span>{totalSales.toFixed(2)} {t('dinar')}</span>
-              </div>
+                {isDataLoading ? (
+                    <Skeleton className="h-40 w-full" />
+                ) : salesItems.length > 0 ? (
+                  <>
+                    <div className="overflow-x-auto">
+                        {renderTable()}
+                    </div>
+                    <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
+                        <span>{t('totalSales')}:</span>
+                        <span>{totalSales.toFixed(2)} {t('dinar')}</span>
+                    </div>
+                  </>
+                ) : (
+                    <p className="text-center text-muted-foreground py-4">{t('noSalesYet')}</p>
+                )}
             </CardContent>
-          </Card>
-        ) : (
-            <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl sm:text-2xl">{t('salesList')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-center text-muted-foreground py-4">{t('noArchivedItems')}</p>
-                </CardContent>
-            </Card>
-        )}
+        </Card>
     </div>
   );
 }
