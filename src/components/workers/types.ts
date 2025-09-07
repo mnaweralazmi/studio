@@ -9,7 +9,7 @@ export interface Transaction {
     id: string;
     type: 'salary' | 'bonus' | 'deduction';
     amount: number;
-    date: Date;
+    date: Date | any;
     description: string;
     month?: number;
     year?: number;

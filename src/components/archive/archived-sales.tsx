@@ -15,7 +15,6 @@ import { type SalesItem } from '../budget-content';
 
 interface ArchivedSale extends SalesItem {
     archivedAt: Timestamp;
-    departmentId: string;
 }
 
 const departmentTitles = {
@@ -39,8 +38,9 @@ export function ArchivedSales() {
         }
 
         setIsLoading(true);
+        const collectionName = `archive_sales`;
         const q = query(
-            collection(db, 'users', user.uid, "archive_sales"),
+            collection(db, 'users', user.uid, collectionName)
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {

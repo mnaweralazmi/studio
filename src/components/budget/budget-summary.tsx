@@ -30,7 +30,7 @@ const useAllDepartmentsData = <T extends DocumentData>(
     }
     setLoading(true);
 
-    const q = query(collectionGroup(db, collectionName), where('ownerId', '==', user.uid));
+    const q = query(collection(db, 'users', user.uid, collectionName), where('ownerId', '==', user.uid));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const fetchedItems = snapshot.docs.map(doc => {

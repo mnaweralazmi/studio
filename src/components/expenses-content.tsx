@@ -45,15 +45,16 @@ export type ExpenseItem = {
   category: string;
   item: string;
   amount: number;
-  ownerId?: string;
+  ownerId: string;
   departmentId: string;
 };
 
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-async function addExpense(userId: string, data: ExpenseItemData): Promise<string> {
-    const expensesCollectionRef = collection(db, 'users', userId, 'expenses');
+async function addExpense(userId: string, departmentId: Department, data: ExpenseItemData): Promise<string> {
+    const collectionName = `expenses`;
+    const expensesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -108,7 +109,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
 
         setIsDataLoading(true);
-        const expensesCollectionRef = collection(db, 'users', authUser.uid, 'expenses');
+        const collectionName = `expenses`;
+        const expensesCollectionRef = collection(db, 'users', authUser.uid, collectionName);
         const q = query(expensesCollectionRef, where("departmentId", "==", departmentId));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -163,7 +165,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            await addExpense(authUser.uid, newExpenseData);
+            await addExpense(authUser.uid, departmentId, newExpenseData);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });

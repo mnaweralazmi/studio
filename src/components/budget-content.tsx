@@ -39,14 +39,15 @@ export type SalesItem = {
   price: number;
   total: number;
   date: Date;
-  ownerId?: string;
+  ownerId: string;
   departmentId: string;
 };
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-async function addSale(userId: string, data: SalesItemData): Promise<string> {
-    const salesCollectionRef = collection(db, 'users', userId, 'sales');
+async function addSale(userId: string, departmentId: Department, data: SalesItemData): Promise<string> {
+    const collectionName = `sales`;
+    const salesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -100,7 +101,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
-    const salesCollectionRef = collection(db, 'users', authUser.uid, 'sales');
+    const collectionName = `sales`;
+    const salesCollectionRef = collection(db, 'users', authUser.uid, collectionName);
     const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -155,7 +157,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        await addSale(authUser.uid, submissionData);
+        await addSale(authUser.uid, departmentId, submissionData);
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {

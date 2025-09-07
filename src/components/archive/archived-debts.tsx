@@ -39,9 +39,9 @@ export function ArchivedDebts() {
         }
 
         setIsLoading(true);
-        // Correctly query the single archive collection
+        const collectionName = `archive_debts`;
         const q = query(
-            collection(db, 'users', user.uid, "archive_debts")
+            collection(db, 'users', user.uid, collectionName)
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {

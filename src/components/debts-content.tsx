@@ -37,14 +37,15 @@ export type DebtItem = {
   dueDate?: Date;
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
-  ownerId?: string;
+  ownerId: string;
   departmentId: string;
 };
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-async function addDebt(userId: string, data: DebtItemData): Promise<string> {
-    const debtsCollectionRef = collection(db, 'users', userId, 'debts');
+async function addDebt(userId: string, departmentId: Department, data: DebtItemData): Promise<string> {
+    const collectionName = `debts`;
+    const debtsCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
@@ -118,7 +119,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
 
         setIsDataLoading(true);
-        const debtsCollectionRef = collection(db, 'users', authUser.uid, 'debts');
+        const collectionName = `debts`;
+        const debtsCollectionRef = collection(db, 'users', authUser.uid, collectionName);
         const q = query(debtsCollectionRef, where("departmentId", "==", departmentId));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -172,7 +174,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            await addDebt(authUser.uid, newDebtData);
+            await addDebt(authUser.uid, departmentId, newDebtData);
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });

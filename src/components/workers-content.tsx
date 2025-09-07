@@ -94,9 +94,9 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         }
         
         setIsDataLoading(true);
-        // Query the unified 'workers' collection
         const q = query(
-            collection(db, 'users', authUser.uid, 'workers')
+            collection(db, 'users', authUser.uid, 'workers'),
+            where("departmentId", "==", departmentId)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -121,7 +121,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         return () => unsubscribe();
         
-    }, [authUser, isAuthLoading, t, toast]);
+    }, [authUser, isAuthLoading, t, toast, departmentId]);
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
@@ -213,22 +213,19 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
-
-    // Filter workers by the active departmentId
-    const workersForDepartment = workers.filter(w => w.departmentId === departmentId);
     
-    const totalUnpaidSalariesThisMonth = workersForDepartment
+    const totalUnpaidSalariesThisMonth = workers
         .filter(w => !getMonthStatus(w, currentMonth, currentYear))
         .reduce((sum, w) => sum + w.baseSalary, 0);
 
-    const totalSalariesThisYear = workersForDepartment.reduce((total, worker) => {
+    const totalSalariesThisYear = workers.reduce((total, worker) => {
         const yearSalaries = (worker.transactions || [])
             .filter(t => t.type === 'salary' && t.year === currentYear)
             .reduce((sum, t) => sum + t.amount, 0);
         return total + yearSalaries;
     }, 0);
     
-    const totalAnnualBaseSalaries = workersForDepartment.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
+    const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
 
     if (isAuthLoading) {
         return (
@@ -261,7 +258,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{workersForDepartment.length}</div>
+                    <div className="text-2xl font-bold">{workers.length}</div>
                     <p className="text-xs text-muted-foreground">{t('totalWorkersDesc')}</p>
                 </CardContent>
             </Card>
@@ -322,7 +319,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                   <TableBody>
                     {isDataLoading ? (
                         <TableRow><TableCell colSpan={5} className="h-24 text-center"><Skeleton className="w-full h-8" /></TableCell></TableRow>
-                    ) : workersForDepartment.length > 0 ? workersForDepartment.map((worker) => {
+                    ) : workers.length > 0 ? workers.map((worker) => {
                       const isPaidThisMonth = getMonthStatus(worker, currentMonth, currentYear);
                       const balance = getWorkerBalance(worker);
                       return (

@@ -15,7 +15,6 @@ import { type ExpenseItem } from '../expenses-content';
 
 interface ArchivedExpense extends ExpenseItem {
     archivedAt: Timestamp;
-    departmentId: string;
 }
 
 const departmentTitles = {
@@ -39,8 +38,9 @@ export function ArchivedExpenses() {
         }
 
         setIsLoading(true);
+        const collectionName = `archive_expenses`;
         const q = query(
-            collection(db, 'users', user.uid, "archive_expenses"),
+            collection(db, 'users', user.uid, collectionName),
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
