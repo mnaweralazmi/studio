@@ -19,6 +19,7 @@ const iconComponents: { [key: string]: React.ElementType } = {
   Bug,
   Scissors,
   Sprout,
+  Leaf
 };
 
 
