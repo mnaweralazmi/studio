@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch, where, collectionGroup } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -98,7 +98,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
-    const q = query(collectionGroup(db, 'sales'), where("ownerId", "==", authUser.uid));
+    const salesCollectionRef = collection(db, 'users', authUser.uid, 'sales');
+    const q = query(salesCollectionRef);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const allData = snapshot.docs.map(doc => {

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, addDoc, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, onSnapshot, arrayUnion, where, collectionGroup } from 'firebase/firestore';
+import { collection, addDoc, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, onSnapshot, arrayUnion, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
@@ -92,7 +92,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         }
         
         setIsDataLoading(true);
-        const q = query(collectionGroup(db, 'workers'), where("ownerId", "==", authUser.uid));
+        const workersCollectionRef = collection(db, 'users', authUser.uid, 'workers');
+        const q = query(workersCollectionRef);
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const allData = snapshot.docs.map(docSnap => {

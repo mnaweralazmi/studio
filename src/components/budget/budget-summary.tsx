@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, where, DocumentData, Timestamp, collectionGroup } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, DocumentData, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import type { DebtItem } from '../debts-content';
 import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
 
-const useAllDataForUser = <T extends DocumentData>(
+const useCollectionForUser = <T extends DocumentData>(
   collectionName: string
 ): [T[], boolean] => {
   const { user, loading: authLoading } = useAuth();
@@ -27,7 +27,7 @@ const useAllDataForUser = <T extends DocumentData>(
     }
     setLoading(true);
 
-    const dataQuery = query(collectionGroup(db, collectionName), where("ownerId", "==", user.uid));
+    const dataQuery = query(collection(db, 'users', user.uid, collectionName));
     
     const unsubscribe = onSnapshot(dataQuery, (snapshot) => {
         const fetchedItems = snapshot.docs.map(doc => {
@@ -58,10 +58,10 @@ const useAllDataForUser = <T extends DocumentData>(
 export function BudgetSummary() {
     const { t } = useLanguage();
     
-    const [allSales, salesLoading] = useAllDataForUser<SalesItem>('sales');
-    const [allExpenses, expensesLoading] = useAllDataForUser<ExpenseItem>('expenses');
-    const [allDebts, debtsLoading] = useAllDataForUser<DebtItem>('debts');
-    const [allWorkers, workersLoading] = useAllDataForUser<Worker>('workers');
+    const [allSales, salesLoading] = useCollectionForUser<SalesItem>('sales');
+    const [allExpenses, expensesLoading] = useCollectionForUser<ExpenseItem>('expenses');
+    const [allDebts, debtsLoading] = useCollectionForUser<DebtItem>('debts');
+    const [allWorkers, workersLoading] = useCollectionForUser<Worker>('workers');
 
     const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
 

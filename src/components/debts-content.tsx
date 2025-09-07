@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, onSnapshot, writeBatch, where, collectionGroup } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,7 +116,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
 
         setIsDataLoading(true);
-        const q = query(collectionGroup(db, 'debts'), where("ownerId", "==", authUser.uid));
+        const debtsCollectionRef = collection(db, 'users', authUser.uid, 'debts');
+        const q = query(debtsCollectionRef);
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const allData = snapshot.docs.map(doc => {

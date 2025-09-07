@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, collection, query, onSnapshot, writeBatch, where, collectionGroup } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,7 +106,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
 
         setIsDataLoading(true);
-        const q = query(collectionGroup(db, 'expenses'), where("ownerId", "==", authUser.uid));
+        const expensesCollectionRef = collection(db, 'users', authUser.uid, 'expenses');
+        const q = query(expensesCollectionRef);
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const allData = snapshot.docs.map(doc => {
