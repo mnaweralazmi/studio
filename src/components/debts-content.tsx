@@ -122,8 +122,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         setIsDataLoading(true);
         const collectionName = `debts`;
         const q = query(
-            collection(db, 'users', authUser.uid, collectionName),
-            where("departmentId", "==", departmentId)
+            collection(db, 'users', authUser.uid, collectionName)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
