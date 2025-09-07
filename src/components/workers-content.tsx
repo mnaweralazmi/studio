@@ -95,8 +95,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         setIsDataLoading(true);
         const q = query(
             collection(db, 'users', authUser.uid, 'workers'),
-            where("departmentId", "==", departmentId),
-            where("ownerId", "==", authUser.uid)
+            where("departmentId", "==", departmentId)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
