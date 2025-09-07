@@ -1,11 +1,10 @@
 
-
 "use client";
 
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, getDocs, doc, Timestamp, deleteDoc, updateDoc, arrayUnion, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,9 +42,8 @@ export type DebtItem = {
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-async function addDebt(userId: string, departmentId: Department, data: DebtItemData): Promise<string> {
-    const collectionName = `debts`;
-    const debtsCollectionRef = collection(db, 'users', userId, collectionName);
+async function addDebt(userId: string, data: DebtItemData): Promise<string> {
+    const debtsCollectionRef = collection(db, 'users', userId, 'debts');
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
@@ -119,8 +117,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         }
 
         setIsDataLoading(true);
-        const collectionName = `debts`;
-        const debtsCollectionRef = collection(db, 'users', authUser.uid, collectionName);
+        const debtsCollectionRef = collection(db, 'users', authUser.uid, 'debts');
         const q = query(debtsCollectionRef, where("departmentId", "==", departmentId));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -174,7 +171,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            await addDebt(authUser.uid, departmentId, newDebtData);
+            await addDebt(authUser.uid, newDebtData);
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });

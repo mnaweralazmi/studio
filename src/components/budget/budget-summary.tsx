@@ -1,9 +1,8 @@
 
-
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, getDocs, DocumentData, Timestamp, collectionGroup, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, DocumentData, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -14,9 +13,8 @@ import type { ExpenseItem } from '../expenses-content';
 import type { DebtItem } from '../debts-content';
 import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
-import type { Department } from '@/app/financials/page';
 
-const useAllDepartmentsData = <T extends DocumentData>(
+const useAllDataForUser = <T extends DocumentData>(
   collectionName: string
 ): [T[], boolean] => {
   const { user, loading: authLoading } = useAuth();
@@ -30,9 +28,9 @@ const useAllDepartmentsData = <T extends DocumentData>(
     }
     setLoading(true);
 
-    const q = query(collection(db, 'users', user.uid, collectionName), where('ownerId', '==', user.uid));
+    const dataQuery = query(collection(db, 'users', user.uid, collectionName), where('ownerId', '==', user.uid));
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(dataQuery, (snapshot) => {
         const fetchedItems = snapshot.docs.map(doc => {
              const docData = doc.data();
              const mappedData: any = { id: doc.id, ...docData };
@@ -46,7 +44,7 @@ const useAllDepartmentsData = <T extends DocumentData>(
         setData(fetchedItems);
         setLoading(false);
     }, error => {
-        console.error(`Error fetching collection group ${collectionName}:`, error);
+        console.error(`Error fetching collection ${collectionName}:`, error);
         setLoading(false);
     });
 
@@ -61,10 +59,10 @@ const useAllDepartmentsData = <T extends DocumentData>(
 export function BudgetSummary() {
     const { t } = useLanguage();
     
-    const [allSales, salesLoading] = useAllDepartmentsData<SalesItem>('sales');
-    const [allExpenses, expensesLoading] = useAllDepartmentsData<ExpenseItem>('expenses');
-    const [allDebts, debtsLoading] = useAllDepartmentsData<DebtItem>('debts');
-    const [allWorkers, workersLoading] = useAllDepartmentsData<Worker>('workers');
+    const [allSales, salesLoading] = useAllDataForUser<SalesItem>('sales');
+    const [allExpenses, expensesLoading] = useAllDataForUser<ExpenseItem>('expenses');
+    const [allDebts, debtsLoading] = useAllDataForUser<DebtItem>('debts');
+    const [allWorkers, workersLoading] = useAllDataForUser<Worker>('workers');
 
     const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
 

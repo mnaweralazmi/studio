@@ -1,9 +1,8 @@
 
-
 "use client";
 
 import * as React from 'react';
-import { addDoc, getDocs, doc, Timestamp, deleteDoc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,9 +51,8 @@ export type ExpenseItem = {
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-async function addExpense(userId: string, departmentId: Department, data: ExpenseItemData): Promise<string> {
-    const collectionName = `expenses`;
-    const expensesCollectionRef = collection(db, 'users', userId, collectionName);
+async function addExpense(userId: string, data: ExpenseItemData): Promise<string> {
+    const expensesCollectionRef = collection(db, 'users', userId, 'expenses');
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -109,8 +107,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         }
 
         setIsDataLoading(true);
-        const collectionName = `expenses`;
-        const expensesCollectionRef = collection(db, 'users', authUser.uid, collectionName);
+        const expensesCollectionRef = collection(db, 'users', authUser.uid, 'expenses');
         const q = query(expensesCollectionRef, where("departmentId", "==", departmentId));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -165,7 +162,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            await addExpense(authUser.uid, departmentId, newExpenseData);
+            await addExpense(authUser.uid, newExpenseData);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });

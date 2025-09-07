@@ -1,9 +1,8 @@
 
-
 "use client";
 
 import * as React from 'react';
-import { collection, addDoc, getDocs, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, where, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, addDoc, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, where, onSnapshot, arrayUnion } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
