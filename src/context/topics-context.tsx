@@ -37,7 +37,7 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
     // Fetch public topics regardless of auth state
     setTopicsLoading(true);
     setTopicsError(null);
-    const topicsColRef = collection(db, "public_topics");
+    const topicsColRef = collection(db, "data");
 
     const unsubscribe = onSnapshot(
       topicsColRef,
@@ -47,7 +47,7 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
         setTopicsLoading(false);
       },
       (err) => {
-        console.error("public_topics onSnapshot error:", err);
+        console.error("data onSnapshot error:", err);
         setTopicsError(err?.message ?? "خطأ في جلب المواضيع");
         setTopics([]);
         setTopicsLoading(false);
@@ -62,7 +62,7 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) throw new Error("Not signed in");
     // Decide where to add topics, maybe a user-specific collection or a protected public one
     // For now, let's assume adding is a protected action to the public list.
-    const colRef = collection(db, "public_topics");
+    const colRef = collection(db, "data");
     const docRef = await addDoc(colRef, {
       ...data,
       ownerId: user.uid, // still track owner for admin purposes
@@ -76,7 +76,7 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
   async function deleteTopic(id: string) {
     if (!user) throw new Error("Not signed in");
     // Add logic to check if user has permission to delete if needed
-    await deleteDoc(doc(db, "public_topics", id));
+    await deleteDoc(doc(db, "data", id));
   }
 
   return (

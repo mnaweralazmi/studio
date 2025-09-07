@@ -45,11 +45,11 @@ const createNewUserDocument = async (user: User, name: string | null) => {
         });
         
         // 2. Populate public topics if they don't exist (run only once for the first user)
-        const publicTopicsColRef = collection(db, 'public_topics');
-        const publicTopicsSnap = await getDocs(publicTopicsColRef);
-        if (publicTopicsSnap.empty) {
+        const dataColRef = collection(db, 'data');
+        const dataSnap = await getDocs(dataColRef);
+        if (dataSnap.empty) {
             initialAgriculturalSections.forEach(topic => {
-                const newTopicRef = doc(publicTopicsColRef, topic.id);
+                const newTopicRef = doc(dataColRef, topic.id);
                 // We don't need ownerId for public topics, so we remove it.
                 const { ownerId, ...publicTopicData } = topic;
                 batch.set(newTopicRef, publicTopicData);
