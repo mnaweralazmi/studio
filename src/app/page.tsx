@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { Leaf, PlayCircle, BookOpen } from 'lucide-react';
+import { Leaf, PlayCircle, BookOpen, Droplets, FlaskConical, Bug, Scissors, Sprout } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
@@ -11,6 +11,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
+
+
+const iconComponents: { [key: string]: React.ElementType } = {
+  Droplets,
+  FlaskConical,
+  Bug,
+  Scissors,
+  Sprout,
+};
 
 
 export default function Home() {
@@ -48,6 +57,7 @@ export default function Home() {
                         const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
                         const description = topic.descriptionKey === 'custom' ? topic.description : t(topic.descriptionKey as any);
                         const video = topic.videos && topic.videos.length > 0 ? topic.videos[0] : null;
+                        const Icon = iconComponents[topic.iconName] || Leaf;
                         return (
                             <Card key={topic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
                                 <div className="relative w-full h-40">
@@ -60,7 +70,10 @@ export default function Home() {
                                     />
                                 </div>
                                 <CardContent className="p-4 flex flex-col flex-1">
-                                    <h3 className="text-lg font-bold mb-2">{title}</h3>
+                                    <div className="flex items-center gap-2 mb-2 text-primary">
+                                        <Icon className="h-5 w-5" />
+                                        <h3 className="text-lg font-bold text-foreground">{title}</h3>
+                                    </div>
                                     <p className="text-muted-foreground text-sm flex-1">{description}</p>
                                     <div className="flex flex-col gap-2 mt-4">
                                         <Button asChild size="sm">
