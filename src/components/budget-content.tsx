@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -99,7 +99,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
     setIsDataLoading(true);
     const salesCollectionRef = collection(db, 'users', authUser.uid, 'sales');
-    const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
+    const q = query(salesCollectionRef);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => {
@@ -110,7 +110,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 date: (docData.date as Timestamp).toDate()
             } as SalesItem;
         });
-        setSalesItems(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+        setSalesItems(data.filter(item => item.departmentId === departmentId).sort((a,b) => b.date.getTime() - a.date.getTime()));
         setIsDataLoading(false);
     }, (error) => {
         console.error("Error fetching sales: ", error);

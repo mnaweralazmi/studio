@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, collection, query, onSnapshot, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,7 +107,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
         setIsDataLoading(true);
         const expensesCollectionRef = collection(db, 'users', authUser.uid, 'expenses');
-        const q = query(expensesCollectionRef, where("departmentId", "==", departmentId));
+        const q = query(expensesCollectionRef);
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => {
@@ -118,7 +118,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     date: (docData.date as Timestamp).toDate()
                 } as ExpenseItem;
             });
-            setExpenses(data.sort((a,b) => b.date.getTime() - a.date.getTime()));
+            setExpenses(data.filter(item => item.departmentId === departmentId).sort((a,b) => b.date.getTime() - a.date.getTime()));
             setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching expenses: ", error);

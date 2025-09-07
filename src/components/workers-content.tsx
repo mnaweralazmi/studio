@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, addDoc, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, where, onSnapshot, arrayUnion } from 'firebase/firestore';
+import { collection, addDoc, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, onSnapshot, arrayUnion } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
@@ -93,8 +93,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const q = query(
-            collection(db, 'users', authUser.uid, 'workers'),
-            where("departmentId", "==", departmentId)
+            collection(db, 'users', authUser.uid, 'workers')
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -109,7 +108,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     }))
                 } as Worker;
             });
-            setWorkers(data);
+            setWorkers(data.filter(item => item.departmentId === departmentId));
             setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching workers: ", error);
