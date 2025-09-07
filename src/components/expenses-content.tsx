@@ -107,9 +107,10 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
         setIsDataLoading(true);
         const expensesCollectionRef = collection(db, 'users', authUser.uid, 'expenses');
+        const q = query(expensesCollectionRef);
         
-        const unsubscribe = onSnapshot(expensesCollectionRef, (snapshot) => {
-            const data = snapshot.docs.map(doc => {
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allData = snapshot.docs.map(doc => {
                 const docData = doc.data();
                 return {
                     id: doc.id,
@@ -117,7 +118,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     date: (docData.date as Timestamp).toDate()
                 } as ExpenseItem;
             });
-            setExpenses(data.filter(item => item.departmentId === departmentId).sort((a,b) => b.date.getTime() - a.date.getTime()));
+            const filteredData = allData.filter(item => item.departmentId === departmentId);
+            setExpenses(filteredData.sort((a,b) => b.date.getTime() - a.date.getTime()));
             setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching expenses: ", error);

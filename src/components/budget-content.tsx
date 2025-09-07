@@ -102,7 +102,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     const q = query(salesCollectionRef);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => {
+        const allData = snapshot.docs.map(doc => {
             const docData = doc.data();
             return {
                 id: doc.id,
@@ -110,7 +110,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 date: (docData.date as Timestamp).toDate()
             } as SalesItem;
         });
-        setSalesItems(data.filter(item => item.departmentId === departmentId).sort((a,b) => b.date.getTime() - a.date.getTime()));
+        const filteredData = allData.filter(item => item.departmentId === departmentId);
+        setSalesItems(filteredData.sort((a,b) => b.date.getTime() - a.date.getTime()));
         setIsDataLoading(false);
     }, (error) => {
         console.error("Error fetching sales: ", error);

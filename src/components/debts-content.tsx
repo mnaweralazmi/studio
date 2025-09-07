@@ -117,9 +117,10 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         setIsDataLoading(true);
         const debtsCollectionRef = collection(db, 'users', authUser.uid, 'debts');
-        
-        const unsubscribe = onSnapshot(debtsCollectionRef, (snapshot) => {
-            const data = snapshot.docs.map(doc => {
+        const q = query(debtsCollectionRef);
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const allData = snapshot.docs.map(doc => {
                 const docData = doc.data();
                 return {
                     id: doc.id,
@@ -128,7 +129,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                     payments: (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}))
                 } as DebtItem;
             });
-            setDebts(data.filter(item => item.departmentId === departmentId).sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
+            const filteredData = allData.filter(item => item.departmentId === departmentId);
+            setDebts(filteredData.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching debts: ", error);
