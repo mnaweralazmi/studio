@@ -117,9 +117,8 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         setIsDataLoading(true);
         const debtsCollectionRef = collection(db, 'users', authUser.uid, 'debts');
-        const q = query(debtsCollectionRef);
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribe = onSnapshot(debtsCollectionRef, (snapshot) => {
             const data = snapshot.docs.map(doc => {
                 const docData = doc.data();
                 return {
