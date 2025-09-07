@@ -62,13 +62,15 @@ export default function Home() {
                         return (
                             <Card key={topic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
                                 <div className="relative w-full h-40">
-                                    <Image 
-                                        src={topic.image} 
-                                        alt={title!} 
-                                        fill 
-                                        style={{objectFit: 'cover'}}
-                                        data-ai-hint={topic.hint}
-                                    />
+                                    {topic.image && (
+                                        <Image 
+                                            src={topic.image} 
+                                            alt={title!} 
+                                            fill 
+                                            style={{objectFit: 'cover'}}
+                                            data-ai-hint={topic.hint}
+                                        />
+                                    )}
                                 </div>
                                 <CardContent className="p-4 flex flex-col flex-1">
                                     <div className="flex items-center gap-2 mb-2 text-primary">
