@@ -27,7 +27,7 @@ const useAllDataForUser = <T extends DocumentData>(
     }
     setLoading(true);
 
-    const dataQuery = query(collection(db, 'users', user.uid, collectionName));
+    const dataQuery = query(collectionGroup(db, collectionName), where("ownerId", "==", user.uid));
     
     const unsubscribe = onSnapshot(dataQuery, (snapshot) => {
         const fetchedItems = snapshot.docs.map(doc => {

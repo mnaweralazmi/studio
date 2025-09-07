@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch, where, collectionGroup } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -98,8 +98,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
-    const salesCollectionRef = collection(db, 'users', authUser.uid, 'sales');
-    const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
+    const q = query(collectionGroup(db, 'sales'), where("ownerId", "==", authUser.uid));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const allData = snapshot.docs.map(doc => {
@@ -110,7 +109,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                 date: (docData.date as Timestamp).toDate()
             } as SalesItem;
         });
-        setSalesItems(allData.sort((a,b) => b.date.getTime() - a.date.getTime()));
+        const filteredData = allData.filter(item => item.departmentId === departmentId);
+        setSalesItems(filteredData.sort((a,b) => b.date.getTime() - a.date.getTime()));
         setIsDataLoading(false);
     }, (error) => {
         console.error("Error fetching sales: ", error);
