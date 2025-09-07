@@ -95,7 +95,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         setIsDataLoading(true);
         const q = query(
             collection(db, 'users', authUser.uid, 'workers'),
-            where("departmentId", "==", departmentId)
+            where("departmentId", "==", departmentId),
+            where("ownerId", "==", authUser.uid)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -199,11 +200,16 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
   
     const getWorkerBalance = (worker: Worker) => {
-        return (worker.transactions || []).reduce((acc, t) => {
-             if (t.type === 'bonus') return acc + t.amount;
-             if (t.type === 'deduction' || t.type === 'salary') return acc - t.amount;
-             return acc;
-        }, 0);
+        // Start with base salary because it's a credit to the worker.
+        let balance = 0;
+        (worker.transactions || []).forEach(t => {
+            if (t.type === 'bonus') {
+                balance += t.amount;
+            } else if (t.type === 'deduction' || t.type === 'salary') {
+                balance -= t.amount;
+            }
+        });
+        return balance;
     }
     
     const getMonthStatus = (worker: Worker, month: number, year: number) => {
