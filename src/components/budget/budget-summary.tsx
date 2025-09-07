@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -32,28 +33,35 @@ const useAllDepartmentsCollectionData = <T extends DocumentData>(
     }
 
     setLoading(true);
-    // Use collectionGroup to fetch data from all subcollections with the same name
-    const q = query(collectionGroup(db, collectionName), where('ownerId', '==', user.uid));
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedData = snapshot.docs.map(doc => {
-          const docData = doc.data();
-          const mappedData: any = { id: doc.id, ...docData };
-           if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
-           if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
-           if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
-           if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
-          return mappedData as T;
-      });
-      setData(fetchedData);
-      setLoading(false);
-    }, (error) => {
-      console.error(`Error fetching collection group ${collectionName}:`, error);
-      setData([]);
-      setLoading(false);
+    const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
+    const promises = departments.map(dept => {
+        const fullCollectionName = collectionName === 'workers' ? 'workers' : `${dept}_${collectionName}`;
+        const subcollectionRef = collection(db, 'users', user.uid, fullCollectionName);
+        return getDocs(subcollectionRef);
     });
 
-    return () => unsubscribe();
+    Promise.all(promises).then(snapshots => {
+        const fetchedData: T[] = [];
+        snapshots.forEach(snapshot => {
+            snapshot.docs.forEach(doc => {
+                const docData = doc.data();
+                const mappedData: any = { id: doc.id, ...docData };
+                 if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
+                 if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
+                 if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
+                 if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
+                fetchedData.push(mappedData as T);
+            })
+        });
+        setData(fetchedData);
+        setLoading(false);
+    }).catch(error => {
+         console.error(`Error fetching collection group ${collectionName}:`, error);
+          setData([]);
+          setLoading(false);
+    });
+
   }, [user, authLoading, collectionName]);
 
   return [data, loading || authLoading];
