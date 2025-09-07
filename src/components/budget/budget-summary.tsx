@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, getDocs, DocumentData, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, getDocs, DocumentData, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -15,7 +15,7 @@ import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
 
-const useCollectionData = <T extends DocumentData>(
+const useAllDepartmentsCollectionData = <T extends DocumentData>(
   collectionName: string
 ): [T[], boolean] => {
   const { user, loading: authLoading } = useAuth();
@@ -32,7 +32,8 @@ const useCollectionData = <T extends DocumentData>(
     }
 
     setLoading(true);
-    const q = query(collection(db, 'users', user.uid, collectionName));
+    // Use collectionGroup to fetch data from all subcollections with the same name
+    const q = query(collectionGroup(db, collectionName), where('ownerId', '==', user.uid));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedData = snapshot.docs.map(doc => {
@@ -47,7 +48,7 @@ const useCollectionData = <T extends DocumentData>(
       setData(fetchedData);
       setLoading(false);
     }, (error) => {
-      console.error(`Error fetching ${collectionName}:`, error);
+      console.error(`Error fetching collection group ${collectionName}:`, error);
       setData([]);
       setLoading(false);
     });
@@ -62,10 +63,10 @@ const useCollectionData = <T extends DocumentData>(
 export function BudgetSummary() {
     const { t } = useLanguage();
     
-    const [allSales, salesLoading] = useCollectionData<SalesItem>('sales');
-    const [allExpenses, expensesLoading] = useCollectionData<ExpenseItem>('expenses');
-    const [allDebts, debtsLoading] = useCollectionData<DebtItem>('debts');
-    const [allWorkers, workersLoading] = useCollectionData<Worker>('workers');
+    const [allSales, salesLoading] = useAllDepartmentsCollectionData<SalesItem>('sales');
+    const [allExpenses, expensesLoading] = useAllDepartmentsCollectionData<ExpenseItem>('expenses');
+    const [allDebts, debtsLoading] = useAllDepartmentsCollectionData<DebtItem>('debts');
+    const [allWorkers, workersLoading] = useAllDepartmentsCollectionData<Worker>('workers');
 
     const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
 

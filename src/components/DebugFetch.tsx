@@ -4,7 +4,7 @@
 
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
-import { fetchUserDoc, fetchUserCollection } from '@/lib/api/user-db';
+import { fetchUserDoc, fetchUserSubcollection } from '@/lib/api/user-db';
 
 export function DebugFetch() {
   const { user, loading: authLoading } = useAuth();
@@ -35,7 +35,7 @@ export function DebugFetch() {
         setStatus("نجح جلب مستند المستخدم. جاري جلب العمال...");
 
         // Test 2: Fetch 'workers' subcollection
-        const workersCollection = await fetchUserCollection("workers", user.uid);
+        const workersCollection = await fetchUserSubcollection("workers", user.uid);
         console.log("Workers Collection:", workersCollection);
         setStatus(`نجاح! تم جلب ${workersCollection.length} عامل.`);
 

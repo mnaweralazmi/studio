@@ -8,7 +8,7 @@ export interface Transaction {
     id: string;
     type: 'salary' | 'bonus' | 'deduction';
     amount: number;
-    date: string; // Keep as string (ISO format) for consistency
+    date: string | Date; // Allow Date object
     description: string;
     month?: number;
     year?: number;
