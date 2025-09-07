@@ -93,9 +93,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         
         setIsDataLoading(true);
         const workersCollectionRef = collection(db, 'users', authUser.uid, 'workers');
-        const q = query(workersCollectionRef, where("departmentId", "==", departmentId));
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribe = onSnapshot(workersCollectionRef, (snapshot) => {
             const allData = snapshot.docs.map(docSnap => {
                 const docData = docSnap.data();
                 return {
@@ -107,7 +106,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     }))
                 } as Worker;
             });
-            setWorkers(allData);
+            const filteredData = allData.filter(worker => worker.departmentId === departmentId);
+            setWorkers(filteredData);
             setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching workers: ", error);
