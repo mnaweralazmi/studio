@@ -25,10 +25,10 @@ export default function FinancialsPage() {
     };
     
     const departmentTitles: Record<Department, string> = {
-        agriculture: t('topicSoil'),
-        livestock: t('livestockSales'),
-        poultry: t('poultrySales'),
-        fish: t('fishSales'),
+        agriculture: t('departmentAgriculture'),
+        livestock: t('departmentLivestock'),
+        poultry: t('departmentPoultry'),
+        fish: t('departmentFish'),
     };
 
 

@@ -18,10 +18,10 @@ interface ArchivedExpense extends ExpenseItem {
 }
 
 const departmentTitles = {
-    agriculture: 'topicSoil',
-    livestock: 'livestockSales',
-    poultry: 'poultrySales',
-    fish: 'fishSales'
+    agriculture: 'departmentAgriculture',
+    livestock: 'departmentLivestock',
+    poultry: 'departmentPoultry',
+    fish: 'departmentFish'
 };
 type DeptKey = keyof typeof departmentTitles;
 
