@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from 'react';
@@ -89,11 +90,12 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const fishList = language === 'ar' ? fishListAr : fishListEn;
 
   React.useEffect(() => {
+    if (isAuthLoading) {
+        return;
+    }
     if (!authUser) {
-      if (!isAuthLoading) {
-        setIsDataLoading(false);
-        setSalesItems([]);
-      }
+      setIsDataLoading(false);
+      setSalesItems([]);
       return;
     }
 

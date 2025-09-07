@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -107,11 +108,12 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
     React.useEffect(() => {
+        if (isAuthLoading) {
+            return;
+        }
         if (!authUser) {
-            if (!isAuthLoading) {
-                setIsDataLoading(false);
-                setDebts([]);
-            }
+            setIsDataLoading(false);
+            setDebts([]);
             return;
         }
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -97,11 +98,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     }, [language, departmentId]);
 
     React.useEffect(() => {
+        if (isAuthLoading) {
+            return;
+        }
         if (!authUser) {
-          if(!isAuthLoading) {
-            setIsDataLoading(false);
-            setExpenses([]);
-          }
+          setIsDataLoading(false);
+          setExpenses([]);
           return;
         }
 

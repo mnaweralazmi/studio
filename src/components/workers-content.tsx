@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -83,11 +84,12 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const months = language === 'ar' ? monthsAr : monthsEn;
 
     React.useEffect(() => {
+        if (isAuthLoading) {
+            return;
+        }
         if (!authUser) {
-            if (!isAuthLoading) {
-                setWorkers([]);
-                setIsDataLoading(false);
-            }
+            setWorkers([]);
+            setIsDataLoading(false);
             return;
         }
         

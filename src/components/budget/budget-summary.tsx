@@ -1,7 +1,8 @@
+
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, where, DocumentData, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, DocumentData, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -21,12 +22,16 @@ const useCollectionForUser = <T extends DocumentData>(
   const [loading, setLoading] = React.useState(true);
   
   React.useEffect(() => {
-    if (!user || authLoading) {
-        if(!authLoading) setLoading(false);
-        return;
+    if (authLoading) {
+      return; 
     }
-    setLoading(true);
+    if (!user) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
 
+    setLoading(true);
     const dataQuery = query(collection(db, 'users', user.uid, collectionName));
     
     const unsubscribe = onSnapshot(dataQuery, (snapshot) => {
