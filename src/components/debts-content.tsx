@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, onSnapshot, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,7 +117,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         setIsDataLoading(true);
         const debtsCollectionRef = collection(db, 'users', authUser.uid, 'debts');
-        const q = query(debtsCollectionRef);
+        const q = query(debtsCollectionRef, where("departmentId", "==", departmentId));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const allData = snapshot.docs.map(doc => {
@@ -129,8 +129,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                     payments: (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}))
                 } as DebtItem;
             });
-            const filteredData = allData.filter(item => item.departmentId === departmentId);
-            setDebts(filteredData.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
+            setDebts(allData.sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0) ));
             setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching debts: ", error);
