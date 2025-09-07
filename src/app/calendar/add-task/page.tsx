@@ -72,25 +72,19 @@ export default function AddTaskPage() {
   const [fruit, setFruit] = React.useState('');
   const [isRecurring, setIsRecurring] = React.useState(false);
   const [reminderDays, setReminderDays] = React.useState(0);
-
-
-  React.useEffect(() => {
-    if (vegetable) {
-        setFruit('');
-        if (!description) {
-            setDescription(vegetable);
-        }
-    }
-  }, [vegetable, description]);
+  const [isDescManuallyEdited, setIsDescManuallyEdited] = React.useState(false);
 
   React.useEffect(() => {
-    if (fruit) {
-        setVegetable('');
-        if (!description) {
-            setDescription(fruit);
-        }
+    if (vegetable && !isDescManuallyEdited) {
+        setDescription(vegetable);
     }
-  }, [fruit, description]);
+  }, [vegetable, isDescManuallyEdited]);
+
+  React.useEffect(() => {
+    if (fruit && !isDescManuallyEdited) {
+        setDescription(fruit);
+    }
+  }, [fruit, isDescManuallyEdited]);
 
 
   async function onSubmit(event: React.FormEvent) {
@@ -205,7 +199,7 @@ export default function AddTaskPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label>{t('selectVegetableOptional')}</Label>
-                            <Select onValueChange={setVegetable} value={vegetable}>
+                            <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('selectVegetable')} />
                                 </SelectTrigger>
@@ -218,7 +212,7 @@ export default function AddTaskPage() {
                         </div>
                          <div className="space-y-2">
                             <Label>{t('selectFruitOptional')}</Label>
-                            <Select onValueChange={setFruit} value={fruit}>
+                            <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('selectFruit')} />
                                 </SelectTrigger>
@@ -233,7 +227,7 @@ export default function AddTaskPage() {
                     
                     <div className="space-y-2">
                         <Label htmlFor='description'>{t('description')}</Label>
-                        <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => setDescription(e.target.value)} />
+                        <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => { setDescription(e.target.value); setIsDescManuallyEdited(true);}} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -322,5 +316,7 @@ export default function AddTaskPage() {
     </main>
   );
 }
+
+    
 
     
