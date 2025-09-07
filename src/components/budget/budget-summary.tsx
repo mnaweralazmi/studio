@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, onSnapshot, query, where, DocumentData, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, DocumentData, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
