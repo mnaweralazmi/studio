@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { db } from '@/lib/firebase';
@@ -53,6 +53,7 @@ export function ArchivedDebts() {
                     ...data,
                     dueDate: data.dueDate ? data.dueDate.toDate() : undefined,
                     payments: (data.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })),
+                    archivedAt: data.archivedAt
                 } as ArchivedDebt);
             });
             setArchivedItems(items.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));

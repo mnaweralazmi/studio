@@ -1,4 +1,5 @@
 
+
 export type WorkerFormValues = {
   name: string;
   baseSalary: number;
@@ -8,7 +9,7 @@ export interface Transaction {
     id: string;
     type: 'salary' | 'bonus' | 'deduction';
     amount: number;
-    date: string | Date; // Allow Date object
+    date: Date;
     description: string;
     month?: number;
     year?: number;

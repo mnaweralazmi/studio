@@ -16,53 +16,63 @@ import type { Worker } from '../workers/types';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
 
-const useAllDepartmentsCollectionData = <T extends DocumentData>(
-  collectionName: string
+const useAllDepartmentsData = <T extends DocumentData>(
+  collectionSuffix: string
 ): [T[], boolean] => {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = React.useState<T[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const collectionNames: string[] = React.useMemo(() => {
+    const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
+    if (collectionSuffix === 'workers') {
+        return ['workers'];
+    }
+    return departments.map(dept => `${dept}_${collectionSuffix}`);
+  }, [collectionSuffix]);
+
 
   React.useEffect(() => {
-    if (!user) {
-      if (!authLoading) {
-        setData([]);
-        setLoading(false);
-      }
-      return;
+    if (!user || authLoading) {
+        if(!authLoading) setLoading(false);
+        return;
     }
-
     setLoading(true);
-    
-    const departments: Department[] = ['agriculture', 'livestock', 'poultry', 'fish'];
-    const promises = departments.map(dept => {
-        const fullCollectionName = collectionName === 'workers' ? 'workers' : `${dept}_${collectionName}`;
-        const subcollectionRef = collection(db, 'users', user.uid, fullCollectionName);
-        return getDocs(subcollectionRef);
-    });
 
-    Promise.all(promises).then(snapshots => {
-        const fetchedData: T[] = [];
-        snapshots.forEach(snapshot => {
-            snapshot.docs.forEach(doc => {
-                const docData = doc.data();
-                const mappedData: any = { id: doc.id, ...docData };
+    const unsubscribers = collectionNames.map(name => {
+        const q = query(collection(db, 'users', user.uid, name));
+        return onSnapshot(q, (snapshot) => {
+            const fetchedItems = snapshot.docs.map(doc => {
+                 const docData = doc.data();
+                 const mappedData: any = { id: doc.id, ...docData };
                  if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
                  if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
                  if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
                  if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
-                fetchedData.push(mappedData as T);
-            })
-        });
-        setData(fetchedData);
-        setLoading(false);
-    }).catch(error => {
-         console.error(`Error fetching collection group ${collectionName}:`, error);
-          setData([]);
-          setLoading(false);
-    });
+                 return mappedData as T;
+            });
+            
+            setData(prevData => {
+                // Filter out old data from this collection and add new
+                const otherData = prevData.filter(item => !(item as any).departmentId || !name.startsWith((item as any).departmentId));
+                return [...otherData, ...fetchedItems];
+            });
 
-  }, [user, authLoading, collectionName]);
+        }, error => {
+            console.error(`Error fetching ${name}:`, error);
+        });
+    });
+    
+    // We can't determine global loading state easily with multiple listeners this way
+    // so we just set it to false after a delay. A more robust solution might use Promise.all with getDocs
+    // if real-time updates aren't strictly necessary for the summary.
+    const timer = setTimeout(() => setLoading(false), 1500);
+
+    return () => {
+        unsubscribers.forEach(unsub => unsub());
+        clearTimeout(timer);
+    };
+
+  }, [user, authLoading, collectionNames]);
 
   return [data, loading || authLoading];
 };
@@ -71,10 +81,10 @@ const useAllDepartmentsCollectionData = <T extends DocumentData>(
 export function BudgetSummary() {
     const { t } = useLanguage();
     
-    const [allSales, salesLoading] = useAllDepartmentsCollectionData<SalesItem>('sales');
-    const [allExpenses, expensesLoading] = useAllDepartmentsCollectionData<ExpenseItem>('expenses');
-    const [allDebts, debtsLoading] = useAllDepartmentsCollectionData<DebtItem>('debts');
-    const [allWorkers, workersLoading] = useAllDepartmentsCollectionData<Worker>('workers');
+    const [allSales, salesLoading] = useAllDepartmentsData<SalesItem>('sales');
+    const [allExpenses, expensesLoading] = useAllDepartmentsData<ExpenseItem>('expenses');
+    const [allDebts, debtsLoading] = useAllDepartmentsData<DebtItem>('debts');
+    const [allWorkers, workersLoading] = useAllDepartmentsData<Worker>('workers');
 
     const loading = salesLoading || expensesLoading || debtsLoading || workersLoading;
 
