@@ -10,14 +10,15 @@ import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Award, Palette, Bell, LogOut } from 'lucide-react';
+import { User, Award, Palette, Bell, LogOut, GitBranch } from 'lucide-react';
 
 import { ProfileTab } from '@/components/settings/profile-tab';
 import { AchievementsTab } from '@/components/settings/achievements-tab';
 import { DisplayTab } from '@/components/settings/display-tab';
 import { NotificationsTab } from '@/components/settings/notifications-tab';
+import { HowItWorksTab } from '@/components/settings/how-it-works-tab';
 
-type SettingsSection = 'profile' | 'achievements' | 'display' | 'notifications';
+type SettingsSection = 'profile' | 'achievements' | 'display' | 'notifications' | 'how-it-works';
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -35,6 +36,7 @@ export default function SettingsPage() {
         { id: 'achievements', label: t('achievements'), icon: Award },
         { id: 'display', label: t('displayAndLanguage'), icon: Palette },
         { id: 'notifications', label: t('notifications'), icon: Bell },
+        { id: 'how-it-works', label: t('howItWorks'), icon: GitBranch },
     ] as const;
 
     const renderContent = () => {
@@ -43,6 +45,7 @@ export default function SettingsPage() {
             case 'achievements': return <AchievementsTab />;
             case 'display': return <DisplayTab />;
             case 'notifications': return <NotificationsTab />;
+            case 'how-it-works': return <HowItWorksTab />;
             default: return <ProfileTab />;
         }
     };

@@ -419,7 +419,15 @@
     "department": "Department",
     "itemArchived": "Item Archived!",
     "itemArchivedDesc": "The item has been successfully moved to the archive.",
-    "fromMonths": "from months"
+    "fromMonths": "from months",
+    "howItWorks": "How It Works",
+    "howItWorksDesc": "Understand how data is fetched and processed in the application.",
+    "dataPoint1Title": "Starting Point: Connecting to Firebase",
+    "dataPoint1Desc": "First, a connection to your Firebase project is initialized. This is the foundation that allows the app to communicate with the database.",
+    "dataPoint2Title": "Identifying the Current User (Authentication)",
+    "dataPoint2Desc": "When you log in, the app gets your unique ID (UID) and uses it to fetch your profile information and secure your data.",
+    "dataPoint3Title": "Fetching Department Data",
+    "dataPoint3Desc": "A live, continuous connection is made to the database to fetch data for each section (sales, expenses, etc.) separately and securely based on your ID.",
+    "dataPoint4Title": "Fetching Aggregated Data (Financial Summary)",
+    "dataPoint4Desc": "The financial summary page fetches all your data from all sections and then calculates the totals to display a comprehensive financial picture."
 }
-
-    
