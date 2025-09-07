@@ -3,7 +3,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -45,9 +45,8 @@ export type SalesItem = {
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-async function addSale(userId: string, departmentId: Department, data: SalesItemData): Promise<string> {
-    const collectionName = `${departmentId}_sales`;
-    const salesCollectionRef = collection(db, 'users', userId, collectionName);
+async function addSale(userId: string, data: SalesItemData): Promise<string> {
+    const salesCollectionRef = collection(db, 'users', userId, 'sales');
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -55,10 +54,10 @@ async function addSale(userId: string, departmentId: Department, data: SalesItem
     return docRef.id;
 }
 
-async function archiveSale(userId: string, departmentId: Department, sale: SalesItem): Promise<void> {
+async function archiveSale(userId: string, sale: SalesItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalSaleRef = doc(db, 'users', userId, `${departmentId}_sales`, sale.id);
+    const originalSaleRef = doc(db, 'users', userId, 'sales', sale.id);
     batch.delete(originalSaleRef);
 
     const archiveCollectionName = `archive_sales`;
@@ -101,8 +100,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     setIsDataLoading(true);
-    const collectionName = `${departmentId}_sales`;
-    const q = query(collection(db, 'users', authUser.uid, collectionName));
+    const salesCollectionRef = collection(db, 'users', authUser.uid, 'sales');
+    const q = query(salesCollectionRef, where("departmentId", "==", departmentId));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => {
@@ -156,7 +155,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        await addSale(authUser.uid, departmentId, submissionData);
+        await addSale(authUser.uid, submissionData);
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
@@ -187,7 +186,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     const saleToArchive = salesItems.find(item => item.id === saleId);
     if (!saleToArchive) return;
     try {
-        await archiveSale(authUser.uid, departmentId, saleToArchive);
+        await archiveSale(authUser.uid, saleToArchive);
         toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
     } catch (e) {
         console.error("Error archiving sale: ", e);

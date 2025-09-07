@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { db } from '@/lib/firebase';
