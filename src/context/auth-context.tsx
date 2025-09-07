@@ -3,23 +3,11 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
-export interface Badge {
-    id: 'explorer' | 'planner' | 'trader';
-    name: string;
-    description: string;
-    icon: React.ComponentType<{ className?: string }>;
-}
-
-export interface AppUser extends User {
-  role?: string;
-  name?: string;
-  points?: number;
-  level?: number;
-  badges?: ('explorer' | 'planner' | 'trader')[];
-}
+// Simplified user type
+export type AppUser = User & DocumentData;
 
 interface AuthContextType {
   user: AppUser | null;
@@ -38,29 +26,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // If we have a user, listen for their data in Firestore
         const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-          if (doc.exists()) {
-            const userData = doc.data();
-            setUser({ ...firebaseUser, ...userData } as AppUser);
+        
+        const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            // If the document exists, merge Firestore data with auth data
+            const firestoreData = docSnap.data();
+            setUser({ ...firebaseUser, ...firestoreData });
           } else {
-             // Fallback to auth user if firestore doc doesn't exist yet
-            setUser(firebaseUser as AppUser);
+            // If Firestore document doesn't exist (e.g., new user), use basic auth data
+            // The document will be created on registration or first login
+            setUser(firebaseUser);
           }
           setLoading(false);
         }, (error) => {
-           console.error("Error fetching user data:", error);
-           setUser(firebaseUser as AppUser); // Fallback to auth user on error
-           setLoading(false);
+          console.error("Error fetching user document from Firestore:", error);
+          // On error, fall back to basic auth user to prevent app crash
+          setUser(firebaseUser);
+          setLoading(false);
         });
-        
+
+        // Return the snapshot listener's unsubscribe function
         return () => unsubscribeSnapshot();
+        
       } else {
+        // No user is signed in
         setUser(null);
         setLoading(false);
       }
     });
 
+    // Return the auth listener's unsubscribe function
     return () => unsubscribeAuth();
   }, []);
 
