@@ -1,10 +1,9 @@
-
 "use client";
 
 import * as React from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { Timestamp, doc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore';
+import { Timestamp, doc, collection, query, where, onSnapshot, writeBatch, addDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,8 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
+import useCollectionSubscription from '@/hooks/use-collection-subscription';
+
 
 // --- Data Types ---
 export interface Task {
@@ -37,15 +38,15 @@ const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: 
     const hasTime = !!dateStr.match(/T\d{2}:\d{2}/) && !dateStr.endsWith("T00:00:00.000Z");
     
     const getIconWithBg = (Icon: React.ElementType, colorClass: string) => (
-        <div className={`p-1 rounded-full ${colorClass}`}>
+        <div class={`p-1 rounded-full ${colorClass}`}>
             <Icon className="h-3.5 w-3.5 text-white" />
         </div>
     )
     
     return (
-        <div className="flex items-start justify-between p-3 rounded-lg bg-background hover:bg-muted/50 transition-all border">
-            <div className="flex items-center gap-3 flex-1">
-                 <div className="flex flex-col gap-2 text-xs text-muted-foreground self-start pt-1">
+        <div class="flex items-start justify-between p-3 rounded-lg bg-background hover:bg-muted/50 transition-all border">
+            <div class="flex items-center gap-3 flex-1">
+                 <div class="flex flex-col gap-2 text-xs text-muted-foreground self-start pt-1">
                     {onComplete && !task.isCompleted && (
                         <button onClick={() => onComplete(task.id)} title={t('completeTask')} className="group">
                            <CheckCircle className="h-5 w-5 text-gray-400 group-hover:text-green-500 transition-colors" />
@@ -56,21 +57,21 @@ const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: 
                     )}
                 </div>
                 
-                <div className="flex-1">
+                <div class="flex-1">
                     <span className={`font-medium ${task.isCompleted ? 'line-through text-muted-foreground' : ''}`}>{task.title}</span>
                     {task.description && (
                         <p className={`text-sm text-muted-foreground mt-1 ${task.isCompleted ? 'line-through' : ''}`}>
                             {task.description}
                         </p>
                     )}
-                     <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-2 text-xs text-muted-foreground">
-                         <div className='flex items-center gap-2'>
+                     <div class="flex items-center flex-wrap gap-x-4 gap-y-2 mt-2 text-xs text-muted-foreground">
+                         <div class='flex items-center gap-2'>
                             {getIconWithBg(CalendarDays, 'bg-blue-500')}
                             <span>{format(dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS })}</span>
                         </div>
-                        {hasTime && <div className='flex items-center gap-2'>{getIconWithBg(Clock, 'bg-orange-500')}<span>{format(dueDate, "p", { locale: language === 'ar' ? arSA : enUS })}</span></div>}
-                        {task.isRecurring && <div className='flex items-center gap-2'>{getIconWithBg(Repeat, 'bg-purple-500')}<span>{t('rememberTask')}</span></div>}
-                        {task.reminderDays && task.reminderDays > 0 && <div className='flex items-center gap-2'>{getIconWithBg(Bell, 'bg-yellow-500')}<span>{t('remindMeBeforeXDays', {days: task.reminderDays})}</span></div>}
+                        {hasTime && <div class='flex items-center gap-2'>{getIconWithBg(Clock, 'bg-orange-500')}<span>{format(dueDate, "p", { locale: language === 'ar' ? arSA : enUS })}</span></div>}
+                        {task.isRecurring && <div class='flex items-center gap-2'>{getIconWithBg(Repeat, 'bg-purple-500')}<span>{t('rememberTask')}</span></div>}
+                        {task.reminderDays && task.reminderDays > 0 && <div class='flex items-center gap-2'>{getIconWithBg(Bell, 'bg-yellow-500')}<span>{t('remindMeBeforeXDays', {days: task.reminderDays})}</span></div>}
                     </div>
                 </div>
             </div>
@@ -80,7 +81,7 @@ const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: 
 
 
 const TaskList = ({ tasks, onComplete, language, t }: { tasks: Task[], onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
-    <div className="space-y-3">
+    <div class="space-y-3">
         {tasks.map(task => (
             <TaskItem key={task.id} task={task} onComplete={onComplete} language={language} t={t} />
         ))}
@@ -94,7 +95,7 @@ const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[],
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto pr-2">
              {tasks.length > 0 ? (
-                <div className="space-y-4">
+                <div class="space-y-4">
                     <TaskList tasks={tasks} {...props} />
                 </div>
             ) : (
@@ -106,45 +107,12 @@ const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[],
 
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [tasks, setTasks] = React.useState<Task[]>([]);
   const { toast } = useToast();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [tasks, tasksLoading] = useCollectionSubscription<Task>('tasks', user?.uid);
+
   const { language, t } = useLanguage();
-  const [isTasksLoading, setIsTasksLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!user) {
-      if (!loading) {
-        setIsTasksLoading(false);
-        setTasks([]);
-      }
-      return;
-    }
-
-    setIsTasksLoading(true);
-    const tasksCollectionRef = collection(db, 'users', user.uid, 'tasks');
-    const q = query(tasksCollectionRef, where("ownerId", "==", user.uid));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const fetchedTasks = querySnapshot.docs.map((docSnap: any) => {
-            const data = docSnap.data();
-            return {
-                id: docSnap.id,
-                ...data,
-                dueDate: (data.dueDate as Timestamp).toDate(),
-            } as Task;
-        });
-        setTasks(fetchedTasks);
-        setIsTasksLoading(false);
-    }, (error) => {
-        console.error("Failed to fetch tasks:", error);
-        toast({ variant: 'destructive', title: t('error'), description: 'Failed to load tasks.' });
-        setIsTasksLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, loading, t, toast]);
-
+  
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
     const taskToComplete = tasks.find(t => t.id === taskId);
@@ -152,7 +120,7 @@ export default function CalendarPage() {
 
     try {
         const batch = writeBatch(db);
-        const originalTaskRef = doc(db, 'users', user.uid, 'tasks', taskId);
+        const originalTaskRef = doc(db, 'tasks', taskId);
         
         if (taskToComplete.isRecurring) {
             // Update the existing task with a new due date
@@ -160,7 +128,7 @@ export default function CalendarPage() {
             batch.update(originalTaskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
         } else {
             // Move to archive and delete from active tasks
-            const archiveRef = doc(collection(db, 'users', user.uid, 'completed_tasks'));
+            const archiveRef = doc(collection(db, 'completed_tasks'));
             const archivedTaskData = {
                 ...taskToComplete,
                 completedAt: Timestamp.now(),
@@ -190,14 +158,14 @@ export default function CalendarPage() {
     .filter(task => task.isCompleted)
     .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
   
-  if (loading) {
-    return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+  if (authLoading) {
+    return <div class="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
   return (
-    <main className="flex flex-1 flex-col p-4 sm:p-6 md:p-8">
-      <div className="w-full max-w-7xl mx-auto">
-         <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
+    <main class="flex flex-1 flex-col p-4 sm:p-6 md:p-8">
+      <div class="w-full max-w-7xl mx-auto">
+         <div class="flex justify-between items-center flex-wrap gap-4 mb-8">
             <div>
                 <h1 className="text-3xl font-bold">{t('calendarAndTasks')}</h1>
                 <p className="text-muted-foreground">{t('tasksForDayDesc')}</p>
@@ -210,15 +178,15 @@ export default function CalendarPage() {
             </Button>
         </div>
         
-        { isTasksLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
+        { tasksLoading ? (
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
                  <Skeleton className="h-[298px] w-full" />
                  <Skeleton className="h-[400px] w-full" />
                  <Skeleton className="h-[400px] w-full" />
                  <Skeleton className="h-[400px] w-full" />
             </div>
         ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-8" style={{gridTemplateRows: 'auto auto'}}>
                 <Card className="row-span-1">
                     <Calendar
                         mode="single"
@@ -257,7 +225,7 @@ export default function CalendarPage() {
                     </CardHeader>
                     <CardContent className="overflow-y-auto max-h-96 pr-2">
                         {allCompletedTasks.length > 0 ? (
-                                <div className="space-y-3">
+                                <div class="space-y-3">
                                 {allCompletedTasks.slice(0,20).map(task => (
                                     <TaskItem key={task.id} task={task} language={language} t={t} />
                                 ))}

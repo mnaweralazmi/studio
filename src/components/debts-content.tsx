@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -22,7 +21,8 @@ import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
-import { useData } from '@/context/data-context';
+import useCollectionSubscription from '@/hooks/use-collection-subscription';
+
 
 export type Payment = {
   id: string;
@@ -43,8 +43,8 @@ export type DebtItem = {
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-async function addDebt(userId: string, data: DebtItemData): Promise<string> {
-    const debtsCollectionRef = collection(db, 'users', userId, 'debts');
+async function addDebt(data: DebtItemData): Promise<string> {
+    const debtsCollectionRef = collection(db, 'debts');
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
@@ -54,13 +54,13 @@ async function addDebt(userId: string, data: DebtItemData): Promise<string> {
     return docRef.id;
 }
 
-async function archiveDebt(userId: string, debt: DebtItem): Promise<void> {
+async function archiveDebt(debt: DebtItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalDebtRef = doc(db, 'users', userId, 'debts', debt.id);
+    const originalDebtRef = doc(db, 'debts', debt.id);
     batch.delete(originalDebtRef);
 
-    const archiveDebtRef = doc(collection(db, 'users', userId, 'archive_debts'));
+    const archiveDebtRef = doc(collection(db, 'archive_debts'));
 
     const archivedData: any = {
         ...debt,
@@ -78,8 +78,8 @@ async function archiveDebt(userId: string, debt: DebtItem): Promise<void> {
 }
 
 
-async function addDebtPayment(userId: string, debtId: string, paymentData: Omit<Payment, 'id'>) {
-    const debtRef = doc(db, 'users', userId, 'debts', debtId);
+async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'>) {
+    const debtRef = doc(db, 'debts', debtId);
     await updateDoc(debtRef, {
         payments: arrayUnion({
             ...paymentData,
@@ -89,8 +89,8 @@ async function addDebtPayment(userId: string, debtId: string, paymentData: Omit<
     });
 }
 
-async function updateDebtStatus(userId: string, debtId: string, status: DebtItem['status']) {
-    const debtRef = doc(db, 'users', userId, 'debts', debtId);
+async function updateDebtStatus(debtId: string, status: DebtItem['status']) {
+    const debtRef = doc(db, 'debts', debtId);
     await updateDoc(debtRef, { status });
 }
 
@@ -99,9 +99,10 @@ interface DebtsContentProps {
 }
 
 export function DebtsContent({ departmentId }: DebtsContentProps) {
-    const { allDebts, loading: isDataLoading } = useData();
-    const { toast } = useToast();
     const { user: authUser, loading: isAuthLoading } = useAuth();
+    const [allDebts, isDataLoading] = useCollectionSubscription<DebtItem>('debts', authUser?.uid);
+
+    const { toast } = useToast();
     const { language, t } = useLanguage();
     const formRef = React.useRef<HTMLFormElement>(null);
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
@@ -140,7 +141,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            await addDebt(authUser.uid, newDebtData);
+            await addDebt(newDebtData);
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -156,7 +157,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         const debtToArchive = debts.find(item => item.id === debtId);
         if (!debtToArchive) return;
         try {
-            await archiveDebt(authUser.uid, debtToArchive);
+            await archiveDebt(debtToArchive);
             toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
             console.error("Error archiving debt: ", e);
@@ -172,12 +173,12 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         try {
             const newPayment = { amount: paymentAmount, date: new Date() };
-            await addDebtPayment(authUser.uid, debtId, newPayment);
+            await addDebtPayment(debtId, newPayment);
             
             const totalPaid = (debt.payments || []).reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             const newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
             if (newStatus !== debt.status) {
-                await updateDebtStatus(authUser.uid, debtId, newStatus);
+                await updateDebtStatus(debtId, newStatus);
             }
             
             toast({ title: t('paymentRecordedSuccess') });
@@ -202,7 +203,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
     if (isAuthLoading || isDataLoading) {
         return (
-            <div className="space-y-6">
+            <div class="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
                 <Card><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
                 <Card><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
@@ -212,7 +213,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     }
 
     return (
-        <div className="space-y-6">
+        <div class="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Landmark className="h-5 w-5 sm:h-6 sm:w-6" />{t('debts')}</CardTitle>
@@ -226,22 +227,22 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                     <Landmark className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{totalUnpaidDebts.toFixed(2)} {t('dinar')}</div>
+                    <div class="text-2xl font-bold">{totalUnpaidDebts.toFixed(2)} {t('dinar')}</div>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('addNewDebt')}</CardTitle></CardHeader>
                 <CardContent>
                     <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div className="space-y-2">
+                        <div class="space-y-2">
                             <Label htmlFor="creditor">{t('creditorName')}</Label>
                             <Input id="creditor" name="creditor" placeholder={t('creditorNamePlaceholder')} />
                         </div>
-                         <div className="space-y-2">
+                         <div class="space-y-2">
                             <Label htmlFor="amount">{t('amountInDinar')}</Label>
                             <Input id="amount" name="amount" type="number" step="0.01" />
                         </div>
-                        <div className="flex flex-col space-y-2">
+                        <div class="flex flex-col space-y-2">
                             <Label>{t('dueDateOptional')}</Label>
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -264,7 +265,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
                 <CardContent>
                     {debts.length > 0 ? (
-                    <div className="overflow-x-auto">
+                    <div class="overflow-x-auto">
                         <Table>
                             <TableHeader><TableRow>
                                 <TableHead>{t('tableCreditor')}</TableHead>
@@ -291,7 +292,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                            <div class={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
                                                  <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
                                                     <Trash2 className="h-4 w-4" />

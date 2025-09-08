@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -44,8 +43,8 @@ export interface Task {
 
 export type TaskData = Omit<Task, 'id'>;
 
-async function addTask(userId: string, data: TaskData): Promise<string> {
-    const tasksCollectionRef = collection(db, 'users', userId, 'tasks');
+async function addTask(data: TaskData): Promise<string> {
+    const tasksCollectionRef = collection(db, 'tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
         dueDate: Timestamp.fromDate(data.dueDate),
@@ -116,7 +115,7 @@ export default function AddTaskPage() {
             ownerId: user.uid,
         };
 
-        await addTask(user.uid, taskData);
+        await addTask(taskData);
 
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
@@ -163,12 +162,12 @@ export default function AddTaskPage() {
   }
   
   if (loading || !user) {
-    return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+    return <div class="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-2xl mx-auto">
+    <main class="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
+      <div class="w-full max-w-2xl mx-auto">
             <form onSubmit={onSubmit}>
                 <Card>
                 <CardHeader>
@@ -181,7 +180,7 @@ export default function AddTaskPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="space-y-2">
+                    <div class="space-y-2">
                         <Label>{t('taskTitle')}</Label>
                         <Select onValueChange={setTitle} value={title}>
                           <SelectTrigger>
@@ -196,8 +195,8 @@ export default function AddTaskPage() {
                     </div>
                     
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
                             <Label>{t('selectVegetableOptional')}</Label>
                             <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
                                 <SelectTrigger>
@@ -210,7 +209,7 @@ export default function AddTaskPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                         <div className="space-y-2">
+                         <div class="space-y-2">
                             <Label>{t('selectFruitOptional')}</Label>
                             <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
                                 <SelectTrigger>
@@ -225,15 +224,15 @@ export default function AddTaskPage() {
                         </div>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div class="space-y-2">
                         <Label htmlFor='description'>{t('description')}</Label>
                         <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => { setDescription(e.target.value); setIsDescManuallyEdited(true);}} />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
                             <Label>{t('dueDate')}</Label>
-                             <div className="flex gap-2">
+                             <div class="flex gap-2">
                                 <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -262,13 +261,13 @@ export default function AddTaskPage() {
                                     />
                                 </PopoverContent>
                                 </Popover>
-                                <div className="relative">
+                                <div class="relative">
                                     <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="pl-10" />
                                 </div>
                             </div>
                         </div>
-                         <div className="space-y-2">
+                         <div class="space-y-2">
                             <Label>{t('remindMeBefore')}</Label>
                             <Select onValueChange={(value) => setReminderDays(Number(value))} defaultValue={String(reminderDays)}>
                                 <SelectTrigger>
@@ -285,8 +284,8 @@ export default function AddTaskPage() {
                         </div>
                     </div>
                     
-                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
+                    <div class="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div class="space-y-0.5">
                             <Label className="text-base flex items-center gap-2">
                                 <Repeat />
                                 {t('rememberTask')}

@@ -1,10 +1,9 @@
-
 "use client";
 
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, Timestamp, where } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { db } from '@/lib/firebase';
@@ -12,6 +11,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type SalesItem } from '../budget-content';
+import useCollectionSubscription from '@/hooks/use-collection-subscription';
+
 
 interface ArchivedSale extends SalesItem {
     archivedAt: Timestamp;
@@ -27,41 +28,14 @@ type DeptKey = keyof typeof departmentTitles;
 
 export function ArchivedSales() {
     const { user, loading: authLoading } = useAuth();
+    const [archivedItems, isLoading] = useCollectionSubscription<ArchivedSale>('archive_sales', user?.uid);
     const { t, language } = useLanguage();
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [archivedItems, setArchivedItems] = React.useState<ArchivedSale[]>([]);
     
-    React.useEffect(() => {
-        if (!user) {
-            if (!authLoading) setIsLoading(false);
-            return;
-        }
+    const sortedItems = React.useMemo(() => {
+        return [...archivedItems].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
+    }, [archivedItems]);
 
-        setIsLoading(true);
-        const collectionName = `archive_sales`;
-        const q = query(collection(db, 'users', user.uid, collectionName));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(doc => {
-                 const data = doc.data();
-                return { 
-                    id: doc.id, 
-                    ...data,
-                    date: data.date.toDate(),
-                    archivedAt: data.archivedAt.toDate(),
-                } as ArchivedSale;
-            });
-            setArchivedItems(items.sort((a, b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime()));
-            setIsLoading(false);
-        }, (error) => {
-            console.error(`Error fetching archived sales from ${collectionName}:`, error);
-            setIsLoading(false);
-        });
-
-        return () => unsubscribe();
-
-    }, [user, authLoading]);
-
-    if (isLoading) {
+    if (isLoading || authLoading) {
         return <Skeleton className="h-60 w-full" />;
     }
     
@@ -71,7 +45,7 @@ export function ArchivedSales() {
                 <CardTitle>{t('archivedSales')}</CardTitle>
             </CardHeader>
             <CardContent>
-                {archivedItems.length > 0 ? (
+                {sortedItems.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -82,7 +56,7 @@ export function ArchivedSales() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {archivedItems.map((item) => (
+                            {sortedItems.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{t(departmentTitles[item.departmentId as DeptKey] as any)}</TableCell>
                                     <TableCell>{item.product}</TableCell>

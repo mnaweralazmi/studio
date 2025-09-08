@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch, where, query } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -16,7 +15,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
-import { useData } from '@/context/data-context';
+import useCollectionSubscription from '@/hooks/use-collection-subscription';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -45,8 +44,8 @@ export type SalesItem = {
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-async function addSale(userId: string, data: SalesItemData): Promise<string> {
-    const salesCollectionRef = collection(db, 'users', userId, 'sales');
+async function addSale(data: SalesItemData): Promise<string> {
+    const salesCollectionRef = collection(db, 'sales');
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -54,13 +53,14 @@ async function addSale(userId: string, data: SalesItemData): Promise<string> {
     return docRef.id;
 }
 
-async function archiveSale(userId: string, sale: SalesItem): Promise<void> {
+async function archiveSale(sale: SalesItem): Promise<void> {
+    if (!sale.ownerId) return;
     const batch = writeBatch(db);
     
-    const originalSaleRef = doc(db, 'users', userId, 'sales', sale.id);
+    const originalSaleRef = doc(db, 'sales', sale.id);
     batch.delete(originalSaleRef);
 
-    const archiveSaleRef = doc(collection(db, 'users', userId, 'archive_sales'));
+    const archiveSaleRef = doc(collection(db, 'archive_sales'));
     const archivedSaleData = {
         ...sale,
         archivedAt: Timestamp.now(),
@@ -77,9 +77,10 @@ interface BudgetContentProps {
 }
 
 export function BudgetContent({ departmentId }: BudgetContentProps) {
-  const { allSales, loading: isDataLoading } = useData();
-  const { toast } = useToast();
   const { user: authUser, loading: isAuthLoading } = useAuth();
+  const [allSales, isDataLoading] = useCollectionSubscription<SalesItem>('sales', authUser?.uid);
+
+  const { toast } = useToast();
   const { language, t } = useLanguage();
   const formRef = React.useRef<HTMLFormElement>(null);
   
@@ -125,7 +126,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        await addSale(authUser.uid, submissionData);
+        await addSale(submissionData);
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
@@ -156,7 +157,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     const saleToArchive = salesItems.find(item => item.id === saleId);
     if (!saleToArchive) return;
     try {
-        await archiveSale(authUser.uid, saleToArchive);
+        await archiveSale(saleToArchive);
         toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
     } catch (e) {
         console.error("Error archiving sale: ", e);
@@ -169,11 +170,11 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const renderFormFields = () => {
     const commonFields = (
         <>
-            <div className="space-y-2">
+            <div class="space-y-2">
                 <Label htmlFor="quantity">{t('quantity')}</Label>
                 <Input id="quantity" name="quantity" type="number" step="1" required />
             </div>
-             <div className="space-y-2">
+             <div class="space-y-2">
                 <Label htmlFor="price">{t('unitPrice')}</Label>
                 <Input id="price" name="price" type="number" step="0.01" required />
             </div>
@@ -183,23 +184,23 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     switch(departmentId) {
         case 'agriculture':
             return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="space-y-2">
                         <Label htmlFor="product">{t('vegetableType')}</Label>
                         <Select name="product" required>
                             <SelectTrigger id="product"><SelectValue placeholder={t('selectVegetable')} /></SelectTrigger>
                             <SelectContent>{vegetableList.map(veg => <SelectItem key={veg} value={veg}>{veg}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
-                     <div className="space-y-2">
+                     <div class="space-y-2">
                         <Label htmlFor="quantity">{t('quantityInCartons')}</Label>
                         <Input id="quantity" name="quantity" type="number" step="1" required/>
                     </div>
-                     <div className="space-y-2">
+                     <div class="space-y-2">
                         <Label htmlFor="weightPerUnit">{t('weightPerCartonInKg')}</Label>
                         <Input id="weightPerUnit" name="weightPerUnit" type="number" step="0.1" />
                     </div>
-                     <div className="space-y-2">
+                     <div class="space-y-2">
                         <Label htmlFor="price">{t('pricePerCartonInDinar')}</Label>
                         <Input id="price" name="price" type="number" step="0.01" required/>
                     </div>
@@ -207,19 +208,19 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             )
         case 'livestock':
              return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="space-y-2">
                         <Label htmlFor="product">{t('animalType')}</Label>
                         <Select name="product" required>
                             <SelectTrigger id="product"><SelectValue placeholder={t('selectAnimalType')} /></SelectTrigger>
                             <SelectContent>{livestockList.map(animal => <SelectItem key={animal} value={animal}>{animal}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
-                     <div className="space-y-2">
+                     <div class="space-y-2">
                         <Label htmlFor="quantity">{t('quantityInHead')}</Label>
                         <Input id="quantity" name="quantity" type="number" step="1" required/>
                     </div>
-                     <div className="space-y-2">
+                     <div class="space-y-2">
                         <Label htmlFor="price">{t('pricePerHead')}</Label>
                         <Input id="price" name="price" type="number" step="0.01" required/>
                     </div>
@@ -227,8 +228,8 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             )
         case 'poultry':
              return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="space-y-2">
                         <Label htmlFor="product">{t('poultryType')}</Label>
                         <Select name="product" required>
                             <SelectTrigger id="product"><SelectValue placeholder={t('selectPoultryType')} /></SelectTrigger>
@@ -240,19 +241,19 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             )
         case 'fish':
              return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="space-y-2">
                         <Label htmlFor="product">{t('fishType')}</Label>
                         <Select name="product" required>
                             <SelectTrigger id="product"><SelectValue placeholder={t('selectFishType')} /></SelectTrigger>
                             <SelectContent>{fishList.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
-                    <div className="space-y-2">
+                    <div class="space-y-2">
                         <Label htmlFor="quantity">{t('quantity')} ({t('kg')})</Label>
                         <Input id="quantity" name="quantity" type="number" step="0.1" required />
                     </div>
-                     <div className="space-y-2">
+                     <div class="space-y-2">
                         <Label htmlFor="price">{t('unitPrice')} ({t('dinar')}/{t('kg')})</Label>
                         <Input id="price" name="price" type="number" step="0.01" required />
                     </div>
@@ -296,7 +297,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   
   if (isAuthLoading || isDataLoading) {
       return (
-        <div className="space-y-6">
+        <div class="space-y-6">
             <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
             <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
         </div>
@@ -304,7 +305,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div class="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -318,7 +319,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
           <CardContent>
               <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
                  {renderFormFields()}
-                <div className="flex justify-end pt-4">
+                <div class="flex justify-end pt-4">
                     <Button type="submit" className="">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('add')}
@@ -335,10 +336,10 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             <CardContent>
                 {salesItems.length > 0 ? (
                   <>
-                    <div className="overflow-x-auto">
+                    <div class="overflow-x-auto">
                         {renderTable()}
                     </div>
-                    <div className="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
+                    <div class="mt-4 pt-4 border-t text-lg font-bold flex justify-between">
                         <span>{t('totalSales')}:</span>
                         <span>{totalSales.toFixed(2)} {t('dinar')}</span>
                     </div>

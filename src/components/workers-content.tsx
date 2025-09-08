@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -18,15 +17,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
-import { useData } from '@/context/data-context';
+import useCollectionSubscription from '@/hooks/use-collection-subscription';
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
 // --- Firestore Service Functions ---
 
-async function addWorker(userId: string, data: WorkerFormValues & { ownerId: string; departmentId: string }): Promise<string> {
-    const workersColRef = collection(db, 'users', userId, 'workers');
+async function addWorker(data: WorkerFormValues & { ownerId: string; departmentId: string }): Promise<string> {
+    const workersColRef = collection(db, 'workers');
     const docRef = await addDoc(workersColRef, {
         ...data,
         paidMonths: [],
@@ -35,13 +34,13 @@ async function addWorker(userId: string, data: WorkerFormValues & { ownerId: str
     return docRef.id;
 }
 
-async function updateWorker(userId: string, workerId: string, data: Partial<WorkerFormValues>) {
-    const workerDocRef = doc(db, 'users', userId, 'workers', workerId);
+async function updateWorker(workerId: string, data: Partial<WorkerFormValues>) {
+    const workerDocRef = doc(db, 'workers', workerId);
     await updateDoc(workerDocRef, data);
 }
 
-async function paySalary(userId: string, workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
-    const workerRef = doc(db, 'users', userId, 'workers', workerId);
+async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
+    const workerRef = doc(db, 'workers', workerId);
     const newTransaction = { 
         ...transactionData, 
         date: Timestamp.now(), 
@@ -53,8 +52,8 @@ async function paySalary(userId: string, workerId: string, paidMonth: { year: nu
     });
 }
 
-async function addTransaction(userId: string, workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
-    const workerRef = doc(db, 'users', userId, 'workers', workerId);
+async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
+    const workerRef = doc(db, 'workers', workerId);
     const newTransaction = {
         ...transactionData,
         date: Timestamp.now(),
@@ -66,10 +65,10 @@ async function addTransaction(userId: string, workerId: string, transactionData:
     return newTransaction.id;
 }
 
-async function deleteWorker(userId: string, workerId: string) {
-    const workerDocRef = doc(db, 'users', userId, 'workers', workerId);
+async function deleteWorker(workerId: string) {
+    const workerDocRef = doc(db, 'workers', workerId);
     
-    const archiveRef = doc(collection(db, 'users', userId, 'archive_workers'));
+    const archiveRef = doc(collection(db, 'archive_workers'));
 
     const batch = writeBatch(db);
     // You might want to get the worker data before deleting to archive it
@@ -85,9 +84,10 @@ interface WorkersContentProps {
 }
 
 export function WorkersContent({ departmentId }: WorkersContentProps) {
-    const { allWorkers, loading: isDataLoading } = useData();
-    const { toast } = useToast();
     const { user: authUser, loading: isAuthLoading } = useAuth();
+    const [allWorkers, isDataLoading] = useCollectionSubscription<Worker>('workers', authUser?.uid);
+
+    const { toast } = useToast();
     const { language, t } = useLanguage();
     const months = language === 'ar' ? monthsAr : monthsEn;
 
@@ -110,11 +110,11 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
         try {
             if (workerId) {
-                await updateWorker(authUser.uid, workerId, data);
+                await updateWorker(workerId, data);
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
                 const newWorkerData = { ...data, ownerId: authUser.uid, departmentId: departmentId };
-                await addWorker(authUser.uid, newWorkerData);
+                await addWorker(newWorkerData);
                 toast({ title: t('workerAddedSuccess') });
             }
         } catch (e) {
@@ -133,7 +133,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 month,
                 year,
             };
-            await paySalary(authUser.uid, workerId, {year, month}, transaction);
+            await paySalary(workerId, {year, month}, transaction);
             toast({ title: t('salaryPaidSuccess') });
         } catch (e) {
             console.error("Error paying salary: ", e);
@@ -151,7 +151,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 description: transaction.description,
             };
 
-            await addTransaction(authUser.uid, workerId, newTransactionData);
+            await addTransaction(workerId, newTransactionData);
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
@@ -163,7 +163,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     async function handleDeleteWorker(workerId: string) {
         if(!authUser) return;
         try {
-            await deleteWorker(authUser.uid, workerId);
+            await deleteWorker(workerId);
             toast({ title: t('workerDeleted') });
         } catch(e) {
             console.error("Error deleting worker: ", e);
@@ -205,16 +205,16 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     if (isAuthLoading || isDataLoading) {
         return (
-            <div className="space-y-6">
+            <div class="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
                 <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
             </div>
         )
     }
 
     return (
-    <div className="space-y-6">
+    <div class="space-y-6">
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -227,14 +227,14 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             </CardHeader>
         </Card>
         
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{t('totalWorkers')}</CardTitle>
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{workers.length}</div>
+                    <div class="text-2xl font-bold">{workers.length}</div>
                     <p className="text-xs text-muted-foreground">{t('totalWorkersDesc')}</p>
                 </CardContent>
             </Card>
@@ -244,7 +244,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{totalAnnualBaseSalaries.toFixed(2)} {t('dinar')}</div>
+                    <div class="text-2xl font-bold">{totalAnnualBaseSalaries.toFixed(2)} {t('dinar')}</div>
                     <p className="text-xs text-muted-foreground">{t('totalAnnualSalariesDesc')}</p>
                 </CardContent>
             </Card>
@@ -254,7 +254,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <Banknote className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{totalSalariesThisYear.toFixed(2)} {t('dinar')}</div>
+                    <div class="text-2xl font-bold text-green-600">{totalSalariesThisYear.toFixed(2)} {t('dinar')}</div>
                     <p className="text-xs text-muted-foreground">{t('totalSalariesPaidThisYearDesc')} {currentYear}</p>
                 </CardContent>
             </Card>
@@ -264,7 +264,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <Banknote className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-destructive">{totalUnpaidSalariesThisMonth.toFixed(2)} {t('dinar')}</div>
+                    <div class="text-2xl font-bold text-destructive">{totalUnpaidSalariesThisMonth.toFixed(2)} {t('dinar')}</div>
                     <p className="text-xs text-muted-foreground">{t('unpaidSalariesThisMonthDesc')} {months.find(m => m.value === currentMonth)?.label}</p>
                 </CardContent>
             </Card>
@@ -282,7 +282,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             </CardHeader>
             <CardContent>
                 {workers.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div class="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -308,7 +308,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                 {balance.toFixed(2)} {t('dinar')}
                             </TableCell>
                             <TableCell>
-                                <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                <div class={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                     <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
                                     <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
                                     <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>

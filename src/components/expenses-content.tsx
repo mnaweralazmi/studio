@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -16,7 +15,7 @@ import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
 import type { Department } from '@/app/financials/page';
-import { useData } from '@/context/data-context';
+import useCollectionSubscription from '@/hooks/use-collection-subscription';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -52,8 +51,8 @@ export type ExpenseItem = {
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-async function addExpense(userId: string, data: ExpenseItemData): Promise<string> {
-    const expensesCollectionRef = collection(db, 'users', userId, 'expenses');
+async function addExpense(data: ExpenseItemData): Promise<string> {
+    const expensesCollectionRef = collection(db, 'expenses');
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -61,13 +60,13 @@ async function addExpense(userId: string, data: ExpenseItemData): Promise<string
     return docRef.id;
 }
 
-async function archiveExpense(userId: string, expense: ExpenseItem): Promise<void> {
+async function archiveExpense(expense: ExpenseItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalExpenseRef = doc(db, 'users', userId, 'expenses', expense.id);
+    const originalExpenseRef = doc(db, 'expenses', expense.id);
     batch.delete(originalExpenseRef);
 
-    const archiveExpenseRef = doc(collection(db, 'users', userId, 'archive_expenses'));
+    const archiveExpenseRef = doc(collection(db, 'archive_expenses'));
     const archivedExpenseData = {
         ...expense,
         archivedAt: Timestamp.now(),
@@ -83,11 +82,12 @@ interface ExpensesContentProps {
 }
 
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
-    const { allExpenses, loading: isDataLoading } = useData();
+    const { user: authUser, loading: isAuthLoading } = useAuth();
+    const [allExpenses, isDataLoading] = useCollectionSubscription<ExpenseItem>('expenses', authUser?.uid);
+
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
     const { toast } = useToast();
-    const { user: authUser, loading: isAuthLoading } = useAuth();
     const formRef = React.useRef<HTMLFormElement>(null);
     const [selectedCategory, setSelectedCategory] = React.useState<string>('');
 
@@ -133,7 +133,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            await addExpense(authUser.uid, newExpenseData);
+            await addExpense(newExpenseData);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
@@ -148,7 +148,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         const expenseToArchive = expenses.find(item => item.id === expenseId);
         if (!expenseToArchive) return;
         try {
-            await archiveExpense(authUser.uid, expenseToArchive);
+            await archiveExpense(expenseToArchive);
             toast({ title: t('itemArchived'), description: t('itemArchivedDesc') });
         } catch(e) {
             console.error("Error archiving expense: ", e);
@@ -164,16 +164,16 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     if (isAuthLoading || isDataLoading) {
         return (
-            <div className="space-y-6">
+            <div class="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
-                <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+                <div class="grid gap-4 md:grid-cols-2"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
                 <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6">
+        <div class="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -187,14 +187,14 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             </Card>
             
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{t('totalFixedExpenses')}</CardTitle>
                         <Repeat className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalFixedExpenses.toFixed(2)} {t('dinar')}</div>
+                        <div class="text-2xl font-bold">{totalFixedExpenses.toFixed(2)} {t('dinar')}</div>
                         <p className="text-xs text-muted-foreground">{t('totalFixedExpensesDesc')}</p>
                     </CardContent>
                 </Card>
@@ -204,7 +204,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalVariableExpenses.toFixed(2)} {t('dinar')}</div>
+                        <div class="text-2xl font-bold">{totalVariableExpenses.toFixed(2)} {t('dinar')}</div>
                         <p className="text-xs text-muted-foreground">{t('totalVariableExpensesDesc')}</p>
                     </CardContent>
                 </Card>
@@ -216,8 +216,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 </CardHeader>
                 <CardContent>
                     <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="space-y-2">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="space-y-2">
                                 <Label htmlFor="type">{t('expenseType')}</Label>
                                 <Select name="type">
                                     <SelectTrigger id="type"><SelectValue placeholder={t('selectType')} /></SelectTrigger>
@@ -227,7 +227,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <div className="space-y-2">
+                             <div class="space-y-2">
                                 <Label htmlFor="category">{t('category')}</Label>
                                 <Select name="category" onValueChange={setSelectedCategory} value={selectedCategory}>
                                     <SelectTrigger id="category"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
@@ -236,7 +236,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
+                            <div class="space-y-2">
                                 <Label htmlFor="item">{t('item')}</Label>
                                 <Select name="item" disabled={!selectedCategory}>
                                     <SelectTrigger id="item"><SelectValue placeholder={t('selectItem')} /></SelectTrigger>
@@ -245,12 +245,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
+                            <div class="space-y-2">
                                 <Label htmlFor="amount">{t('amountInDinar')}</Label>
                                 <Input id="amount" name="amount" type="number" step="0.01" />
                             </div>
                         </div>
-                        <div className="flex justify-end pt-4">
+                        <div class="flex justify-end pt-4">
                             <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" />{t('add')}</Button>
                         </div>
                     </form>
@@ -263,11 +263,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 </CardHeader>
                 <CardContent>
                  {(fixedExpenses.length > 0 || variableExpenses.length > 0) ? (
-                     <div className="grid md:grid-cols-2 gap-6">
+                     <div class="grid md:grid-cols-2 gap-6">
                         {fixedExpenses.length > 0 && (
                         <div>
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</h3>
-                            <div className="overflow-x-auto border rounded-lg">
+                            <div class="overflow-x-auto border rounded-lg">
                                 <Table>
                                     <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>
@@ -290,7 +290,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                         {variableExpenses.length > 0 && (
                         <div>
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</h3>
-                             <div className="overflow-x-auto border rounded-lg">
+                             <div class="overflow-x-auto border rounded-lg">
                                 <Table>
                                     <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>
