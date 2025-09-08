@@ -2,11 +2,11 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch, updateDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { PlusCircle, Wallet, Trash2 } from 'lucide-react';
+import { PlusCircle, Wallet, Trash2, Edit } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { db } from '@/lib/firebase';
 import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { Department, SalesItem, SalesItemData } from '@/lib/types';
+import { EditSaleDialog } from './budget/edit-sale-dialog';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -38,6 +39,12 @@ async function addSale(data: SalesItemData): Promise<string> {
     });
     return docRef.id;
 }
+
+async function updateSale(saleId: string, data: Partial<SalesItem>) {
+    const saleRef = doc(db, 'sales', saleId);
+    await updateDoc(saleRef, data);
+}
+
 
 async function archiveSale(sale: SalesItem): Promise<void> {
     const batch = writeBatch(db);
@@ -133,6 +140,16 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     } catch (e) {
         console.error("Error adding document: ", e);
         toast({ variant: "destructive", title: t('error'), description: "Failed to save sale."});
+    }
+  }
+
+  const handleUpdate = async (saleId: string, data: Partial<SalesItem>) => {
+    try {
+        await updateSale(saleId, data);
+        toast({ title: t('salesUpdatedSuccess') });
+    } catch (e) {
+        console.error("Error updating sale: ", e);
+        toast({ variant: "destructive", title: t('error'), description: "Failed to update sale." });
     }
   }
 
@@ -267,9 +284,16 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                      <TableCell>{item.price.toFixed(2)} {t('dinar')}</TableCell>
                      <TableCell>{item.total.toFixed(2)} {t('dinar')}</TableCell>
                      <TableCell className="text-right">
-                         <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                            <EditSaleDialog sale={item} onSave={handleUpdate}>
+                                 <Button variant="ghost" size="icon" title={t('edit')}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                            </EditSaleDialog>
+                            <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)} title={t('delete')}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                      </TableCell>
                  </TableRow>
              ))}
