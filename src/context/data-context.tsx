@@ -26,24 +26,23 @@ const DataContext = createContext<DataContextType>({
     loading: true,
 });
 
-
-const mapTimestampsToDates = (docData: DocumentData): any => {
-    const mapped: any = { ...docData };
-    for (const key in mapped) {
-        if (mapped[key] instanceof Timestamp) {
-            mapped[key] = mapped[key].toDate();
-        } else if (Array.isArray(mapped[key])) {
-            mapped[key] = mapped[key].map((item: any) => {
-                if (item && typeof item === 'object' && !(item instanceof Date)) {
-                    return mapTimestampsToDates(item);
-                }
-                return item;
-            });
-        } else if (mapped[key] && typeof mapped[key] === 'object' && !(mapped[key] instanceof Date)) {
-             mapped[key] = mapTimestampsToDates(mapped[key]);
-        }
+const mapTimestampsToDates = (data: any): any => {
+    if (data instanceof Timestamp) {
+        return data.toDate();
     }
-    return mapped;
+    if (Array.isArray(data)) {
+        return data.map(item => mapTimestampsToDates(item));
+    }
+    if (data && typeof data === 'object') {
+        const mappedObject: { [key: string]: any } = {};
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                mappedObject[key] = mapTimestampsToDates(data[key]);
+            }
+        }
+        return mappedObject;
+    }
+    return data;
 };
 
 
@@ -59,7 +58,7 @@ const useCollectionSubscription = <T extends DocumentData>(
         if (!enabled || !userId) {
             setData({});
             setLoading(false);
-            return () => {};
+            return;
         }
 
         setLoading(true);
@@ -67,10 +66,11 @@ const useCollectionSubscription = <T extends DocumentData>(
             const dataQuery = query(collection(db, 'users', userId, collectionName));
             
             return onSnapshot(dataQuery, (snapshot) => {
-                const fetchedItems = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...mapTimestampsToDates(doc.data()),
-                } as T));
+                const fetchedItems = snapshot.docs.map(doc => {
+                    const docData = doc.data();
+                    const mappedData = mapTimestampsToDates(docData);
+                    return { id: doc.id, ...mappedData } as T;
+                });
 
                 setData(prevData => ({
                     ...prevData,
@@ -93,7 +93,7 @@ const useCollectionSubscription = <T extends DocumentData>(
             unsubscribers.forEach(unsub => unsub());
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, userId]);
+    }, [enabled, userId, JSON.stringify(collectionNames)]);
 
     const flattenedData = useMemo(() => Object.values(data).flat(), [data]);
 
