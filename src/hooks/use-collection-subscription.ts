@@ -1,5 +1,5 @@
 
-import { collection, onSnapshot, query, getDocs, DocumentData, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, DocumentData, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 
@@ -24,10 +24,7 @@ const useCollectionSubscription = <T extends DocumentData>(
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    console.info(`[debug] useCollectionSubscription start`, { collectionName, userId });
-
     if (!userId) {
-      console.warn(`[debug] No userId — clearing data for collection "${collectionName}"`);
       setData([]);
       setLoading(false);
       return;
@@ -37,11 +34,9 @@ const useCollectionSubscription = <T extends DocumentData>(
 
     const q = query(collection(db, "users", userId, collectionName));
 
-    // 1) Try onSnapshot first
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        console.info(`[debug] onSnapshot received for ${collectionName}: docs=${snapshot.size}`);
         const items = snapshot.docs.map((doc) => {
           const mapped = mapTimestampsToDates(doc.data());
           return { id: doc.id, ...mapped } as T & { id: string };
@@ -49,28 +44,18 @@ const useCollectionSubscription = <T extends DocumentData>(
         setData(items);
         setLoading(false);
       },
-      async (err) => {
+      (err) => {
         console.error(`[debug] onSnapshot error for ${collectionName}:`, err);
-
-        // 2) Fallback: try getDocs once to see if reads are allowed
-        try {
-          console.info(`[debug] Attempting fallback getDocs for ${collectionName}`);
-          const snap = await getDocs(q);
-          console.info(`[debug] getDocs succeeded: docs=${snap.size}`);
-          const items = snap.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) }) as T & { id: string });
-          setData(items);
-        } catch (getErr) {
-          console.error(`[debug] getDocs also failed for ${collectionName}:`, getErr);
-        } finally {
-          setLoading(false);
-        }
+        // On error, clear data and stop loading to prevent infinite spinners
+        setData([]);
+        setLoading(false);
       }
     );
 
+    // Cleanup function to unsubscribe when the component unmounts or dependencies change
     return () => {
       try {
         unsubscribe();
-        console.info(`[debug] unsubscribed from ${collectionName}`);
       } catch (e) {
         console.warn(`[debug] unsubscribe error for ${collectionName}`, e);
       }
