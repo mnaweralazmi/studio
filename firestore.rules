@@ -2,15 +2,38 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write their own data
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // Helper function to check ownership
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // Public data is read-only for all users
-    match /data/{document=**} {
+    // Public data (agricultural topics) can be read by anyone
+    match /data/{topicId} {
       allow read: if true;
-      allow write: if false; 
+      // Write access should be restricted (e.g., to admins)
+      // For now, only authenticated users can write, but this should be refined.
+      allow write: if request.auth != null;
+    }
+
+    // User profile data
+    match /users/{userId} {
+      // Users can read and update their own profile
+      allow read, update: if isOwner(userId);
+      // Deny creating or deleting user profiles from the client
+      allow create, delete: if false;
+    }
+
+    // Generic rule for user-owned data collections
+    // This applies to: sales, expenses, debts, workers, tasks, completed_tasks, etc.
+    match /{collection}/{docId} {
+      // A user can do anything (create, read, update, delete) to a document
+      // in any of these collections if the document's `ownerId` field
+      // matches their own user ID.
+      allow read, write, delete: if isOwner(resource.data.ownerId);
+      // When creating, the new document must have an `ownerId` that
+      // matches the user creating it.
+      allow create: if isOwner(request.resource.data.ownerId);
     }
   }
 }
