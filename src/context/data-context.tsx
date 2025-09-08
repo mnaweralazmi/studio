@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { collection, onSnapshot, query, DocumentData, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
@@ -33,7 +33,7 @@ const mapTimestampsToDates = (data: any): any => {
     if (Array.isArray(data)) {
         return data.map(item => mapTimestampsToDates(item));
     }
-    if (data && typeof data === 'object') {
+    if (data && typeof data === 'object' && !React.isValidElement(data)) {
         const mappedObject: { [key: string]: any } = {};
         for (const key in data) {
             if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -48,20 +48,20 @@ const mapTimestampsToDates = (data: any): any => {
 
 const useCollectionSubscription = <T extends DocumentData>(
     collectionNames: string[],
-    enabled: boolean,
     userId: string | undefined
 ): [T[], boolean] => {
     const [data, setData] = useState<Record<string, T[]>>({});
-    const [loading, setLoading] = useState(true);
+    const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(() =>
+        Object.fromEntries(collectionNames.map(name => [name, true]))
+    );
 
     useEffect(() => {
-        if (!enabled || !userId) {
+        if (!userId) {
             setData({});
-            setLoading(false);
+            setLoadingStates(Object.fromEntries(collectionNames.map(name => [name, false])));
             return;
         }
 
-        setLoading(true);
         const unsubscribers = collectionNames.map(collectionName => {
             const dataQuery = query(collection(db, 'users', userId, collectionName));
             
@@ -71,49 +71,48 @@ const useCollectionSubscription = <T extends DocumentData>(
                     const mappedData = mapTimestampsToDates(docData);
                     return { id: doc.id, ...mappedData } as T;
                 });
-
+                
                 setData(prevData => ({
                     ...prevData,
                     [collectionName]: fetchedItems,
                 }));
+                 setLoadingStates(prev => ({ ...prev, [collectionName]: false }));
             }, error => {
                 console.error(`Error fetching collection ${collectionName}:`, error);
-                 setData(prevData => ({
+                setData(prevData => ({
                     ...prevData,
                     [collectionName]: [],
                 }));
+                 setLoadingStates(prev => ({ ...prev, [collectionName]: false }));
             });
         });
-        
-        // This is the key fix: setLoading to false *after* all listeners are established.
-        // It prevents the loading state from flickering and hiding the data.
-        setLoading(false);
 
         return () => {
             unsubscribers.forEach(unsub => unsub());
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, userId, JSON.stringify(collectionNames)]);
+    }, [userId, JSON.stringify(collectionNames)]);
 
     const flattenedData = useMemo(() => Object.values(data).flat(), [data]);
+    const isLoading = useMemo(() => Object.values(loadingStates).some(s => s), [loadingStates]);
 
-    return [flattenedData, loading];
+    return [flattenedData, isLoading];
 };
 
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
     const { user, loading: authLoading } = useAuth();
-    const isEnabled = !authLoading && !!user;
     
     const departments = ['agriculture', 'livestock', 'poultry', 'fish'];
-    const salesCollections = departments.map(d => `${d}_sales`);
-    const expensesCollections = departments.map(d => `${d}_expenses`);
-    const debtsCollections = departments.map(d => `${d}_debts`);
+    const salesCollections = useMemo(() => departments.map(d => `${d}_sales`), []);
+    const expensesCollections = useMemo(() => departments.map(d => `${d}_expenses`), []);
+    const debtsCollections = useMemo(() => departments.map(d => `${d}_debts`), []);
+    const workerCollections = useMemo(() => ['workers'], []);
 
-    const [allSales, salesLoading] = useCollectionSubscription<SalesItem>(salesCollections, isEnabled, user?.uid);
-    const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>(expensesCollections, isEnabled, user?.uid);
-    const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>(debtsCollections, isEnabled, user?.uid);
-    const [allWorkers, workersLoading] = useCollectionSubscription<Worker>(['workers'], isEnabled, user?.uid);
+    const [allSales, salesLoading] = useCollectionSubscription<SalesItem>(salesCollections, user?.uid);
+    const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>(expensesCollections, user?.uid);
+    const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>(debtsCollections, user?.uid);
+    const [allWorkers, workersLoading] = useCollectionSubscription<Worker>(workerCollections, user?.uid);
     
     const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading;
 
