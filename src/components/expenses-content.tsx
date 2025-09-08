@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, collection, query, onSnapshot, writeBatch, where, deleteDoc } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, collection, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,11 +64,9 @@ async function addExpense(userId: string, data: ExpenseItemData): Promise<string
 async function archiveExpense(userId: string, expense: ExpenseItem): Promise<void> {
     const batch = writeBatch(db);
 
-    // 1. Delete from the main 'expenses' collection
     const originalExpenseRef = doc(db, 'users', userId, 'expenses', expense.id);
     batch.delete(originalExpenseRef);
 
-    // 2. Add to the 'archive_expenses' collection
     const archiveExpenseRef = doc(collection(db, 'users', userId, 'archive_expenses'));
     const archivedExpenseData = {
         ...expense,

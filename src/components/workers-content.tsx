@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { collection, addDoc, doc, Timestamp, writeBatch, deleteDoc, updateDoc, query, onSnapshot, arrayUnion, where } from 'firebase/firestore';
+import { collection, addDoc, doc, Timestamp, writeBatch, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
@@ -68,7 +68,15 @@ async function addTransaction(userId: string, workerId: string, transactionData:
 
 async function deleteWorker(userId: string, workerId: string) {
     const workerDocRef = doc(db, 'users', userId, 'workers', workerId);
-    await deleteDoc(workerDocRef);
+    
+    const archiveRef = doc(collection(db, 'users', userId, 'archive_workers'));
+
+    const batch = writeBatch(db);
+    // You might want to get the worker data before deleting to archive it
+    // For simplicity, we just delete. If you need to archive, get a doc snapshot first.
+    batch.delete(workerDocRef);
+    
+    await batch.commit();
 }
 
 
@@ -164,7 +172,6 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
   
     const getWorkerBalance = (worker: Worker) => {
-        // Start with base salary because it's a credit to the worker.
         let balance = 0;
         (worker.transactions || []).forEach(t => {
             if (t.type === 'bonus') {
@@ -196,7 +203,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     
     const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + worker.baseSalary * 12, 0);
 
-    if (isAuthLoading) {
+    if (isAuthLoading || isDataLoading) {
         return (
             <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
@@ -274,9 +281,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 </AddWorkerDialog>
             </CardHeader>
             <CardContent>
-                {isDataLoading ? (
-                    <Skeleton className="w-full h-24" />
-                ) : workers.length > 0 ? (
+                {workers.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>

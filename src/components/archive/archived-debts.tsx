@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, query, onSnapshot, Timestamp, collectionGroup } from 'firebase/firestore';
+import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { db } from '@/lib/firebase';
@@ -40,7 +40,7 @@ export function ArchivedDebts() {
 
         setIsLoading(true);
         
-        const collectionName = `archive_debts`;
+        const collectionName = 'archive_debts';
         const q = query(collection(db, 'users', user.uid, collectionName));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const items = snapshot.docs.map(doc => {

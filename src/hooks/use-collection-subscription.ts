@@ -45,20 +45,14 @@ const useCollectionSubscription = <T extends DocumentData>(
         setLoading(false);
       },
       (err) => {
-        console.error(`[debug] onSnapshot error for ${collectionName}:`, err);
-        // On error, clear data and stop loading to prevent infinite spinners
+        console.error(`[Firestore Error] Failed to listen to ${collectionName}:`, err);
         setData([]);
         setLoading(false);
       }
     );
 
-    // Cleanup function to unsubscribe when the component unmounts or dependencies change
     return () => {
-      try {
         unsubscribe();
-      } catch (e) {
-        console.warn(`[debug] unsubscribe error for ${collectionName}`, e);
-      }
     };
   }, [collectionName, userId]);
 

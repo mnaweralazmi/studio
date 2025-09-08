@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, onSnapshot, writeBatch, where, deleteDoc } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,7 +109,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const debts = React.useMemo(() => {
         return allDebts
             .filter(item => item.departmentId === departmentId)
-            .sort((a,b) => (a.dueDate ? new Date(a.dueDate).getTime() : 0) - (b.dueDate ? new Date(b.dueDate).getTime() : 0));
+            .sort((a,b) => (a.dueDate ? new Date(a.dueDate).getTime() : Infinity) - (b.dueDate ? new Date(b.dueDate).getTime() : Infinity));
     }, [allDebts, departmentId]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -174,7 +174,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             const newPayment = { amount: paymentAmount, date: new Date() };
             await addDebtPayment(authUser.uid, debtId, newPayment);
             
-            const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
+            const totalPaid = (debt.payments || []).reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             const newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
             if (newStatus !== debt.status) {
                 await updateDebtStatus(authUser.uid, debtId, newStatus);
@@ -188,7 +188,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     }
 
     const getPaidAmount = (debt: DebtItem) => {
-        return debt.payments.reduce((sum, p) => sum + p.amount, 0);
+        return (debt.payments || []).reduce((sum, p) => sum + p.amount, 0);
     }
     
     const getRemainingAmount = (debt: DebtItem) => {

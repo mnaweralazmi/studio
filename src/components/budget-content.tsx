@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch, deleteDoc } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -57,11 +57,9 @@ async function addSale(userId: string, data: SalesItemData): Promise<string> {
 async function archiveSale(userId: string, sale: SalesItem): Promise<void> {
     const batch = writeBatch(db);
     
-    // 1. Delete from the main 'sales' collection
     const originalSaleRef = doc(db, 'users', userId, 'sales', sale.id);
     batch.delete(originalSaleRef);
 
-    // 2. Add to the 'archive_sales' collection
     const archiveSaleRef = doc(collection(db, 'users', userId, 'archive_sales'));
     const archivedSaleData = {
         ...sale,

@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { type SalesItem } from '@/components/budget-content';
 import { type ExpenseItem } from '@/components/expenses-content';
