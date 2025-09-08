@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -11,18 +12,16 @@ import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
 import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
-import type { Worker, Transaction, TransactionFormValues, WorkerFormValues } from '@/components/workers/types';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
-import type { Department } from '@/app/financials/page';
 import useCollectionSubscription from '@/hooks/use-collection-subscription';
+import type { Department, Worker, Transaction, TransactionFormValues, WorkerFormValues, PaidMonth } from '@/lib/types';
+
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
-
-// --- Firestore Service Functions ---
 
 async function addWorker(data: WorkerFormValues & { ownerId: string; departmentId: string }): Promise<string> {
     const workersColRef = collection(db, 'workers');
@@ -39,12 +38,11 @@ async function updateWorker(workerId: string, data: Partial<WorkerFormValues>) {
     await updateDoc(workerDocRef, data);
 }
 
-async function paySalary(workerId: string, paidMonth: { year: number, month: number }, transactionData: Omit<Transaction, 'id' | 'date'>) {
+async function paySalary(workerId: string, paidMonth: PaidMonth, transactionData: Omit<Transaction, 'id' | 'date'>) {
     const workerRef = doc(db, 'workers', workerId);
     const newTransaction = { 
         ...transactionData, 
         date: Timestamp.now(), 
-        id: new Date().getTime().toString() 
     };
     await updateDoc(workerRef, {
         paidMonths: arrayUnion(paidMonth),
@@ -52,29 +50,21 @@ async function paySalary(workerId: string, paidMonth: { year: number, month: num
     });
 }
 
-async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>): Promise<string> {
+async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>) {
     const workerRef = doc(db, 'workers', workerId);
     const newTransaction = {
         ...transactionData,
         date: Timestamp.now(),
-        id: new Date().getTime().toString()
     };
     await updateDoc(workerRef, {
         transactions: arrayUnion(newTransaction)
     });
-    return newTransaction.id;
 }
 
 async function deleteWorker(workerId: string) {
     const workerDocRef = doc(db, 'workers', workerId);
-    
-    const archiveRef = doc(collection(db, 'archive_workers'));
-
     const batch = writeBatch(db);
-    // You might want to get the worker data before deleting to archive it
-    // For simplicity, we just delete. If you need to archive, get a doc snapshot first.
     batch.delete(workerDocRef);
-    
     await batch.commit();
 }
 
@@ -205,16 +195,16 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
 
     if (isAuthLoading || isDataLoading) {
         return (
-            <div class="space-y-6">
+            <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
-                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
                 <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
             </div>
         )
     }
 
     return (
-    <div class="space-y-6">
+    <div className="space-y-6">
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -227,14 +217,14 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             </CardHeader>
         </Card>
         
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{t('totalWorkers')}</CardTitle>
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold">{workers.length}</div>
+                    <div className="text-2xl font-bold">{workers.length}</div>
                     <p className="text-xs text-muted-foreground">{t('totalWorkersDesc')}</p>
                 </CardContent>
             </Card>
@@ -244,7 +234,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold">{totalAnnualBaseSalaries.toFixed(2)} {t('dinar')}</div>
+                    <div className="text-2xl font-bold">{totalAnnualBaseSalaries.toFixed(2)} {t('dinar')}</div>
                     <p className="text-xs text-muted-foreground">{t('totalAnnualSalariesDesc')}</p>
                 </CardContent>
             </Card>
@@ -254,7 +244,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <Banknote className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold text-green-600">{totalSalariesThisYear.toFixed(2)} {t('dinar')}</div>
+                    <div className="text-2xl font-bold text-green-600">{totalSalariesThisYear.toFixed(2)} {t('dinar')}</div>
                     <p className="text-xs text-muted-foreground">{t('totalSalariesPaidThisYearDesc')} {currentYear}</p>
                 </CardContent>
             </Card>
@@ -264,7 +254,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                     <Banknote className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold text-destructive">{totalUnpaidSalariesThisMonth.toFixed(2)} {t('dinar')}</div>
+                    <div className="text-2xl font-bold text-destructive">{totalUnpaidSalariesThisMonth.toFixed(2)} {t('dinar')}</div>
                     <p className="text-xs text-muted-foreground">{t('unpaidSalariesThisMonthDesc')} {months.find(m => m.value === currentMonth)?.label}</p>
                 </CardContent>
             </Card>
@@ -282,7 +272,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             </CardHeader>
             <CardContent>
                 {workers.length > 0 ? (
-                  <div class="overflow-x-auto">
+                  <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -308,7 +298,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                 {balance.toFixed(2)} {t('dinar')}
                             </TableCell>
                             <TableCell>
-                                <div class={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                     <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
                                     <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
                                     <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>

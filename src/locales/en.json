@@ -98,7 +98,7 @@
     "allUpcomingTasksDesc": "An overview of all future uncompleted tasks.",
     "noUpcomingTasks": "You have no upcoming tasks. Great!",
     "completedTasksLog": "Completed Tasks Log",
-    "completedTasksLogDesc": "All the tasks you have completed, sorted from newest to oldest.",
+    "completedTasksLogDesc": "View all your completed tasks in the",
     "noCompletedTasks": "You haven't completed any tasks yet.",
     "uncompleteTask": "Mark as Not Completed",
     "taskDeleted": "Task deleted successfully!",
@@ -431,6 +431,7 @@
     "migrationInProgress": "Migration in progress...",
     "migrationSuccess": "Migration completed successfully!",
     "migrationSuccessDesc": "All old records have been updated.",
+    "records": "records",
     "migrationError": "An error occurred during migration.",
     "migrationErrorDesc": "Please try again or contact support."
 }

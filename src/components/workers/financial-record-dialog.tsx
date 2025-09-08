@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Eye, PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
-import type { Worker, TransactionFormValues } from './types';
+import type { Worker, TransactionFormValues } from '@/lib/types';
 import { Label } from '../ui/label';
 
 interface FinancialRecordDialogProps {

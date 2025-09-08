@@ -1,17 +1,16 @@
+
 "use client";
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { type SalesItem } from '@/components/budget-content';
-import { type ExpenseItem } from '@/components/expenses-content';
-import { type DebtItem } from '@/components/debts-content';
-import { type Worker } from '@/components/workers/types';
 import useCollectionSubscription from '@/hooks/use-collection-subscription';
+import type { SalesItem, ExpenseItem, DebtItem, Worker } from '@/lib/types';
+
 
 interface DataContextType {
-  allSales: (SalesItem & { id: string })[];
-  allExpenses: (ExpenseItem & { id: string })[];
-  allDebts: (DebtItem & { id: string })[];
-  allWorkers: (Worker & { id: string })[];
+  allSales: SalesItem[];
+  allExpenses: ExpenseItem[];
+  allDebts: DebtItem[];
+  allWorkers: Worker[];
   loading: boolean;
 }
 

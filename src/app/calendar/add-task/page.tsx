@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -20,6 +21,7 @@ import { useAuth } from '@/context/auth-context';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { db } from '@/lib/firebase';
+import type { TaskData } from '@/lib/types';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -29,19 +31,6 @@ const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Be
 
 const fruitListAr = [ "فراولة", "توت", "تين", "عنب", "بطيخ", "شمام", "رمان", "مانجو", "موز", "تفاح", "برتقال", "ليمون" ] as const;
 const fruitListEn = [ "Strawberry", "Berry", "Fig", "Grape", "Watermelon", "Melon", "Pomegranate", "Mango", "Banana", "Apple", "Orange", "Lemon" ] as const;
-
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  dueDate: Date; 
-  isCompleted: boolean;
-  isRecurring: boolean;
-  reminderDays?: number;
-  ownerId: string;
-}
-
-export type TaskData = Omit<Task, 'id'>;
 
 async function addTask(data: TaskData): Promise<string> {
     const tasksCollectionRef = collection(db, 'tasks');
@@ -162,12 +151,12 @@ export default function AddTaskPage() {
   }
   
   if (loading || !user) {
-    return <div class="flex items-center justify-center h-full"><p>Loading...</p></div>
+    return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
   }
 
   return (
-    <main class="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div class="w-full max-w-2xl mx-auto">
+    <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
+      <div className="w-full max-w-2xl mx-auto">
             <form onSubmit={onSubmit}>
                 <Card>
                 <CardHeader>
@@ -180,7 +169,7 @@ export default function AddTaskPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div class="space-y-2">
+                    <div className="space-y-2">
                         <Label>{t('taskTitle')}</Label>
                         <Select onValueChange={setTitle} value={title}>
                           <SelectTrigger>
@@ -195,8 +184,8 @@ export default function AddTaskPage() {
                     </div>
                     
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
                             <Label>{t('selectVegetableOptional')}</Label>
                             <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
                                 <SelectTrigger>
@@ -209,7 +198,7 @@ export default function AddTaskPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                         <div class="space-y-2">
+                         <div className="space-y-2">
                             <Label>{t('selectFruitOptional')}</Label>
                             <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
                                 <SelectTrigger>
@@ -224,15 +213,15 @@ export default function AddTaskPage() {
                         </div>
                     </div>
                     
-                    <div class="space-y-2">
+                    <div className="space-y-2">
                         <Label htmlFor='description'>{t('description')}</Label>
                         <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => { setDescription(e.target.value); setIsDescManuallyEdited(true);}} />
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
                             <Label>{t('dueDate')}</Label>
-                             <div class="flex gap-2">
+                             <div className="flex gap-2">
                                 <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -261,13 +250,13 @@ export default function AddTaskPage() {
                                     />
                                 </PopoverContent>
                                 </Popover>
-                                <div class="relative">
+                                <div className="relative">
                                     <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="pl-10" />
                                 </div>
                             </div>
                         </div>
-                         <div class="space-y-2">
+                         <div className="space-y-2">
                             <Label>{t('remindMeBefore')}</Label>
                             <Select onValueChange={(value) => setReminderDays(Number(value))} defaultValue={String(reminderDays)}>
                                 <SelectTrigger>
@@ -284,8 +273,8 @@ export default function AddTaskPage() {
                         </div>
                     </div>
                     
-                    <div class="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div class="space-y-0.5">
+                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
                             <Label className="text-base flex items-center gap-2">
                                 <Repeat />
                                 {t('rememberTask')}
@@ -315,7 +304,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    
-
-    

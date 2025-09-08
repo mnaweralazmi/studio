@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -20,28 +21,9 @@ import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
-import type { Department } from '@/app/financials/page';
 import useCollectionSubscription from '@/hooks/use-collection-subscription';
+import type { DebtItem, DebtItemData, Department, Payment } from '@/lib/types';
 
-
-export type Payment = {
-  id: string;
-  amount: number;
-  date: Date;
-};
-
-export type DebtItem = {
-  id: string;
-  creditor: string;
-  amount: number;
-  dueDate?: Date;
-  status: 'unpaid' | 'paid' | 'partially-paid';
-  payments: Payment[];
-  ownerId: string;
-  departmentId: string;
-};
-
-export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
 async function addDebt(data: DebtItemData): Promise<string> {
     const debtsCollectionRef = collection(db, 'debts');
@@ -66,12 +48,7 @@ async function archiveDebt(debt: DebtItem): Promise<void> {
         ...debt,
         archivedAt: Timestamp.now(),
     };
-    delete archivedData.id;
-
-    if (archivedData.dueDate === undefined) {
-        delete archivedData.dueDate;
-    }
-
+    
     batch.set(archiveDebtRef, archivedData);
 
     await batch.commit();
@@ -84,7 +61,6 @@ async function addDebtPayment(debtId: string, paymentData: Omit<Payment, 'id'>) 
         payments: arrayUnion({
             ...paymentData,
             date: Timestamp.fromDate(paymentData.date),
-            id: new Date().getTime().toString() // Simple unique ID
         })
     });
 }
@@ -153,7 +129,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     }
     
     async function handleDelete(debtId: string) {
-        if (!authUser) return;
         const debtToArchive = debts.find(item => item.id === debtId);
         if (!debtToArchive) return;
         try {
@@ -166,8 +141,6 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     }
 
     async function handlePayment(debtId: string, paymentAmount: number) {
-        if (!authUser) return;
-        
         const debt = debts.find(d => d.id === debtId);
         if (!debt) return;
 
@@ -203,7 +176,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
     if (isAuthLoading || isDataLoading) {
         return (
-            <div class="space-y-6">
+            <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
                 <Card><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
                 <Card><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
@@ -213,7 +186,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     }
 
     return (
-        <div class="space-y-6">
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl"><Landmark className="h-5 w-5 sm:h-6 sm:w-6" />{t('debts')}</CardTitle>
@@ -227,22 +200,22 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                     <Landmark className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold">{totalUnpaidDebts.toFixed(2)} {t('dinar')}</div>
+                    <div className="text-2xl font-bold">{totalUnpaidDebts.toFixed(2)} {t('dinar')}</div>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('addNewDebt')}</CardTitle></CardHeader>
                 <CardContent>
                     <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div class="space-y-2">
+                        <div className="space-y-2">
                             <Label htmlFor="creditor">{t('creditorName')}</Label>
                             <Input id="creditor" name="creditor" placeholder={t('creditorNamePlaceholder')} />
                         </div>
-                         <div class="space-y-2">
+                         <div className="space-y-2">
                             <Label htmlFor="amount">{t('amountInDinar')}</Label>
                             <Input id="amount" name="amount" type="number" step="0.01" />
                         </div>
-                        <div class="flex flex-col space-y-2">
+                        <div className="flex flex-col space-y-2">
                             <Label>{t('dueDateOptional')}</Label>
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -265,7 +238,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
                 <CardContent>
                     {debts.length > 0 ? (
-                    <div class="overflow-x-auto">
+                    <div className="overflow-x-auto">
                         <Table>
                             <TableHeader><TableRow>
                                 <TableHead>{t('tableCreditor')}</TableHead>
@@ -292,7 +265,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            <div class={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                            <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
                                                  <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
                                                     <Trash2 className="h-4 w-4" />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -14,8 +15,8 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
-import type { Department } from '@/app/financials/page';
 import useCollectionSubscription from '@/hooks/use-collection-subscription';
+import type { Department, ExpenseItem, ExpenseItemData } from '@/lib/types';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -37,20 +38,6 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
     }
 };
 
-export type ExpenseItem = {
-  id: string;
-  date: Date;
-  type: 'fixed' | 'variable';
-  category: string;
-  item: string;
-  amount: number;
-  ownerId: string;
-  departmentId: string;
-};
-
-export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
-
-
 async function addExpense(data: ExpenseItemData): Promise<string> {
     const expensesCollectionRef = collection(db, 'expenses');
     const docRef = await addDoc(expensesCollectionRef, {
@@ -71,7 +58,6 @@ async function archiveExpense(expense: ExpenseItem): Promise<void> {
         ...expense,
         archivedAt: Timestamp.now(),
     };
-    delete (archivedExpenseData as any).id;
     batch.set(archiveExpenseRef, archivedExpenseData);
 
     await batch.commit();
@@ -144,7 +130,6 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     }
 
     const handleDelete = async (expenseId: string) => {
-        if (!authUser) return;
         const expenseToArchive = expenses.find(item => item.id === expenseId);
         if (!expenseToArchive) return;
         try {
@@ -164,16 +149,16 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     if (isAuthLoading || isDataLoading) {
         return (
-            <div class="space-y-6">
+            <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
-                <div class="grid gap-4 md:grid-cols-2"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+                <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
                 <Card><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
             </div>
         )
     }
 
     return (
-        <div class="space-y-6">
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
@@ -187,14 +172,14 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             </Card>
             
 
-            <div class="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{t('totalFixedExpenses')}</CardTitle>
                         <Repeat className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">{totalFixedExpenses.toFixed(2)} {t('dinar')}</div>
+                        <div className="text-2xl font-bold">{totalFixedExpenses.toFixed(2)} {t('dinar')}</div>
                         <p className="text-xs text-muted-foreground">{t('totalFixedExpensesDesc')}</p>
                     </CardContent>
                 </Card>
@@ -204,7 +189,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">{totalVariableExpenses.toFixed(2)} {t('dinar')}</div>
+                        <div className="text-2xl font-bold">{totalVariableExpenses.toFixed(2)} {t('dinar')}</div>
                         <p className="text-xs text-muted-foreground">{t('totalVariableExpensesDesc')}</p>
                     </CardContent>
                 </Card>
@@ -216,8 +201,8 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 </CardHeader>
                 <CardContent>
                     <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div class="space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="space-y-2">
                                 <Label htmlFor="type">{t('expenseType')}</Label>
                                 <Select name="type">
                                     <SelectTrigger id="type"><SelectValue placeholder={t('selectType')} /></SelectTrigger>
@@ -227,7 +212,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <div class="space-y-2">
+                             <div className="space-y-2">
                                 <Label htmlFor="category">{t('category')}</Label>
                                 <Select name="category" onValueChange={setSelectedCategory} value={selectedCategory}>
                                     <SelectTrigger id="category"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
@@ -236,7 +221,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div class="space-y-2">
+                            <div className="space-y-2">
                                 <Label htmlFor="item">{t('item')}</Label>
                                 <Select name="item" disabled={!selectedCategory}>
                                     <SelectTrigger id="item"><SelectValue placeholder={t('selectItem')} /></SelectTrigger>
@@ -245,12 +230,12 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div class="space-y-2">
+                            <div className="space-y-2">
                                 <Label htmlFor="amount">{t('amountInDinar')}</Label>
                                 <Input id="amount" name="amount" type="number" step="0.01" />
                             </div>
                         </div>
-                        <div class="flex justify-end pt-4">
+                        <div className="flex justify-end pt-4">
                             <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" />{t('add')}</Button>
                         </div>
                     </form>
@@ -263,11 +248,11 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 </CardHeader>
                 <CardContent>
                  {(fixedExpenses.length > 0 || variableExpenses.length > 0) ? (
-                     <div class="grid md:grid-cols-2 gap-6">
+                     <div className="grid md:grid-cols-2 gap-6">
                         {fixedExpenses.length > 0 && (
                         <div>
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><Repeat className="h-5 w-5" />{t('fixedMonthlyExpenses')}</h3>
-                            <div class="overflow-x-auto border rounded-lg">
+                            <div className="overflow-x-auto border rounded-lg">
                                 <Table>
                                     <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>
@@ -290,7 +275,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                         {variableExpenses.length > 0 && (
                         <div>
                             <h3 className="flex items-center gap-2 text-lg font-semibold mb-2"><TrendingUp className="h-5 w-5" />{t('variableExpenses')}</h3>
-                             <div class="overflow-x-auto border rounded-lg">
+                             <div className="overflow-x-auto border rounded-lg">
                                 <Table>
                                     <TableHeader><TableRow><TableHead>{t('tableCategory')}</TableHead><TableHead>{t('tableItem')}</TableHead><TableHead>{t('tableDate')}</TableHead><TableHead className="text-right">{t('tableAmount')}</TableHead><TableHead className="text-right">{t('tableAction')}</TableHead></TableRow></TableHeader>
                                     <TableBody>

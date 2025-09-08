@@ -36,6 +36,7 @@ export default function SettingsPage() {
         { id: 'achievements', label: t('achievements'), icon: Award },
         { id: 'display', label: t('displayAndLanguage'), icon: Palette },
         { id: 'notifications', label: t('notifications'), icon: Bell },
+        { id: 'maintenance', label: t('maintenanceTools'), icon: Wrench },
     ] as const;
 
     const renderContent = () => {
@@ -44,6 +45,7 @@ export default function SettingsPage() {
             case 'achievements': return <AchievementsTab />;
             case 'display': return <DisplayTab />;
             case 'notifications': return <NotificationsTab />;
+            case 'maintenance': return <MaintenanceTab />;
             default: return <ProfileTab />;
         }
     };

@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLanguage } from '@/context/language-context';
-import type { Worker, WorkerFormValues } from './types';
+import type { Worker, WorkerFormValues, Department } from '@/lib/types';
 import { Label } from '../ui/label';
 
 interface AddWorkerDialogProps {
     onSave: (data: WorkerFormValues, workerId?: string) => void;
     worker?: Worker;
-    departmentId: string;
+    departmentId: Department;
     children: React.ReactNode;
 }
 
@@ -45,7 +45,6 @@ export function AddWorkerDialog({ onSave, worker, departmentId, children }: AddW
         event.preventDefault();
         
         if (name.length < 3 || baseSalary < 0) {
-            // Basic validation
             return;
         }
 

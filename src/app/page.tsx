@@ -9,7 +9,6 @@ import { useLanguage } from '@/context/language-context';
 import { useTopics } from '@/context/topics-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -26,7 +25,6 @@ const iconComponents: { [key: string]: React.ElementType } = {
 export default function Home() {
   const { t } = useLanguage();
   const { topics, topicsLoading } = useTopics();
-  const { user } = useAuth();
   
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">

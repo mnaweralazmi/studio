@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { HandCoins } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
-import type { DebtItem } from '../debts-content';
-import { useToast } from '@/hooks/use-toast';
+import type { DebtItem } from '@/lib/types';
 import { Label } from '../ui/label';
 
 interface PaymentDialogProps {
@@ -20,7 +19,6 @@ interface PaymentDialogProps {
 
 export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
     const { t } = useLanguage();
-    const { toast } = useToast();
     const [isOpen, setIsOpen] = React.useState(false);
     const [amount, setAmount] = React.useState(0);
     const [error, setError] = React.useState('');
@@ -29,7 +27,6 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
 
     React.useEffect(() => {
         if (isOpen) {
-            // Correct logic to prevent NaN and set a valid default
             const remaining = Number(remainingAmount.toFixed(2));
             setAmount(remaining > 0 ? remaining : 0.01);
             setError('');
@@ -101,7 +98,7 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
                                 </TableHeader>
                                 <TableBody>
                                     {(debt.payments || []).length > 0 ? debt.payments.map((p, index) => (
-                                        <TableRow key={p.id || index}>
+                                        <TableRow key={index}>
                                             <TableCell>{format(new Date(p.date), 'yyyy/MM/dd')}</TableCell>
                                             <TableCell className="text-right font-mono">{p.amount.toFixed(2)}</TableCell>
                                         </TableRow>

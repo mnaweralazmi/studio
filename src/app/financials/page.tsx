@@ -10,8 +10,7 @@ import { DebtsContent } from '@/components/debts-content';
 import { WorkersContent } from '@/components/workers-content';
 import { Wallet, CreditCard, Landmark, Users, Leaf, PawPrint, Bird, Fish, Building } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-
-export type Department = 'agriculture' | 'livestock' | 'poultry' | 'fish';
+import type { Department } from '@/lib/types';
 
 export default function FinancialsPage() {
     const { t } = useLanguage();

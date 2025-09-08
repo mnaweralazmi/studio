@@ -98,7 +98,7 @@
     "allUpcomingTasksDesc": "نظرة عامة على جميع المهام المستقبلية غير المنجزة.",
     "noUpcomingTasks": "لا توجد لديك مهام قادمة. عظيم!",
     "completedTasksLog": "سجل المهام المنجزة",
-    "completedTasksLogDesc": "جميع المهام التي أنجزتها، مرتبة من الأحدث للأقدم.",
+    "completedTasksLogDesc": "لعرض جميع المهام المنجزة، يرجى زيارة صفحة",
     "noCompletedTasks": "لم تنجز أي مهام بعد.",
     "uncompleteTask": "إلغاء الإنجاز",
     "taskDeleted": "تم حذف المهمة بنجاح!",
@@ -431,6 +431,7 @@
     "migrationInProgress": "جاري الترحيل...",
     "migrationSuccess": "اكتمل الترحيل بنجاح!",
     "migrationSuccessDesc": "تم تحديث جميع السجلات القديمة.",
+    "records": "سجلات",
     "migrationError": "حدث خطأ أثناء الترحيل.",
     "migrationErrorDesc": "يرجى المحاولة مرة أخرى أو الاتصال بالدعم."
 }

@@ -2,13 +2,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Wrench } from "lucide-react";
@@ -60,7 +54,7 @@ export function MaintenanceTab() {
 
         toast({
             title: t("migrationSuccess"),
-            description: `${t("migrationSuccessDesc")} (${updatedDocsCount} records updated)`,
+            description: `${t("migrationSuccessDesc")} (${updatedDocsCount} ${t('records')})`,
         });
 
     } catch (error: any) {
