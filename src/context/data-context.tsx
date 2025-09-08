@@ -1,11 +1,10 @@
 
 "use client";
-import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, where, DocumentData, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { SalesItem, ExpenseItem, DebtItem, Worker, AgriculturalSection } from '@/lib/types';
-
 
 interface DataContextType {
   allSales: SalesItem[];
@@ -16,28 +15,30 @@ interface DataContextType {
   loading: boolean;
 }
 
+// This function recursively searches for Firestore Timestamps and converts them to JS Date objects.
 const mapTimestampsToDates = (data: any): any => {
-  if (!data) return data;
-
+  if (!data) {
+    return data;
+  }
   if (data instanceof Timestamp) {
     return data.toDate();
   }
-
   if (Array.isArray(data)) {
     return data.map(item => mapTimestampsToDates(item));
   }
-
-  if (typeof data === 'object' && !(data instanceof Date)) {
+  // Check if it's an object (and not a Date, which is also an object)
+  if (typeof data === 'object' && data !== null && !(data instanceof Date)) {
     const res: { [key: string]: any } = {};
     for (const key in data) {
-      res[key] = mapTimestampsToDates(data[key]);
+      // Use hasOwnProperty to ensure it's not a property from the prototype chain
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        res[key] = mapTimestampsToDates(data[key]);
+      }
     }
     return res;
   }
-
   return data;
 };
-
 
 const DataContext = createContext<DataContextType>({
   allSales: [],
@@ -50,93 +51,87 @@ const DataContext = createContext<DataContextType>({
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  
+  const [loading, setLoading] = useState(true);
+
   const [allSales, setAllSales] = useState<SalesItem[]>([]);
-  const [salesLoading, setSalesLoading] = useState(true);
-
   const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
-  const [expensesLoading, setExpensesLoading] = useState(true);
-
   const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
-  const [debtsLoading, setDebtsLoading] = useState(true);
-
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
-  const [workersLoading, setWorkersLoading] = useState(true);
-
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-  const [topicsLoading, setTopicsLoading] = useState(true);
   
-  const userId = user?.uid;
-
   useEffect(() => {
-    if (!userId) {
+    // If no user, do nothing and ensure state is cleared.
+    if (!user?.uid) {
+      setLoading(false);
       setAllSales([]);
       setAllExpenses([]);
       setAllDebts([]);
       setAllWorkers([]);
-      setSalesLoading(false);
-      setExpensesLoading(false);
-      setDebtsLoading(false);
-      setWorkersLoading(false);
+      // Topics are public, so they might still be loaded, but we reset others.
       return;
     }
 
-    setSalesLoading(true);
-    setExpensesLoading(true);
-    setDebtsLoading(true);
-    setWorkersLoading(true);
+    // Set loading to true when we start fetching data for a new user
+    setLoading(true);
 
     const collectionsToSubscribe = [
-        { name: 'sales', setter: setAllSales, setLoading: setSalesLoading },
-        { name: 'expenses', setter: setAllExpenses, setLoading: setExpensesLoading },
-        { name: 'debts', setter: setAllDebts, setLoading: setDebtsLoading },
-        { name: 'workers', setter: setAllWorkers, setLoading: setWorkersLoading },
+        { name: 'sales', setter: setAllSales },
+        { name: 'expenses', setter: setAllExpenses },
+        { name: 'debts', setter: setAllDebts },
+        { name: 'workers', setter: setAllWorkers },
     ];
-
-    const unsubscribers = collectionsToSubscribe.map(({ name, setter, setLoading }) => {
-      const q = query(collection(db, name), where("ownerId", "==", userId));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
+    
+    let activeSubscriptions = collectionsToSubscribe.length + 1; // +1 for topics
+    
+    const onDataLoad = () => {
+        activeSubscriptions--;
+        if (activeSubscriptions === 0) {
+            setLoading(false);
+        }
+    };
+    
+    const unsubscribers = collectionsToSubscribe.map(({ name, setter }) => {
+      const q = query(collection(db, name), where("ownerId", "==", user.uid));
+      return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) } as any));
         setter(items);
-        setLoading(false);
+        onDataLoad();
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
         setter([]);
-        setLoading(false);
+        onDataLoad();
       });
-      return unsubscribe;
     });
 
-    return () => unsubscribers.forEach(unsub => unsub());
-
-  }, [userId]);
-
-  useEffect(() => {
-    setTopicsLoading(true);
-    const q = query(collection(db, "data"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // Subscribe to public topics
+    const topicsQuery = query(collection(db, "data"));
+    const topicsUnsubscriber = onSnapshot(topicsQuery, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) } as any));
         setTopics(items);
-        setTopicsLoading(false);
+        onDataLoad();
     }, (error) => {
         console.error(`Error fetching topics:`, error);
         setTopics([]);
-        setTopicsLoading(false);
+        onDataLoad();
     });
-     return () => unsubscribe();
-  }, []);
+    
+    unsubscribers.push(topicsUnsubscriber);
 
+    // Cleanup function to unsubscribe from all listeners on component unmount or when user changes.
+    return () => {
+        unsubscribers.forEach(unsub => unsub());
+    };
 
-  const loading = salesLoading || expensesLoading || debtsLoading || workersLoading || topicsLoading;
+  }, [user?.uid]); // Dependency array ensures this effect re-runs when the user's UID changes.
 
-  const value = useMemo(() => ({
+  const value = {
     allSales,
     allExpenses,
     allDebts,
     allWorkers,
     topics,
     loading
-  }), [allSales, allExpenses, allDebts, allWorkers, topics, loading]);
+  };
 
   return (
     <DataContext.Provider value={value}>
