@@ -3,7 +3,7 @@
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useAuth } from '@/context/auth-context';
 import useCollectionSubscription from '@/hooks/use-collection-subscription';
-import type { SalesItem, ExpenseItem, DebtItem, Worker } from '@/lib/types';
+import type { SalesItem, ExpenseItem, DebtItem, Worker, AgriculturalSection } from '@/lib/types';
 
 
 interface DataContextType {
@@ -11,6 +11,7 @@ interface DataContextType {
   allExpenses: ExpenseItem[];
   allDebts: DebtItem[];
   allWorkers: Worker[];
+  topics: AgriculturalSection[];
   loading: boolean;
 }
 
@@ -19,6 +20,7 @@ const DataContext = createContext<DataContextType>({
   allExpenses: [],
   allDebts: [],
   allWorkers: [],
+  topics: [],
   loading: true,
 });
 
@@ -29,16 +31,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>('expenses', user?.uid);
   const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>('debts', user?.uid);
   const [allWorkers, workersLoading] = useCollectionSubscription<Worker>('workers', user?.uid);
+  const [topics, topicsLoading] = useCollectionSubscription<AgriculturalSection>('data'); // Public data, no user?.uid needed
 
-  const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading;
+  const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading || topicsLoading;
 
   const value = useMemo(() => ({
     allSales,
     allExpenses,
     allDebts,
     allWorkers,
+    topics,
     loading
-  }), [allSales, allExpenses, allDebts, allWorkers, loading]);
+  }), [allSales, allExpenses, allDebts, allWorkers, topics, loading]);
 
   return (
     <DataContext.Provider value={value}>

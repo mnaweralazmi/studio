@@ -7,7 +7,6 @@ import { AppLayout } from '@/components/app-layout';
 import { usePathname } from 'next/navigation';
 import React, { useEffect } from 'react';
 import { LanguageProvider } from '@/context/language-context';
-import { TopicsProvider } from '@/context/topics-context';
 import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,9 +87,7 @@ export default function RootLayout({
       <body>
         <Providers>
             <LanguageProvider>
-              <TopicsProvider>
-                  <RootLayoutContent>{children}</RootLayoutContent>
-              </TopicsProvider>
+              <RootLayoutContent>{children}</RootLayoutContent>
             </LanguageProvider>
         </Providers>
       </body>

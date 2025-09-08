@@ -7,7 +7,7 @@ import type { AgriculturalSection, SubTopic, VideoSection } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/context/language-context';
-import { useTopics } from '@/context/topics-context';
+import { useData } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlayCircle, FileText } from 'lucide-react';
@@ -18,7 +18,7 @@ export default function TopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, topicsLoading } = useTopics();
+  const { topics, loading: topicsLoading } = useData();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   
   const { user } = useAuth();

@@ -6,7 +6,7 @@ import { Leaf, PlayCircle, BookOpen, Droplets, FlaskConical, Bug, Scissors, Spro
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
-import { useTopics } from '@/context/topics-context';
+import { useData } from '@/context/data-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +24,7 @@ const iconComponents: { [key: string]: React.ElementType } = {
 
 export default function Home() {
   const { t } = useLanguage();
-  const { topics, topicsLoading } = useTopics();
+  const { topics, loading } = useData();
   
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
@@ -46,7 +46,7 @@ export default function Home() {
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-3xl font-bold">{t('agriculturalTopics')}</h2>
             </div>
-             {topicsLoading ? (
+             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-96 w-full" />)}
                 </div>

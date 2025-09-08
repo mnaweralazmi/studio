@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { AgriculturalSection, SubTopic } from '@/lib/types';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
-import { useTopics } from '@/context/topics-context';
+import { useData } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -20,7 +20,7 @@ export default function SubTopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, topicsLoading } = useTopics();
+  const { topics, loading: topicsLoading } = useData();
   const { user } = useAuth();
   const { toast } = useToast();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);

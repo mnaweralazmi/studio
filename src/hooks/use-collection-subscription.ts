@@ -24,21 +24,18 @@ const mapTimestampsToDates = (data: any): any => {
 
 const useCollectionSubscription = <T extends DocumentData>(
   collectionName: string,
-  userId?: string
+  userId?: string // userId is now optional
 ): [Array<T & { id: string }>, boolean] => {
   const [data, setData] = useState<Array<T & { id: string }>>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!userId) {
-      setData([]);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     
-    const q = query(collection(db, collectionName), where("ownerId", "==", userId));
+    // If userId is provided, create a query to filter by ownerId.
+    // If userId is not provided, query the entire collection (for public data like topics).
+    const colRef = collection(db, collectionName);
+    const q = userId ? query(colRef, where("ownerId", "==", userId)) : query(colRef);
 
     const unsubscribe = onSnapshot(
       q,
@@ -48,6 +45,7 @@ const useCollectionSubscription = <T extends DocumentData>(
           return { id: doc.id, ...mappedData } as T & { id: string };
         });
         
+        // Sort items locally after fetching
         items.sort((a, b) => {
             const dateA = a.date || a.dueDate || a.createdAt || a.completedAt || a.archivedAt;
             const dateB = b.date || b.dueDate || b.createdAt || b.completedAt || b.archivedAt;
@@ -70,6 +68,7 @@ const useCollectionSubscription = <T extends DocumentData>(
     return () => {
         unsubscribe();
     };
+  // Re-run the effect if the collectionName or userId changes.
   }, [collectionName, userId]);
 
   return [data, loading];
