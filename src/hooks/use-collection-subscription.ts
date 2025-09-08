@@ -1,5 +1,5 @@
 
-import { collection, onSnapshot, query, DocumentData, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, DocumentData, Timestamp, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 
@@ -31,8 +31,10 @@ const useCollectionSubscription = <T extends DocumentData>(
     }
 
     setLoading(true);
-
-    const q = query(collection(db, "users", userId, collectionName));
+    
+    // The path should be users/{userId}/{collectionName}
+    const collectionPath = `users/${userId}/${collectionName}`;
+    const q = query(collection(db, collectionPath));
 
     const unsubscribe = onSnapshot(
       q,
@@ -45,7 +47,7 @@ const useCollectionSubscription = <T extends DocumentData>(
         setLoading(false);
       },
       (err) => {
-        console.error(`[Firestore Error] Failed to listen to ${collectionName}:`, err);
+        console.error(`[Firestore Error] Failed to listen to ${collectionPath}:`, err);
         setData([]);
         setLoading(false);
       }
