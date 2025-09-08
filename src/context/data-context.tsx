@@ -25,16 +25,20 @@ const DataContext = createContext<DataContextType>({
 });
 
 const mapTimestampsToDates = (data: any): any => {
-    if (!data) return data;
-    if (data instanceof Timestamp) return data.toDate();
-    if (Array.isArray(data)) return data.map(item => mapTimestampsToDates(item));
-    if (typeof data === 'object' && !(data instanceof Date)) {
-        return Object.entries(data).reduce((acc, [key, value]) => {
-            acc[key as string] = mapTimestampsToDates(value);
-            return acc;
-        }, {} as { [key: string]: any });
-    }
-    return data;
+  if (!data) return data;
+  if (data instanceof Timestamp) {
+    return data.toDate();
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => mapTimestampsToDates(item));
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    return Object.entries(data).reduce((acc, [key, value]) => {
+      acc[key as string] = mapTimestampsToDates(value);
+      return acc;
+    }, {} as { [key: string]: any });
+  }
+  return data;
 };
 
 
@@ -55,62 +59,45 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setAllExpenses([]);
       setAllDebts([]);
       setAllWorkers([]);
-      // Do not clear topics, as they are public
+      setTopics([]);
       setLoading(false);
       return;
     }
-
+    
     setLoading(true);
-    let activeSubscriptions = 0;
-    const checkDone = () => {
-        activeSubscriptions--;
-        if (activeSubscriptions === 0) {
-            setLoading(false);
-        }
-    };
 
     const collectionsToWatch = [
       { name: 'sales', setter: setAllSales },
       { name: 'expenses', setter: setAllExpenses },
       { name: 'debts', setter: setAllDebts },
       { name: 'workers', setter: setAllWorkers },
+      { name: 'data', setter: setTopics }, // For public topics
     ];
-    
-    activeSubscriptions = collectionsToWatch.length + 1; // +1 for public 'data' collection
 
-    // Subscribe to public topics
-    const publicQuery = query(collection(db, 'data'));
-    const unsubTopics = onSnapshot(publicQuery, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
-        setTopics(items);
-        checkDone();
-    }, (error) => {
-        console.error(`Error fetching public data:`, error);
-        checkDone();
-    });
-
-
-    // Subscribe to user-specific collections
-    const userUnsubscribers = collectionsToWatch.map(({ name, setter }) => {
-      const q = query(collection(db, name), where("ownerId", "==", userId));
+    const unsubscribers = collectionsToWatch.map(({ name, setter }) => {
+      const isPublicCollection = name === 'data';
       
+      const q = isPublicCollection 
+        ? query(collection(db, name)) 
+        : query(collection(db, name), where("ownerId", "==", userId));
+
       return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
         setter(items);
-        checkDone();
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
         setter([]);
-        checkDone();
       });
     });
 
+    // A simple way to determine initial loading state
+    const timer = setTimeout(() => setLoading(false), 2000); // Assume loading is done after 2s
+
     // Cleanup function
     return () => {
-      unsubTopics();
-      userUnsubscribers.forEach(unsub => unsub());
+      clearTimeout(timer);
+      unsubscribers.forEach(unsub => unsub());
     };
-
   }, [user?.uid]);
 
   const value = { allSales, allExpenses, allDebts, allWorkers, topics, loading };
