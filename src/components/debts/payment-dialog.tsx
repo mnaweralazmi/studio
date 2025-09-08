@@ -28,7 +28,8 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
     const remainingAmount = debt.amount - (debt.payments || []).reduce((sum, p) => sum + p.amount, 0);
 
     React.useEffect(() => {
-        if(isOpen) {
+        if (isOpen) {
+            // Correct logic to prevent NaN and set a valid default
             const remaining = Number(remainingAmount.toFixed(2));
             setAmount(remaining > 0 ? remaining : 0.01);
             setError('');
@@ -44,7 +45,7 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
             return;
         }
 
-        if (amount > remainingAmount) {
+        if (amount > Number(remainingAmount.toFixed(2)) + 0.001) { // Add tolerance for floating point issues
             setError(t('paymentExceedsRemaining'));
             return;
         }
