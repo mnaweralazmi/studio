@@ -40,6 +40,7 @@ const createNewUserDocument = async (user: User, name: string | null) => {
 
     // 1. Create user document
     batch.set(userDocRef, {
+        uid: user.uid, // Storing the uid inside the document as well
         name: name,
         email: user.email,
         role: 'user', // Default role
@@ -58,9 +59,8 @@ const createNewUserDocument = async (user: User, name: string | null) => {
         console.log("Populating initial agricultural topics...");
         initialAgriculturalSections.forEach(topic => {
             const newTopicRef = doc(dataColRef, topic.id);
-            const publicTopicData: Omit<AgriculturalSection, 'id'> = {
+            const publicTopicData: Omit<AgriculturalSection, 'id' | 'ownerId'> = {
                 ...topic,
-                ownerId: 'system' // A generic owner for public data
             };
             batch.set(newTopicRef, publicTopicData);
         });

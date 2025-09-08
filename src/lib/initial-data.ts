@@ -1,9 +1,8 @@
 
 import type { AgriculturalSection } from './types';
   
-export const initialAgriculturalSections: Omit<AgriculturalSection, 'ownerId'>[] = [
+export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
     {
-      id: '1',
       titleKey: "topicIrrigation",
       descriptionKey: "topicIrrigationDesc",
       iconName: 'Droplets',
@@ -18,7 +17,6 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'ownerId'>[]
       ]
     },
     {
-      id: '5',
       titleKey: "topicFertilization",
       descriptionKey: "topicFertilizationDesc",
       iconName: 'FlaskConical',
@@ -32,7 +30,6 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'ownerId'>[]
       ]
     },
     {
-      id: '2',
       titleKey: "topicPests",
       descriptionKey: "topicPestsDesc",
       iconName: 'Bug',
@@ -47,7 +44,6 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'ownerId'>[]
       ]
     },
     {
-      id: '3',
       titleKey: "topicPruning",
       descriptionKey: "topicPruningDesc",
       iconName: 'Scissors',
@@ -61,7 +57,6 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'ownerId'>[]
       ]
     },
     {
-      id: '4',
       titleKey: "topicSoil",
       descriptionKey: "topicSoilDesc",
       iconName: 'Sprout',
@@ -75,7 +70,6 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'ownerId'>[]
       ]
     },
     {
-      id: '8',
       titleKey: "topicSeeds",
       descriptionKey: "topicSeedsDesc",
       iconName: 'Sprout',

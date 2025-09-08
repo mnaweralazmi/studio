@@ -83,7 +83,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setAllDebts([]);
       setAllWorkers([]);
       setTasks([]);
-      setTopics([]);
+      setTopics([]); // Keep public topics or clear them? Let's clear for consistency.
       setArchivedSales([]);
       setArchivedExpenses([]);
       setArchivedDebts([]);
@@ -94,33 +94,32 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     const collectionsToWatch = [
-      // Live data
+      // Live data owned by user
       { name: 'sales', setter: setAllSales, owner: true },
       { name: 'expenses', setter: setAllExpenses, owner: true },
       { name: 'debts', setter: setAllDebts, owner: true },
       { name: 'workers', setter: setAllWorkers, owner: true },
       { name: 'tasks', setter: setTasks, owner: true },
-      // Archived data
+      // Archived data owned by user
       { name: 'archive_sales', setter: setArchivedSales, owner: true },
       { name: 'archive_expenses', setter: setArchivedExpenses, owner: true },
       { name: 'archive_debts', setter: setArchivedDebts, owner: true },
       { name: 'completed_tasks', setter: setCompletedTasks, owner: true },
-      // Public data
-      { name: 'data', setter: setTopics, owner: false }, // 'data' collection stores public topics
+      // Public data (not owned)
+      { name: 'data', setter: setTopics, owner: false }, 
     ];
     
-    let activeListeners = collectionsToWatch.length;
+    let listenersCount = collectionsToWatch.length;
     
     const onDataLoaded = () => {
-        activeListeners--;
-        if (activeListeners === 0) {
+        listenersCount--;
+        if (listenersCount === 0) {
             setLoading(false);
         }
     };
 
     const unsubscribers = collectionsToWatch.map(({ name, setter, owner }) => {
       const collectionRef = collection(db, name);
-      // Public data like 'data' does not need to be filtered by ownerId
       const q = owner 
         ? query(collectionRef, where("ownerId", "==", userId))
         : query(collectionRef);
@@ -128,11 +127,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
         setter(items);
-        if(activeListeners > 0) onDataLoaded();
+        onDataLoaded();
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
-        setter([]); // Clear data on error
-        if(activeListeners > 0) onDataLoaded();
+        setter([]); // Clear data on error to avoid stale data
+        onDataLoaded();
       });
     });
 

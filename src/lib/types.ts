@@ -83,6 +83,7 @@ export interface ArchivedDebt extends DebtItem {
 
 // ========== FINANCIALS - WORKERS ==========
 export interface Transaction {
+    id: string;
     type: 'salary' | 'bonus' | 'deduction';
     amount: number;
     date: Date;
@@ -90,7 +91,7 @@ export interface Transaction {
     month?: number;
     year?: number;
 }
-export type TransactionFormValues = Omit<Transaction, 'date' | 'month' | 'year'>;
+export type TransactionFormValues = Omit<Transaction, 'id' | 'date' | 'month' | 'year'>;
 
 export interface PaidMonth {
     year: number;
@@ -101,7 +102,7 @@ export interface Worker extends BaseItem {
   name: string;
   baseSalary: number;
   paidMonths: PaidMonth[];
-  transactions: (Transaction & { id: string })[];
+  transactions: Transaction[];
   departmentId: Department;
 }
 export type WorkerFormValues = Pick<Worker, 'name' | 'baseSalary'>;
@@ -129,7 +130,8 @@ export interface SubTopic {
     hint?: string;
 }
   
-export interface AgriculturalSection extends BaseItem {
+export interface AgriculturalSection {
+    id: string;
     titleKey: string;
     title?: string;
     descriptionKey: string;

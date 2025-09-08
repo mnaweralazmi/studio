@@ -23,13 +23,12 @@ import { useData } from '@/context/data-context';
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
 const monthsEn = [ { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' }, { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' }, { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' }, { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' } ];
 
-async function addWorker(data: WorkerFormValues & { ownerId: string; departmentId: Department }): Promise<string> {
+async function addWorker(data: Omit<Worker, 'id' | 'paidMonths' | 'transactions'>): Promise<string> {
     const workersColRef = collection(db, 'workers');
     const docRef = await addDoc(workersColRef, {
         ...data,
         paidMonths: [],
         transactions: [],
-        departmentId: data.departmentId, 
     });
     return docRef.id;
 }
