@@ -12,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import FirestoreDebugTest from '@/components/debug/firestore-debug';
 
 export default function AdminPage() {
     const { user, loading } = useAuth();
@@ -134,11 +133,6 @@ export default function AdminPage() {
                         </Button>
                     </CardFooter>
                 </Card>
-
-                <FirestoreDebugTest collectionName="sales" />
-                <FirestoreDebugTest collectionName="expenses" />
-                <FirestoreDebugTest collectionName="debts" />
-                <FirestoreDebugTest collectionName="workers" />
 
             </div>
         </main>
