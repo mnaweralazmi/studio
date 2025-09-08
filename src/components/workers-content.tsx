@@ -272,46 +272,46 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             </CardHeader>
             <CardContent>
                 {workers.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('workerName')}</TableHead>
-                          <TableHead>{t('baseSalary')}</TableHead>
-                           <TableHead>{t('currentMonthSalaryStatus')}</TableHead>
-                           <TableHead>{t('totalBalance')}</TableHead>
-                          <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {workers.map((worker) => {
-                          const isPaidThisMonth = getMonthStatus(worker, currentMonth, currentYear);
-                          const balance = getWorkerBalance(worker);
-                          return (
-                          <TableRow key={worker.id}>
-                            <TableCell className="font-medium">{worker.name}</TableCell>
-                            <TableCell>{(worker.baseSalary || 0).toFixed(2)} {t('dinar')} {t('monthly')}</TableCell>
-                            <TableCell>
-                               <BadgeCheck className={`h-5 w-5 ${isPaidThisMonth ? 'text-green-600' : 'text-muted-foreground'}`}/>
-                            </TableCell>
-                            <TableCell className={`font-mono ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {balance.toFixed(2)} {t('dinar')}
-                            </TableCell>
-                            <TableCell>
-                                <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
-                                    <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
-                                    <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
-                                    <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>
-                                        <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                                    </AddWorkerDialog>
-                                    <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
-                                </div>
-                            </TableCell>
-                          </TableRow>
-                        )})}
-                      </TableBody>
-                    </Table>
-                  </div>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('workerName')}</TableHead>
+                                    <TableHead>{t('baseSalary')}</TableHead>
+                                    <TableHead>{t('currentMonthSalaryStatus')}</TableHead>
+                                    <TableHead>{t('totalBalance')}</TableHead>
+                                    <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableActions')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {workers.map((worker) => {
+                                const isPaidThisMonth = getMonthStatus(worker, currentMonth, currentYear);
+                                const balance = getWorkerBalance(worker);
+                                return (
+                                <TableRow key={worker.id}>
+                                    <TableCell className="font-medium">{worker.name}</TableCell>
+                                    <TableCell>{(worker.baseSalary || 0).toFixed(2)} {t('dinar')} {t('monthly')}</TableCell>
+                                    <TableCell>
+                                        <BadgeCheck className={`h-5 w-5 ${isPaidThisMonth ? 'text-green-600' : 'text-muted-foreground'}`}/>
+                                    </TableCell>
+                                    <TableCell className={`font-mono ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {balance.toFixed(2)} {t('dinar')}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
+                                            <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
+                                            <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
+                                            <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>
+                                                <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                            </AddWorkerDialog>
+                                            <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                )})}
+                            </TableBody>
+                        </Table>
+                    </div>
                 ) : (
                     <p className="text-center text-muted-foreground py-4">{t('noWorkersYet')}</p>
                 )}
@@ -320,3 +320,5 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
+
+    
