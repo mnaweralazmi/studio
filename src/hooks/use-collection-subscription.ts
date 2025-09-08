@@ -30,6 +30,14 @@ const useCollectionSubscription = <T extends DocumentData>(
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // This is the crucial check. If we are querying a user-specific collection
+    // but the userId isn't available yet, we should wait.
+    if (collectionName !== 'data' && !userId) {
+        setLoading(false); // Not loading, just waiting for userId
+        setData([]); // Ensure data is cleared
+        return;
+    }
+
     setLoading(true);
     
     // If userId is provided, create a query to filter by ownerId.

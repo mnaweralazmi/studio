@@ -26,12 +26,13 @@ const DataContext = createContext<DataContextType>({
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.uid;
 
-  const [allSales, salesLoading] = useCollectionSubscription<SalesItem>('sales', user?.uid);
-  const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>('expenses', user?.uid);
-  const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>('debts', user?.uid);
-  const [allWorkers, workersLoading] = useCollectionSubscription<Worker>('workers', user?.uid);
-  const [topics, topicsLoading] = useCollectionSubscription<AgriculturalSection>('data'); // Public data, no user?.uid needed
+  const [allSales, salesLoading] = useCollectionSubscription<SalesItem>('sales', userId);
+  const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>('expenses', userId);
+  const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>('debts', userId);
+  const [allWorkers, workersLoading] = useCollectionSubscription<Worker>('workers', userId);
+  const [topics, topicsLoading] = useCollectionSubscription<AgriculturalSection>('data'); // Public data, no userId needed
 
   const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading || topicsLoading;
 
