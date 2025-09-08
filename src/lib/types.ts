@@ -31,5 +31,5 @@ export interface AgriculturalSection {
     hint?: string;
     subTopics: SubTopic[];
     videos: VideoSection[];
-    ownerId?: string; // ownerId is optional as it's for public data
+    ownerId: string; 
 }

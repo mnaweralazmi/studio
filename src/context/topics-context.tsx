@@ -10,6 +10,8 @@ import {
   doc,
   serverTimestamp,
   Unsubscribe,
+  query,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
@@ -21,7 +23,7 @@ type TopicsContextType = {
   topics: Topic[];
   topicsLoading: boolean;
   topicsError: string | null;
-  addTopic: (data: Omit<Topic, "id" | "subTopics" | "videos">) => Promise<string>;
+  addTopic: (data: Omit<Topic, "id" | "subTopics" | "videos" | "ownerId">) => Promise<string>;
   deleteTopic: (id: string) => Promise<void>;
 };
 
@@ -34,13 +36,15 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
   const [topicsError, setTopicsError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch public topics regardless of auth state
     setTopicsLoading(true);
     setTopicsError(null);
+    
+    // We fetch public topics here, no user needed
     const topicsColRef = collection(db, "data");
+    const q = query(topicsColRef); // In a real app, you might filter for public topics
 
     const unsubscribe = onSnapshot(
-      topicsColRef,
+      q,
       (snap) => {
         const items: Topic[] = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Topic));
         setTopics(items);
@@ -58,14 +62,12 @@ export const TopicsProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // Functions for adding/deleting topics should still be protected
-  async function addTopic(data: Omit<Topic, "id" | "subTopics" | "videos">) {
+  async function addTopic(data: Omit<Topic, "id" | "subTopics" | "videos" | "ownerId">) {
     if (!user) throw new Error("Not signed in");
-    // Decide where to add topics, maybe a user-specific collection or a protected public one
-    // For now, let's assume adding is a protected action to the public list.
     const colRef = collection(db, "data");
     const docRef = await addDoc(colRef, {
       ...data,
-      ownerId: user.uid, // still track owner for admin purposes
+      ownerId: user.uid,
       createdAt: serverTimestamp(),
       subTopics: [],
       videos: [],

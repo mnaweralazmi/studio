@@ -12,9 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Leaf, UserPlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, writeBatch, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, writeBatch, getDocs, query } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { initialAgriculturalSections } from '@/lib/initial-data';
+import type { AgriculturalSection } from '@/lib/types';
+
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -50,13 +52,16 @@ const createNewUserDocument = async (user: User, name: string | null) => {
     // 2. Populate public topics if they don't exist
     // This should ideally be a server-side script, but for simplicity, we do it on first user registration.
     const dataColRef = collection(db, 'data');
-    const dataSnap = await getDocs(dataColRef);
+    const q = query(dataColRef);
+    const dataSnap = await getDocs(q);
     if (dataSnap.empty) {
         console.log("Populating initial agricultural topics...");
         initialAgriculturalSections.forEach(topic => {
             const newTopicRef = doc(dataColRef, topic.id);
-            // We don't need ownerId for public topics
-            const { ownerId, ...publicTopicData } = topic;
+            const publicTopicData: Omit<AgriculturalSection, 'id'> = {
+                ...topic,
+                ownerId: 'system' // A generic owner for public data
+            };
             batch.set(newTopicRef, publicTopicData);
         });
     }
