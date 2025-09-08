@@ -33,47 +33,51 @@ const useCollectionSubscription = <T extends DocumentData>(
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // If there's no userId, we can't fetch data, so we stop loading and return an empty array.
     if (!userId) {
       setData([]);
       setLoading(false);
-      return; // Exit the effect early
+      return;
     }
 
     setLoading(true);
     
-    // Create a query to get documents from the specified collection
-    // where the `ownerId` field matches the current user's ID.
+    // Perform a simple query: filter by ownerId. Sorting will be done on the client.
+    // This avoids the need for composite indexes, which was the root cause of the problem.
     const q = query(collection(db, collectionName), where("ownerId", "==", userId));
 
-    // onSnapshot creates a real-time listener. It will fire once with the initial data,
-    // and then again every time the data changes in Firestore.
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         const items = snapshot.docs.map((doc) => {
-          // Convert Firestore Timestamps to JavaScript Date objects
           const mappedData = mapTimestampsToDates(doc.data());
-          // Return the document data along with its ID
           return { id: doc.id, ...mappedData } as T & { id: string };
         });
+        
+        // Sorting is now handled on the client side after fetching the data.
+        // This is a reliable way to ensure data is always displayed correctly.
+        items.sort((a, b) => {
+            const dateA = a.date || a.dueDate || a.createdAt || a.completedAt || a.archivedAt;
+            const dateB = b.date || b.dueDate || b.createdAt || b.completedAt || b.archivedAt;
+            if (dateA && dateB) {
+                return new Date(dateB).getTime() - new Date(dateA).getTime();
+            }
+            return 0;
+        });
+        
         setData(items);
-        setLoading(false); // Data has been loaded
+        setLoading(false);
       },
       (err) => {
         console.error(`[Firestore Error] Failed to listen to ${collectionName}:`, err);
-        // In case of an error (e.g., permissions issue), clear data and stop loading.
         setData([]);
         setLoading(false);
       }
     );
 
-    // This is a cleanup function. When the component unmounts,
-    // it unsubscribes from the Firestore listener to prevent memory leaks.
     return () => {
         unsubscribe();
     };
-  }, [collectionName, userId]); // Rerun the effect if the collectionName or userId changes
+  }, [collectionName, userId]);
 
   return [data, loading];
 };
