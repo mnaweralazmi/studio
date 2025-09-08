@@ -17,21 +17,24 @@ interface DataContextType {
 }
 
 const mapTimestampsToDates = (data: any): any => {
+  if (!data) return data;
+
   if (data instanceof Timestamp) {
     return data.toDate();
   }
+
   if (Array.isArray(data)) {
-    return data.map(mapTimestampsToDates);
+    return data.map(item => mapTimestampsToDates(item));
   }
-  if (data && typeof data === "object" && Object.prototype.toString.call(data) !== "[object Date]") {
-    const out: { [key: string]: any } = {};
-    for (const k in data) {
-      if (Object.prototype.hasOwnProperty.call(data, k)) {
-        out[k] = mapTimestampsToDates(data[k]);
-      }
+
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const res: { [key: string]: any } = {};
+    for (const key in data) {
+      res[key] = mapTimestampsToDates(data[key]);
     }
-    return out;
+    return res;
   }
+
   return data;
 };
 
@@ -67,7 +70,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!userId) {
-      // If user logs out, clear all data and set loading to false.
       setAllSales([]);
       setAllExpenses([]);
       setAllDebts([]);
@@ -79,7 +81,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Reset loading states when user changes
     setSalesLoading(true);
     setExpensesLoading(true);
     setDebtsLoading(true);
@@ -106,10 +107,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return unsubscribe;
     });
 
-    // Cleanup function to unsubscribe from all listeners on component unmount or when userId changes
     return () => unsubscribers.forEach(unsub => unsub());
 
-  }, [userId]); // This effect re-runs whenever the userId changes (login/logout)
+  }, [userId]);
 
   useEffect(() => {
     setTopicsLoading(true);
@@ -124,7 +124,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setTopicsLoading(false);
     });
      return () => unsubscribe();
-  }, []); // This effect runs once to fetch public topic data
+  }, []);
 
 
   const loading = salesLoading || expensesLoading || debtsLoading || workersLoading || topicsLoading;
