@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, runTransaction, collection, writeBatch, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -45,9 +45,8 @@ export type SalesItem = {
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-async function addSale(userId: string, departmentId: Department, data: SalesItemData): Promise<string> {
-    const collectionName = `${departmentId}_sales`;
-    const salesCollectionRef = collection(db, 'users', userId, collectionName);
+async function addSale(userId: string, data: SalesItemData): Promise<string> {
+    const salesCollectionRef = collection(db, 'users', userId, 'sales');
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -58,12 +57,12 @@ async function addSale(userId: string, departmentId: Department, data: SalesItem
 async function archiveSale(userId: string, sale: SalesItem): Promise<void> {
     const batch = writeBatch(db);
     
-    const collectionName = `${sale.departmentId}_sales`;
-    const originalSaleRef = doc(db, 'users', userId, collectionName, sale.id);
+    // 1. Delete from the main 'sales' collection
+    const originalSaleRef = doc(db, 'users', userId, 'sales', sale.id);
     batch.delete(originalSaleRef);
 
-    const archiveCollectionName = `archive_${sale.departmentId}_sales`;
-    const archiveSaleRef = doc(collection(db, 'users', userId, archiveCollectionName));
+    // 2. Add to the 'archive_sales' collection
+    const archiveSaleRef = doc(collection(db, 'users', userId, 'archive_sales'));
     const archivedSaleData = {
         ...sale,
         archivedAt: Timestamp.now(),
@@ -94,7 +93,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const salesItems = React.useMemo(() => {
     return allSales
         .filter(item => item.departmentId === departmentId)
-        .sort((a,b) => b.date.getTime() - a.date.getTime())
+        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [allSales, departmentId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -128,7 +127,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        await addSale(authUser.uid, departmentId, submissionData);
+        await addSale(authUser.uid, submissionData);
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {
@@ -297,7 +296,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     )
   }
   
-  if (isAuthLoading) {
+  if (isAuthLoading || isDataLoading) {
       return (
         <div className="space-y-6">
             <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
@@ -336,9 +335,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
               <CardTitle className="text-xl sm:text-2xl">{t('salesList')}</CardTitle>
             </CardHeader>
             <CardContent>
-                {isDataLoading ? (
-                    <Skeleton className="h-40 w-full" />
-                ) : salesItems.length > 0 ? (
+                {salesItems.length > 0 ? (
                   <>
                     <div className="overflow-x-auto">
                         {renderTable()}

@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from 'react';
-import { addDoc, doc, Timestamp, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, collection, query, onSnapshot, writeBatch, where, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,9 +52,8 @@ export type ExpenseItem = {
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-async function addExpense(userId: string, departmentId: Department, data: ExpenseItemData): Promise<string> {
-    const collectionName = `${departmentId}_expenses`;
-    const expensesCollectionRef = collection(db, 'users', userId, collectionName);
+async function addExpense(userId: string, data: ExpenseItemData): Promise<string> {
+    const expensesCollectionRef = collection(db, 'users', userId, 'expenses');
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -65,12 +64,12 @@ async function addExpense(userId: string, departmentId: Department, data: Expens
 async function archiveExpense(userId: string, expense: ExpenseItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const collectionName = `${expense.departmentId}_expenses`;
-    const originalExpenseRef = doc(db, 'users', userId, collectionName, expense.id);
+    // 1. Delete from the main 'expenses' collection
+    const originalExpenseRef = doc(db, 'users', userId, 'expenses', expense.id);
     batch.delete(originalExpenseRef);
 
-    const archiveCollectionName = `archive_${expense.departmentId}_expenses`;
-    const archiveExpenseRef = doc(collection(db, 'users', userId, archiveCollectionName));
+    // 2. Add to the 'archive_expenses' collection
+    const archiveExpenseRef = doc(collection(db, 'users', userId, 'archive_expenses'));
     const archivedExpenseData = {
         ...expense,
         archivedAt: Timestamp.now(),
@@ -102,7 +101,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const expenses = React.useMemo(() => {
         return allExpenses
             .filter(item => item.departmentId === departmentId)
-            .sort((a,b) => b.date.getTime() - a.date.getTime());
+            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [allExpenses, departmentId]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -136,7 +135,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            await addExpense(authUser.uid, departmentId, newExpenseData);
+            await addExpense(authUser.uid, newExpenseData);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });
@@ -165,7 +164,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const totalFixedExpenses = fixedExpenses.reduce((sum, item) => sum + item.amount, 0);
     const totalVariableExpenses = variableExpenses.reduce((sum, item) => sum + item.amount, 0);
 
-    if (isAuthLoading) {
+    if (isAuthLoading || isDataLoading) {
         return (
             <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
@@ -265,9 +264,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                     <CardTitle className="text-xl sm:text-2xl">{t('expensesList')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                 {isDataLoading ? (
-                    <Skeleton className="h-40 w-full" />
-                 ) : (fixedExpenses.length > 0 || variableExpenses.length > 0) ? (
+                 {(fixedExpenses.length > 0 || variableExpenses.length > 0) ? (
                      <div className="grid md:grid-cols-2 gap-6">
                         {fixedExpenses.length > 0 && (
                         <div>

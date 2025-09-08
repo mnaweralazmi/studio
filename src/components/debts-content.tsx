@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, onSnapshot, writeBatch, where } from 'firebase/firestore';
+import { addDoc, doc, Timestamp, updateDoc, arrayUnion, collection, query, onSnapshot, writeBatch, where, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,9 +43,8 @@ export type DebtItem = {
 
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-async function addDebt(userId: string, departmentId: Department, data: DebtItemData): Promise<string> {
-    const collectionName = `${departmentId}_debts`;
-    const debtsCollectionRef = collection(db, 'users', userId, collectionName);
+async function addDebt(userId: string, data: DebtItemData): Promise<string> {
+    const debtsCollectionRef = collection(db, 'users', userId, 'debts');
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
         payments: [],
@@ -58,12 +57,10 @@ async function addDebt(userId: string, departmentId: Department, data: DebtItemD
 async function archiveDebt(userId: string, debt: DebtItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const collectionName = `${debt.departmentId}_debts`;
-    const originalDebtRef = doc(db, 'users', userId, collectionName, debt.id);
+    const originalDebtRef = doc(db, 'users', userId, 'debts', debt.id);
     batch.delete(originalDebtRef);
 
-    const archiveCollectionName = `archive_${debt.departmentId}_debts`;
-    const archiveDebtRef = doc(collection(db, 'users', userId, archiveCollectionName));
+    const archiveDebtRef = doc(collection(db, 'users', userId, 'archive_debts'));
 
     const archivedData: any = {
         ...debt,
@@ -81,9 +78,8 @@ async function archiveDebt(userId: string, debt: DebtItem): Promise<void> {
 }
 
 
-async function addDebtPayment(userId: string, debtId: string, departmentId: Department, paymentData: Omit<Payment, 'id'>) {
-    const collectionName = `${departmentId}_debts`;
-    const debtRef = doc(db, 'users', userId, collectionName, debtId);
+async function addDebtPayment(userId: string, debtId: string, paymentData: Omit<Payment, 'id'>) {
+    const debtRef = doc(db, 'users', userId, 'debts', debtId);
     await updateDoc(debtRef, {
         payments: arrayUnion({
             ...paymentData,
@@ -93,9 +89,8 @@ async function addDebtPayment(userId: string, debtId: string, departmentId: Depa
     });
 }
 
-async function updateDebtStatus(userId: string, debtId: string, departmentId: Department, status: DebtItem['status']) {
-    const collectionName = `${departmentId}_debts`;
-    const debtRef = doc(db, 'users', userId, collectionName, debtId);
+async function updateDebtStatus(userId: string, debtId: string, status: DebtItem['status']) {
+    const debtRef = doc(db, 'users', userId, 'debts', debtId);
     await updateDoc(debtRef, { status });
 }
 
@@ -114,7 +109,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const debts = React.useMemo(() => {
         return allDebts
             .filter(item => item.departmentId === departmentId)
-            .sort((a,b) => (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0));
+            .sort((a,b) => (a.dueDate ? new Date(a.dueDate).getTime() : 0) - (b.dueDate ? new Date(b.dueDate).getTime() : 0));
     }, [allDebts, departmentId]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -145,7 +140,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         };
 
         try {
-            await addDebt(authUser.uid, departmentId, newDebtData);
+            await addDebt(authUser.uid, newDebtData);
             formRef.current?.reset();
             setDueDate(undefined);
             toast({ title: t('debtAddedSuccess') });
@@ -177,12 +172,12 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
         try {
             const newPayment = { amount: paymentAmount, date: new Date() };
-            await addDebtPayment(authUser.uid, debtId, debt.departmentId as Department, newPayment);
+            await addDebtPayment(authUser.uid, debtId, newPayment);
             
             const totalPaid = debt.payments.reduce((sum, p) => sum + p.amount, 0) + paymentAmount;
             const newStatus: DebtItem['status'] = totalPaid >= debt.amount ? 'paid' : 'partially-paid';
             if (newStatus !== debt.status) {
-                await updateDebtStatus(authUser.uid, debtId, debt.departmentId as Department, newStatus);
+                await updateDebtStatus(authUser.uid, debtId, newStatus);
             }
             
             toast({ title: t('paymentRecordedSuccess') });
@@ -205,7 +200,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         return sum + getRemainingAmount(item);
     }, 0);
 
-    if (isAuthLoading) {
+    if (isAuthLoading || isDataLoading) {
         return (
             <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>
@@ -268,9 +263,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             <Card>
                 <CardHeader><CardTitle className="text-xl sm:text-2xl">{t('debtList')}</CardTitle></CardHeader>
                 <CardContent>
-                    {isDataLoading ? (
-                        <Skeleton className="h-40 w-full" />
-                    ) : debts.length > 0 ? (
+                    {debts.length > 0 ? (
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader><TableRow>
@@ -291,7 +284,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                         <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell className="font-mono text-green-600">{getPaidAmount(item).toFixed(2)} {t('dinar')}</TableCell>
                                         <TableCell className="font-mono">{remainingAmount.toFixed(2)} {t('dinar')}</TableCell>
-                                        <TableCell>{item.dueDate ? format(item.dueDate, "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
+                                        <TableCell>{item.dueDate ? format(new Date(item.dueDate), "PPP", { locale: language === 'ar' ? arSA : enUS }) : t('noDueDate')}</TableCell>
                                         <TableCell>
                                             <Badge variant={item.status === 'paid' ? 'default' : (item.status === 'partially-paid' ? 'secondary' : 'destructive')} className={item.status === 'paid' ? 'bg-green-600 hover:bg-green-600/80' : ''}>
                                                 {t(`status${item.status.charAt(0).toUpperCase() + item.status.slice(1)}` as any)}

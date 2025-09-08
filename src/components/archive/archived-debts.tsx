@@ -40,34 +40,28 @@ export function ArchivedDebts() {
 
         setIsLoading(true);
         
-        const departments = ['agriculture', 'livestock', 'poultry', 'fish'];
-        const unsubscribers = departments.map(dept => {
-            const collectionName = `archive_${dept}_debts`;
-            const q = query(collection(db, 'users', user.uid, collectionName));
-            return onSnapshot(q, (snapshot) => {
-                const items = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return { 
-                        id: doc.id,
-                        ...data,
-                        dueDate: data.dueDate ? data.dueDate.toDate() : undefined,
-                        payments: (data.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })),
-                        archivedAt: data.archivedAt
-                    } as ArchivedDebt;
-                });
-                
-                setArchivedItems(prev => {
-                    const otherItems = prev.filter(p => p.departmentId !== dept);
-                    const newItems = [...otherItems, ...items];
-                    return newItems.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis());
-                });
-            }, (error) => {
-                console.error(`Error fetching archived debts from ${collectionName}:`, error);
+        const collectionName = `archive_debts`;
+        const q = query(collection(db, 'users', user.uid, collectionName));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return { 
+                    id: doc.id,
+                    ...data,
+                    dueDate: data.dueDate ? data.dueDate.toDate() : undefined,
+                    payments: (data.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })),
+                    archivedAt: data.archivedAt.toDate()
+                } as ArchivedDebt;
             });
+            
+            setArchivedItems(items.sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime()));
+            setIsLoading(false);
+        }, (error) => {
+            console.error(`Error fetching archived debts from ${collectionName}:`, error);
+            setIsLoading(false);
         });
 
-        setIsLoading(false);
-        return () => unsubscribers.forEach(unsub => unsub());
+        return () => unsubscribe();
 
     }, [user, authLoading]);
 
@@ -97,7 +91,7 @@ export function ArchivedDebts() {
                                     <TableCell>{t(departmentTitles[item.departmentId as DeptKey] as any)}</TableCell>
                                     <TableCell>{item.creditor}</TableCell>
                                     <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                    <TableCell>{format(item.archivedAt.toDate(), "PPP p", { locale: language === 'ar' ? arSA : enUS })}</TableCell>
+                                    <TableCell>{format(new Date(item.archivedAt), "PPP p", { locale: language === 'ar' ? arSA : enUS })}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

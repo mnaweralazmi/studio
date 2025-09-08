@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { db } from '@/lib/firebase';
@@ -38,32 +38,26 @@ export function ArchivedExpenses() {
         }
 
         setIsLoading(true);
-        const departments = ['agriculture', 'livestock', 'poultry', 'fish'];
-        const unsubscribers = departments.map(dept => {
-            const collectionName = `archive_${dept}_expenses`;
-            const q = query(collection(db, 'users', user.uid, collectionName));
-            return onSnapshot(q, (snapshot) => {
-                 const items = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return { 
-                        id: doc.id,
-                        ...data,
-                        date: data.date.toDate(),
-                    } as ArchivedExpense;
-                });
-                 setArchivedItems(prev => {
-                    const otherItems = prev.filter(p => p.departmentId !== dept);
-                    const newItems = [...otherItems, ...items];
-                    return newItems.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis());
-                });
-            }, (error) => {
-                 console.error(`Error fetching archived expenses from ${collectionName}:`, error);
+        const collectionName = 'archive_expenses';
+        const q = query(collection(db, 'users', user.uid, collectionName));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+             const items = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return { 
+                    id: doc.id,
+                    ...data,
+                    date: data.date.toDate(),
+                    archivedAt: data.archivedAt.toDate()
+                } as ArchivedExpense;
             });
+            setArchivedItems(items.sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime()));
+            setIsLoading(false);
+        }, (error) => {
+             console.error(`Error fetching archived expenses from ${collectionName}:`, error);
+             setIsLoading(false);
         });
 
-        setIsLoading(false);
-        return () => unsubscribers.forEach(unsub => unsub());
-
+        return () => unsubscribe();
     }, [user, authLoading]);
 
     if (isLoading) {
@@ -94,7 +88,7 @@ export function ArchivedExpenses() {
                                     <TableCell>{item.category}</TableCell>
                                     <TableCell>{item.item}</TableCell>
                                     <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                    <TableCell>{format(item.archivedAt.toDate(), "PPP p", { locale: language === 'ar' ? arSA : enUS })}</TableCell>
+                                    <TableCell>{format(new Date(item.archivedAt), "PPP p", { locale: language === 'ar' ? arSA : enUS })}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
