@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthProvider, useAuth } from '@/context/auth-context';
+import { DataProvider } from '@/context/data-context';
 import Providers from './providers';
 
 const cairo = Cairo({
@@ -86,9 +87,13 @@ export default function RootLayout({
       <head />
       <body>
         <Providers>
-            <LanguageProvider>
-              <RootLayoutContent>{children}</RootLayoutContent>
-            </LanguageProvider>
+          <AuthProvider>
+            <DataProvider>
+              <LanguageProvider>
+                <RootLayoutContent>{children}</RootLayoutContent>
+              </LanguageProvider>
+            </DataProvider>
+          </AuthProvider>
         </Providers>
       </body>
     </html>
