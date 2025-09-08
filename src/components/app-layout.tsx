@@ -4,7 +4,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive, Shield } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive, Shield, Bug } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/summary', label: t('financialSummary'), icon: BarChart },
     { href: '/archive', label: t('archive'), icon: Archive },
     { href: '/settings', label: t('settings'), icon: Settings },
+     { href: '/debug', label: 'Debug', icon: Bug }, // Temporary debug page
   ];
 
   if (loading || !user) {
