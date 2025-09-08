@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { collection, onSnapshot, query, DocumentData, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
@@ -76,23 +76,26 @@ const useCollectionSubscription = <T extends DocumentData>(
                     ...prevData,
                     [collectionName]: fetchedItems,
                 }));
-                 setLoading(false);
             }, error => {
                 console.error(`Error fetching collection ${collectionName}:`, error);
-                setLoading(false);
+                 setData(prevData => ({
+                    ...prevData,
+                    [collectionName]: [],
+                }));
             });
         });
-
-        // Initial loading is done after setting up listeners
-        const timer = setTimeout(() => setLoading(false), 1500); // Failsafe timeout
+        
+        // This is the key fix: setLoading to false *after* all listeners are established.
+        // It prevents the loading state from flickering and hiding the data.
+        setLoading(false);
 
         return () => {
-            clearTimeout(timer);
             unsubscribers.forEach(unsub => unsub());
         };
-    }, [collectionNames.join(','), enabled, userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enabled, userId]);
 
-    const flattenedData = React.useMemo(() => Object.values(data).flat(), [data]);
+    const flattenedData = useMemo(() => Object.values(data).flat(), [data]);
 
     return [flattenedData, loading];
 };
@@ -111,7 +114,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>(expensesCollections, isEnabled, user?.uid);
     const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>(debtsCollections, isEnabled, user?.uid);
     const [allWorkers, workersLoading] = useCollectionSubscription<Worker>(['workers'], isEnabled, user?.uid);
-
+    
     const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading;
 
     const value = {
