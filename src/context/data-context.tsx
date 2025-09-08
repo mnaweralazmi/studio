@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { collection, onSnapshot, query, DocumentData, Timestamp } from 'firebase/firestore';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { collection, onSnapshot, query, DocumentData, Timestamp, Query } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { type SalesItem } from '@/components/budget-content';
@@ -26,57 +26,72 @@ const DataContext = createContext<DataContextType>({
     loading: true,
 });
 
-const useCollectionForUser = <T extends DocumentData>(
+const useCollectionSubscription = <T extends DocumentData>(
   collectionName: string,
-  enabled: boolean
+  enabled: boolean,
+  userId: string | undefined
 ): [T[], boolean] => {
-  const { user } = useAuth();
-  const [data, setData] = React.useState<T[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  
-  React.useEffect(() => {
-    if (!enabled || !user) {
+  const [data, setData] = useState<T[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const mapTimestampsToDates = useCallback((docData: DocumentData) => {
+    const mapped: any = { ...docData };
+    for (const key in mapped) {
+      if (mapped[key] instanceof Timestamp) {
+        mapped[key] = mapped[key].toDate();
+      } else if (Array.isArray(mapped[key])) {
+        // Recursively check arrays for objects with Timestamps
+        mapped[key] = mapped[key].map((item: any) => {
+          if (item && typeof item === 'object' && !(item instanceof Date)) {
+            return mapTimestampsToDates(item);
+          }
+          return item;
+        });
+      }
+    }
+    return mapped;
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || !userId) {
       setLoading(false);
-      return;
+      setData([]);
+      return () => {};
     }
 
     setLoading(true);
-    const dataQuery = query(collection(db, 'users', user.uid, collectionName));
+    const dataQuery: Query<DocumentData> = query(collection(db, 'users', userId, collectionName));
     
     const unsubscribe = onSnapshot(dataQuery, (snapshot) => {
-        const fetchedItems = snapshot.docs.map(doc => {
-             const docData = doc.data();
-             const mappedData: any = { id: doc.id, ...docData };
-             // Convert Timestamps to Dates for relevant fields
-             if (docData.date) mappedData.date = (docData.date as Timestamp).toDate();
-             if (docData.dueDate) mappedData.dueDate = (docData.dueDate as Timestamp).toDate();
-             if (docData.payments) mappedData.payments = (docData.payments || []).map((p: any) => ({...p, date: (p.date as Timestamp).toDate()}));
-             if (docData.transactions) mappedData.transactions = (docData.transactions || []).map((t: any) => ({...t, date: (t.date as Timestamp).toDate()}));
-             return mappedData as T;
-        });
-        setData(fetchedItems);
-        setLoading(false);
+      const fetchedItems = snapshot.docs.map(doc => {
+        const docData = doc.data();
+        return {
+          id: doc.id,
+          ...mapTimestampsToDates(docData),
+        } as T;
+      });
+      setData(fetchedItems);
+      setLoading(false);
     }, error => {
-        console.error(`Error fetching collection ${collectionName}:`, error);
-        setLoading(false);
+      console.error(`Error fetching collection ${collectionName}:`, error);
+      setLoading(false);
+      setData([]);
     });
 
     return () => unsubscribe();
-
-  }, [user, collectionName, enabled]);
+  }, [collectionName, enabled, userId, mapTimestampsToDates]);
 
   return [data, loading];
 };
-
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
     const { user, loading: authLoading } = useAuth();
     const isEnabled = !authLoading && !!user;
 
-    const [allSales, salesLoading] = useCollectionForUser<SalesItem>('sales', isEnabled);
-    const [allExpenses, expensesLoading] = useCollectionForUser<ExpenseItem>('expenses', isEnabled);
-    const [allDebts, debtsLoading] = useCollectionForUser<DebtItem>('debts', isEnabled);
-    const [allWorkers, workersLoading] = useCollectionForUser<Worker>('workers', isEnabled);
+    const [allSales, salesLoading] = useCollectionSubscription<SalesItem>('sales', isEnabled, user?.uid);
+    const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>('expenses', isEnabled, user?.uid);
+    const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>('debts', isEnabled, user?.uid);
+    const [allWorkers, workersLoading] = useCollectionSubscription<Worker>('workers', isEnabled, user?.uid);
 
     const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading;
 
