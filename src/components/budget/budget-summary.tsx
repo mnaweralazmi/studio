@@ -16,7 +16,7 @@ export function BudgetSummary() {
     
     const totalExpenses = React.useMemo(() => allExpenses.reduce((sum, item) => sum + item.amount, 0), [allExpenses]);
 
-    const totalSalaries = React.useMemo(() => allWorkers.reduce((workerSum, worker) => {
+    const totalSalariesPaid = React.useMemo(() => allWorkers.reduce((workerSum, worker) => {
         const salaries = (worker.transactions || []).filter(t => t.type === 'salary').reduce((sum, t) => sum + t.amount, 0);
         return workerSum + salaries;
     }, 0), [allWorkers]);
@@ -26,7 +26,7 @@ export function BudgetSummary() {
         return sum + (item.amount - paidAmount);
     }, 0), [allDebts]);
     
-    const totalExpenditure = totalExpenses + totalSalaries;
+    const totalExpenditure = totalExpenses + totalSalariesPaid;
     const netProfit = totalSales - totalExpenditure;
 
     if (loading) {
