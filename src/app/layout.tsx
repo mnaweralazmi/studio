@@ -12,7 +12,6 @@ import { Cairo } from 'next/font/google';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { DataProvider } from '@/context/data-context';
-import Providers from './providers';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -90,13 +89,11 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <head />
       <body>
-        <Providers>
           <AuthProvider>
               <LanguageProvider>
                 <RootLayoutContent>{children}</RootLayoutContent>
               </LanguageProvider>
           </AuthProvider>
-        </Providers>
       </body>
     </html>
   );
