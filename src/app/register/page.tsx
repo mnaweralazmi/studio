@@ -29,7 +29,7 @@ const GoogleIcon = () => (
 
 
 const createNewUserDocument = async (user: User, name: string | null) => {
-    const userDocRef = doc(db, "users", user.uid);
+    const userDocRef = doc(db, "data-users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {

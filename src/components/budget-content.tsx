@@ -120,7 +120,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     try {
         await addSale(submissionData);
         
-        const userRef = doc(db, 'users', authUser.uid);
+        const userRef = doc(db, 'data-users', authUser.uid);
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) throw "User document does not exist!";

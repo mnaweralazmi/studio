@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { User, Save, Upload, Image as ImageIcon, Copy } from "lucide-react";
+import { User, Save, Upload, Image as ImageIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -100,7 +100,7 @@ export function ProfileTab() {
         photoURL: newAvatarUrl,
       });
 
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(db, "data-users", user.uid);
       await updateDoc(userDocRef, {
         name: name,
         photoURL: newAvatarUrl,

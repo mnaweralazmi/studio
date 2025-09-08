@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         // If we have a user, listen for their data in Firestore
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDocRef = doc(db, 'data-users', firebaseUser.uid);
         
         const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {

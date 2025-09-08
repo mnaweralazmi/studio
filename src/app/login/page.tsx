@@ -25,7 +25,7 @@ const GoogleIcon = () => (
 )
 
 const handleUserSignIn = async (user: User) => {
-    const userDocRef = doc(db, 'users', user.uid);
+    const userDocRef = doc(db, 'data-users', user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
@@ -157,5 +157,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
