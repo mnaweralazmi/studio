@@ -1,26 +1,48 @@
 "use client";
-import React, { createContext, useContext, ReactNode } from 'react';
-// This context is no longer needed as each component will fetch its own data.
-// This simplifies the data flow and ensures components are self-contained.
-// Keeping the file for now to avoid breaking imports, but it's effectively empty.
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+import { useAuth } from '@/context/auth-context';
+import { type SalesItem } from '@/components/budget-content';
+import { type ExpenseItem } from '@/components/expenses-content';
+import { type DebtItem } from '@/components/debts-content';
+import { type Worker } from '@/components/workers/types';
+import useCollectionSubscription from '@/hooks/use-collection-subscription';
 
 interface DataContextType {
-  // Define the shape of your context data here
-  // For example:
-  // sales: any[];
-  // loading: boolean;
+  allSales: (SalesItem & { id: string })[];
+  allExpenses: (ExpenseItem & { id: string })[];
+  allDebts: (DebtItem & { id: string })[];
+  allWorkers: (Worker & { id: string })[];
+  loading: boolean;
 }
 
-const DataContext = createContext<DataContextType | undefined>(undefined);
+const DataContext = createContext<DataContextType>({
+  allSales: [],
+  allExpenses: [],
+  allDebts: [],
+  allWorkers: [],
+  loading: true,
+});
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-  // The value provided to the context consumers
-  const value = {
-    // Populate your context value here
-  };
+  const { user, loading: authLoading } = useAuth();
+
+  const [allSales, salesLoading] = useCollectionSubscription<SalesItem>('sales', user?.uid);
+  const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>('expenses', user?.uid);
+  const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>('debts', user?.uid);
+  const [allWorkers, workersLoading] = useCollectionSubscription<Worker>('workers', user?.uid);
+
+  const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading;
+
+  const value = useMemo(() => ({
+    allSales,
+    allExpenses,
+    allDebts,
+    allWorkers,
+    loading
+  }), [allSales, allExpenses, allDebts, allWorkers, loading]);
 
   return (
-    <DataContext.Provider value={value as any}>
+    <DataContext.Provider value={value}>
       {children}
     </DataContext.Provider>
   );
@@ -28,10 +50,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 export const useData = () => {
   const context = useContext(DataContext);
-  if (context === undefined) {
-    // This can be a silent failure or a logged error, depending on desired strictness.
-    // console.warn('useData must be used within a DataProvider');
-    return { allSales: [], allExpenses: [], allDebts: [], allWorkers: [], loading: true }; // Return a default empty state
-  }
+  if (context === undefined) throw new Error('useData must be used within a DataProvider');
   return context;
 };
