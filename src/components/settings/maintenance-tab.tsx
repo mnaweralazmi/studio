@@ -15,7 +15,7 @@ import { Wrench } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import { useAuth } from "@/context/auth-context";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, writeBatch, doc } from "firebase/firestore";
+import { collection, getDocs, writeBatch } from "firebase/firestore";
 
 const COLLECTIONS_TO_MIGRATE = ['sales', 'expenses', 'debts', 'workers', 'tasks'];
 
@@ -43,12 +43,10 @@ export function MaintenanceTab() {
 
         for (const collectionName of COLLECTIONS_TO_MIGRATE) {
             const colRef = collection(db, collectionName);
-            // Fetch all documents in the collection
             const snapshot = await getDocs(colRef);
 
             snapshot.forEach(docSnapshot => {
                 const data = docSnapshot.data();
-                // Check if ownerId is missing or falsy
                 if (!data.ownerId) {
                     batch.update(docSnapshot.ref, { ownerId: user.uid });
                     updatedDocsCount++;

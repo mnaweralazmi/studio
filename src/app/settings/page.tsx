@@ -23,7 +23,7 @@ type SettingsSection = 'profile' | 'achievements' | 'display' | 'notifications' 
 export default function SettingsPage() {
     const router = useRouter();
     const { user, loading } = useAuth();
-    const { language, t } = useLanguage();
+    const { t } = useLanguage();
     const [activeSection, setActiveSection] = React.useState<SettingsSection>('profile');
 
     const handleLogout = async () => {
@@ -36,7 +36,6 @@ export default function SettingsPage() {
         { id: 'achievements', label: t('achievements'), icon: Award },
         { id: 'display', label: t('displayAndLanguage'), icon: Palette },
         { id: 'notifications', label: t('notifications'), icon: Bell },
-        { id: 'maintenance', label: t('maintenanceTools'), icon: Wrench },
     ] as const;
 
     const renderContent = () => {
@@ -45,7 +44,6 @@ export default function SettingsPage() {
             case 'achievements': return <AchievementsTab />;
             case 'display': return <DisplayTab />;
             case 'notifications': return <NotificationsTab />;
-            case 'maintenance': return <MaintenanceTab />;
             default: return <ProfileTab />;
         }
     };
