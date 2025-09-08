@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { User, Save, Upload, Image as ImageIcon } from "lucide-react";
+import { User, Save, Upload, Image as ImageIcon, Copy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +52,13 @@ export function ProfileTab() {
       setAvatarUrl(URL.createObjectURL(file));
     }
   };
+
+  const copyToClipboard = () => {
+    if(user?.uid) {
+        navigator.clipboard.writeText(user.uid);
+        toast({ title: "Copied!", description: "User ID has been copied to clipboard."});
+    }
+  }
 
   async function onProfileSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -205,6 +212,16 @@ export function ProfileTab() {
               </Label>
               <Input id="email" readOnly disabled value={user?.email || ""} />
             </div>
+          </div>
+          
+           <div className="space-y-2">
+              <Label htmlFor="userId">User ID</Label>
+              <div className="flex items-center gap-2">
+                  <Input id="userId" readOnly disabled value={user?.uid || ""} />
+                   <Button type="button" variant="outline" size="icon" onClick={copyToClipboard} aria-label="Copy User ID">
+                        <Copy className="h-4 w-4" />
+                   </Button>
+              </div>
           </div>
 
           <div>
