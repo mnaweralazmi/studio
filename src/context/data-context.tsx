@@ -15,31 +15,6 @@ interface DataContextType {
   loading: boolean;
 }
 
-// This function recursively searches for Firestore Timestamps and converts them to JS Date objects.
-const mapTimestampsToDates = (data: any): any => {
-  if (!data) {
-    return data;
-  }
-  if (data instanceof Timestamp) {
-    return data.toDate();
-  }
-  if (Array.isArray(data)) {
-    return data.map(item => mapTimestampsToDates(item));
-  }
-  // Check if it's an object (and not a Date, which is also an object)
-  if (typeof data === 'object' && data !== null && !(data instanceof Date)) {
-    const res: { [key: string]: any } = {};
-    for (const key in data) {
-      // Use hasOwnProperty to ensure it's not a property from the prototype chain
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        res[key] = mapTimestampsToDates(data[key]);
-      }
-    }
-    return res;
-  }
-  return data;
-};
-
 const DataContext = createContext<DataContextType>({
   allSales: [],
   allExpenses: [],
@@ -49,89 +24,87 @@ const DataContext = createContext<DataContextType>({
   loading: true,
 });
 
+const mapTimestampsToDates = (data: any): any => {
+    if (!data) return data;
+    if (data instanceof Timestamp) return data.toDate();
+    if (Array.isArray(data)) return data.map(item => mapTimestampsToDates(item));
+    if (typeof data === 'object' && !(data instanceof Date)) {
+        return Object.entries(data).reduce((acc, [key, value]) => {
+            acc[key] = mapTimestampsToDates(value);
+            return acc;
+        }, {} as { [key: string]: any });
+    }
+    return data;
+};
+
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-
   const [allSales, setAllSales] = useState<SalesItem[]>([]);
   const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
   const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-  
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    // If no user, do nothing and ensure state is cleared.
+    // If there is no user, reset everything to empty and not loading.
     if (!user?.uid) {
-      setLoading(false);
       setAllSales([]);
       setAllExpenses([]);
       setAllDebts([]);
       setAllWorkers([]);
-      // Topics are public, so they might still be loaded, but we reset others.
+      setTopics([]);
+      setLoading(false);
       return;
     }
 
-    // Set loading to true when we start fetching data for a new user
     setLoading(true);
+    const userId = user.uid;
 
-    const collectionsToSubscribe = [
-        { name: 'sales', setter: setAllSales },
-        { name: 'expenses', setter: setAllExpenses },
-        { name: 'debts', setter: setAllDebts },
-        { name: 'workers', setter: setAllWorkers },
+    const collectionsToWatch = [
+      { name: 'sales', setter: setAllSales },
+      { name: 'expenses', setter: setAllExpenses },
+      { name: 'debts', setter: setAllDebts },
+      { name: 'workers', setter: setAllWorkers },
+      { name: 'data', setter: setTopics, isPublic: true },
     ];
     
-    let activeSubscriptions = collectionsToSubscribe.length + 1; // +1 for topics
-    
-    const onDataLoad = () => {
-        activeSubscriptions--;
-        if (activeSubscriptions === 0) {
-            setLoading(false);
-        }
-    };
-    
-    const unsubscribers = collectionsToSubscribe.map(({ name, setter }) => {
-      const q = query(collection(db, name), where("ownerId", "==", user.uid));
+    let pendingSubscriptions = collectionsToWatch.length;
+
+    const unsubscribers = collectionsToWatch.map(({ name, setter, isPublic }) => {
+      const q = isPublic 
+        ? query(collection(db, name))
+        : query(collection(db, name), where("ownerId", "==", userId));
+      
       return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) } as any));
+        const items = snapshot.docs.map(doc => ({ 
+            id: doc.id, 
+            ...mapTimestampsToDates(doc.data()) 
+        })) as any[];
         setter(items);
-        onDataLoad();
+        
+        pendingSubscriptions--;
+        if (pendingSubscriptions === 0) {
+          setLoading(false);
+        }
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
         setter([]);
-        onDataLoad();
+        pendingSubscriptions--;
+        if (pendingSubscriptions === 0) {
+          setLoading(false);
+        }
       });
     });
 
-    // Subscribe to public topics
-    const topicsQuery = query(collection(db, "data"));
-    const topicsUnsubscriber = onSnapshot(topicsQuery, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) } as any));
-        setTopics(items);
-        onDataLoad();
-    }, (error) => {
-        console.error(`Error fetching topics:`, error);
-        setTopics([]);
-        onDataLoad();
-    });
-    
-    unsubscribers.push(topicsUnsubscriber);
-
-    // Cleanup function to unsubscribe from all listeners on component unmount or when user changes.
+    // Cleanup function to unsubscribe from all listeners
     return () => {
-        unsubscribers.forEach(unsub => unsub());
+      unsubscribers.forEach(unsub => unsub());
     };
 
-  }, [user?.uid]); // Dependency array ensures this effect re-runs when the user's UID changes.
+  }, [user?.uid]);
 
-  const value = {
-    allSales,
-    allExpenses,
-    allDebts,
-    allWorkers,
-    topics,
-    loading
-  };
+  const value = { allSales, allExpenses, allDebts, allWorkers, topics, loading };
 
   return (
     <DataContext.Provider value={value}>
@@ -142,6 +115,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 export const useData = () => {
   const context = useContext(DataContext);
-  if (context === undefined) throw new Error('useData must be used within a DataProvider');
+  if (context === undefined) {
+    throw new Error('useData must be used within a DataProvider');
+  }
   return context;
 };
