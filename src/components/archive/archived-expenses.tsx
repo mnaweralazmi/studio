@@ -4,13 +4,12 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { ArchivedExpense, Department } from '@/lib/types';
+import { useData } from '@/context/data-context';
 
 
 const departmentTitles: Record<Department, string> = {
@@ -21,15 +20,14 @@ const departmentTitles: Record<Department, string> = {
 };
 
 export function ArchivedExpenses() {
-    const { user, loading: authLoading } = useAuth();
-    const [archivedItems, isLoading] = useCollectionSubscription<ArchivedExpense>('archive_expenses', user?.uid);
+    const { archivedExpenses, loading } = useData();
     const { t, language } = useLanguage();
 
     const sortedItems = React.useMemo(() => {
-        return [...archivedItems].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
-    }, [archivedItems]);
+        return [...archivedExpenses].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
+    }, [archivedExpenses]);
 
-    if (isLoading || authLoading) {
+    if (loading) {
         return <Skeleton className="h-60 w-full" />;
     }
     

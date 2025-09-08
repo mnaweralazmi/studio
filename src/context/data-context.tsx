@@ -4,7 +4,7 @@ import React, { createContext, useContext, ReactNode, useState, useEffect } from
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, where, DocumentData, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { SalesItem, ExpenseItem, DebtItem, Worker, AgriculturalSection } from '@/lib/types';
+import type { SalesItem, ExpenseItem, DebtItem, Worker, AgriculturalSection, ArchivedSale, ArchivedExpense, ArchivedDebt, ArchivedTask } from '@/lib/types';
 
 interface DataContextType {
   allSales: SalesItem[];
@@ -12,6 +12,10 @@ interface DataContextType {
   allDebts: DebtItem[];
   allWorkers: Worker[];
   topics: AgriculturalSection[];
+  archivedSales: ArchivedSale[];
+  archivedExpenses: ArchivedExpense[];
+  archivedDebts: ArchivedDebt[];
+  completedTasks: ArchivedTask[];
   loading: boolean;
 }
 
@@ -21,86 +25,123 @@ const DataContext = createContext<DataContextType>({
   allDebts: [],
   allWorkers: [],
   topics: [],
+  archivedSales: [],
+  archivedExpenses: [],
+  archivedDebts: [],
+  completedTasks: [],
   loading: true,
 });
 
 const mapTimestampsToDates = (data: any): any => {
-  if (!data) return data;
-  if (data instanceof Timestamp) {
-    return data.toDate();
-  }
-  if (Array.isArray(data)) {
-    return data.map(item => mapTimestampsToDates(item));
-  }
-  if (typeof data === 'object' && !(data instanceof Date)) {
-    return Object.entries(data).reduce((acc, [key, value]) => {
-      acc[key as string] = mapTimestampsToDates(value);
-      return acc;
-    }, {} as { [key: string]: any });
-  }
-  return data;
+    if (!data) return data;
+    if (data instanceof Timestamp) {
+        return data.toDate();
+    }
+    if (Array.isArray(data)) {
+        return data.map(item => mapTimestampsToDates(item));
+    }
+    if (typeof data === 'object' && !(data instanceof Date)) {
+        const newObj: { [key: string]: any } = {};
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                newObj[key] = mapTimestampsToDates(data[key]);
+            }
+        }
+        return newObj;
+    }
+    return data;
 };
-
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+
+  // States for live data
   const [allSales, setAllSales] = useState<SalesItem[]>([]);
   const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
   const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // States for archived data
+  const [archivedSales, setArchivedSales] = useState<ArchivedSale[]>([]);
+  const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
+  const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
 
   useEffect(() => {
     const userId = user?.uid;
 
     if (!userId) {
+      setLoading(false);
+      // Reset all states to empty when user logs out
       setAllSales([]);
       setAllExpenses([]);
       setAllDebts([]);
       setAllWorkers([]);
       setTopics([]);
-      setLoading(false);
+      setArchivedSales([]);
+      setArchivedExpenses([]);
+      setArchivedDebts([]);
+      setCompletedTasks([]);
       return;
     }
     
     setLoading(true);
 
     const collectionsToWatch = [
-      { name: 'sales', setter: setAllSales },
-      { name: 'expenses', setter: setAllExpenses },
-      { name: 'debts', setter: setAllDebts },
-      { name: 'workers', setter: setAllWorkers },
-      { name: 'data', setter: setTopics }, // For public topics
+      // Live data
+      { name: 'sales', setter: setAllSales, owner: true },
+      { name: 'expenses', setter: setAllExpenses, owner: true },
+      { name: 'debts', setter: setAllDebts, owner: true },
+      { name: 'workers', setter: setAllWorkers, owner: true },
+      { name: 'tasks', setter: () => {}, owner: true }, // Tasks are handled separately in their component, but we keep a listener for consistency if needed later
+      // Archived data
+      { name: 'archive_sales', setter: setArchivedSales, owner: true },
+      { name: 'archive_expenses', setter: setArchivedExpenses, owner: true },
+      { name: 'archive_debts', setter: setArchivedDebts, owner: true },
+      { name: 'completed_tasks', setter: setCompletedTasks, owner: true },
+      // Public data
+      { name: 'data', setter: setTopics, owner: false },
     ];
+    
+    let activeListeners = collectionsToWatch.length;
+    
+    const onDataLoaded = () => {
+        activeListeners--;
+        if (activeListeners === 0) {
+            setLoading(false);
+        }
+    };
 
-    const unsubscribers = collectionsToWatch.map(({ name, setter }) => {
-      const isPublicCollection = name === 'data';
-      
-      const q = isPublicCollection 
-        ? query(collection(db, name)) 
-        : query(collection(db, name), where("ownerId", "==", userId));
+    const unsubscribers = collectionsToWatch.map(({ name, setter, owner }) => {
+      const collectionRef = collection(db, name);
+      const q = owner 
+        ? query(collectionRef, where("ownerId", "==", userId))
+        : query(collectionRef);
 
       return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
         setter(items);
+        onDataLoaded();
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
-        setter([]);
+        setter([]); // Clear data on error
+        onDataLoaded();
       });
     });
 
-    // A simple way to determine initial loading state
-    const timer = setTimeout(() => setLoading(false), 2000); // Assume loading is done after 2s
-
     // Cleanup function
     return () => {
-      clearTimeout(timer);
       unsubscribers.forEach(unsub => unsub());
     };
   }, [user?.uid]);
 
-  const value = { allSales, allExpenses, allDebts, allWorkers, topics, loading };
+  const value = { 
+    allSales, allExpenses, allDebts, allWorkers, topics, 
+    archivedSales, archivedExpenses, archivedDebts, completedTasks,
+    loading 
+  };
 
   return (
     <DataContext.Provider value={value}>

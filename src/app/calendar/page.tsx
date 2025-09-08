@@ -15,8 +15,8 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
-import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { Task } from '@/lib/types';
+import { useData } from '@/context/data-context';
 
 
 const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
@@ -96,7 +96,25 @@ export default function CalendarPage() {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const { language, t } = useLanguage();
-  const [tasks, tasksLoading] = useCollectionSubscription<Task>('tasks', user?.uid);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = React.useState(true);
+
+
+  React.useEffect(() => {
+    if (user?.uid) {
+      const q = query(collection(db, "tasks"), where("ownerId", "==", user.uid));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const tasksData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          dueDate: (doc.data().dueDate as Timestamp).toDate(),
+        })) as Task[];
+        setTasks(tasksData);
+        setTasksLoading(false);
+      });
+      return () => unsubscribe();
+    }
+  }, [user?.uid]);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
@@ -117,6 +135,7 @@ export default function CalendarPage() {
                 completedAt: Timestamp.now(),
                 isCompleted: true,
                 ownerId: user.uid,
+                dueDate: Timestamp.fromDate(new Date(taskToComplete.dueDate))
             };
             
             batch.set(archiveRef, archivedTaskData);

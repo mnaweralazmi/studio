@@ -4,26 +4,24 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { ArchivedTask } from '@/lib/types';
+import { useData } from '@/context/data-context';
 
 
 export function ArchivedTasks() {
-    const { user, loading: authLoading } = useAuth();
-    const [archivedTasks, isLoading] = useCollectionSubscription<ArchivedTask>('completed_tasks', user?.uid);
+    const { completedTasks, loading } = useData();
     const { t, language } = useLanguage();
 
     const sortedTasks = React.useMemo(() => {
-        return [...archivedTasks].sort((a,b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
-    }, [archivedTasks]);
+        return [...completedTasks].sort((a,b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+    }, [completedTasks]);
 
 
-    if (isLoading || authLoading) {
+    if (loading) {
         return <Skeleton className="h-60 w-full" />;
     }
     
