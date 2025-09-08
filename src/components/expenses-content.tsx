@@ -52,8 +52,9 @@ export type ExpenseItem = {
 export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 
-async function addExpense(userId: string, data: ExpenseItemData): Promise<string> {
-    const expensesCollectionRef = collection(db, 'users', userId, 'expenses');
+async function addExpense(userId: string, departmentId: Department, data: ExpenseItemData): Promise<string> {
+    const collectionName = `${departmentId}_expenses`;
+    const expensesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -64,10 +65,11 @@ async function addExpense(userId: string, data: ExpenseItemData): Promise<string
 async function archiveExpense(userId: string, expense: ExpenseItem): Promise<void> {
     const batch = writeBatch(db);
 
-    const originalExpenseRef = doc(db, 'users', userId, 'expenses', expense.id);
+    const collectionName = `${expense.departmentId}_expenses`;
+    const originalExpenseRef = doc(db, 'users', userId, collectionName, expense.id);
     batch.delete(originalExpenseRef);
 
-    const archiveCollectionName = `archive_expenses`;
+    const archiveCollectionName = `archive_${expense.departmentId}_expenses`;
     const archiveExpenseRef = doc(collection(db, 'users', userId, archiveCollectionName));
     const archivedExpenseData = {
         ...expense,
@@ -134,7 +136,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         };
 
         try {
-            await addExpense(authUser.uid, newExpenseData);
+            await addExpense(authUser.uid, departmentId, newExpenseData);
             formRef.current?.reset();
             setSelectedCategory('');
             toast({ title: t('expenseAddedSuccess') });

@@ -37,30 +37,39 @@ export default function AdminPage() {
 
         try {
             // Mapping old collections to new department-specific collections
-            const collectionsToMigrate: { old: string; new: string; departmentId?: string }[] = [
-                { old: 'sales', new: 'agriculture_sales', departmentId: 'agriculture' },
-                { old: 'expenses', new: 'agriculture_expenses', departmentId: 'agriculture' },
-                { old: 'debts', new: 'agriculture_debts', departmentId: 'agriculture' },
-                { old: 'workers', new: 'workers', departmentId: 'agriculture' }, // All workers go to the unified 'workers' collection
+            const collectionsToMigrate: { old: string; newPrefix: string; departmentId: string }[] = [
+                { old: 'sales', newPrefix: 'agriculture', departmentId: 'agriculture' },
+                { old: 'expenses', newPrefix: 'agriculture', departmentId: 'agriculture' },
+                { old: 'debts', newPrefix: 'agriculture', departmentId: 'agriculture' },
             ];
 
-            for (const { old: oldCollection, new: newCollection, departmentId } of collectionsToMigrate) {
+            for (const { old: oldCollection, newPrefix, departmentId } of collectionsToMigrate) {
                 const oldDataSnapshot = await getDocs(collection(db, oldCollection));
                 oldDataSnapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     // IMPORTANT: We only migrate data that doesn't have an ownerId or belongs to the admin
                     if (!data.ownerId || data.ownerId === adminUid) {
-                        const newData: any = { ...data, ownerId: adminUid };
-                        // For workers, we need to explicitly set the departmentId
-                        if (newCollection === 'workers' && departmentId) {
-                            newData.departmentId = departmentId;
-                        }
-                        const newDocRef = doc(db, 'users', adminUid, newCollection, docSnap.id);
+                        const newCollectionName = `${newPrefix}_${oldCollection}`;
+                        const newData: any = { ...data, ownerId: adminUid, departmentId };
+                        const newDocRef = doc(db, 'users', adminUid, newCollectionName, docSnap.id);
                         batch.set(newDocRef, newData);
                         totalMigrated++;
                     }
                 });
             }
+
+            // Handle workers separately as they are not prefixed
+            const workersSnapshot = await getDocs(collection(db, 'workers'));
+            workersSnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                if (!data.ownerId || data.ownerId === adminUid) {
+                    const newData = { ...data, ownerId: adminUid, departmentId: 'agriculture' };
+                    const newDocRef = doc(db, 'users', adminUid, 'workers', docSnap.id);
+                    batch.set(newDocRef, newData);
+                    totalMigrated++;
+                }
+            });
+
 
             if (totalMigrated > 0) {
                 await batch.commit();

@@ -27,71 +27,77 @@ const DataContext = createContext<DataContextType>({
 });
 
 const useCollectionSubscription = <T extends DocumentData>(
-  collectionName: string,
-  enabled: boolean,
-  userId: string | undefined
+    collectionNames: string[],
+    enabled: boolean,
+    userId: string | undefined
 ): [T[], boolean] => {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<T[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  const mapTimestampsToDates = useCallback((docData: DocumentData) => {
-    const mapped: any = { ...docData };
-    for (const key in mapped) {
-      if (mapped[key] instanceof Timestamp) {
-        mapped[key] = mapped[key].toDate();
-      } else if (Array.isArray(mapped[key])) {
-        // Recursively check arrays for objects with Timestamps
-        mapped[key] = mapped[key].map((item: any) => {
-          if (item && typeof item === 'object' && !(item instanceof Date)) {
-            return mapTimestampsToDates(item);
-          }
-          return item;
+    const mapTimestampsToDates = useCallback((docData: DocumentData) => {
+        const mapped: any = { ...docData };
+        for (const key in mapped) {
+            if (mapped[key] instanceof Timestamp) {
+                mapped[key] = mapped[key].toDate();
+            } else if (Array.isArray(mapped[key])) {
+                mapped[key] = mapped[key].map((item: any) => {
+                    if (item && typeof item === 'object' && !(item instanceof Date)) {
+                        return mapTimestampsToDates(item);
+                    }
+                    return item;
+                });
+            }
+        }
+        return mapped;
+    }, []);
+
+    useEffect(() => {
+        if (!enabled || !userId) {
+            setLoading(false);
+            setData([]);
+            return () => {};
+        }
+
+        setLoading(true);
+        const unsubscribers = collectionNames.map(collectionName => {
+            const dataQuery = query(collection(db, 'users', userId, collectionName));
+            return onSnapshot(dataQuery, (snapshot) => {
+                const fetchedItems = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...mapTimestampsToDates(doc.data()),
+                } as T));
+
+                setData(prevData => {
+                    const otherData = prevData.filter(item => (item as any).departmentId !== (fetchedItems[0] as any)?.departmentId);
+                    return [...otherData, ...fetchedItems];
+                });
+            }, error => {
+                console.error(`Error fetching collection ${collectionName}:`, error);
+            });
         });
-      }
-    }
-    return mapped;
-  }, []);
 
-  useEffect(() => {
-    if (!enabled || !userId) {
-      setLoading(false);
-      setData([]);
-      return () => {};
-    }
+        setLoading(false); // Set loading to false after setting up listeners
+        return () => unsubscribers.forEach(unsub => unsub());
 
-    setLoading(true);
-    const dataQuery: Query<DocumentData> = query(collection(db, 'users', userId, collectionName));
-    
-    const unsubscribe = onSnapshot(dataQuery, (snapshot) => {
-      const fetchedItems = snapshot.docs.map(doc => {
-        const docData = doc.data();
-        return {
-          id: doc.id,
-          ...mapTimestampsToDates(docData),
-        } as T;
-      });
-      setData(fetchedItems);
-      setLoading(false);
-    }, error => {
-      console.error(`Error fetching collection ${collectionName}:`, error);
-      setLoading(false);
-      setData([]);
-    });
+    }, [collectionNames.join(','), enabled, userId, mapTimestampsToDates]); // Dependency on joined names to re-run if they change
 
-    return () => unsubscribe();
-  }, [collectionName, enabled, userId, mapTimestampsToDates]);
-
-  return [data, loading];
+    return [data, loading];
 };
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
     const { user, loading: authLoading } = useAuth();
     const isEnabled = !authLoading && !!user;
+    
+    const departments = ['agriculture', 'livestock', 'poultry', 'fish'];
+    const salesCollections = departments.map(d => `${d}_sales`);
+    const expensesCollections = departments.map(d => `${d}_expenses`);
+    const debtsCollections = departments.map(d => `${d}_debts`);
 
-    const [allSales, salesLoading] = useCollectionSubscription<SalesItem>('sales', isEnabled, user?.uid);
-    const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>('expenses', isEnabled, user?.uid);
-    const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>('debts', isEnabled, user?.uid);
-    const [allWorkers, workersLoading] = useCollectionSubscription<Worker>('workers', isEnabled, user?.uid);
+    const [allSales, salesLoading] = useCollectionSubscription<SalesItem>(salesCollections, isEnabled, user?.uid);
+    const [allExpenses, expensesLoading] = useCollectionSubscription<ExpenseItem>(expensesCollections, isEnabled, user?.uid);
+    const [allDebts, debtsLoading] = useCollectionSubscription<DebtItem>(debtsCollections, isEnabled, user?.uid);
+    // Workers are not departmentalized in the same way, kept as a single collection
+    const [allWorkers, workersLoading] = useCollectionSubscription<Worker>(['workers'], isEnabled, user?.uid);
 
     const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading;
 

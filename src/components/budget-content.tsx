@@ -45,8 +45,9 @@ export type SalesItem = {
 
 export type SalesItemData = Omit<SalesItem, 'id'>;
 
-async function addSale(userId: string, data: SalesItemData): Promise<string> {
-    const salesCollectionRef = collection(db, 'users', userId, 'sales');
+async function addSale(userId: string, departmentId: Department, data: SalesItemData): Promise<string> {
+    const collectionName = `${departmentId}_sales`;
+    const salesCollectionRef = collection(db, 'users', userId, collectionName);
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
         date: Timestamp.fromDate(data.date),
@@ -56,11 +57,12 @@ async function addSale(userId: string, data: SalesItemData): Promise<string> {
 
 async function archiveSale(userId: string, sale: SalesItem): Promise<void> {
     const batch = writeBatch(db);
-
-    const originalSaleRef = doc(db, 'users', userId, 'sales', sale.id);
+    
+    const collectionName = `${sale.departmentId}_sales`;
+    const originalSaleRef = doc(db, 'users', userId, collectionName, sale.id);
     batch.delete(originalSaleRef);
 
-    const archiveCollectionName = `archive_sales`;
+    const archiveCollectionName = `archive_${sale.departmentId}_sales`;
     const archiveSaleRef = doc(collection(db, 'users', userId, archiveCollectionName));
     const archivedSaleData = {
         ...sale,
@@ -126,7 +128,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     };
 
     try {
-        await addSale(authUser.uid, submissionData);
+        await addSale(authUser.uid, departmentId, submissionData);
         
         const userRef = doc(db, 'users', authUser.uid);
         await runTransaction(db, async (transaction) => {

@@ -38,29 +38,32 @@ export function ArchivedExpenses() {
         }
 
         setIsLoading(true);
-        const collectionName = `archive_expenses`;
-        const q = query(
-            collection(db, 'users', user.uid, collectionName),
-        );
-
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const items: ArchivedExpense[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                items.push({ 
-                    id: doc.id,
-                    ...data,
-                    date: data.date.toDate(),
-                } as ArchivedExpense);
+        const departments = ['agriculture', 'livestock', 'poultry', 'fish'];
+        const unsubscribers = departments.map(dept => {
+            const collectionName = `archive_${dept}_expenses`;
+            const q = query(collection(db, 'users', user.uid, collectionName));
+            return onSnapshot(q, (snapshot) => {
+                 const items = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { 
+                        id: doc.id,
+                        ...data,
+                        date: data.date.toDate(),
+                    } as ArchivedExpense;
+                });
+                 setArchivedItems(prev => {
+                    const otherItems = prev.filter(p => p.departmentId !== dept);
+                    const newItems = [...otherItems, ...items];
+                    return newItems.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis());
+                });
+            }, (error) => {
+                 console.error(`Error fetching archived expenses from ${collectionName}:`, error);
             });
-            setArchivedItems(items.sort((a,b) => b.archivedAt.toMillis() - a.archivedAt.toMillis()));
-            setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching archived expenses:", error);
-            setIsLoading(false);
         });
 
-        return () => unsubscribe();
+        setIsLoading(false);
+        return () => unsubscribers.forEach(unsub => unsub());
+
     }, [user, authLoading]);
 
     if (isLoading) {
