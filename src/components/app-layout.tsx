@@ -25,7 +25,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   ];
   
   if (user?.role === 'admin') {
-      navItems.push({ href: '/admin', label: t('adminDashboard'), icon: Shield });
+      // navItems.push({ href: '/admin', label: t('adminDashboard'), icon: Shield });
   }
 
 
