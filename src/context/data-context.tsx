@@ -46,7 +46,7 @@ const DataContext = createContext<DataContextType>({
 });
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   
   const [allSales, setAllSales] = useState<SalesItem[]>([]);
   const [salesLoading, setSalesLoading] = useState(true);
@@ -67,13 +67,24 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!userId) {
+      // If user logs out, clear all data and set loading to false.
+      setAllSales([]);
+      setAllExpenses([]);
+      setAllDebts([]);
+      setAllWorkers([]);
       setSalesLoading(false);
       setExpensesLoading(false);
       setDebtsLoading(false);
       setWorkersLoading(false);
       return;
-    };
-    
+    }
+
+    // Reset loading states when user changes
+    setSalesLoading(true);
+    setExpensesLoading(true);
+    setDebtsLoading(true);
+    setWorkersLoading(true);
+
     const collectionsToSubscribe = [
         { name: 'sales', setter: setAllSales, setLoading: setSalesLoading },
         { name: 'expenses', setter: setAllExpenses, setLoading: setExpensesLoading },
@@ -83,21 +94,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribers = collectionsToSubscribe.map(({ name, setter, setLoading }) => {
       const q = query(collection(db, name), where("ownerId", "==", userId));
-      return onSnapshot(q, (snapshot) => {
+      const unsubscribe = onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) } as any));
         setter(items);
         setLoading(false);
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
+        setter([]);
         setLoading(false);
       });
+      return unsubscribe;
     });
 
+    // Cleanup function to unsubscribe from all listeners on component unmount or when userId changes
     return () => unsubscribers.forEach(unsub => unsub());
 
-  }, [userId]);
+  }, [userId]); // This effect re-runs whenever the userId changes (login/logout)
 
   useEffect(() => {
+    setTopicsLoading(true);
     const q = query(collection(db, "data"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) } as any));
@@ -105,13 +120,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setTopicsLoading(false);
     }, (error) => {
         console.error(`Error fetching topics:`, error);
+        setTopics([]);
         setTopicsLoading(false);
     });
      return () => unsubscribe();
-  }, []);
+  }, []); // This effect runs once to fetch public topic data
 
 
-  const loading = authLoading || salesLoading || expensesLoading || debtsLoading || workersLoading || topicsLoading;
+  const loading = salesLoading || expensesLoading || debtsLoading || workersLoading || topicsLoading;
 
   const value = useMemo(() => ({
     allSales,
