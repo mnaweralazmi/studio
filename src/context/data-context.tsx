@@ -4,13 +4,14 @@ import React, { createContext, useContext, ReactNode, useState, useEffect } from
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, where, DocumentData, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { SalesItem, ExpenseItem, DebtItem, Worker, AgriculturalSection, ArchivedSale, ArchivedExpense, ArchivedDebt, ArchivedTask } from '@/lib/types';
+import type { SalesItem, ExpenseItem, DebtItem, Worker, AgriculturalSection, ArchivedSale, ArchivedExpense, ArchivedDebt, ArchivedTask, Task } from '@/lib/types';
 
 interface DataContextType {
   allSales: SalesItem[];
   allExpenses: ExpenseItem[];
   allDebts: DebtItem[];
   allWorkers: Worker[];
+  tasks: Task[];
   topics: AgriculturalSection[];
   archivedSales: ArchivedSale[];
   archivedExpenses: ArchivedExpense[];
@@ -24,6 +25,7 @@ const DataContext = createContext<DataContextType>({
   allExpenses: [],
   allDebts: [],
   allWorkers: [],
+  tasks: [],
   topics: [],
   archivedSales: [],
   archivedExpenses: [],
@@ -61,6 +63,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
   const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
   
   // States for archived data
@@ -79,6 +82,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setAllExpenses([]);
       setAllDebts([]);
       setAllWorkers([]);
+      setTasks([]);
       setTopics([]);
       setArchivedSales([]);
       setArchivedExpenses([]);
@@ -95,14 +99,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       { name: 'expenses', setter: setAllExpenses, owner: true },
       { name: 'debts', setter: setAllDebts, owner: true },
       { name: 'workers', setter: setAllWorkers, owner: true },
-      { name: 'tasks', setter: () => {}, owner: true }, // Tasks are handled separately in their component, but we keep a listener for consistency if needed later
+      { name: 'tasks', setter: setTasks, owner: true },
       // Archived data
       { name: 'archive_sales', setter: setArchivedSales, owner: true },
       { name: 'archive_expenses', setter: setArchivedExpenses, owner: true },
       { name: 'archive_debts', setter: setArchivedDebts, owner: true },
       { name: 'completed_tasks', setter: setCompletedTasks, owner: true },
       // Public data
-      { name: 'data', setter: setTopics, owner: false },
+      { name: 'data', setter: setTopics, owner: false }, // 'data' collection stores public topics
     ];
     
     let activeListeners = collectionsToWatch.length;
@@ -116,6 +120,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribers = collectionsToWatch.map(({ name, setter, owner }) => {
       const collectionRef = collection(db, name);
+      // Public data like 'data' does not need to be filtered by ownerId
       const q = owner 
         ? query(collectionRef, where("ownerId", "==", userId))
         : query(collectionRef);
@@ -123,11 +128,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
         setter(items);
-        onDataLoaded();
+        if(activeListeners > 0) onDataLoaded();
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
         setter([]); // Clear data on error
-        onDataLoaded();
+        if(activeListeners > 0) onDataLoaded();
       });
     });
 
@@ -138,7 +143,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.uid]);
 
   const value = { 
-    allSales, allExpenses, allDebts, allWorkers, topics, 
+    allSales, allExpenses, allDebts, allWorkers, tasks, topics, 
     archivedSales, archivedExpenses, archivedDebts, completedTasks,
     loading 
   };

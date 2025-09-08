@@ -94,27 +94,9 @@ const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[],
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
+  const { tasks, loading } = useData();
   const { language, t } = useLanguage();
-  const [tasks, setTasks] = React.useState<Task[]>([]);
-  const [tasksLoading, setTasksLoading] = React.useState(true);
-
-
-  React.useEffect(() => {
-    if (user?.uid) {
-      const q = query(collection(db, "tasks"), where("ownerId", "==", user.uid));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const tasksData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          dueDate: (doc.data().dueDate as Timestamp).toDate(),
-        })) as Task[];
-        setTasks(tasksData);
-        setTasksLoading(false);
-      });
-      return () => unsubscribe();
-    }
-  }, [user?.uid]);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
@@ -157,9 +139,7 @@ export default function CalendarPage() {
 
   const selectedDayTasks = upcomingTasks.filter(task => date && isSameDay(task.dueDate, date));
   
-  const isLoading = authLoading || tasksLoading;
-
-  if (isLoading) {
+  if (loading) {
     return (
         <main className="flex flex-1 flex-col p-4 sm:p-6 md:p-8">
              <div className="w-full max-w-7xl mx-auto">
