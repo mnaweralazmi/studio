@@ -15,8 +15,8 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
-import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { Department, ExpenseItem, ExpenseItemData } from '@/lib/types';
+import { useData } from '@/context/data-context';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -57,6 +57,7 @@ async function archiveExpense(expense: ExpenseItem): Promise<void> {
     const archivedExpenseData = {
         ...expense,
         archivedAt: Timestamp.now(),
+        ownerId: expense.ownerId,
     };
     batch.set(archiveExpenseRef, archivedExpenseData);
 
@@ -69,7 +70,7 @@ interface ExpensesContentProps {
 
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const { user: authUser, loading: isAuthLoading } = useAuth();
-    const [allExpenses, isDataLoading] = useCollectionSubscription<ExpenseItem>('expenses', authUser?.uid);
+    const { allExpenses, loading: isDataLoading } = useData();
 
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});

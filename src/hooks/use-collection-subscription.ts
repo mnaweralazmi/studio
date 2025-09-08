@@ -1,3 +1,4 @@
+
 import { collection, onSnapshot, query, where, DocumentData, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
@@ -25,6 +26,18 @@ const mapTimestampsToDates = (data: any): any => {
   return data;
 };
 
+/**
+ * A real-time Firestore collection subscription hook.
+ *
+ * This hook simplifies data fetching by performing a simple query to filter
+ * documents by `ownerId` and then handles all sorting client-side. This approach
+ * is more reliable and avoids the need for complex composite indexes in Firestore,
+ * which can be a common source of "missing data" errors if not configured perfectly.
+ *
+ * @param collectionName The name of the Firestore collection to subscribe to.
+ * @param userId The UID of the currently authenticated user.
+ * @returns A tuple containing the array of documents and a loading state boolean.
+ */
 const useCollectionSubscription = <T extends DocumentData>(
   collectionName: string,
   userId?: string
@@ -41,27 +54,29 @@ const useCollectionSubscription = <T extends DocumentData>(
 
     setLoading(true);
     
-    // Perform a simple query: filter by ownerId. Sorting will be done on the client.
-    // This avoids the need for composite indexes, which was the root cause of the problem.
+    // 1. Perform a simple query to get all documents for the current user.
+    // This avoids the need for composite indexes for sorting.
     const q = query(collection(db, collectionName), where("ownerId", "==", userId));
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const items = snapshot.docs.map((doc) => {
+        let items = snapshot.docs.map((doc) => {
+          // Firestore Timestamps need to be converted to JS Date objects
           const mappedData = mapTimestampsToDates(doc.data());
           return { id: doc.id, ...mappedData } as T & { id: string };
         });
         
-        // Sorting is now handled on the client side after fetching the data.
-        // This is a reliable way to ensure data is always displayed correctly.
+        // 2. Sort the data on the client side. This is fast and reliable.
         items.sort((a, b) => {
             const dateA = a.date || a.dueDate || a.createdAt || a.completedAt || a.archivedAt;
             const dateB = b.date || b.dueDate || b.createdAt || b.completedAt || b.archivedAt;
+            // Ensure both dates exist before comparing
             if (dateA && dateB) {
+                // Sort in descending order (newest first)
                 return new Date(dateB).getTime() - new Date(dateA).getTime();
             }
-            return 0;
+            return 0; // No change in order if dates are missing
         });
         
         setData(items);
@@ -69,11 +84,12 @@ const useCollectionSubscription = <T extends DocumentData>(
       },
       (err) => {
         console.error(`[Firestore Error] Failed to listen to ${collectionName}:`, err);
-        setData([]);
+        setData([]); // Clear data on error
         setLoading(false);
       }
     );
 
+    // Cleanup the listener when the component unmounts or dependencies change
     return () => {
         unsubscribe();
     };

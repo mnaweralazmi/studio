@@ -115,7 +115,8 @@ export default function CalendarPage() {
             const archivedTaskData = {
                 ...taskToComplete,
                 completedAt: Timestamp.now(),
-                isCompleted: true
+                isCompleted: true,
+                ownerId: user.uid,
             };
             
             batch.set(archiveRef, archivedTaskData);

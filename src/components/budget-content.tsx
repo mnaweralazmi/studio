@@ -15,9 +15,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { db } from '@/lib/firebase';
-import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { Department, SalesItem, SalesItemData } from '@/lib/types';
 import { EditSaleDialog } from './budget/edit-sale-dialog';
+import { useData } from '@/context/data-context';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -56,6 +56,7 @@ async function archiveSale(sale: SalesItem): Promise<void> {
     const archivedSaleData = {
         ...sale,
         archivedAt: Timestamp.now(),
+        ownerId: sale.ownerId,
     };
     batch.set(archiveSaleRef, archivedSaleData);
 
@@ -69,7 +70,7 @@ interface BudgetContentProps {
 
 export function BudgetContent({ departmentId }: BudgetContentProps) {
   const { user: authUser, loading: isAuthLoading } = useAuth();
-  const [allSales, isDataLoading] = useCollectionSubscription<SalesItem>('sales', authUser?.uid);
+  const { allSales, loading: isDataLoading } = useData();
 
   const { toast } = useToast();
   const { language, t } = useLanguage();

@@ -16,8 +16,8 @@ import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
-import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { Department, Worker, Transaction, TransactionFormValues, WorkerFormValues, PaidMonth } from '@/lib/types';
+import { useData } from '@/context/data-context';
 
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
@@ -75,7 +75,7 @@ interface WorkersContentProps {
 
 export function WorkersContent({ departmentId }: WorkersContentProps) {
     const { user: authUser, loading: isAuthLoading } = useAuth();
-    const [allWorkers, isDataLoading] = useCollectionSubscription<Worker>('workers', authUser?.uid);
+    const { allWorkers, loading: isDataLoading } = useData();
 
     const { toast } = useToast();
     const { language, t } = useLanguage();

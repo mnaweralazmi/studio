@@ -21,9 +21,8 @@ import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
-import useCollectionSubscription from '@/hooks/use-collection-subscription';
 import type { DebtItem, DebtItemData, Department, Payment } from '@/lib/types';
-
+import { useData } from '@/context/data-context';
 
 async function addDebt(data: DebtItemData): Promise<string> {
     const debtsCollectionRef = collection(db, 'debts');
@@ -47,6 +46,7 @@ async function archiveDebt(debt: DebtItem): Promise<void> {
     const archivedData: any = {
         ...debt,
         archivedAt: Timestamp.now(),
+        ownerId: debt.ownerId
     };
     
     batch.set(archiveDebtRef, archivedData);
@@ -76,7 +76,7 @@ interface DebtsContentProps {
 
 export function DebtsContent({ departmentId }: DebtsContentProps) {
     const { user: authUser, loading: isAuthLoading } = useAuth();
-    const [allDebts, isDataLoading] = useCollectionSubscription<DebtItem>('debts', authUser?.uid);
+    const { allDebts, loading: isDataLoading } = useData();
 
     const { toast } = useToast();
     const { language, t } = useLanguage();
