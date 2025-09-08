@@ -30,12 +30,13 @@ const mapTimestampsToDates = (data: any): any => {
     if (Array.isArray(data)) return data.map(item => mapTimestampsToDates(item));
     if (typeof data === 'object' && !(data instanceof Date)) {
         return Object.entries(data).reduce((acc, [key, value]) => {
-            acc[key] = mapTimestampsToDates(value);
+            acc[key as string] = mapTimestampsToDates(value);
             return acc;
         }, {} as { [key: string]: any });
     }
     return data;
 };
+
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
@@ -47,59 +48,67 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // If there is no user, reset everything to empty and not loading.
-    if (!user?.uid) {
+    const userId = user?.uid;
+
+    if (!userId) {
       setAllSales([]);
       setAllExpenses([]);
       setAllDebts([]);
       setAllWorkers([]);
-      setTopics([]);
+      // Do not clear topics, as they are public
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const userId = user.uid;
+    let activeSubscriptions = 0;
+    const checkDone = () => {
+        activeSubscriptions--;
+        if (activeSubscriptions === 0) {
+            setLoading(false);
+        }
+    };
 
     const collectionsToWatch = [
       { name: 'sales', setter: setAllSales },
       { name: 'expenses', setter: setAllExpenses },
       { name: 'debts', setter: setAllDebts },
       { name: 'workers', setter: setAllWorkers },
-      { name: 'data', setter: setTopics, isPublic: true },
     ];
     
-    let pendingSubscriptions = collectionsToWatch.length;
+    activeSubscriptions = collectionsToWatch.length + 1; // +1 for public 'data' collection
 
-    const unsubscribers = collectionsToWatch.map(({ name, setter, isPublic }) => {
-      const q = isPublic 
-        ? query(collection(db, name))
-        : query(collection(db, name), where("ownerId", "==", userId));
+    // Subscribe to public topics
+    const publicQuery = query(collection(db, 'data'));
+    const unsubTopics = onSnapshot(publicQuery, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
+        setTopics(items);
+        checkDone();
+    }, (error) => {
+        console.error(`Error fetching public data:`, error);
+        checkDone();
+    });
+
+
+    // Subscribe to user-specific collections
+    const userUnsubscribers = collectionsToWatch.map(({ name, setter }) => {
+      const q = query(collection(db, name), where("ownerId", "==", userId));
       
       return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ 
-            id: doc.id, 
-            ...mapTimestampsToDates(doc.data()) 
-        })) as any[];
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
         setter(items);
-        
-        pendingSubscriptions--;
-        if (pendingSubscriptions === 0) {
-          setLoading(false);
-        }
+        checkDone();
       }, (error) => {
         console.error(`Error fetching ${name}:`, error);
         setter([]);
-        pendingSubscriptions--;
-        if (pendingSubscriptions === 0) {
-          setLoading(false);
-        }
+        checkDone();
       });
     });
 
-    // Cleanup function to unsubscribe from all listeners
+    // Cleanup function
     return () => {
-      unsubscribers.forEach(unsub => unsub());
+      unsubTopics();
+      userUnsubscribers.forEach(unsub => unsub());
     };
 
   }, [user?.uid]);
