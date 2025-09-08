@@ -422,5 +422,15 @@
     "fromMonths": "from months",
     "noSalesYet": "No sales in this department yet.",
     "noExpensesYet": "No expenses in this department yet.",
-    "noDebtsYet": "No debts in this department yet."
+    "noDebtsYet": "No debts in this department yet.",
+    "maintenanceTools": "Maintenance Tools",
+    "maintenanceToolsDesc": "Tools to help fix data issues.",
+    "dataMigration": "Data Migration",
+    "dataMigrationDesc": "Run this tool once to fix old records that don't have an ownerId, making them compatible with the new security rules.",
+    "startDataMigration": "Start Old Data Migration",
+    "migrationInProgress": "Migration in progress...",
+    "migrationSuccess": "Migration completed successfully!",
+    "migrationSuccessDesc": "All old records have been updated.",
+    "migrationError": "An error occurred during migration.",
+    "migrationErrorDesc": "Please try again or contact support."
 }

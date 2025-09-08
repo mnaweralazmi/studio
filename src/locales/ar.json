@@ -422,5 +422,15 @@
     "fromMonths": "من الأشهر",
     "noSalesYet": "لا توجد مبيعات في هذا القسم بعد.",
     "noExpensesYet": "لا توجد مصروفات في هذا القسم بعد.",
-    "noDebtsYet": "لا توجد ديون في هذا القسم بعد."
+    "noDebtsYet": "لا توجد ديون في هذا القسم بعد.",
+    "maintenanceTools": "أدوات الصيانة",
+    "maintenanceToolsDesc": "أدوات للمساعدة في إصلاح مشاكل البيانات.",
+    "dataMigration": "ترحيل البيانات",
+    "dataMigrationDesc": "قم بتشغيل هذه الأداة مرة واحدة لإصلاح السجلات القديمة التي لا تحتوي على معرّف المالك (ownerId)، مما يجعلها متوافقة مع قواعد الأمان الجديدة.",
+    "startDataMigration": "بدء ترحيل البيانات القديمة",
+    "migrationInProgress": "جاري الترحيل...",
+    "migrationSuccess": "اكتمل الترحيل بنجاح!",
+    "migrationSuccessDesc": "تم تحديث جميع السجلات القديمة.",
+    "migrationError": "حدث خطأ أثناء الترحيل.",
+    "migrationErrorDesc": "يرجى المحاولة مرة أخرى أو الاتصال بالدعم."
 }
