@@ -58,21 +58,25 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   if (isAuthPage) {
     return <>{children}<Toaster /></>;
   }
-
+  
+  // This is the key change: We ensure user exists before rendering the DataProvider and AppLayout
   if (!user) {
+    // This will be shown briefly while redirecting or if auth fails, preventing errors.
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
-            <Skeleton className="h-20 w-20" />
+            <p>Redirecting to login...</p>
         </div>
     );
   }
 
 
   return (
-    <AppLayout>
-        {children}
-        <Toaster />
-    </AppLayout>
+    <DataProvider>
+        <AppLayout>
+            {children}
+            <Toaster />
+        </AppLayout>
+    </DataProvider>
   );
 }
 
@@ -88,11 +92,9 @@ export default function RootLayout({
       <body>
         <Providers>
           <AuthProvider>
-            <DataProvider>
               <LanguageProvider>
                 <RootLayoutContent>{children}</RootLayoutContent>
               </LanguageProvider>
-            </DataProvider>
           </AuthProvider>
         </Providers>
       </body>
