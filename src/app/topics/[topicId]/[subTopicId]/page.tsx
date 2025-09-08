@@ -49,7 +49,7 @@ export default function SubTopicDetailsPage() {
       }
 
       try {
-        const userRef = doc(db, 'data-users', user.uid);
+        const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
           const userDoc = await transaction.get(userRef);
           if (!userDoc.exists()) {

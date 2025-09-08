@@ -100,7 +100,7 @@ export function ProfileTab() {
         photoURL: newAvatarUrl,
       });
 
-      const userDocRef = doc(db, "data-users", user.uid);
+      const userDocRef = doc(db, "users", user.uid);
       await updateDoc(userDocRef, {
         name: name,
         photoURL: newAvatarUrl,
