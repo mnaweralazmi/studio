@@ -111,9 +111,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
+                // User is logged in, now fetch their specific data
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
                 
-                // Set up a listener for the user document itself
+                // Set up a listener for the user document itself for real-time profile updates
                 const userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
                     if (userDocSnap.exists()) {
                         const userData = userDocSnap.data();
@@ -125,67 +126,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                          };
                         setUser(combinedUser);
                     } else {
-                        // Handle case where user exists in Auth but not Firestore
+                        // This might happen if user is created in Auth but Firestore doc fails.
+                        // We still set the basic user object.
                         setUser(firebaseUser);
                     }
                 });
 
-                // Data fetching for logged-in user is now triggered by user state change in a separate useEffect
+                // Set up listeners for all user-specific collections
+                const subscriptions = [
+                    createUserSubscription<Task>('tasks', firebaseUser.uid, setTasks, d => ({...d, dueDate: d.dueDate.toDate()}) as Task),
+                    createUserSubscription<ArchivedTask>('completed_tasks', firebaseUser.uid, setCompletedTasks, d => ({...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate()}) as ArchivedTask),
+                    createUserSubscription<SalesItem>('sales', firebaseUser.uid, setAllSales, d => ({...d, date: d.date.toDate()}) as SalesItem),
+                    createUserSubscription<ArchivedSale>('archive_sales', firebaseUser.uid, setArchivedSales, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedSale),
+                    createUserSubscription<ExpenseItem>('expenses', firebaseUser.uid, setAllExpenses, d => ({...d, date: d.date.toDate()}) as ExpenseItem),
+                    createUserSubscription<ArchivedExpense>('archive_expenses', firebaseUser.uid, setArchivedExpenses, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedExpense),
+                    createUserSubscription<DebtItem>('debts', firebaseUser.uid, setAllDebts, d => ({...d, dueDate: d.dueDate?.toDate(), payments: (d.payments || []).map((p: any) => ({...p, date: p.date.toDate()})) }) as DebtItem),
+                    createUserSubscription<ArchivedDebt>('archive_debts', firebaseUser.uid, setArchivedDebt, d => ({...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate?.toDate() }) as ArchivedDebt),
+                    createUserSubscription<Worker>('workers', firebaseUser.uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
+                ];
+
+                setLoading(false); // All listeners are set up, we can show the UI
+
+                // Return a cleanup function for this user's session
                 return () => {
                     userDocUnsubscribe();
-                }
+                    subscriptions.forEach(unsub => unsub());
+                    clearAllData();
+                };
+
             } else {
+                // User is logged out
                 setUser(null);
                 clearAllData();
-                setLoading(false); // No user, so stop loading (public data is already being fetched)
+                setLoading(false);
             }
         });
         
+        // Main cleanup for auth and public data listeners
         return () => {
             authUnsubscribe();
             topicsUnsubscribe();
         };
     }, []);
 
-    useEffect(() => {
-        if (!user) {
-            // User is logged out, clear their specific data
-            clearAllData();
-            // Loading is false because auth state is determined
-            if (!auth.currentUser) {
-                setLoading(false);
-            }
-            return;
-        }
-
-        // --- User is logged in, set up all their data subscriptions ---
-        setLoading(true); // Start loading user-specific data
-        const uid = user.uid;
-        
-        const subscriptions = [
-            createUserSubscription<Task>( 'tasks', uid, setTasks, d => ({...d, dueDate: d.dueDate.toDate()}) as Task),
-            createUserSubscription<ArchivedTask>( 'completed_tasks', uid, setCompletedTasks, d => ({...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate()}) as ArchivedTask),
-            createUserSubscription<SalesItem>( 'sales', uid, setAllSales, d => ({...d, date: d.date.toDate()}) as SalesItem),
-            createUserSubscription<ArchivedSale>( 'archive_sales', uid, setArchivedSales, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedSale),
-            createUserSubscription<ExpenseItem>( 'expenses', uid, setAllExpenses, d => ({...d, date: d.date.toDate()}) as ExpenseItem),
-            createUserSubscription<ArchivedExpense>( 'archive_expenses', uid, setArchivedExpenses, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedExpense),
-            createUserSubscription<DebtItem>( 'debts', uid, setAllDebts, d => ({...d, dueDate: d.dueDate?.toDate(), payments: (d.payments || []).map((p: any) => ({...p, date: p.date.toDate()})) }) as DebtItem),
-            createUserSubscription<ArchivedDebt>( 'archive_debts', uid, setArchivedDebt, d => ({...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate?.toDate() }) as ArchivedDebt),
-            createUserSubscription<Worker>( 'workers', uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
-        ];
-        
-        // This is a bit of a simplification. In a real-world app, you might use Promise.all
-        // with initial fetches to know exactly when all data is loaded. For onSnapshot,
-        // we assume data is "loaded" once the listeners are attached.
-        setLoading(false);
-
-        // Cleanup function for when user logs out or component unmounts
-        return () => {
-            subscriptions.forEach(unsub => unsub());
-            clearAllData();
-        };
-
-    }, [user]); 
 
     const value = {
         user,
