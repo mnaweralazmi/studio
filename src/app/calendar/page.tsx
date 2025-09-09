@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { Timestamp, doc, collection, writeBatch, runTransaction } from 'firebase/firestore';
+import { Timestamp, doc, collection, writeBatch, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,17 +100,18 @@ export default function CalendarPage() {
 
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
-    const taskToComplete = tasks.find(t => t.id === taskId);
+    
+    const taskToComplete = tasks.find(t => t.id === taskId && !t.isCompleted);
     if (!taskToComplete) return;
 
     try {
-        const batch = writeBatch(db);
-        const originalTaskRef = doc(db, 'tasks', taskId);
-        
         if (taskToComplete.isRecurring) {
             const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
-            batch.update(originalTaskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
+            const taskRef = doc(db, 'tasks', taskId);
+            await updateDoc(taskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
         } else {
+            const batch = writeBatch(db);
+            const originalTaskRef = doc(db, 'tasks', taskId);
             const archiveRef = doc(collection(db, 'completed_tasks'));
             const archivedTaskData: Omit<ArchivedTask, 'id'> = {
                 ...taskToComplete,
@@ -119,7 +120,6 @@ export default function CalendarPage() {
                 ownerId: user.uid,
             };
             
-            // We need to convert date fields back to Timestamps for Firestore
             const finalArchivedData = {
                 ...archivedTaskData,
                 dueDate: Timestamp.fromDate(archivedTaskData.dueDate),
@@ -128,10 +128,9 @@ export default function CalendarPage() {
 
             batch.set(archiveRef, finalArchivedData);
             batch.delete(originalTaskRef);
+            await batch.commit();
         }
         
-        await batch.commit();
-
         toast({ title: t('taskCompleted'), description: t('taskCompletedDesc') });
     } catch (e) {
         console.error("Failed to complete task:", e);
