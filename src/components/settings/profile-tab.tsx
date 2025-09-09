@@ -87,19 +87,22 @@ export function ProfileTab() {
         }
       }
       
-      let newAvatarUrl = user.photoURL || "";
+      let newAvatarUrl = avatarUrl;
       if (avatarFile) {
         const storage = getStorage();
         const storageRef = ref(storage, `avatars/${user.uid}`);
         await uploadBytes(storageRef, avatarFile);
-        newAvatarUrl = await getDownloadURL(storageRef);
+        const downloadUrl = await getDownloadURL(storageRef);
+        // Force refresh by adding a timestamp
+        newAvatarUrl = `${downloadUrl}?v=${new Date().getTime()}`;
+        setAvatarUrl(newAvatarUrl); // Update local state to show the new image immediately
       }
 
       // Prepare update objects
       const profileUpdate: { displayName: string; photoURL?: string } = { displayName: name };
       const firestoreUpdate: { name: string; photoURL?: string } = { name: name };
 
-      if (newAvatarUrl && newAvatarUrl !== user.photoURL) {
+      if (avatarFile && newAvatarUrl) {
           profileUpdate.photoURL = newAvatarUrl;
           firestoreUpdate.photoURL = newAvatarUrl;
       }
@@ -110,6 +113,7 @@ export function ProfileTab() {
       await updateDoc(userDocRef, firestoreUpdate);
 
       toast({ title: t("profileUpdated"), description: t("profileUpdatedSuccess") });
+      setAvatarFile(null); // Reset file input after successful upload
 
     } catch (error: any) {
       let description = t("profileUpdateFailed");
@@ -272,5 +276,3 @@ export function ProfileTab() {
     </Card>
   );
 }
-
-    
