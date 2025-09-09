@@ -1,131 +1,227 @@
-
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import type { Task, ArchivedTask, SalesItem, ArchivedSale, ExpenseItem, ArchivedExpense, DebtItem, ArchivedDebt, Worker, AgriculturalSection } from '@/lib/types';
-import { initialAgriculturalSections } from '@/lib/initial-data';
+import React, { createContext, useState, useContext, useEffect, useMemo, useRef } from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  where,
+  CollectionReference,
+  DocumentData,
+  QuerySnapshot,
+  Unsubscribe,
+  getDoc,
+  doc
+} from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
-// --- DUMMY DATA ---
+import type {
+  Task,
+  ArchivedTask,
+  SalesItem,
+  ArchivedSale,
+  ExpenseItem,
+  ArchivedExpense,
+  DebtItem,
+  ArchivedDebt,
+  Worker,
+  AgriculturalSection
+} from "@/lib/types";
+import { initialAgriculturalSections } from "@/lib/initial-data";
 
-const dummyUser: User = {
-    uid: 'dummy-user-id-123',
-    email: 'user@example.com',
-    displayName: 'المستخدم الافتراضي',
-    name: 'المستخدم الافتراضي',
-    role: 'user',
-    points: 75,
-    level: 1,
-    badges: ['explorer', 'planner'],
-    photoURL: `https://i.pravatar.cc/150?u=dummy-user-id-123`,
-    // FirebaseUser properties
-    emailVerified: true,
-    isAnonymous: false,
-    metadata: {},
-    providerId: 'password',
-    providerData: [],
-    refreshToken: '',
-    tenantId: null,
-    delete: async () => {},
-    getIdToken: async () => '',
-    getIdTokenResult: async () => ({} as any),
-    reload: async () => {},
-    toJSON: () => ({}),
-};
-
-const dummyTasks: Task[] = [
-    { id: 'task-1', ownerId: dummyUser.uid, title: 'سقي الطماطم', dueDate: new Date(), isCompleted: false, isRecurring: true, reminderDays: 1, description: 'تأكد من ري الطماطم في الصباح الباكر.' },
-    { id: 'task-2', ownerId: dummyUser.uid, title: 'تسميد الخيار', dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), isCompleted: false, isRecurring: false, reminderDays: 2 },
-];
-
-const dummyCompletedTasks: ArchivedTask[] = [
-    { id: 'task-3', ownerId: dummyUser.uid, title: 'تقليم أشجار الليمون', dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), isCompleted: true, isRecurring: false, completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
-];
-
-const dummySales: SalesItem[] = [
-    { id: 'sale-1', ownerId: dummyUser.uid, departmentId: 'agriculture', product: 'خيار', quantity: 10, price: 1.5, total: 15, date: new Date() },
-    { id: 'sale-2', ownerId: dummyUser.uid, departmentId: 'livestock', product: 'خروف', quantity: 2, price: 80, total: 160, date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
-];
-
-const dummyExpenses: ExpenseItem[] = [
-    { id: 'exp-1', ownerId: dummyUser.uid, departmentId: 'agriculture', type: 'variable', category: 'مستلزمات زراعية', item: 'أسمدة', amount: 25, date: new Date() },
-    { id: 'exp-2', ownerId: dummyUser.uid, departmentId: 'poultry', type: 'fixed', category: 'تغذية', item: 'أعلاف', amount: 120, date: new Date() },
-];
-
-const dummyDebts: DebtItem[] = [
-    { id: 'debt-1', ownerId: dummyUser.uid, departmentId: 'agriculture', creditor: 'شركة الأسمدة المتحدة', amount: 200, dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), status: 'partially-paid', payments: [{ amount: 100, date: new Date() }] },
-];
-
-const dummyWorkers: Worker[] = [
-    { id: 'worker-1', ownerId: dummyUser.uid, departmentId: 'agriculture', name: 'عامل المزرعة ١', baseSalary: 150, paidMonths: [{year: new Date().getFullYear(), month: new Date().getMonth()}], transactions: [] },
-];
-
-
+/** --- Types --- */
 interface UserProfile {
-    name?: string;
-    role?: 'admin' | 'user';
-    points?: number;
-    level?: number;
-    badges?: string[];
-    photoURL?: string;
+  name?: string;
+  role?: "admin" | "user";
+  points?: number;
+  level?: number;
+  badges?: string[];
+  photoURL?: string;
 }
-
-interface User extends FirebaseUser, UserProfile {}
+export interface User extends FirebaseUser, UserProfile {}
 
 interface AppContextType {
-    user: User | null;
-    loading: boolean;
-    tasks: Task[];
-    completedTasks: ArchivedTask[];
-    allSales: SalesItem[];
-    allExpenses: ExpenseItem[];
-    allDebts: DebtItem[];
-    allWorkers: Worker[];
-    archivedSales: ArchivedSale[];
-    archivedExpenses: ArchivedExpense[];
-    archivedDebts: ArchivedDebt[];
-    topics: AgriculturalSection[];
+  user: User | null;
+  loading: boolean;
+  tasks: Task[];
+  completedTasks: ArchivedTask[];
+  allSales: SalesItem[];
+  archivedSales: ArchivedSale[];
+  allExpenses: ExpenseItem[];
+  archivedExpenses: ArchivedExpense[];
+  allDebts: DebtItem[];
+  archivedDebts: ArchivedDebt[];
+  allWorkers: Worker[];
+  topics: AgriculturalSection[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+/** --- Helpers --- */
+function normalizeDocData<T = any>(docData: DocumentData): T {
+  const out: any = {};
+  for (const k of Object.keys(docData)) {
+    const v = docData[k];
+    if (v && typeof v === "object" && typeof (v as any).toDate === "function") {
+      out[k] = (v as any).toDate();
+    } else {
+      out[k] = v;
+    }
+  }
+  return out as T;
+}
+
+function mapSnapshot<T>(snap: QuerySnapshot<DocumentData>) {
+  return snap.docs.map(d => ({ id: d.id, ...normalizeDocData(d.data()) })) as T[];
+}
+
+/** --- Provider --- */
 export function AppProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        // Simulate checking auth state and fetching data
-        const timer = setTimeout(() => {
-            setUser(dummyUser);
-            setLoading(false);
-        }, 1500); // 1.5 second delay to simulate loading
+  // data states
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
+  const [allSales, setAllSales] = useState<SalesItem[]>([]);
+  const [archivedSales, setArchivedSales] = useState<ArchivedSale[]>([]);
+  const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
+  const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
+  const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
+  const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
+  const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
+  const [topics, setTopics] = useState<AgriculturalSection[]>(initialAgriculturalSections);
 
-        return () => clearTimeout(timer);
-    }, []);
+  const unsubRef = useRef<Record<string, Unsubscribe | null>>({});
 
-    const value = useMemo(() => ({
-        user,
-        loading,
-        tasks: dummyTasks,
-        completedTasks: dummyCompletedTasks,
-        allSales: dummySales,
-        archivedSales: [],
-        allExpenses: dummyExpenses,
-        archivedExpenses: [],
-        allDebts: dummyDebts,
-        archivedDebts: [],
-        allWorkers: dummyWorkers,
-        topics: initialAgriculturalSections,
-    }), [user, loading]);
+  const createSubscription = <T>(
+    collectionName: string, 
+    setter: React.Dispatch<React.SetStateAction<T[]>>,
+    uid?: string
+    ) => {
+    const colRef = collection(db, collectionName);
+    let q;
+    if (uid) {
+        // This is a private collection, filter by ownerId
+        q = query(colRef, where("ownerId", "==", uid));
+    } else {
+        // This is a public collection (like 'data')
+        q = query(colRef);
+    }
+    
+    const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+            const data = mapSnapshot<T>(snapshot);
+            setter(data);
+        },
+        (error) => {
+            console.error(`Error fetching ${collectionName}:`, error);
+            setter([]);
+        }
+    );
+    return unsubscribe;
+  };
+  
+  const clearAllListeners = () => {
+    Object.values(unsubRef.current).forEach(unsub => unsub && unsub());
+    unsubRef.current = {};
+  };
 
-    return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearAllListeners();
+      setLoading(true);
+
+      if (firebaseUser) {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        let userData: User;
+        if (userDocSnap.exists()) {
+            const userProfileData = userDocSnap.data() as UserProfile;
+            userData = { ...firebaseUser, ...userProfileData };
+        } else {
+            userData = firebaseUser as User;
+        }
+        setUser(userData);
+        
+        const uid = firebaseUser.uid;
+        const subscriptions: { [key: string]: Unsubscribe } = {};
+
+        subscriptions.tasks = createSubscription<Task>('tasks', setTasks, uid);
+        subscriptions.completed_tasks = createSubscription<ArchivedTask>('completed_tasks', setCompletedTasks, uid);
+        subscriptions.sales = createSubscription<SalesItem>('sales', setAllSales, uid);
+        subscriptions.archive_sales = createSubscription<ArchivedSale>('archive_sales', setArchivedSales, uid);
+        subscriptions.expenses = createSubscription<ExpenseItem>('expenses', setAllExpenses, uid);
+        subscriptions.archive_expenses = createSubscription<ArchivedExpense>('archive_expenses', setArchivedExpenses, uid);
+        subscriptions.debts = createSubscription<DebtItem>('debts', setAllDebts, uid);
+        subscriptions.archive_debts = createSubscription<ArchivedDebt>('archive_debts', setArchivedDebts, uid);
+        subscriptions.workers = createSubscription<Worker>('workers', setAllWorkers, uid);
+        subscriptions.data = createSubscription<AgriculturalSection>('data', setTopics);
+
+        unsubRef.current = subscriptions;
+        setLoading(false);
+
+      } else {
+        // User is signed out
+        setUser(null);
+        setTasks([]);
+        setCompletedTasks([]);
+        setAllSales([]);
+        setArchivedSales([]);
+        setAllExpenses([]);
+        setArchivedExpenses([]);
+        setAllDebts([]);
+        setArchivedDebts([]);
+        setAllWorkers([]);
+        setTopics(initialAgriculturalSections);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+        unsubAuth();
+        clearAllListeners();
+    };
+  }, []);
+  
+  const value = useMemo<AppContextType>(() => ({
+    user,
+    loading,
+    tasks,
+    completedTasks,
+    allSales,
+    archivedSales,
+    allExpenses,
+    archivedExpenses,
+    allDebts,
+    archivedDebts,
+    allWorkers,
+    topics,
+  }), [
+    user,
+    loading,
+    tasks,
+    completedTasks,
+    allSales,
+    archivedSales,
+    allExpenses,
+    archivedExpenses,
+    allDebts,
+    archivedDebts,
+    allWorkers,
+    topics
+  ]);
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export const useAppContext = () => {
-    const context = useContext(AppContext);
-    if (context === undefined) {
-        throw new Error('useAppContext must be used within an AppProvider');
-    }
-    return context;
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error("useAppContext must be used within an AppProvider");
+  return ctx;
 };
