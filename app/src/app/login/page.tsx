@@ -33,7 +33,6 @@ const createNewUserDocument = async (user: User) => {
         return; 
     }
 
-    // Only create the user document. The app-context will handle populating `data` collection if needed.
     await setDoc(userDocRef, {
         uid: user.uid,
         name: user.displayName || 'Anonymous User',
@@ -62,7 +61,8 @@ export default function LoginPage() {
     event.preventDefault();
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      await createNewUserDocument(result.user);
       toast({ title: "تم تسجيل الدخول بنجاح!" });
       router.push('/');
     } catch (error: any) {

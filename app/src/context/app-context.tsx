@@ -14,9 +14,8 @@ import {
   Unsubscribe,
   doc,
   DocumentSnapshot,
-  getDoc,
-  writeBatch,
   getDocs,
+  writeBatch,
   limit,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -174,13 +173,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (docSnap.exists()) {
              const userProfile = docSnap.data() as UserProfile;
              setUser(prevUser => ({
-                 ...(prevUser || {}),
+                 ...(prevUser || {} as User), // Ensure prevUser is not null
                  ...firebaseUser,
                  ...userProfile,
-             } as User));
+             }));
           } else {
+             // This case might happen if user document creation fails.
+             // We set the base user from auth.
              setUser(firebaseUser as User);
           }
+        }, (error) => {
+            console.error("Error listening to user document:", error);
+            setUser(firebaseUser as User); // Fallback to auth user
         });
 
         // Listen to user-specific collections

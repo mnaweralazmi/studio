@@ -258,6 +258,7 @@ export function ProfileTab() {
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -270,6 +271,7 @@ export function ProfileTab() {
                     placeholder={t("leaveBlank")}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -281,6 +283,7 @@ export function ProfileTab() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
                   />
                 </div>
             </div>
