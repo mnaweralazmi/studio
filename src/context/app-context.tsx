@@ -178,7 +178,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             clearAllData();
         };
 
-    }, [user?.uid]); // Re-run ONLY when user ID changes to avoid re-subscribing on other user data changes
+    }, [user]); 
 
     const value = {
         user,
