@@ -11,9 +11,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { Leaf, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, writeBatch, collection } from 'firebase/firestore';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -23,24 +22,6 @@ const GoogleIcon = () => (
         <path d="M12 5.16c1.56 0 2.95.55 4.06 1.6l3.16-3.16C17.45 1.99 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
     </svg>
 )
-
-const handleUserSignIn = async (user: User) => {
-    const userDocRef = doc(db, 'users', user.uid);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (!userDocSnap.exists()) {
-        await setDoc(userDocRef, {
-            name: user.displayName,
-            email: user.email,
-            role: 'user',
-            createdAt: new Date(),
-            points: 0,
-            level: 1,
-            badges: [],
-        });
-    }
-}
-
 
 export default function LoginPage() {
   const router = useRouter();
@@ -56,8 +37,7 @@ export default function LoginPage() {
     event.preventDefault();
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      await handleUserSignIn(userCredential.user);
+      await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "تم تسجيل الدخول بنجاح!" });
       router.push('/');
     } catch (error: any) {
@@ -75,9 +55,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-        const result = await signInWithPopup(auth, provider);
-        await handleUserSignIn(result.user);
-        
+        await signInWithPopup(auth, provider);
         toast({ title: "تم تسجيل الدخول بنجاح!" });
         router.push('/');
     } catch (error: any) {
