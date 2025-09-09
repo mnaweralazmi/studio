@@ -25,7 +25,6 @@ export default function SubTopicDetailsPage() {
   const { toast } = useToast();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   const [subTopic, setSubTopic] = React.useState<SubTopic | null>(null);
-  const [isPointsLoading, setIsPointsLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (topics.length > 0 && params.topicId && params.subTopicId) {
@@ -44,7 +43,6 @@ export default function SubTopicDetailsPage() {
       
       const viewedTopicKey = `viewed-${subTopic.id}`;
       if (sessionStorage.getItem(viewedTopicKey)) {
-        setIsPointsLoading(false);
         return;
       }
 
@@ -79,19 +77,15 @@ export default function SubTopicDetailsPage() {
         sessionStorage.setItem(viewedTopicKey, 'true');
       } catch (error) {
         console.error("Failed to award points:", error);
-      } finally {
-        setIsPointsLoading(false);
       }
     };
 
     if (user && subTopic) {
       awardPoints();
-    } else { // if no user, no points to award
-      setIsPointsLoading(false);
     }
   }, [user, subTopic, toast, t]);
 
-  if (topicsLoading || isPointsLoading) {
+  if (topicsLoading) {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
             <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
@@ -151,5 +145,3 @@ export default function SubTopicDetailsPage() {
     </main>
   );
 }
-
-    
