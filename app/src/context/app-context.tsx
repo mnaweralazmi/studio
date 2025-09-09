@@ -168,23 +168,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const userDocRef = doc(db, "users", firebaseUser.uid);
         
-        // Listen for user profile updates
         unsubRef.current['userDoc'] = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
-          if (docSnap.exists()) {
-             const userProfile = docSnap.data() as UserProfile;
-             setUser(prevUser => ({
-                 ...(prevUser || {} as User), // Ensure prevUser is not null
-                 ...firebaseUser,
-                 ...userProfile,
-             }));
-          } else {
-             // This case might happen if user document creation fails.
-             // We set the base user from auth.
-             setUser(firebaseUser as User);
-          }
+          const userProfile = docSnap.exists() ? (docSnap.data() as UserProfile) : {};
+          setUser({ ...firebaseUser, ...userProfile } as User);
         }, (error) => {
             console.error("Error listening to user document:", error);
-            setUser(firebaseUser as User); // Fallback to auth user
+            setUser(firebaseUser as User); 
         });
 
         // Listen to user-specific collections
