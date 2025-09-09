@@ -82,7 +82,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     const months = language === 'ar' ? monthsAr : monthsEn;
 
     const workers = React.useMemo(() => {
-        return allWorkers.filter(worker => worker.departmentId === departmentId);
+        return (allWorkers || []).filter(worker => worker.departmentId === departmentId);
     }, [allWorkers, departmentId]);
     
 
