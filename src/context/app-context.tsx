@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, onSnapshot, doc, DocumentData, Unsubscribe } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -38,7 +38,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Helper to create a user-specific subscription
-const createUserSubscription = <T,>(
+const createSubscription = <T,>(
     collectionName: string,
     uid: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
@@ -49,32 +49,16 @@ const createUserSubscription = <T,>(
         const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
         setData(items);
     }, (error) => {
-        console.error(`Error fetching user-specific ${collectionName}:`, error);
+        console.error(`Error fetching ${collectionName}:`, error);
         setData([]);
     });
 };
-
-// Helper to create a public (non-user-specific) subscription for public data like topics
-const createPublicSubscription = <T,>(
-    collectionName: string,
-    setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (doc: DocumentData) => T
-): Unsubscribe => {
-    const q = query(collection(db, collectionName));
-    return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
-        setData(items);
-    }, (error) => {
-        console.error(`Error fetching public ${collectionName}:`, error);
-        setData([]);
-    });
-}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // All data states
+    // Data states
     const [tasks, setTasks] = useState<Task[]>([]);
     const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
     const [allSales, setAllSales] = useState<SalesItem[]>([]);
@@ -82,7 +66,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
     const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
     const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
-    const [archivedDebts, setArchivedDebt] = useState<ArchivedDebt[]>([]);
+    const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
     const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
     const [topics, setTopics] = useState<AgriculturalSection[]>([]);
     
@@ -94,56 +78,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllExpenses([]);
         setArchivedExpenses([]);
         setAllDebts([]);
-        setArchivedDebt([]);
+        setArchivedDebts([]);
         setAllWorkers([]);
     };
 
+    // Effect for handling auth state changes and user document loading
     useEffect(() => {
-        const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>(
-            'data', setTopics, (d) => ({
-                ...d,
-                subTopics: d.subTopics || [],
-                videos: d.videos || [],
-            }) as AgriculturalSection
-        );
-
         const authUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            if (!firebaseUser) {
+            if (firebaseUser) {
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                const userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        setUser({
+                            ...firebaseUser,
+                            ...userData,
+                            name: userData.name || firebaseUser.displayName,
+                            photoURL: userData.photoURL || firebaseUser.photoURL,
+                        });
+                    } else {
+                        setUser(firebaseUser); // Fallback to basic user info if doc doesn't exist
+                    }
+                    setLoading(false); // Auth state confirmed, user data (or lack thereof) loaded
+                });
+                return () => userDocUnsubscribe(); // Cleanup user doc listener
+            } else {
                 setUser(null);
-                setLoading(false);
                 clearAllData();
-                return;
+                setLoading(false); // Auth state confirmed (logged out)
             }
-
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            const userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
-                let combinedUser: User;
-                if (userDocSnap.exists()) {
-                    const userData = userDocSnap.data();
-                    combinedUser = {
-                        ...firebaseUser,
-                        ...userData,
-                        name: userData.name || firebaseUser.displayName,
-                        photoURL: userData.photoURL || firebaseUser.photoURL,
-                    };
-                } else {
-                    combinedUser = firebaseUser;
-                }
-                setUser(combinedUser);
-                setLoading(false);
-            });
-
-            return () => {
-                userDocUnsubscribe();
-            };
         });
-        
-        return () => {
-            authUnsubscribe();
-            topicsUnsubscribe();
-        };
+
+        return () => authUnsubscribe(); // Cleanup auth listener
     }, []);
 
+    // Effect for fetching app-wide data (like topics)
+    useEffect(() => {
+        const topicsQuery = query(collection(db, 'data'));
+        const topicsUnsubscribe = onSnapshot(topicsQuery, (snapshot) => {
+            const items = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                subTopics: doc.data().subTopics || [],
+                videos: doc.data().videos || [],
+            }) as AgriculturalSection);
+            setTopics(items);
+        }, (error) => {
+            console.error("Error fetching topics:", error);
+            setTopics([]);
+        });
+
+        return () => topicsUnsubscribe();
+    }, []);
+
+    // Effect for setting up user-specific data subscriptions
     useEffect(() => {
         if (!user) {
             clearAllData();
@@ -151,25 +139,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
 
         const subscriptions = [
-            createUserSubscription<Task>('tasks', user.uid, setTasks, d => ({...d, dueDate: d.dueDate.toDate()}) as Task),
-            createUserSubscription<ArchivedTask>('completed_tasks', user.uid, setCompletedTasks, d => ({...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate()}) as ArchivedTask),
-            createUserSubscription<SalesItem>('sales', user.uid, setAllSales, d => ({...d, date: d.date.toDate()}) as SalesItem),
-            createUserSubscription<ArchivedSale>('archive_sales', user.uid, setArchivedSales, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedSale),
-            createUserSubscription<ExpenseItem>('expenses', user.uid, setAllExpenses, d => ({...d, date: d.date.toDate()}) as ExpenseItem),
-            createUserSubscription<ArchivedExpense>('archive_expenses', user.uid, setArchivedExpenses, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedExpense),
-            createUserSubscription<DebtItem>('debts', user.uid, setAllDebts, d => ({...d, dueDate: d.dueDate?.toDate(), payments: (d.payments || []).map((p: any) => ({...p, date: p.date.toDate()})) }) as DebtItem),
-            createUserSubscription<ArchivedDebt>('archive_debts', user.uid, setArchivedDebt, d => ({...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate?.toDate() }) as ArchivedDebt),
-            createUserSubscription<Worker>('workers', user.uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
+            createSubscription<Task>('tasks', user.uid, setTasks, d => ({...d, dueDate: d.dueDate.toDate()}) as Task),
+            createSubscription<ArchivedTask>('completed_tasks', user.uid, setCompletedTasks, d => ({...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate()}) as ArchivedTask),
+            createSubscription<SalesItem>('sales', user.uid, setAllSales, d => ({...d, date: d.date.toDate()}) as SalesItem),
+            createSubscription<ArchivedSale>('archive_sales', user.uid, setArchivedSales, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedSale),
+            createSubscription<ExpenseItem>('expenses', user.uid, setAllExpenses, d => ({...d, date: d.date.toDate()}) as ExpenseItem),
+            createSubscription<ArchivedExpense>('archive_expenses', user.uid, setArchivedExpenses, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedExpense),
+            createSubscription<DebtItem>('debts', user.uid, setAllDebts, d => ({...d, dueDate: d.dueDate?.toDate(), payments: (d.payments || []).map((p: any) => ({...p, date: p.date.toDate()})) }) as DebtItem),
+            createSubscription<ArchivedDebt>('archive_debts', user.uid, setArchivedDebts, d => ({...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate?.toDate() }) as ArchivedDebt),
+            createSubscription<Worker>('workers', user.uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
         ];
 
         return () => {
             subscriptions.forEach(unsub => unsub());
-        }
+        };
+    }, [user]); // This effect now correctly depends on the *complete* user object
 
-    }, [user]);
-
-
-    const value = {
+    const value = useMemo(() => ({
         user,
         loading,
         tasks,
@@ -182,7 +168,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         archivedDebts,
         allWorkers,
         topics,
-    };
+    }), [user, loading, tasks, completedTasks, allSales, archivedSales, allExpenses, archivedExpenses, allDebts, archivedDebts, allWorkers, topics]);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
@@ -194,3 +180,5 @@ export const useAppContext = () => {
     }
     return context;
 };
+
+    
