@@ -83,7 +83,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setAllDebts([]);
       setAllWorkers([]);
       setTasks([]);
-      setTopics([]); // Keep public topics or clear them? Let's clear for consistency.
+      setTopics([]);
       setArchivedSales([]);
       setArchivedExpenses([]);
       setArchivedDebts([]);
@@ -94,46 +94,58 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     const collectionsToWatch = [
-      // Live data owned by user
       { name: 'sales', setter: setAllSales, owner: true },
       { name: 'expenses', setter: setAllExpenses, owner: true },
       { name: 'debts', setter: setAllDebts, owner: true },
       { name: 'workers', setter: setAllWorkers, owner: true },
       { name: 'tasks', setter: setTasks, owner: true },
-      // Archived data owned by user
       { name: 'archive_sales', setter: setArchivedSales, owner: true },
       { name: 'archive_expenses', setter: setArchivedExpenses, owner: true },
       { name: 'archive_debts', setter: setArchivedDebts, owner: true },
       { name: 'completed_tasks', setter: setCompletedTasks, owner: true },
-      // Public data (not owned)
       { name: 'data', setter: setTopics, owner: false }, 
     ];
     
-    let listenersCount = collectionsToWatch.length;
-    
-    const onDataLoaded = () => {
-        listenersCount--;
-        if (listenersCount === 0) {
+    // Promise-based approach to handle loading state correctly
+    const setupListeners = async () => {
+        const promises = collectionsToWatch.map(({ name, setter, owner }) => {
+            return new Promise<void>((resolve, reject) => {
+                const collectionRef = collection(db, name);
+                const q = owner 
+                    ? query(collectionRef, where("ownerId", "==", userId))
+                    : query(collectionRef);
+
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
+                    setter(items);
+                    // Resolve the promise once the first snapshot is received
+                    resolve(); 
+                    // Note: We don't unsubscribe here because we want real-time updates.
+                    // The unsubscribe will happen in the cleanup function of useEffect.
+                }, (error) => {
+                    console.error(`Error fetching ${name}:`, error);
+                    setter([]);
+                    reject(error); // Reject on error
+                });
+
+                // Store unsubscribe function for cleanup
+                unsubscribers.push(unsubscribe);
+            });
+        });
+
+        try {
+            // Wait for all initial data fetches to complete or fail
+            await Promise.all(promises);
+        } catch (error) {
+            console.error("One or more listeners failed to initialize:", error);
+        } finally {
+            // Set loading to false regardless of success or failure
             setLoading(false);
         }
     };
 
-    const unsubscribers = collectionsToWatch.map(({ name, setter, owner }) => {
-      const collectionRef = collection(db, name);
-      const q = owner 
-        ? query(collectionRef, where("ownerId", "==", userId))
-        : query(collectionRef);
-
-      return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
-        setter(items);
-        onDataLoaded();
-      }, (error) => {
-        console.error(`Error fetching ${name}:`, error);
-        setter([]); // Clear data on error to avoid stale data
-        onDataLoaded();
-      });
-    });
+    const unsubscribers: (() => void)[] = [];
+    setupListeners();
 
     // Cleanup function
     return () => {

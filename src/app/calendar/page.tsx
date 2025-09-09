@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { Timestamp, doc, collection, writeBatch } from 'firebase/firestore';
+import { Timestamp, doc, collection, writeBatch, runTransaction } from 'firebase/firestore';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
-import type { Task } from '@/lib/types';
+import type { Task, ArchivedTask } from '@/lib/types';
 import { useData } from '@/context/data-context';
 
 
@@ -66,7 +66,7 @@ const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: 
 };
 
 
-const TaskList = ({ tasks, onComplete, language, t }: { tasks: Task[], onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
+const TaskList = ({ tasks, onComplete, language, t }: { tasks: (Task | ArchivedTask)[], onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => (
     <div className="space-y-3">
         {tasks.map(task => (
             <TaskItem key={task.id} task={task} onComplete={onComplete} language={language} t={t} />
@@ -95,7 +95,7 @@ export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const { toast } = useToast();
   const { user } = useAuth();
-  const { tasks, loading } = useData();
+  const { tasks, loading, completedTasks } = useData();
   const { language, t } = useLanguage();
 
   const handleCompleteTask = async (taskId: string) => {
@@ -112,15 +112,21 @@ export default function CalendarPage() {
             batch.update(originalTaskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
         } else {
             const archiveRef = doc(collection(db, 'completed_tasks'));
-            const archivedTaskData = {
+            const archivedTaskData: Omit<ArchivedTask, 'id'> = {
                 ...taskToComplete,
-                completedAt: Timestamp.now(),
+                completedAt: new Date(),
                 isCompleted: true,
                 ownerId: user.uid,
-                dueDate: Timestamp.fromDate(new Date(taskToComplete.dueDate))
             };
             
-            batch.set(archiveRef, archivedTaskData);
+            // We need to convert date fields back to Timestamps for Firestore
+            const finalArchivedData = {
+                ...archivedTaskData,
+                dueDate: Timestamp.fromDate(archivedTaskData.dueDate),
+                completedAt: Timestamp.fromDate(archivedTaskData.completedAt),
+            }
+
+            batch.set(archiveRef, finalArchivedData);
             batch.delete(originalTaskRef);
         }
         
@@ -138,6 +144,8 @@ export default function CalendarPage() {
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   const selectedDayTasks = upcomingTasks.filter(task => date && isSameDay(task.dueDate, date));
+
+  const recentCompletedTasks = completedTasks.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime()).slice(0, 10);
   
   if (loading) {
     return (
@@ -215,13 +223,20 @@ export default function CalendarPage() {
                     <CardTitle>{t('completedTasksLog')}</CardTitle>
                 </CardHeader>
                 <CardContent className="overflow-y-auto max-h-96 pr-2">
-                    <p className="text-center text-muted-foreground py-4">
-                        {t('completedTasksLogDesc')}
-                        <Link href="/archive" className="text-primary hover:underline font-semibold mx-1">
-                            {t('archivePageTitle')}
-                        </Link>
-                        .
-                    </p>
+                    {recentCompletedTasks.length > 0 ? (
+                        <>
+                        <TaskList tasks={recentCompletedTasks} language={language} t={t} />
+                         <p className="text-center text-sm text-muted-foreground py-4 mt-4">
+                            {t('completedTasksLogDesc')}
+                            <Link href="/archive" className="text-primary hover:underline font-semibold mx-1">
+                                {t('archivePageTitle')}
+                            </Link>
+                            .
+                        </p>
+                        </>
+                    ) : (
+                         <p className="text-center text-muted-foreground py-4">{t('noCompletedTasks')}</p>
+                    )}
                 </CardContent>
             </Card>
         </div>

@@ -33,7 +33,7 @@ export default function ArchivePage() {
                         <TabsTrigger value="debts"><Landmark className="mr-2 h-4 w-4" />{t('archivedDebts')}</TabsTrigger>
                     </TabsList>
                     
-                    <div className="mt-6 space-y-6">
+                    <div className="mt-6">
                         <TabsContent value="completed-tasks">
                            <ArchivedTasks />
                         </TabsContent>
