@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Wrench, Info } from 'lucide-react';
 import { useLanguage } from "@/context/language-context";
 import { useAuth } from "@/context/auth-context";
-import { collection, getDocs, writeBatch, query, where } from "firebase/firestore";
+import { collection, getDocs, writeBatch, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,19 +33,24 @@ export function MaintenanceTab() {
       const batch = writeBatch(db);
 
       for (const collectionName of collectionsToMigrate) {
-        // Query for documents that do NOT have the ownerId field.
-        // Firestore doesn't support a "not exists" query directly, so we query for documents
-        // that are missing the field and belong to the user (a workaround).
-        // Since the old data doesn't have ownerId, we have to fetch all and filter client-side.
-        // This is not ideal for very large datasets, but necessary for this one-time migration.
         const q = query(collection(db, collectionName));
         const querySnapshot = await getDocs(q);
         
         querySnapshot.forEach(docSnap => {
-          // IMPORTANT: Only update documents that BELONG TO THE USER but are missing the ownerId.
-          // In this specific app's case, we assume all data belongs to the logged-in user as there's no data sharing.
-          if (!docSnap.data().ownerId) {
-            batch.update(docSnap.ref, { ownerId: user.uid });
+          const data = docSnap.data();
+          // IMPORTANT: Only update documents that are missing ownerId.
+          // This assumes that if ownerId is missing, departmentId is also missing for relevant collections.
+          if (!data.ownerId) {
+            const updateData: { ownerId: string; departmentId?: string } = { ownerId: user.uid };
+            
+            // Add departmentId only to collections that need it.
+            if (['sales', 'expenses', 'debts', 'workers'].includes(collectionName)) {
+                // We assign a default department because we can't know the original one.
+                // The user can re-categorize them later if needed.
+                updateData.departmentId = 'agriculture';
+            }
+            
+            batch.update(docSnap.ref, updateData);
             totalUpdated++;
           }
         });
