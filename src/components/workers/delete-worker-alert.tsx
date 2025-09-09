@@ -8,12 +8,11 @@ import { Trash2 } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 
 interface DeleteWorkerAlertProps {
-    workerId: string;
     workerName: string;
-    onConfirm: (workerId: string) => void;
+    onConfirm: () => void;
 }
 
-function DeleteWorkerAlertComponent({ workerId, workerName, onConfirm }: DeleteWorkerAlertProps) {
+function DeleteWorkerAlertComponent({ workerName, onConfirm }: DeleteWorkerAlertProps) {
     const { t } = useLanguage();
 
     return (
@@ -32,7 +31,7 @@ function DeleteWorkerAlertComponent({ workerId, workerName, onConfirm }: DeleteW
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onConfirm(workerId)}>
+                    <AlertDialogAction onClick={onConfirm}>
                         {t('confirmDelete')}
                     </AlertDialogAction>
                 </AlertDialogFooter>

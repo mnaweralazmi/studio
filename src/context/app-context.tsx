@@ -15,6 +15,9 @@ import {
   doc,
   DocumentSnapshot,
   getDoc,
+  writeBatch,
+  getDocs,
+  limit,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
@@ -133,27 +136,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const userDocRef = doc(db, "users", firebaseUser.uid);
         
-        const userDocSnap = await getDoc(userDocRef);
-        const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
-        const currentUser = { ...firebaseUser, ...userProfile } as User;
-        setUser(currentUser);
-
         // Listen for user profile updates
-        const unsubUser = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
+        unsubRef.current['userDoc'] = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
           if (docSnap.exists()) {
              const userProfile = docSnap.data() as UserProfile;
-             // Important: merge fresh data from auth and firestore
              setUser(prevUser => ({
                  ...(prevUser || {}),
                  ...firebaseUser,
                  ...userProfile,
              } as User));
           } else {
-             // Handle case where user exists in auth but not firestore (e.g. during registration)
              setUser(firebaseUser as User);
           }
         });
-        unsubRef.current['userDoc'] = unsubUser;
 
         // Listen to user-specific collections
         listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
@@ -166,7 +161,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
         listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
         
-        // Listen to public collections (no UID filter)
+        // Listen to public data
         listenToCollection<AgriculturalSection>('data', setTopics);
 
         setLoading(false);
@@ -181,7 +176,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllDebts([]);
         setArchivedDebts([]);
         setAllWorkers([]);
-        setTopics([]); // Clear public data too on logout
+        setTopics([]);
         setLoading(false);
       }
     });

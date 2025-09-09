@@ -50,7 +50,7 @@ async function paySalary(workerId: string, paidMonth: PaidMonth, transactionData
     });
 }
 
-async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'>) {
+async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date'>) {
     const workerRef = doc(db, 'workers', workerId);
     const newTransaction = {
         ...transactionData,
@@ -305,7 +305,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                             <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>
                                                 <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                                             </AddWorkerDialog>
-                                            <DeleteWorkerAlert workerId={worker.id} workerName={worker.name} onConfirm={handleDeleteWorker} />
+                                            <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
                                         </div>
                                     </TableCell>
                                 </TableRow>
