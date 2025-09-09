@@ -102,7 +102,7 @@ export default function CalendarPage() {
     if (!user) return;
     
     const taskToComplete = tasks.find(t => t.id === taskId);
-    if (!taskToComplete || taskToComplete.isCompleted) return;
+    if (!taskToComplete) return;
 
     try {
         if (taskToComplete.isRecurring) {
@@ -115,8 +115,8 @@ export default function CalendarPage() {
             const archiveRef = doc(collection(db, 'completed_tasks'));
             const archivedTaskData: Omit<ArchivedTask, 'id'> = {
                 ...taskToComplete,
-                completedAt: new Date(),
                 isCompleted: true,
+                completedAt: new Date(),
                 ownerId: user.uid,
             };
             
@@ -243,9 +243,5 @@ export default function CalendarPage() {
     </main>
   );
 }
-
-    
-
-    
 
     
