@@ -3,6 +3,7 @@ import type { AgriculturalSection } from './types';
   
 export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
     {
+      id: '1',
       titleKey: "topicIrrigation",
       descriptionKey: "topicIrrigationDesc",
       iconName: 'Droplets',
@@ -17,6 +18,7 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
       ]
     },
     {
+      id: '5',
       titleKey: "topicFertilization",
       descriptionKey: "topicFertilizationDesc",
       iconName: 'FlaskConical',
@@ -30,6 +32,7 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
       ]
     },
     {
+      id: '2',
       titleKey: "topicPests",
       descriptionKey: "topicPestsDesc",
       iconName: 'Bug',
@@ -44,6 +47,7 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
       ]
     },
     {
+      id: '3',
       titleKey: "topicPruning",
       descriptionKey: "topicPruningDesc",
       iconName: 'Scissors',
@@ -57,6 +61,7 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
       ]
     },
     {
+      id: '4',
       titleKey: "topicSoil",
       descriptionKey: "topicSoilDesc",
       iconName: 'Sprout',
@@ -70,6 +75,7 @@ export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
       ]
     },
     {
+      id: '6',
       titleKey: "topicSeeds",
       descriptionKey: "topicSeedsDesc",
       iconName: 'Sprout',
