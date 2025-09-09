@@ -102,7 +102,7 @@ export default function CalendarPage() {
     if (!user) return;
     
     const taskToComplete = tasks.find(t => t.id === taskId);
-    if (!taskToComplete) return;
+    if (!taskToComplete || taskToComplete.isCompleted) return;
 
     try {
         if (taskToComplete.isRecurring) {
@@ -224,7 +224,7 @@ export default function CalendarPage() {
                 <CardContent className="overflow-y-auto max-h-96 pr-2">
                     {recentCompletedTasks.length > 0 ? (
                         <>
-                        <TaskList tasks={recentCompletedTasks} language={language} t={t} />
+                        <TaskList tasks={recentCompletedTasks} language={language} t={t} onComplete={handleCompleteTask}/>
                          <p className="text-center text-sm text-muted-foreground py-4 mt-4">
                             {t('completedTasksLogDesc')}
                             <Link href="/archive" className="text-primary hover:underline font-semibold mx-1">
@@ -243,3 +243,5 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    
