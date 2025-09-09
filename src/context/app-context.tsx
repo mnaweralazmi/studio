@@ -115,14 +115,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 
                 // Set up a listener for the user document itself
                 const userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
-                    const userData = userDocSnap.exists() ? userDocSnap.data() : {};
-                    const combinedUser: User = { 
-                        ...firebaseUser, 
-                        ...userData,
-                        name: userData.name || firebaseUser.displayName,
-                        photoURL: userData.photoURL || firebaseUser.photoURL,
-                     };
-                    setUser(combinedUser);
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        const combinedUser: User = { 
+                            ...firebaseUser, 
+                            ...userData,
+                            name: userData.name || firebaseUser.displayName,
+                            photoURL: userData.photoURL || firebaseUser.photoURL,
+                         };
+                        setUser(combinedUser);
+                    } else {
+                        // Handle case where user exists in Auth but not Firestore
+                        setUser(firebaseUser);
+                    }
                 });
 
                 // Data fetching for logged-in user is now triggered by user state change in a separate useEffect
@@ -147,7 +152,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             // User is logged out, clear their specific data
             clearAllData();
             // Loading is false because auth state is determined
-            setLoading(false);
+            if (!auth.currentUser) {
+                setLoading(false);
+            }
             return;
         }
 
