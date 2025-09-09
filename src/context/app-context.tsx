@@ -14,6 +14,7 @@ import {
   Unsubscribe,
   doc,
   DocumentSnapshot,
+  getDoc,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
@@ -29,7 +30,6 @@ import type {
   Worker,
   AgriculturalSection
 } from "@/lib/types";
-import { initialAgriculturalSections } from "@/lib/initial-data";
 
 type UserProfile = {
   name?: string;
@@ -132,6 +132,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
 
         const userDocRef = doc(db, "users", firebaseUser.uid);
+
+        // Listen for user profile updates
+        const unsubUser = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
+          if (docSnap.exists()) {
+             const userProfile = docSnap.data() as UserProfile;
+             // Important: merge fresh data from auth and firestore
+             setUser(prevUser => ({
+                 ...(prevUser || {}),
+                 ...firebaseUser,
+                 ...userProfile,
+             } as User));
+          } else {
+             // Handle case where user exists in auth but not firestore (e.g. during registration)
+             setUser(firebaseUser as User);
+          }
+        });
+        unsubRef.current['userDoc'] = unsubUser;
+        
+        // Initial fetch of user profile to avoid flicker
         const userDocSnap = await getDoc(userDocRef);
         const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
         const currentUser = { ...firebaseUser, ...userProfile } as User;
@@ -150,14 +169,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
         // Listen to public collections (no UID filter)
         listenToCollection<AgriculturalSection>('data', setTopics);
-
-        // Listen for user profile updates
-        const unsubUser = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
-          if (docSnap.exists()) {
-            setUser(prevUser => ({ ...prevUser, ...firebaseUser, ...docSnap.data() } as User));
-          }
-        });
-        unsubRef.current['userDoc'] = unsubUser;
 
         setLoading(false);
       } else {
