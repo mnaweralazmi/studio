@@ -63,10 +63,17 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     return <>{children}<Toaster /></>;
   }
   
+  // This check is important. If loading is done and there's still no user,
+  // it means we should be on a page that allows anonymous access or redirecting.
+  // The useEffect above handles the redirect. So we can show a loader here.
   if (!user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
-            <p>Redirecting to login...</p>
+             <div className="flex flex-col items-center gap-4">
+                <Skeleton className="h-20 w-20 rounded-full" />
+                <Skeleton className="h-6 w-48" />
+                <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
+            </div>
         </div>
     );
   }
