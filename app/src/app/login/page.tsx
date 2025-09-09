@@ -12,9 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Leaf, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { doc, getDoc, writeBatch, collection, query, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { AgriculturalSection } from '@/lib/types';
 
 
 const GoogleIcon = () => (
@@ -26,77 +25,27 @@ const GoogleIcon = () => (
     </svg>
 )
 
-const initialAgriculturalSections: Omit<AgriculturalSection, 'id' | 'ownerId'>[] = [
-    {
-      titleKey: "topicIrrigation", descriptionKey: "topicIrrigationDesc", iconName: 'Droplets', image: 'https://picsum.photos/400/200', hint: 'watering plants', subTopics: [
-        { id: '1-1', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://picsum.photos/400/200', hint: 'drip irrigation' },
-        { id: '1-2', titleKey: 'subTopicSprinklerIrrigation', descriptionKey: 'subTopicSprinklerIrrigationDesc', image: 'https://picsum.photos/400/200', hint: 'sprinkler irrigation' },
-      ], videos: [ { id: 'v-1', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'gardening basics' } ]
-    },
-    {
-      titleKey: "topicFertilization", descriptionKey: "topicFertilizationDesc", iconName: 'FlaskConical', image: 'https://picsum.photos/400/200', hint: 'fertilizer', subTopics: [
-         { id: '5-1', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://picsum.photos/400/200', hint: 'fertilizer types' },
-      ], videos: [ { id: 'v-2', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'compost bin' } ]
-    },
-    {
-      titleKey: "topicPests", descriptionKey: "topicPestsDesc", iconName: 'Bug', image: 'https://picsum.photos/400/200', hint: 'insect pest', subTopics: [
-        { id: '2-1', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://picsum.photos/400/200', hint: 'ladybug pests' },
-        { id: '2-2', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://picsum.photos/400/200', hint: 'spraying pesticides' },
-      ], videos: [ { id: 'v-5', titleKey: 'videoPestControl', durationKey: 'videoDuration18', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'pest control' } ]
-    },
-    {
-      titleKey: "topicPruning", descriptionKey: "topicPruningDesc", iconName: 'Scissors', image: 'https://picsum.photos/400/200', hint: 'pruning shears', subTopics: [
-        { id: '3-1', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://picsum.photos/400/200', hint: 'young tree' },
-      ], videos: [ { id: 'v-3', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'tomato plant' } ]
-    },
-    {
-      titleKey: "topicSoil", descriptionKey: "topicSoilDesc", iconName: 'Sprout', image: 'https://picsum.photos/400/200', hint: 'rich soil', subTopics: [
-         { id: '4-1', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://picsum.photos/400/200', hint: 'soil test' },
-      ], videos: [ { id: 'v-4', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'gardening tools' } ]
-    },
-    { titleKey: "topicSeeds", descriptionKey: "topicSeedsDesc", iconName: 'Sprout', image: 'https://picsum.photos/400/200', hint: 'seeds planting', subTopics: [], videos: [] },
-    { titleKey: "topicHarvesting", descriptionKey: "topicHarvestingDesc", iconName: 'Leaf', image: 'https://picsum.photos/400/200', hint: 'harvest basket', subTopics: [], videos: [] }
-];
-
 const createNewUserDocument = async (user: User) => {
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {
-        return; // User document already exists
+        return; 
     }
 
-    const batch = writeBatch(db);
-
-    // 1. Create the user document with all necessary default fields
-    batch.set(userDocRef, {
+    // Only create the user document. The app-context will handle populating `data` collection if needed.
+    await setDoc(userDocRef, {
         uid: user.uid,
         name: user.displayName || 'Anonymous User',
         email: user.email,
-        role: 'user',
-        createdAt: Timestamp.now(), // Use server timestamp
+        role: 'user', 
+        createdAt: new Date(),
         points: 0,
         level: 1,
         badges: [],
-        photoURL: user.photoURL || '',
+        photoURL: user.photoURL || ''
     });
-
-    // 2. Check if the 'data' collection is empty
-    const dataColRef = collection(db, 'data');
-    const q = query(dataColRef, limit(1));
-    const dataSnap = await getDocs(q);
-
-    // 3. If it's empty, populate it with initial topics
-    if (dataSnap.empty) {
-        initialAgriculturalSections.forEach((topic, index) => {
-            const newTopicRef = doc(dataColRef, (index + 1).toString());
-            batch.set(newTopicRef, topic);
-        });
-    }
-
-    // 4. Commit the batch
-    await batch.commit();
-};
+}
 
 
 export default function LoginPage() {
@@ -221,5 +170,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
