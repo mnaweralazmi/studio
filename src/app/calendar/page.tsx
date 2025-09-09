@@ -105,7 +105,7 @@ export default function CalendarPage() {
     if (!taskToComplete) return;
 
     try {
-        if (taskToComplete.isRecurring) {
+        if (taskToComplete.isRecurring && !taskToComplete.isCompleted) {
             const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
             const taskRef = doc(db, 'tasks', taskId);
             await updateDoc(taskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
@@ -243,5 +243,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
-    
