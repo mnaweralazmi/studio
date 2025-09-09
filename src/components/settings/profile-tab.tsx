@@ -65,9 +65,8 @@ export function ProfileTab() {
           const storage = getStorage();
           const storageRef = ref(storage, `avatars/${user.uid}`);
           await uploadBytes(storageRef, avatarFile);
-          const downloadUrl = await getDownloadURL(storageRef);
-          newAvatarUrl = `${downloadUrl}?v=${new Date().getTime()}`;
-          setAvatarUrl(newAvatarUrl);
+          newAvatarUrl = await getDownloadURL(storageRef);
+          setAvatarUrl(newAvatarUrl + `?v=${new Date().getTime()}`);
         }
 
         const profileUpdate: { displayName: string; photoURL?: string } = { displayName: name };
