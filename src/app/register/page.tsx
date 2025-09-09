@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Leaf, UserPlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, writeBatch, getDocs, query } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, writeBatch, getDocs, query, limit } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { initialAgriculturalSections } from '@/lib/initial-data';
 import type { AgriculturalSection } from '@/lib/types';
@@ -40,19 +40,23 @@ const createNewUserDocument = async (user: User, name: string | null) => {
 
     // 1. Create user document
     batch.set(userDocRef, {
-        uid: user.uid, // Storing the uid inside the document as well
-        name: name,
+        uid: user.uid,
+        name: name || user.displayName || 'Anonymous User',
         email: user.email,
-        role: 'user', // Default role
+        role: 'user', 
         createdAt: new Date(),
         points: 0,
         level: 1,
         badges: [],
+        photoURL: user.photoURL || ''
     });
     
-    // 2. Populate public topics if they don't exist
+    // 2. Populate public topics only if the 'data' collection is completely empty.
+    // This should only run once in the entire lifetime of the database.
     const dataColRef = collection(db, 'data');
-    const dataSnap = await getDocs(dataColRef);
+    const q = query(dataColRef, limit(1));
+    const dataSnap = await getDocs(q);
+
     if (dataSnap.empty) {
         console.log("Populating initial agricultural topics...");
         initialAgriculturalSections.forEach(topic => {
