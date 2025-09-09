@@ -24,7 +24,8 @@ export function ArchivedExpenses() {
     const { t, language } = useLanguage();
 
     const sortedItems = React.useMemo(() => {
-        return [...archivedExpenses].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
+        const list = Array.isArray(archivedExpenses) ? archivedExpenses : [];
+        return [...list].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
     }, [archivedExpenses]);
 
     if (loading) {

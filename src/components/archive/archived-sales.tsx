@@ -24,7 +24,8 @@ export function ArchivedSales() {
     const { t, language } = useLanguage();
     
     const sortedItems = React.useMemo(() => {
-        return [...archivedSales].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
+        const list = Array.isArray(archivedSales) ? archivedSales : [];
+        return [...list].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
     }, [archivedSales]);
 
     if (loading) {

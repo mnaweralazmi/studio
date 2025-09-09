@@ -17,7 +17,8 @@ export function ArchivedTasks() {
     const { t, language } = useLanguage();
 
     const sortedTasks = React.useMemo(() => {
-        return [...completedTasks].sort((a,b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+        const list = Array.isArray(completedTasks) ? completedTasks : [];
+        return [...list].sort((a,b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
     }, [completedTasks]);
 
 
