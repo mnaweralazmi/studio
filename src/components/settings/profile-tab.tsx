@@ -36,6 +36,7 @@ export function ProfileTab() {
   const [name, setName] = React.useState("");
   const [avatarUrl, setAvatarUrl] = React.useState("");
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
@@ -51,7 +52,7 @@ export function ProfileTab() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setAvatarFile(file);
-      setAvatarUrl(URL.createObjectURL(file));
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -60,30 +61,36 @@ export function ProfileTab() {
       if (!user || !auth.currentUser) return;
       setIsProfileSaving(true);
       try {
-        const updateData: { displayName: string; photoURL?: string; name: string } = {
-          displayName: name,
-          name: name,
-        };
+        const updateData: { displayName?: string; name?: string; photoURL?: string } = {};
         
+        if (name !== (user.displayName || user.name)) {
+            updateData.displayName = name;
+            updateData.name = name;
+        }
+
+        let newAvatarUrl;
         if (avatarFile) {
           const storage = getStorage();
           const storageRef = ref(storage, `avatars/${user.uid}`);
           await uploadBytes(storageRef, avatarFile);
-          const newAvatarUrl = await getDownloadURL(storageRef);
+          newAvatarUrl = await getDownloadURL(storageRef);
           updateData.photoURL = newAvatarUrl;
         }
 
-        // Update Firebase Auth profile
-        await updateProfile(auth.currentUser, { displayName: updateData.displayName, photoURL: updateData.photoURL });
-        
-        // Update Firestore document
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, { name: updateData.name, photoURL: updateData.photoURL });
+        if (Object.keys(updateData).length > 0) {
+            // Update Firebase Auth profile
+            await updateProfile(auth.currentUser, { displayName: updateData.displayName, photoURL: updateData.photoURL });
+            
+            // Update Firestore document
+            const userDocRef = doc(db, "users", user.uid);
+            await updateDoc(userDocRef, { name: updateData.name, photoURL: updateData.photoURL });
 
-        if (updateData.photoURL) {
-           setAvatarUrl(updateData.photoURL + `?v=${new Date().getTime()}`);
+            if (newAvatarUrl) {
+               setAvatarUrl(newAvatarUrl);
+               setPreviewUrl(null);
+            }
         }
-
+        
         toast({ title: t("profileUpdated"), description: t("profileUpdatedSuccess") });
         setAvatarFile(null);
 
@@ -187,7 +194,7 @@ export function ProfileTab() {
               <div className="flex items-center gap-6 flex-wrap">
                 <Avatar className="h-24 w-24 border">
                   <AvatarImage
-                    src={avatarUrl || undefined}
+                    src={previewUrl || avatarUrl || undefined}
                     alt={t("profilePicture")}
                   />
                   <AvatarFallback>
@@ -291,5 +298,3 @@ export function ProfileTab() {
     </Card>
   );
 }
-
-    
