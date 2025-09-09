@@ -9,11 +9,13 @@ import { useLanguage } from '@/context/language-context';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useData } from '@/context/data-context';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { loading: dataLoading } = useData();
 
   const navItems = [
     { href: '/', label: t('home'), icon: Home },
@@ -28,11 +30,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       // navItems.push({ href: '/admin', label: t('adminDashboard'), icon: Shield });
   }
 
-
-  if (loading || !user) {
+  // The main loading condition
+  if (authLoading || dataLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Skeleton className="h-full w-full" />
+        <div className="flex flex-col items-center gap-4">
+            <Skeleton className="h-20 w-20 rounded-full" />
+            <Skeleton className="h-6 w-48" />
+        </div>
       </div>
     );
   }

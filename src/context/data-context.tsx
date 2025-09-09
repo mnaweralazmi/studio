@@ -54,94 +54,107 @@ const mapTimestampsToDates = (data: any): any => {
     return data;
 };
 
-// List of collections that depend on the user's ID
-const userSpecificCollections = [
-  { name: 'sales', setter: 'setAllSales' },
-  { name: 'expenses', setter: 'setAllExpenses' },
-  { name: 'debts', setter: 'setAllDebts' },
-  { name: 'workers', setter: 'setAllWorkers' },
-  { name: 'tasks', setter: 'setTasks' },
-  { name: 'archive_sales', setter: 'setArchivedSales' },
-  { name: 'archive_expenses', setter: 'setArchivedExpenses' },
-  { name: 'archive_debts', setter: 'setArchivedDebts' },
-  { name: 'completed_tasks', setter: 'setCompletedTasks' },
-] as const;
+// Definitions for all collections
+const collectionsConfig = {
+  userSpecific: [
+    { name: 'sales', stateKey: 'allSales' },
+    { name: 'expenses', stateKey: 'allExpenses' },
+    { name: 'debts', stateKey: 'allDebts' },
+    { name: 'workers', stateKey: 'allWorkers' },
+    { name: 'tasks', stateKey: 'tasks' },
+    { name: 'archive_sales', stateKey: 'archivedSales' },
+    { name: 'archive_expenses', stateKey: 'archivedExpenses' },
+    { name: 'archive_debts', stateKey: 'archivedDebts' },
+    { name: 'completed_tasks', stateKey: 'completedTasks' },
+  ],
+  public: [
+    { name: 'data', stateKey: 'topics' },
+  ]
+} as const;
+
+
+// Helper to generate initial state
+const getInitialState = () => {
+    const initialState: { [key: string]: any } = {};
+    [...collectionsConfig.userSpecific, ...collectionsConfig.public].forEach(({ stateKey }) => {
+        initialState[stateKey] = [];
+    });
+    return initialState;
+}
+
+const getInitialLoadingState = () => {
+    const loadingState: { [key: string]: boolean } = {};
+    [...collectionsConfig.userSpecific, ...collectionsConfig.public].forEach(({ name }) => {
+        loadingState[name] = true;
+    });
+    return loadingState;
+}
 
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   
-  const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-  const [allSales, setAllSales] = useState<SalesItem[]>([]);
-  const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
-  const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
-  const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [archivedSales, setArchivedSales] = useState<ArchivedSale[]>([]);
-  const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
-  const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
-  const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
-  
-  const stateSetters = { setTopics, setAllSales, setAllExpenses, setAllDebts, setAllWorkers, setTasks, setArchivedSales, setArchivedExpenses, setArchivedDebts, setCompletedTasks };
+  const [data, setData] = useState(getInitialState);
+  const [loadingStates, setLoadingStates] = useState(getInitialLoadingState);
 
-  const [topicsLoading, setTopicsLoading] = useState(true);
-  const [userDataLoading, setUserDataLoading] = useState(true);
-
-  // Effect for public data (topics) that doesn't depend on user auth
+  // Effect for public data that doesn't depend on user auth
   useEffect(() => {
-    setTopicsLoading(true);
-    const q = query(collection(db, 'data'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as AgriculturalSection[];
-        setTopics(items);
-        setTopicsLoading(false);
-    }, (error) => {
-        console.error("Error fetching public topics:", error);
-        setTopics([]);
-        setTopicsLoading(false);
+    const unsubscribers = collectionsConfig.public.map(({ name, stateKey }) => {
+        const q = query(collection(db, name));
+        return onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) }));
+            setData(prevData => ({ ...prevData, [stateKey]: items }));
+            setLoadingStates(prev => ({ ...prev, [name]: false }));
+        }, (error) => {
+            console.error(`Error fetching public collection ${name}:`, error);
+            setLoadingStates(prev => ({ ...prev, [name]: false }));
+        });
     });
-    return () => unsubscribe();
+    return () => unsubscribers.forEach(unsub => unsub());
   }, []);
 
   // Effect for user-specific data, triggers when user's auth state changes
   useEffect(() => {
+    // Reset user-specific data and loading states when user logs out
     if (!user) {
-      // If user logs out, clear their data and set loading to false
-      userSpecificCollections.forEach(({ setter }) => stateSetters[setter]([]));
-      setUserDataLoading(false);
+      const resetData: { [key: string]: any[] } = {};
+      const resetLoading: { [key: string]: boolean } = {};
+      collectionsConfig.userSpecific.forEach(({ stateKey, name }) => {
+          resetData[stateKey] = [];
+          resetLoading[name] = true; // Reset to loading for next user
+      });
+      setData(prevData => ({ ...prevData, ...resetData }));
+      setLoadingStates(prev => ({ ...prev, ...resetLoading }));
       return;
     }
 
-    setUserDataLoading(true);
-    const unsubscribers = userSpecificCollections.map(({ name, setter }) => {
+    // Set up listeners for user-specific collections
+    const unsubscribers = collectionsConfig.userSpecific.map(({ name, stateKey }) => {
       const q = query(collection(db, name), where("ownerId", "==", user.uid));
       return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
-        stateSetters[setter](items);
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) }));
+        setData(prevData => ({ ...prevData, [stateKey]: items }));
+        setLoadingStates(prev => ({ ...prev, [name]: false }));
       }, (error) => {
         console.error(`Error fetching ${name} for user ${user.uid}:`, error);
-        stateSetters[setter]([]); // Clear data on error
+        setLoadingStates(prev => ({ ...prev, [name]: false }));
       });
     });
 
-    // We can consider userDataLoading to be false once listeners are attached.
-    // The UI will update reactively as data arrives.
-    setUserDataLoading(false);
-
-    // Cleanup function to unsubscribe from all listeners when user changes or component unmounts
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
   }, [user]);
+  
+  const isDataLoading = Object.values(loadingStates).some(status => status === true);
 
   const value = { 
-    allSales, allExpenses, allDebts, allWorkers, tasks, topics, 
-    archivedSales, archivedExpenses, archivedDebts, completedTasks,
-    loading: authLoading || topicsLoading || userDataLoading,
+    ...data,
+    loading: authLoading || isDataLoading,
   };
 
   return (
-    <DataContext.Provider value={value}>
+    <DataContext.Provider value={value as DataContextType}>
       {children}
     </DataContext.Provider>
   );
