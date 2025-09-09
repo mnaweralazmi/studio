@@ -11,7 +11,6 @@ import { useData } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlayCircle, FileText } from 'lucide-react';
-import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TopicDetailsPage() {
@@ -20,9 +19,6 @@ export default function TopicDetailsPage() {
   const { t, language } = useLanguage();
   const { topics, loading: topicsLoading } = useData();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
-  
-  const { user } = useAuth();
-
 
   React.useEffect(() => {
     if (topics.length > 0 && params.topicId) {
@@ -146,5 +142,3 @@ export default function TopicDetailsPage() {
     </main>
   );
 }
-
-    
