@@ -99,7 +99,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        // Public data subscription (always active, does not depend on user)
         const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>(
             'data', setTopics, (d) => ({
                 ...d,
@@ -109,34 +108,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         );
 
         const authUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            if (firebaseUser) {
-                const userDocRef = doc(db, 'users', firebaseUser.uid);
-                
-                const userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
-                    if (userDocSnap.exists()) {
-                        const userData = userDocSnap.data();
-                        const combinedUser: User = { 
-                            ...firebaseUser, 
-                            ...userData,
-                            name: userData.name || firebaseUser.displayName,
-                            photoURL: userData.photoURL || firebaseUser.photoURL,
-                         };
-                        setUser(combinedUser);
-                    } else {
-                        setUser(firebaseUser);
-                    }
-                     setLoading(false);
-                });
-
-                return () => {
-                    userDocUnsubscribe();
-                };
-
-            } else {
+            if (!firebaseUser) {
                 setUser(null);
-                clearAllData();
                 setLoading(false);
+                clearAllData();
+                return;
             }
+
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
+                let combinedUser: User;
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    combinedUser = {
+                        ...firebaseUser,
+                        ...userData,
+                        name: userData.name || firebaseUser.displayName,
+                        photoURL: userData.photoURL || firebaseUser.photoURL,
+                    };
+                } else {
+                    combinedUser = firebaseUser;
+                }
+                setUser(combinedUser);
+                setLoading(false);
+            });
+
+            return () => {
+                userDocUnsubscribe();
+            };
         });
         
         return () => {
@@ -149,7 +148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!user) {
             clearAllData();
             return;
-        };
+        }
 
         const subscriptions = [
             createUserSubscription<Task>('tasks', user.uid, setTasks, d => ({...d, dueDate: d.dueDate.toDate()}) as Task),
@@ -167,7 +166,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             subscriptions.forEach(unsub => unsub());
         }
 
-    }, [user])
+    }, [user]);
 
 
     const value = {
