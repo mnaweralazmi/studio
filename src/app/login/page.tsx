@@ -104,9 +104,14 @@ export default function LoginPage() {
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
         let description = "Could not sign you in with Google.";
-        if (error.code === 'auth/popup-closed-by-user') {
-            description = "The sign-in window was closed. Please try again.";
+
+        // This is a common configuration error. Guide the user on how to fix it.
+        if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+            description = "The sign-in window was closed. Please try again. If this issue persists, your app's domain might not be authorized in the Firebase console.";
+        } else if (error.code === 'auth/unauthorized-domain') {
+            description = "This domain is not authorized for Google Sign-In. Please add it to the list of authorized domains in your Firebase project settings under Authentication > Sign-in method > Authorized domains.";
         }
+        
         toast({
             variant: "destructive",
             title: "Login Failed",
@@ -183,7 +188,5 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
 
     
