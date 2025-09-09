@@ -62,6 +62,8 @@ export default function AddTaskPage() {
   const [isRecurring, setIsRecurring] = React.useState(false);
   const [reminderDays, setReminderDays] = React.useState(0);
   const [isDescManuallyEdited, setIsDescManuallyEdited] = React.useState(false);
+  
+  const isOtherTask = title === 'مهمة أخرى' || title === 'Other Task';
 
   React.useEffect(() => {
     if (!isDescManuallyEdited) {
@@ -69,6 +71,8 @@ export default function AddTaskPage() {
             setDescription(vegetable);
         } else if (fruit) {
             setDescription(fruit);
+        } else {
+            setDescription('');
         }
     }
   }, [vegetable, fruit, isDescManuallyEdited]);
@@ -208,52 +212,55 @@ export default function AddTaskPage() {
                 <CardContent className="space-y-6 pt-6">
                     <div className="space-y-2">
                         <Label>{t('taskTitle')}</Label>
-                        <Select onValueChange={setTitle} value={title}>
+                        <Select onValueChange={(val) => { setTitle(val); setFruit(''); setVegetable(''); setIsDescManuallyEdited(false); }} value={title}>
                           <SelectTrigger>
                             <SelectValue placeholder={t('selectTask')} />
                           </SelectTrigger>
                           <SelectContent>
-                            {taskTitles.map(title => (
-                              <SelectItem key={title} value={title}>{title}</SelectItem>
+                            {taskTitles.map(taskTitle => (
+                              <SelectItem key={taskTitle} value={taskTitle}>{taskTitle}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                     </div>
                     
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label>{t('selectVegetableOptional')}</Label>
-                            <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('selectVegetable')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {vegetableList.map(veg => (
-                                    <SelectItem key={veg} value={veg}>{veg}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                    {!isOtherTask && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label>{t('selectVegetableOptional')}</Label>
+                                <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('selectVegetable')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {vegetableList.map(veg => (
+                                        <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="space-y-2">
+                                <Label>{t('selectFruitOptional')}</Label>
+                                <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('selectFruit')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {fruitList.map(fruitItem => (
+                                        <SelectItem key={fruitItem} value={fruitItem}>{fruitItem}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                         <div className="space-y-2">
-                            <Label>{t('selectFruitOptional')}</Label>
-                            <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('selectFruit')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {fruitList.map(fruit => (
-                                    <SelectItem key={fruit} value={fruit}>{fruit}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                    )}
                     
-                    <div className="space-y-2">
-                        <Label htmlFor='description'>{t('description')}</Label>
-                        <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => { setDescription(e.target.value); setIsDescManuallyEdited(true);}} />
-                    </div>
+                     {isOtherTask && (
+                        <div className="space-y-2">
+                            <Label htmlFor='description'>{t('description')}</Label>
+                            <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => { setDescription(e.target.value); setIsDescManuallyEdited(true);}} />
+                        </div>
+                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
@@ -341,3 +348,5 @@ export default function AddTaskPage() {
     </main>
   );
 }
+
+    

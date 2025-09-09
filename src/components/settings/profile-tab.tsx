@@ -95,16 +95,19 @@ export function ProfileTab() {
         newAvatarUrl = await getDownloadURL(storageRef);
       }
 
-      await updateProfile(auth.currentUser, {
-        displayName: name,
-        photoURL: newAvatarUrl,
-      });
+      // Prepare update objects
+      const profileUpdate: { displayName: string; photoURL?: string } = { displayName: name };
+      const firestoreUpdate: { name: string; photoURL?: string } = { name: name };
 
+      if (newAvatarUrl && newAvatarUrl !== user.photoURL) {
+          profileUpdate.photoURL = newAvatarUrl;
+          firestoreUpdate.photoURL = newAvatarUrl;
+      }
+
+      await updateProfile(auth.currentUser, profileUpdate);
+      
       const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, {
-        name: name,
-        photoURL: newAvatarUrl,
-      });
+      await updateDoc(userDocRef, firestoreUpdate);
 
       toast({ title: t("profileUpdated"), description: t("profileUpdatedSuccess") });
 
