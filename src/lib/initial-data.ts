@@ -1,7 +1,7 @@
 
 import type { AgriculturalSection } from './types';
   
-export const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
+export const initialAgriculturalSections: AgriculturalSection[] = [
     {
       id: '1',
       titleKey: "topicIrrigation",

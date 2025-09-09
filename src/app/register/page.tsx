@@ -59,7 +59,7 @@ const createNewUserDocument = async (user: User, name: string | null) => {
         console.log("Populating initial agricultural topics...");
         initialAgriculturalSections.forEach(topic => {
             const newTopicRef = doc(dataColRef, topic.id);
-            const publicTopicData: Omit<AgriculturalSection, 'id'> = {
+            const publicTopicData: AgriculturalSection = {
                 ...topic,
             };
             batch.set(newTopicRef, publicTopicData);
