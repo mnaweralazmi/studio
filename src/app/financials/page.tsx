@@ -63,7 +63,7 @@ export default function FinancialsPage() {
                     </CardContent>
                 </Card>
 
-                <Tabs defaultValue="sales" className="w-full">
+                <Tabs defaultValue="sales" className="w-full" key={activeDepartment}>
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="sales"><Wallet className="mr-2 h-4 w-4" />{t('sales')}</TabsTrigger>
                         <TabsTrigger value="expenses"><CreditCard className="mr-2 h-4 w-4" />{t('expenses')}</TabsTrigger>
