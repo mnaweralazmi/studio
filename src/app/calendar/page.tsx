@@ -101,7 +101,7 @@ export default function CalendarPage() {
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
     
-    const taskToComplete = tasks.find(t => t.id === taskId && !t.isCompleted);
+    const taskToComplete = tasks.find(t => t.id === taskId);
     if (!taskToComplete) return;
 
     try {
