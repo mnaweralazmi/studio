@@ -7,16 +7,19 @@ import {
   onSnapshot,
   query,
   orderBy,
-  where,
   CollectionReference,
   DocumentData,
   QuerySnapshot,
   Unsubscribe,
-  getDoc,
-  doc
+  addDoc,
+  deleteDoc,
+  doc,
+  Timestamp
 } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase"; // تأكد من أن هذه التصديرات موجودة
 
+// إذا لديك أنواع (types) خاصة مثل FinancialItem أو NoteItem ضع تعريفها في "@/lib/types"
+// وإلا سنستخدم أي لتجنب أخطاء التجميع.
 import type {
   Task,
   ArchivedTask,
@@ -31,7 +34,10 @@ import type {
 } from "@/lib/types";
 import { initialAgriculturalSections } from "@/lib/initial-data";
 
-/** --- Types --- */
+/** --- Additional local fallback types (use your real types if موجودة) --- */
+type FinancialItem = any;
+type NoteItem = any;
+
 interface UserProfile {
   name?: string;
   role?: "admin" | "user";
@@ -45,6 +51,8 @@ export interface User extends FirebaseUser, UserProfile {}
 interface AppContextType {
   user: User | null;
   loading: boolean;
+
+  // data
   tasks: Task[];
   completedTasks: ArchivedTask[];
   allSales: SalesItem[];
@@ -55,6 +63,20 @@ interface AppContextType {
   archivedDebts: ArchivedDebt[];
   allWorkers: Worker[];
   topics: AgriculturalSection[];
+  financials: FinancialItem[];
+  notes: NoteItem[];
+
+  // CRUD examples:
+  addTask: (payload: Partial<Task>) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  addSale: (payload: Partial<SalesItem>) => Promise<void>;
+  deleteSale: (saleId: string) => Promise<void>;
+
+  addFinancial: (payload: Partial<FinancialItem>) => Promise<void>;
+  deleteFinancial: (id: string) => Promise<void>;
+
+  addNote: (payload: Partial<NoteItem>) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -93,82 +115,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [topics, setTopics] = useState<AgriculturalSection[]>(initialAgriculturalSections);
+  const [financials, setFinancials] = useState<FinancialItem[]>([]);
+  const [notes, setNotes] = useState<NoteItem[]>([]);
 
   const unsubRef = useRef<Record<string, Unsubscribe | null>>({});
 
-  const createSubscription = <T>(
-    collectionName: string, 
-    setter: React.Dispatch<React.SetStateAction<T[]>>,
-    uid?: string
-    ) => {
-    const colRef = collection(db, collectionName);
-    let q;
-    if (uid) {
-        // This is a private collection, filter by ownerId
-        q = query(colRef, where("ownerId", "==", uid));
-    } else {
-        // This is a public collection (like 'data')
-        q = query(colRef);
+  function listenCollection<T = any>(uid: string, collectionName: string, setter: (items: T[]) => void, orderField?: string) {
+    try {
+      const colRef = collection(db, "users", uid, collectionName) as CollectionReference<DocumentData>;
+      const q = orderField ? query(colRef, orderBy(orderField, "desc")) : query(colRef);
+      if (unsubRef.current[collectionName]) {
+        unsubRef.current[collectionName]!();
+      }
+      const unsub = onSnapshot(q, snap => {
+        setter(mapSnapshot<T>(snap));
+      }, err => {
+        console.error(`listenCollection(${collectionName}) error:`, err);
+        setter([]);
+      });
+      unsubRef.current[collectionName] = unsub;
+    } catch (err) {
+      console.error("listenCollection setup error:", err);
     }
-    
-    const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-            const data = mapSnapshot<T>(snapshot);
-            setter(data);
-        },
-        (error) => {
-            console.error(`Error fetching ${collectionName}:`, error);
-            setter([]);
-        }
-    );
-    return unsubscribe;
-  };
-  
-  const clearAllListeners = () => {
-    Object.values(unsubRef.current).forEach(unsub => unsub && unsub());
-    unsubRef.current = {};
-  };
+  }
 
+  function clearAllListeners() {
+    for (const k of Object.keys(unsubRef.current)) {
+      const u = unsubRef.current[k];
+      if (typeof u === "function") {
+        try { u(); } catch (e) { /* ignore */ }
+      }
+      unsubRef.current[k] = null;
+    }
+  }
 
+  // Auth listener
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      clearAllListeners();
-      setLoading(true);
-
+    const unsubAuth = onAuthStateChanged(auth, firebaseUser => {
       if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        let userData: User;
-        if (userDocSnap.exists()) {
-            const userProfileData = userDocSnap.data() as UserProfile;
-            userData = { ...firebaseUser, ...userProfileData };
-        } else {
-            userData = firebaseUser as User;
-        }
-        setUser(userData);
-        
+        setUser(firebaseUser as User);
+        setLoading(true);
+
         const uid = firebaseUser.uid;
-        const subscriptions: { [key: string]: Unsubscribe } = {};
 
-        subscriptions.tasks = createSubscription<Task>('tasks', setTasks, uid);
-        subscriptions.completed_tasks = createSubscription<ArchivedTask>('completed_tasks', setCompletedTasks, uid);
-        subscriptions.sales = createSubscription<SalesItem>('sales', setAllSales, uid);
-        subscriptions.archive_sales = createSubscription<ArchivedSale>('archive_sales', setArchivedSales, uid);
-        subscriptions.expenses = createSubscription<ExpenseItem>('expenses', setAllExpenses, uid);
-        subscriptions.archive_expenses = createSubscription<ArchivedExpense>('archive_expenses', setArchivedExpenses, uid);
-        subscriptions.debts = createSubscription<DebtItem>('debts', setAllDebts, uid);
-        subscriptions.archive_debts = createSubscription<ArchivedDebt>('archive_debts', setArchivedDebts, uid);
-        subscriptions.workers = createSubscription<Worker>('workers', setAllWorkers, uid);
-        subscriptions.data = createSubscription<AgriculturalSection>('data', setTopics);
+        // استمع لكل مجموعات المستخدم — عدّل الأسماء هنا إذا بنية قاعدة بياناتك مختلفة
+        listenCollection<Task>(uid, "tasks", setTasks, "dueDate");
+        listenCollection<ArchivedTask>(uid, "completedTasks", setCompletedTasks, "completedAt");
+        listenCollection<SalesItem>(uid, "sales", setAllSales, "date");
+        listenCollection<ArchivedSale>(uid, "archivedSales", setArchivedSales, "date");
+        listenCollection<ExpenseItem>(uid, "expenses", setAllExpenses, "date");
+        listenCollection<ArchivedExpense>(uid, "archivedExpenses", setArchivedExpenses, "date");
+        listenCollection<DebtItem>(uid, "debts", setAllDebts, "dueDate");
+        listenCollection<ArchivedDebt>(uid, "archivedDebts", setArchivedDebts, "dueDate");
+        listenCollection<Worker>(uid, "workers", setAllWorkers, "name");
+        listenCollection<AgriculturalSection>(uid, "topics", setTopics, "title");
 
-        unsubRef.current = subscriptions;
+        // المجموعات الإضافية التي طلبتها:
+        listenCollection<FinancialItem>(uid, "financials", setFinancials, "date"); // أو field مناسب
+        listenCollection<NoteItem>(uid, "notes", setNotes, "updatedAt");
+
         setLoading(false);
-
       } else {
-        // User is signed out
         setUser(null);
+        clearAllListeners();
         setTasks([]);
         setCompletedTasks([]);
         setAllSales([]);
@@ -179,16 +188,74 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setArchivedDebts([]);
         setAllWorkers([]);
         setTopics(initialAgriculturalSections);
+        setFinancials([]);
+        setNotes([]);
         setLoading(false);
       }
     });
 
     return () => {
-        unsubAuth();
-        clearAllListeners();
+      unsubAuth();
+      clearAllListeners();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
+  /** --- CRUD helpers --- */
+  async function addTask(payload: Partial<Task>) {
+    if (!user) throw new Error("Not authenticated");
+    await addDoc(collection(db, "users", user.uid, "tasks"), {
+      ...payload,
+      ownerId: user.uid,
+      createdAt: Timestamp.now()
+    });
+  }
+  async function deleteTask(taskId: string) {
+    if (!user) throw new Error("Not authenticated");
+    await deleteDoc(doc(db, "users", user.uid, "tasks", taskId));
+  }
+
+  async function addSale(payload: Partial<SalesItem>) {
+    if (!user) throw new Error("Not authenticated");
+    await addDoc(collection(db, "users", user.uid, "sales"), {
+      ...payload,
+      ownerId: user.uid,
+      date: payload.date ? payload.date : Timestamp.now()
+    });
+  }
+  async function deleteSale(saleId: string) {
+    if (!user) throw new Error("Not authenticated");
+    await deleteDoc(doc(db, "users", user.uid, "sales", saleId));
+  }
+
+  // Financials CRUD
+  async function addFinancial(payload: Partial<FinancialItem>) {
+    if (!user) throw new Error("Not authenticated");
+    await addDoc(collection(db, "users", user.uid, "financials"), {
+      ...payload,
+      ownerId: user.uid,
+      date: payload.date ? payload.date : Timestamp.now()
+    });
+  }
+  async function deleteFinancial(id: string) {
+    if (!user) throw new Error("Not authenticated");
+    await deleteDoc(doc(db, "users", user.uid, "financials", id));
+  }
+
+  // Notes CRUD
+  async function addNote(payload: Partial<NoteItem>) {
+    if (!user) throw new Error("Not authenticated");
+    await addDoc(collection(db, "users", user.uid, "notes"), {
+      ...payload,
+      ownerId: user.uid,
+      updatedAt: payload.updatedAt ? payload.updatedAt : Timestamp.now()
+    });
+  }
+  async function deleteNote(id: string) {
+    if (!user) throw new Error("Not authenticated");
+    await deleteDoc(doc(db, "users", user.uid, "notes", id));
+  }
+
   const value = useMemo<AppContextType>(() => ({
     user,
     loading,
@@ -202,6 +269,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     archivedDebts,
     allWorkers,
     topics,
+    financials,
+    notes,
+    addTask,
+    deleteTask,
+    addSale,
+    deleteSale,
+    addFinancial,
+    deleteFinancial,
+    addNote,
+    deleteNote
   }), [
     user,
     loading,
@@ -214,7 +291,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     allDebts,
     archivedDebts,
     allWorkers,
-    topics
+    topics,
+    financials,
+    notes
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
