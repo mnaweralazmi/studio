@@ -16,11 +16,12 @@ interface UserProfile {
     photoURL?: string;
 }
 
+// The final user object that merges Firebase Auth info with Firestore profile data
 interface User extends FirebaseUser, UserProfile {}
 
 interface AppContextType {
     user: User | null;
-    loading: boolean;
+    loading: boolean; // True while authenticating and loading initial data
     tasks: Task[];
     completedTasks: ArchivedTask[];
     allSales: SalesItem[];
@@ -35,22 +36,16 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Helper function to create a data subscription for a specific user
+// Helper to create a user-specific data subscription
 const createUserSubscription = <T extends { id: string }>(
     collectionName: string,
     uid: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (data: DocumentData) => T,
-    sortFn?: (a: T, b: T) => number
+    transform: (data: DocumentData) => T
 ): Unsubscribe => {
-    // Query without server-side ordering to avoid composite index requirement
     const q = query(collection(db, collectionName), where("ownerId", "==", uid));
     return onSnapshot(q, (snapshot) => {
-        let items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
-        // Sort on the client-side
-        if (sortFn) {
-            items = items.sort(sortFn);
-        }
+        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
         setData(items);
     }, (error) => {
         console.error(`Error fetching ${collectionName}:`, error);
@@ -58,24 +53,17 @@ const createUserSubscription = <T extends { id: string }>(
     });
 };
 
-// Helper function for public data that doesn't have an ownerId
+// Helper for public data
 const createPublicSubscription = <T extends { id: string }>(
     collectionName: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (data: DocumentData) => T,
-    sortFn?: (a: T, b: T) => number
+    transform: (data: DocumentData) => T
 ): Unsubscribe => {
     const q = query(collection(db, collectionName));
     return onSnapshot(q, (snapshot) => {
-        let items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
-        if (sortFn) {
-            items = items.sort(sortFn);
-        }
+        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
         setData(items);
-    }, (error) => {
-        console.error(`Error fetching public ${collectionName}:`, error);
-        setData([]);
-    });
+    }, (error) => console.error(`Error fetching public ${collectionName}:`, error));
 }
 
 
@@ -107,63 +95,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllWorkers([]);
     };
 
-    // Effect for auth state and user profile
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        // This is the primary listener for authentication state.
+        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
+                // User is signed in. Now, listen for their profile document.
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
-                const userDocUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
+                const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
+                        // Profile found, merge auth and profile data.
                         const userProfileData = docSnap.data() as UserProfile;
                         setUser({ ...firebaseUser, ...userProfileData });
                     } else {
-                        setUser(firebaseUser); // Fallback to basic user info
+                        // Profile not found (e.g., new user), use basic auth data.
+                        // The user creation logic in register/login pages should handle creating the doc.
+                        setUser(firebaseUser);
                     }
+                    setLoading(false); // Auth and profile check is complete.
+                }, (error) => {
+                    console.error("Error fetching user profile:", error);
+                    setUser(firebaseUser); // Fallback to auth data on error
                     setLoading(false);
                 });
-                 return () => userDocUnsubscribe();
+                return () => unsubscribeProfile(); // Cleanup profile listener on auth change.
             } else {
+                // No user is signed in.
                 setUser(null);
-                setLoading(false);
                 clearAllData();
+                setLoading(false); // Auth check is complete.
             }
         });
-        return () => unsubscribe();
-    }, []);
 
-    // Effect for data subscriptions
+        // This is the main cleanup function for the auth state listener.
+        return () => unsubscribeAuth();
+    }, []); // This effect runs only once on mount.
+
+
     useEffect(() => {
-        // Public data subscription (does not depend on user)
+        // This effect is responsible for setting up all data subscriptions
+        // and it ONLY runs when the `user` object changes.
+        
+        // Always subscribe to public data regardless of user state
         const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>('data', setTopics, d => ({
             ...d,
             subTopics: d.subTopics || [],
             videos: d.videos || [],
         }) as AgriculturalSection);
 
-        // User-specific data subscriptions
         if (user) {
+            // User is logged in, set up their specific data listeners.
             const userSubscriptions = [
-                createUserSubscription<Task>('tasks', user.uid, setTasks, d => ({ ...d, dueDate: d.dueDate.toDate() }) as Task, (a, b) => b.dueDate.getTime() - a.dueDate.getTime()),
-                createUserSubscription<ArchivedTask>('completed_tasks', user.uid, setCompletedTasks, d => ({ ...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate() }) as ArchivedTask, (a,b) => b.completedAt.getTime() - a.completedAt.getTime()),
-                createUserSubscription<SalesItem>('sales', user.uid, setAllSales, d => ({ ...d, date: d.date.toDate() }) as SalesItem, (a, b) => b.date.getTime() - a.date.getTime()),
-                createUserSubscription<ArchivedSale>('archive_sales', user.uid, setArchivedSales, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedSale, (a, b) => b.archivedAt.getTime() - a.archivedAt.getTime()),
-                createUserSubscription<ExpenseItem>('expenses', user.uid, setAllExpenses, d => ({ ...d, date: d.date.toDate() }) as ExpenseItem, (a, b) => b.date.getTime() - a.date.getTime()),
-                createUserSubscription<ArchivedExpense>('archive_expenses', user.uid, setArchivedExpenses, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedExpense, (a, b) => b.archivedAt.getTime() - a.archivedAt.getTime()),
-                createUserSubscription<DebtItem>('debts', user.uid, setAllDebts, d => ({ ...d, dueDate: d.dueDate ? d.dueDate.toDate() : undefined, payments: (d.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })) }) as DebtItem, (a, b) => (b.dueDate?.getTime() || 0) - (a.dueDate?.getTime() || 0)),
-                createUserSubscription<ArchivedDebt>('archive_debts', user.uid, setArchivedDebts, d => ({ ...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate ? d.dueDate.toDate() : undefined }) as ArchivedDebt, (a, b) => b.archivedAt.getTime() - a.archivedAt.getTime()),
+                createUserSubscription<Task>('tasks', user.uid, setTasks, d => ({ ...d, dueDate: d.dueDate.toDate() }) as Task),
+                createUserSubscription<ArchivedTask>('completed_tasks', user.uid, setCompletedTasks, d => ({ ...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate() }) as ArchivedTask),
+                createUserSubscription<SalesItem>('sales', user.uid, setAllSales, d => ({ ...d, date: d.date.toDate() }) as SalesItem),
+                createUserSubscription<ArchivedSale>('archive_sales', user.uid, setArchivedSales, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedSale),
+                createUserSubscription<ExpenseItem>('expenses', user.uid, setAllExpenses, d => ({ ...d, date: d.date.toDate() }) as ExpenseItem),
+                createUserSubscription<ArchivedExpense>('archive_expenses', user.uid, setArchivedExpenses, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedExpense),
+                createUserSubscription<DebtItem>('debts', user.uid, setAllDebts, d => ({ ...d, dueDate: d.dueDate ? d.dueDate.toDate() : null, payments: (d.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })) }) as DebtItem),
+                createUserSubscription<ArchivedDebt>('archive_debts', user.uid, setArchivedDebts, d => ({ ...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate ? d.dueDate.toDate() : null }) as ArchivedDebt),
                 createUserSubscription<Worker>('workers', user.uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
             ];
             
+            // Return a cleanup function that unsubscribes from everything.
             return () => {
                 userSubscriptions.forEach(unsub => unsub());
                 topicsUnsubscribe();
             };
         }
         
-        // Cleanup public subscription if user is not logged in
+        // If there's no user, we still need to clean up the public data listener.
         return () => topicsUnsubscribe();
 
-    }, [user]);
+    }, [user]); // This dependency array is key: it re-runs everything when user logs in/out.
+
 
     const value = useMemo(() => ({
         user,
@@ -190,5 +194,3 @@ export const useAppContext = () => {
     }
     return context;
 };
-
-    

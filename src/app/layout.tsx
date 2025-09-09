@@ -36,18 +36,21 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     const mode = localStorage.getItem("mode") || "dark";
     const html = document.documentElement;
     html.classList.remove("light", "dark");
-    html.classList.add(mode);
+html.classList.add(mode);
 
     html.style.fontFamily = cairo.style.fontFamily;
   }, []);
 
   useEffect(() => {
+    // This effect handles redirection *after* loading is complete.
     if (!loading && !user && !isAuthPage) {
       router.replace('/login');
     }
   }, [user, loading, isAuthPage, router]);
 
 
+  // Primary loading state for the entire app.
+  // It ensures we have a user object before rendering anything sensitive.
   if (loading && !isAuthPage) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
@@ -63,9 +66,9 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     return <>{children}<Toaster /></>;
   }
   
-  // This check is important. If loading is done and there's still no user,
-  // it means we should be on a page that allows anonymous access or redirecting.
-  // The useEffect above handles the redirect. So we can show a loader here.
+  // If loading is done and there's still no user, it means we should be on a page 
+  // that allows anonymous access or the redirect is in progress.
+  // The useEffect above handles the redirect. So we can show a loader or a message.
   if (!user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
