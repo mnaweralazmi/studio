@@ -71,14 +71,16 @@ export function ProfileTab() {
         }
 
         const profileUpdate: { displayName: string; photoURL?: string } = { displayName: name };
-        const firestoreUpdate: { name: string; photoURL?: string } = { name: name };
-        
         if (newAvatarUrl) {
             profileUpdate.photoURL = newAvatarUrl;
-            firestoreUpdate.photoURL = newAvatarUrl;
         }
 
         await updateProfile(auth.currentUser, profileUpdate);
+        
+        const firestoreUpdate: { name: string; photoURL?: string } = { name: name };
+        if (newAvatarUrl) {
+            firestoreUpdate.photoURL = newAvatarUrl;
+        }
         
         const userDocRef = doc(db, "users", user.uid);
         await updateDoc(userDocRef, firestoreUpdate);
@@ -291,3 +293,4 @@ export function ProfileTab() {
   );
 }
 
+    

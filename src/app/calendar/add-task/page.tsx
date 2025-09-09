@@ -225,34 +225,40 @@ export default function AddTaskPage() {
                     </div>
                     
                     {!isOtherTask && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label>{t('selectVegetableOptional')}</Label>
+                                    <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={t('selectVegetable')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {vegetableList.map(veg => (
+                                            <SelectItem key={veg} value={veg}>{veg}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{t('selectFruitOptional')}</Label>
+                                    <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={t('selectFruit')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {fruitList.map(fruitItem => (
+                                            <SelectItem key={fruitItem} value={fruitItem}>{fruitItem}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
                             <div className="space-y-2">
-                                <Label>{t('selectVegetableOptional')}</Label>
-                                <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('selectVegetable')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {vegetableList.map(veg => (
-                                        <SelectItem key={veg} value={veg}>{veg}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Label htmlFor='description'>{t('description')}</Label>
+                                <Input id="description" value={description} disabled className="bg-muted/50" />
                             </div>
-                             <div className="space-y-2">
-                                <Label>{t('selectFruitOptional')}</Label>
-                                <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('selectFruit')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {fruitList.map(fruitItem => (
-                                        <SelectItem key={fruitItem} value={fruitItem}>{fruitItem}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
+                        </>
                     )}
                     
                      {isOtherTask && (
@@ -348,5 +354,7 @@ export default function AddTaskPage() {
     </main>
   );
 }
+
+    
 
     
