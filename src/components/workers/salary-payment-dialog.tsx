@@ -24,11 +24,12 @@ function SalaryPaymentDialogComponent({ worker, onConfirm }: SalaryPaymentDialog
     const [selectedMonth, setSelectedMonth] = React.useState<number | undefined>();
     const currentYear = new Date().getFullYear();
 
-    const isMonthPaid = (monthValue: number) => {
-        return (worker.paidMonths || []).some(pm => pm.month === monthValue && pm.year === currentYear);
-    }
-
-    const unpaidMonths = months.filter(m => !isMonthPaid(m.value));
+    const unpaidMonths = React.useMemo(() => {
+        const isMonthPaid = (monthValue: number) => {
+            return (worker.paidMonths || []).some(pm => pm.month === monthValue && pm.year === currentYear);
+        }
+        return months.filter(m => !isMonthPaid(m.value));
+    }, [worker.paidMonths, months, currentYear]);
 
     const handleConfirm = () => {
         if (selectedMonth) {
@@ -39,8 +40,12 @@ function SalaryPaymentDialogComponent({ worker, onConfirm }: SalaryPaymentDialog
     };
     
     React.useEffect(() => {
-        if(isOpen && unpaidMonths.length > 0) {
-            setSelectedMonth(unpaidMonths[0].value)
+        if(isOpen) {
+            if (unpaidMonths.length > 0) {
+                 setSelectedMonth(unpaidMonths[0].value);
+            } else {
+                 setSelectedMonth(undefined);
+            }
         }
     }, [isOpen, unpaidMonths]);
 
@@ -66,14 +71,11 @@ function SalaryPaymentDialogComponent({ worker, onConfirm }: SalaryPaymentDialog
                             <SelectValue placeholder={t('selectMonth')} />
                         </SelectTrigger>
                         <SelectContent side="bottom" position="popper">
-                            {months.map(m => {
-                                const paid = isMonthPaid(m.value);
-                                return (
-                                <SelectItem key={m.value} value={m.value.toString()} disabled={paid}>
-                                    {m.label} {paid ? `(${t('paid')})` : ''}
+                            {unpaidMonths.map(m => (
+                                <SelectItem key={m.value} value={m.value.toString()}>
+                                    {m.label}
                                 </SelectItem>
-                                )
-                            })}
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
