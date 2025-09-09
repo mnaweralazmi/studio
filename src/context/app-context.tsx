@@ -123,8 +123,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                          };
                         setUser(combinedUser);
                     } else {
-                        // This case can happen briefly if a new user document is being created.
-                        // We set the base user object, and the next snapshot will contain the full data.
                         setUser(firebaseUser);
                     }
                      setLoading(false);
@@ -148,7 +146,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        if (!user || !user.uid) { // Check for user and uid to ensure the user object is populated
+        if (!user) {
             clearAllData();
             return;
         };
