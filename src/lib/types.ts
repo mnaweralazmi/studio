@@ -1,5 +1,5 @@
 
-import { Timestamp } from "firebase/firestore";
+import type { Timestamp } from "firebase/firestore";
 
 // Base type for all data items, ensuring they have an ID and owner.
 export interface BaseItem {
@@ -62,6 +62,7 @@ export interface ArchivedExpense extends ExpenseItem {
 
 // ========== FINANCIALS - DEBTS ==========
 export interface Payment {
+  id?: string; // Can be optional if not stored as a separate document
   amount: number;
   date: Date;
 }
@@ -69,14 +70,16 @@ export interface Payment {
 export interface DebtItem extends BaseItem {
   creditor: string;
   amount: number;
-  dueDate?: Date;
+  dueDate?: Date | null; // Allow null for optional dates
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
   departmentId: Department;
 }
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-export interface ArchivedDebt extends DebtItem {
+export interface ArchivedDebt extends Omit<DebtItem, 'id' | 'ownerId'> {
+    id: string;
+    ownerId: string;
     archivedAt: Date;
 }
 

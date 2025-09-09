@@ -6,14 +6,11 @@ import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive, Shield } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
-import { useAppContext } from '@/context/app-context';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user, loading } = useAppContext();
 
   const navItems = [
     { href: '/', label: t('home'), icon: Home },
@@ -23,22 +20,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/archive', label: t('archive'), icon: Archive },
     { href: '/settings', label: t('settings'), icon: Settings },
   ];
-  
-  if (user?.role === 'admin') {
-      // navItems.push({ href: '/admin', label: t('adminDashboard'), icon: Shield });
-  }
-
-  // The main loading condition
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-            <Skeleton className="h-20 w-20 rounded-full" />
-            <Skeleton className="h-6 w-48" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen w-full flex-col">
