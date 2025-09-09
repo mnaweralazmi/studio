@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Award, BookOpen, CalendarCheck, HandCoins } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import { useAuth } from "@/context/auth-context";
+import { Skeleton } from "../ui/skeleton";
 
 const badgeList = {
   explorer: { icon: BookOpen, titleKey: "badgeExplorer", descriptionKey: "badgeExplorerDesc" },
@@ -17,10 +18,9 @@ const badgeList = {
 type BadgeId = keyof typeof badgeList;
 
 export function AchievementsTab() {
-  const { user, loading } = useAuth(); // إذا عندك loading في الـ context
+  const { user, loading } = useAuth();
   const { t } = useLanguage();
 
-  // حالة انتظار المصادقة
   if (loading) {
     return (
       <Card>
@@ -29,7 +29,11 @@ export function AchievementsTab() {
           <CardDescription>{t("achievementsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground">جاري تحميل بيانات المستخدم…</div>
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-1/4 ml-auto" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -43,19 +47,18 @@ export function AchievementsTab() {
           <CardDescription>{t("achievementsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-muted-foreground">سجّل الدخول لعرض إنجازاتك</div>
+          <div className="text-center text-muted-foreground">Please log in to view your achievements.</div>
         </CardContent>
       </Card>
     );
   }
 
-  // defensive typing: تأكد أنها مصفوفة من strings
-  const userBadges = Array.isArray(user.badges) ? user.badges.filter(b => typeof b === "string") : [];
-
+  const userBadges = Array.isArray(user.badges) ? user.badges.filter((b): b is BadgeId => typeof b === 'string' && b in badgeList) : [];
+  
   const points = typeof user.points === "number" ? user.points : 0;
   const level = typeof user.level === "number" ? user.level : 1;
   const rawProgress = points % 100;
-  const progress = Math.max(0, Math.min(100, Number(rawProgress))); // clamp 0..100
+  const progress = Math.max(0, Math.min(100, Number(rawProgress)));
 
   return (
     <Card>
@@ -79,15 +82,11 @@ export function AchievementsTab() {
           {userBadges.length > 0 ? (
             <TooltipProvider>
               <div className="flex flex-wrap gap-4">
-                {userBadges.map((badgeIdRaw, idx) => {
-                  // cast/check
-                  const id = String(badgeIdRaw) as BadgeId;
-                  const badgeInfo = (badgeList as any)[id] as typeof badgeList[BadgeId] | undefined;
-                  if (!badgeInfo) return null;
-
+                {userBadges.map((badgeId, idx) => {
+                  const badgeInfo = badgeList[badgeId];
                   const Icon = badgeInfo.icon;
                   return (
-                    <Tooltip key={`${id}-${idx}`}>
+                    <Tooltip key={`${badgeId}-${idx}`}>
                       <TooltipTrigger asChild>
                         <div
                           role="button"

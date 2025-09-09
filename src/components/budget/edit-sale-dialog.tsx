@@ -33,10 +33,10 @@ export function EditSaleDialog({ sale, onSave, children }: EditSaleDialogProps) 
     const { t, language } = useLanguage();
     const [isOpen, setIsOpen] = React.useState(false);
     
-    const [product, setProduct] = React.useState('');
-    const [quantity, setQuantity] = React.useState(0);
-    const [price, setPrice] = React.useState(0);
-    const [weightPerUnit, setWeightPerUnit] = React.useState<number | undefined>(undefined);
+    const [product, setProduct] = React.useState(sale.product);
+    const [quantity, setQuantity] = React.useState(sale.quantity);
+    const [price, setPrice] = React.useState(sale.price);
+    const [weightPerUnit, setWeightPerUnit] = React.useState(sale.weightPerUnit);
 
     const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
     const livestockList = language === 'ar' ? livestockListAr : livestockListEn;
@@ -58,7 +58,6 @@ export function EditSaleDialog({ sale, onSave, children }: EditSaleDialogProps) 
         if (!product || quantity <= 0 || price <= 0) {
             return;
         }
-        // Correctly calculate total using the current state values
         const total = quantity * price;
 
         onSave(sale.id, { product, quantity, price, weightPerUnit, total });

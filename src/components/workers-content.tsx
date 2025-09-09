@@ -42,7 +42,7 @@ async function paySalary(workerId: string, paidMonth: PaidMonth, transactionData
     const workerRef = doc(db, 'workers', workerId);
     const newTransaction = { 
         ...transactionData, 
-        id: new Date().toISOString(), // Simple unique ID
+        id: new Date().toISOString() + Math.random(),
         date: Timestamp.now(), 
     };
     await updateDoc(workerRef, {
@@ -55,7 +55,7 @@ async function addTransaction(workerId: string, transactionData: Omit<Transactio
     const workerRef = doc(db, 'workers', workerId);
     const newTransaction = {
         ...transactionData,
-        id: new Date().toISOString(), // Simple unique ID
+        id: new Date().toISOString() + Math.random(),
         date: Timestamp.now(),
     };
     await updateDoc(workerRef, {
