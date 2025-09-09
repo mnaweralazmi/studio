@@ -83,5 +83,15 @@ export const initialAgriculturalSections: AgriculturalSection[] = [
       hint: 'seeds planting',
       subTopics: [],
       videos: []
+    },
+    {
+      id: '7',
+      titleKey: "topicHarvesting",
+      descriptionKey: "topicHarvestingDesc",
+      iconName: 'Leaf',
+      image: 'https://placehold.co/400x200.png',
+      hint: 'harvest basket',
+      subTopics: [],
+      videos: []
     }
 ];
