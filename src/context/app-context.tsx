@@ -97,28 +97,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllWorkers([]);
     };
 
-    // Effect for handling authentication state changes
     useEffect(() => {
         const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            setLoading(true);
             if (firebaseUser) {
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
                 const userDocSnap = await getDoc(userDocRef);
-                if (userDocSnap.exists()) {
-                    setUser({ ...firebaseUser, ...userDocSnap.data() });
-                } else {
-                    setUser(firebaseUser);
-                }
+                const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+                setUser({ ...firebaseUser, ...userData });
+                // Data fetching for logged-in user is handled by the next useEffect
             } else {
                 setUser(null);
                 clearAllData();
-                setLoading(false);
+                setLoading(false); // No user, so stop loading
             }
         });
         return () => authUnsubscribe();
     }, []);
-    
-    // Effect for setting up data subscriptions
+
     useEffect(() => {
         // Public data subscription (always active)
         const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>(
@@ -129,17 +124,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }) as AgriculturalSection
         );
 
+        // If there's no user, we just need public data.
         if (!user) {
-            // If there's no user, we are not loading user-specific data.
-            // Authentication loading is handled in the auth effect.
-            // If loading was true from a previous user session, it should be reset.
-             if (auth.currentUser === null) {
-                setLoading(false);
-            }
+            // Loading is already handled by the auth state change.
             return () => topicsUnsubscribe();
         }
 
-        // If we have a user, set up their specific data subscriptions
+        // --- User is logged in, set up all their data subscriptions ---
+        setLoading(true); // Start loading user-specific data
         const uid = user.uid;
         
         const subscriptions = [
@@ -154,17 +146,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             createSubscription<Worker>( 'workers', uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
         ];
         
-        // All subscriptions are now set up. We can finish loading.
+        // After setting up all listeners, we can mark loading as false.
+        // The onSnapshot will populate the data asynchronously.
+        // The key is that the app shows the loading screen UNTIL listeners are attached.
         setLoading(false);
 
-        // Cleanup function
+        // Cleanup function for when user logs out or component unmounts
         return () => {
             subscriptions.forEach(unsub => unsub());
             topicsUnsubscribe();
             clearAllData();
         };
 
-    }, [user]); // This effect re-runs when the user logs in or out
+    }, [user]); // This effect re-runs when the user object changes (login/logout)
 
     const value = {
         user,
@@ -191,5 +185,3 @@ export const useAppContext = () => {
     }
     return context;
 };
-
-    
