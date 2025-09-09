@@ -105,19 +105,24 @@ export default function CalendarPage() {
     if (!taskToComplete) return;
 
     try {
-        if (taskToComplete.isRecurring && !taskToComplete.isCompleted) {
-            const nextDueDate = addDays(new Date(taskToComplete.dueDate), 7);
+        if (taskToComplete.isRecurring) {
+            const nextDueDate = addDays(taskToComplete.dueDate, 7);
             const taskRef = doc(db, 'tasks', taskId);
             await updateDoc(taskRef, { dueDate: Timestamp.fromDate(nextDueDate) });
         } else {
             const batch = writeBatch(db);
             const originalTaskRef = doc(db, 'tasks', taskId);
             const archiveRef = doc(collection(db, 'completed_tasks'));
+            
             const archivedTaskData: Omit<ArchivedTask, 'id'> = {
-                ...taskToComplete,
+                title: taskToComplete.title,
+                description: taskToComplete.description,
+                dueDate: taskToComplete.dueDate,
                 isCompleted: true,
-                completedAt: new Date(),
+                isRecurring: taskToComplete.isRecurring,
+                reminderDays: taskToComplete.reminderDays,
                 ownerId: user.uid,
+                completedAt: new Date(),
             };
             
             const finalArchivedData = {
@@ -243,3 +248,5 @@ export default function CalendarPage() {
     </main>
   );
 }
+
+    
