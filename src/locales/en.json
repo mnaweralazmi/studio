@@ -344,7 +344,7 @@
     "financialManagement": "Financial Management",
     "financialManagementDesc": "A comprehensive overview of your tools for managing the different departments of your farm.",
     "departmentalManagement": "Departmental Management",
-    "selectDepartmentToManage": "Select a department to manage its finances in detail.",
+    "selectDepartmentToManage": "Select a department to view and manage its financial data.",
     "selectDepartment": "Select Department",
     "departmentAgriculture": "Agriculture",
     "departmentLivestock": "Livestock",
@@ -433,5 +433,6 @@
     "migrationSuccessDesc": "All old records have been updated.",
     "records": "records",
     "migrationError": "An error occurred during migration.",
-    "migrationErrorDesc": "Please try again or contact support."
+    "migrationErrorDesc": "Please try again or contact support.",
+    "selectDepartmentDesc": "Select the department to view and manage its financial data."
 }

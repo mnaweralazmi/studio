@@ -44,7 +44,7 @@ export default function FinancialsPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>{t('selectDepartment')}</CardTitle>
-                        <CardDescription>{t('selectDepartmentToManage')}</CardDescription>
+                        <CardDescription>{t('selectDepartmentDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Tabs value={activeDepartment} onValueChange={(value) => setActiveDepartment(value as Department)} className="w-full">

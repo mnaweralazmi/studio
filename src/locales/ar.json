@@ -344,7 +344,7 @@
     "financialManagement": "الادارة المالية",
     "financialManagementDesc": "نظرة شاملة على أدواتك لإدارة الأقسام المختلفة في مزرعتك.",
     "departmentalManagement": "إدارة الأقسام",
-    "selectDepartmentToManage": "اختر قسماً لإدارة شؤونه المالية بالتفصيل.",
+    "selectDepartmentToManage": "اختر القسم لعرض وإدارة بياناته المالية.",
     "selectDepartment": "اختيار القسم",
     "departmentAgriculture": "الزراعة",
     "departmentLivestock": "المواشي",
@@ -433,5 +433,6 @@
     "migrationSuccessDesc": "تم تحديث جميع السجلات القديمة.",
     "records": "سجلات",
     "migrationError": "حدث خطأ أثناء الترحيل.",
-    "migrationErrorDesc": "يرجى المحاولة مرة أخرى أو الاتصال بالدعم."
+    "migrationErrorDesc": "يرجى المحاولة مرة أخرى أو الاتصال بالدعم.",
+    "selectDepartmentDesc": "اختر القسم لعرض وإدارة بياناته المالية."
 }
