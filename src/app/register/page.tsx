@@ -51,10 +51,8 @@ const createNewUserDocument = async (user: User, name: string | null) => {
     });
     
     // 2. Populate public topics if they don't exist
-    // This should ideally be a server-side script, but for simplicity, we do it on first user registration.
     const dataColRef = collection(db, 'data');
-    const q = query(dataColRef);
-    const dataSnap = await getDocs(q);
+    const dataSnap = await getDocs(dataColRef);
     if (dataSnap.empty) {
         console.log("Populating initial agricultural topics...");
         initialAgriculturalSections.forEach(topic => {
