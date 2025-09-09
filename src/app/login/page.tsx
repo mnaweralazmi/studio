@@ -59,10 +59,14 @@ export default function LoginPage() {
         toast({ title: "تم تسجيل الدخول بنجاح!" });
         router.push('/');
     } catch (error: any) {
+        let description = "لم نتمكن من تسجيل دخولك باستخدام Google.";
+        if (error.code === 'auth/popup-closed-by-user') {
+            description = "تم إغلاق نافذة تسجيل الدخول. يرجى المحاولة مرة أخرى.";
+        }
         toast({
             variant: "destructive",
             title: "فشل تسجيل الدخول",
-            description: "لم نتمكن من تسجيل دخولك باستخدام Google.",
+            description: description,
         });
     } finally {
         setIsGoogleLoading(false);
