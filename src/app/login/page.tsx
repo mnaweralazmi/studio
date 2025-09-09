@@ -102,6 +102,7 @@ export default function LoginPage() {
         toast({ title: "تم تسجيل الدخول بنجاح!" });
         router.push('/');
     } catch (error: any) {
+        console.error("Google Sign-In Error:", error);
         let description = "Could not sign you in with Google.";
         if (error.code === 'auth/popup-closed-by-user') {
             description = "The sign-in window was closed. Please try again.";
@@ -182,3 +183,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
