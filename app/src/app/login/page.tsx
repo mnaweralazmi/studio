@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Leaf, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { doc, getDoc, writeBatch, collection, query, limit, getDocs, Timestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, writeBatch, collection, query, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { AgriculturalSection } from '@/lib/types';
 
@@ -222,3 +222,4 @@ export default function LoginPage() {
   );
 }
 
+    
