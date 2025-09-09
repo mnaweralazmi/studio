@@ -54,109 +54,90 @@ const mapTimestampsToDates = (data: any): any => {
     return data;
 };
 
-export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+// List of collections that depend on the user's ID
+const userSpecificCollections = [
+  { name: 'sales', setter: 'setAllSales' },
+  { name: 'expenses', setter: 'setAllExpenses' },
+  { name: 'debts', setter: 'setAllDebts' },
+  { name: 'workers', setter: 'setAllWorkers' },
+  { name: 'tasks', setter: 'setTasks' },
+  { name: 'archive_sales', setter: 'setArchivedSales' },
+  { name: 'archive_expenses', setter: 'setArchivedExpenses' },
+  { name: 'archive_debts', setter: 'setArchivedDebts' },
+  { name: 'completed_tasks', setter: 'setCompletedTasks' },
+] as const;
 
-  // States for live data
+
+export const DataProvider = ({ children }: { children: ReactNode }) => {
+  const { user, loading: authLoading } = useAuth();
+  
+  const [topics, setTopics] = useState<AgriculturalSection[]>([]);
   const [allSales, setAllSales] = useState<SalesItem[]>([]);
   const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
   const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-  
-  // States for archived data
   const [archivedSales, setArchivedSales] = useState<ArchivedSale[]>([]);
   const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
   const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
   const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
+  
+  const stateSetters = { setTopics, setAllSales, setAllExpenses, setAllDebts, setAllWorkers, setTasks, setArchivedSales, setArchivedExpenses, setArchivedDebts, setCompletedTasks };
 
+  const [topicsLoading, setTopicsLoading] = useState(true);
+  const [userDataLoading, setUserDataLoading] = useState(true);
+
+  // Effect for public data (topics) that doesn't depend on user auth
   useEffect(() => {
-    const userId = user?.uid;
+    setTopicsLoading(true);
+    const q = query(collection(db, 'data'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as AgriculturalSection[];
+        setTopics(items);
+        setTopicsLoading(false);
+    }, (error) => {
+        console.error("Error fetching public topics:", error);
+        setTopics([]);
+        setTopicsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    if (!userId) {
-      setLoading(false);
-      // Reset all states to empty when user logs out
-      setAllSales([]);
-      setAllExpenses([]);
-      setAllDebts([]);
-      setAllWorkers([]);
-      setTasks([]);
-      setTopics([]);
-      setArchivedSales([]);
-      setArchivedExpenses([]);
-      setArchivedDebts([]);
-      setCompletedTasks([]);
+  // Effect for user-specific data, triggers when user's auth state changes
+  useEffect(() => {
+    if (!user) {
+      // If user logs out, clear their data and set loading to false
+      userSpecificCollections.forEach(({ setter }) => stateSetters[setter]([]));
+      setUserDataLoading(false);
       return;
     }
-    
-    setLoading(true);
 
-    const collectionsToWatch = [
-      { name: 'sales', setter: setAllSales, owner: true },
-      { name: 'expenses', setter: setAllExpenses, owner: true },
-      { name: 'debts', setter: setAllDebts, owner: true },
-      { name: 'workers', setter: setAllWorkers, owner: true },
-      { name: 'tasks', setter: setTasks, owner: true },
-      { name: 'archive_sales', setter: setArchivedSales, owner: true },
-      { name: 'archive_expenses', setter: setArchivedExpenses, owner: true },
-      { name: 'archive_debts', setter: setArchivedDebts, owner: true },
-      { name: 'completed_tasks', setter: setCompletedTasks, owner: true },
-      { name: 'data', setter: setTopics, owner: false }, 
-    ];
-    
-    // Promise-based approach to handle loading state correctly
-    const setupListeners = async () => {
-        const promises = collectionsToWatch.map(({ name, setter, owner }) => {
-            return new Promise<void>((resolve, reject) => {
-                const collectionRef = collection(db, name);
-                const q = owner 
-                    ? query(collectionRef, where("ownerId", "==", userId))
-                    : query(collectionRef);
+    setUserDataLoading(true);
+    const unsubscribers = userSpecificCollections.map(({ name, setter }) => {
+      const q = query(collection(db, name), where("ownerId", "==", user.uid));
+      return onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
+        stateSetters[setter](items);
+      }, (error) => {
+        console.error(`Error fetching ${name} for user ${user.uid}:`, error);
+        stateSetters[setter]([]); // Clear data on error
+      });
+    });
 
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    const items = snapshot.docs.map(doc => ({ id: doc.id, ...mapTimestampsToDates(doc.data()) })) as any[];
-                    setter(items);
-                    // Resolve the promise once the first snapshot is received
-                    resolve(); 
-                    // Note: We don't unsubscribe here because we want real-time updates.
-                    // The unsubscribe will happen in the cleanup function of useEffect.
-                }, (error) => {
-                    console.error(`Error fetching ${name}:`, error);
-                    setter([]);
-                    reject(error); // Reject on error
-                });
+    // We can consider userDataLoading to be false once listeners are attached.
+    // The UI will update reactively as data arrives.
+    setUserDataLoading(false);
 
-                // Store unsubscribe function for cleanup
-                unsubscribers.push(unsubscribe);
-            });
-        });
-
-        try {
-            // Wait for all initial data fetches to complete or fail
-            await Promise.all(promises);
-        } catch (error) {
-            console.error("One or more listeners failed to initialize:", error);
-        } finally {
-            // Set loading to false regardless of success or failure
-            setLoading(false);
-        }
-    };
-
-    const unsubscribers: (() => void)[] = [];
-    setupListeners();
-
-    // Cleanup function
+    // Cleanup function to unsubscribe from all listeners when user changes or component unmounts
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [user?.uid]);
+  }, [user]);
 
   const value = { 
     allSales, allExpenses, allDebts, allWorkers, tasks, topics, 
     archivedSales, archivedExpenses, archivedDebts, completedTasks,
-    loading 
+    loading: authLoading || topicsLoading || userDataLoading,
   };
 
   return (
