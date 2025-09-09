@@ -14,12 +14,13 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  Timestamp
+  Timestamp,
+  DocumentSnapshot,
+  getDoc
 } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase"; // تأكد من أن هذه التصديرات موجودة
+import { auth, db } from "@/lib/firebase"; // تأكد أن auth و db مصدّران صحيحان
 
-// إذا لديك أنواع (types) خاصة مثل FinancialItem أو NoteItem ضع تعريفها في "@/lib/types"
-// وإلا سنستخدم أي لتجنب أخطاء التجميع.
+// --- استخدم أنواعك الحقيقية إن وُجدت ---
 import type {
   Task,
   ArchivedTask,
@@ -34,9 +35,10 @@ import type {
 } from "@/lib/types";
 import { initialAgriculturalSections } from "@/lib/initial-data";
 
-/** --- Additional local fallback types (use your real types if موجودة) --- */
+// لو ليس لديك أنواع معينة، استبدل بأي (any) مؤقتاً:
 type FinancialItem = any;
 type NoteItem = any;
+type DeptItem = any;
 
 interface UserProfile {
   name?: string;
@@ -45,6 +47,8 @@ interface UserProfile {
   level?: number;
   badges?: string[];
   photoURL?: string;
+  // أي حقول أخرى مخزنة داخل مستند المستخدم في Firestore
+  [key: string]: any;
 }
 export interface User extends FirebaseUser, UserProfile {}
 
@@ -52,7 +56,7 @@ interface AppContextType {
   user: User | null;
   loading: boolean;
 
-  // data
+  // البيانات
   tasks: Task[];
   completedTasks: ArchivedTask[];
   allSales: SalesItem[];
@@ -65,16 +69,15 @@ interface AppContextType {
   topics: AgriculturalSection[];
   financials: FinancialItem[];
   notes: NoteItem[];
+  depts: DeptItem[];
 
-  // CRUD examples:
+  // دوال CRUD كمثال
   addTask: (payload: Partial<Task>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   addSale: (payload: Partial<SalesItem>) => Promise<void>;
   deleteSale: (saleId: string) => Promise<void>;
-
   addFinancial: (payload: Partial<FinancialItem>) => Promise<void>;
   deleteFinancial: (id: string) => Promise<void>;
-
   addNote: (payload: Partial<NoteItem>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
 }
@@ -86,6 +89,7 @@ function normalizeDocData<T = any>(docData: DocumentData): T {
   const out: any = {};
   for (const k of Object.keys(docData)) {
     const v = docData[k];
+    // تحويل Timestamp إلى Date إن وُجد
     if (v && typeof v === "object" && typeof (v as any).toDate === "function") {
       out[k] = (v as any).toDate();
     } else {
@@ -117,13 +121,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [topics, setTopics] = useState<AgriculturalSection[]>(initialAgriculturalSections);
   const [financials, setFinancials] = useState<FinancialItem[]>([]);
   const [notes, setNotes] = useState<NoteItem[]>([]);
+  const [depts, setDepts] = useState<DeptItem[]>([]);
 
+  // لتخزين كل unsubscribe handlers
   const unsubRef = useRef<Record<string, Unsubscribe | null>>({});
 
+  // استماع على مستند المستخدم نفسه (users/{uid}) لقراءة الحقول مثل badges, name, photoURL...
+  function listenUserDoc(uid: string) {
+    const key = "userDoc";
+    if (unsubRef.current[key]) {
+      unsubRef.current[key]!();
+    }
+    const userDocRef = doc(db, "users", uid);
+    const unsub = onSnapshot(userDocRef, (snap: DocumentSnapshot<DocumentData>) => {
+      if (snap.exists()) {
+        const data = normalizeDocData<Record<string, any>>(snap.data() as DocumentData);
+        // دمج حقول المستند داخل كائن المستخدم (مع الحفاظ على خصائص auth)
+        setUser(prev => {
+          const base = prev ? { ...prev } : ({} as any);
+          return { ...base, ...data } as User;
+        });
+      } else {
+        // لا يوجد مستند؛ لا نغير auth info لكن يمكن إفراغ الحقول الخاصة إذا أردت
+      }
+    }, err => {
+      console.error("listenUserDoc error:", err);
+    });
+    unsubRef.current[key] = unsub;
+  }
+
+  // دالة عامة للاستماع على collections تحت users/{uid}/{collectionName}
   function listenCollection<T = any>(uid: string, collectionName: string, setter: (items: T[]) => void, orderField?: string) {
     try {
       const colRef = collection(db, "users", uid, collectionName) as CollectionReference<DocumentData>;
       const q = orderField ? query(colRef, orderBy(orderField, "desc")) : query(colRef);
+      // إلغاء أي مستمع سابق لنفس الاسم
       if (unsubRef.current[collectionName]) {
         unsubRef.current[collectionName]!();
       }
@@ -149,33 +181,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Auth listener
+  // EFFECT: مراقبة حالة المصادقة
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, firebaseUser => {
+    const unsubAuth = onAuthStateChanged(auth, async firebaseUser => {
       if (firebaseUser) {
+        // المستخدم فعلياً مسجّل الدخول
         setUser(firebaseUser as User);
         setLoading(true);
 
         const uid = firebaseUser.uid;
 
-        // استمع لكل مجموعات المستخدم — عدّل الأسماء هنا إذا بنية قاعدة بياناتك مختلفة
+        // استمع لمستند المستخدم لقراءة الحقول الشخصية (مثلاً badges)
+        listenUserDoc(uid);
+
+        // استمع للمجلدات الفرعية الموجودة في الصورة + مجموعات شائعة أخرى
         listenCollection<Task>(uid, "tasks", setTasks, "dueDate");
         listenCollection<ArchivedTask>(uid, "completedTasks", setCompletedTasks, "completedAt");
         listenCollection<SalesItem>(uid, "sales", setAllSales, "date");
         listenCollection<ArchivedSale>(uid, "archivedSales", setArchivedSales, "date");
-        listenCollection<ExpenseItem>(uid, "expenses", setAllExpenses, "date");
+        listenCollection<ExpenseItem>(uid, "expenses", setAllExpenses, "date");   // حسب الصورة
         listenCollection<ArchivedExpense>(uid, "archivedExpenses", setArchivedExpenses, "date");
         listenCollection<DebtItem>(uid, "debts", setAllDebts, "dueDate");
         listenCollection<ArchivedDebt>(uid, "archivedDebts", setArchivedDebts, "dueDate");
-        listenCollection<Worker>(uid, "workers", setAllWorkers, "name");
+        listenCollection<Worker>(uid, "workers", setAllWorkers, "name");         // حسب الصورة
         listenCollection<AgriculturalSection>(uid, "topics", setTopics, "title");
-
-        // المجموعات الإضافية التي طلبتها:
-        listenCollection<FinancialItem>(uid, "financials", setFinancials, "date"); // أو field مناسب
+        // إضافات: financials, notes, depts (depts ظهرت في الصورة)
+        listenCollection<FinancialItem>(uid, "financials", setFinancials, "date");
         listenCollection<NoteItem>(uid, "notes", setNotes, "updatedAt");
+        listenCollection<DeptItem>(uid, "depts", setDepts, "name");
 
         setLoading(false);
       } else {
+        // لم يعد هناك مستخدم -> تنظيف وإفراغ الحالة
         setUser(null);
         clearAllListeners();
         setTasks([]);
@@ -190,6 +227,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTopics(initialAgriculturalSections);
         setFinancials([]);
         setNotes([]);
+        setDepts([]);
         setLoading(false);
       }
     });
@@ -201,7 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** --- CRUD helpers --- */
+  /** --- CRUD helper functions (أمثلة) --- */
   async function addTask(payload: Partial<Task>) {
     if (!user) throw new Error("Not authenticated");
     await addDoc(collection(db, "users", user.uid, "tasks"), {
@@ -228,7 +266,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await deleteDoc(doc(db, "users", user.uid, "sales", saleId));
   }
 
-  // Financials CRUD
   async function addFinancial(payload: Partial<FinancialItem>) {
     if (!user) throw new Error("Not authenticated");
     await addDoc(collection(db, "users", user.uid, "financials"), {
@@ -242,7 +279,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await deleteDoc(doc(db, "users", user.uid, "financials", id));
   }
 
-  // Notes CRUD
   async function addNote(payload: Partial<NoteItem>) {
     if (!user) throw new Error("Not authenticated");
     await addDoc(collection(db, "users", user.uid, "notes"), {
@@ -271,6 +307,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     topics,
     financials,
     notes,
+    depts,
     addTask,
     deleteTask,
     addSale,
@@ -293,7 +330,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     allWorkers,
     topics,
     financials,
-    notes
+    notes,
+    depts
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
