@@ -32,8 +32,9 @@ const createNewUserDocument = async (user: User, name: string | null) => {
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
+    // Only create documents if they don't already exist.
     if (userDocSnap.exists()) {
-        return; // User document already exists, no need to do anything.
+        return; 
     }
 
     const batch = writeBatch(db);
@@ -51,14 +52,11 @@ const createNewUserDocument = async (user: User, name: string | null) => {
         photoURL: user.photoURL || ''
     });
     
-    // 2. Populate public topics only if the 'data' collection is completely empty.
-    // This should only run once in the entire lifetime of the database.
     const dataColRef = collection(db, 'data');
     const q = query(dataColRef, limit(1));
     const dataSnap = await getDocs(q);
 
     if (dataSnap.empty) {
-        console.log("Populating initial agricultural topics...");
         initialAgriculturalSections.forEach(topic => {
             const newTopicRef = doc(dataColRef, topic.id);
             const publicTopicData: AgriculturalSection = {
