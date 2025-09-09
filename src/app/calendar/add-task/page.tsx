@@ -61,21 +61,20 @@ export default function AddTaskPage() {
   const [fruit, setFruit] = React.useState('');
   const [isRecurring, setIsRecurring] = React.useState(false);
   const [reminderDays, setReminderDays] = React.useState(0);
-  const [isDescManuallyEdited, setIsDescManuallyEdited] = React.useState(false);
   
   const isOtherTask = title === 'مهمة أخرى' || title === 'Other Task';
+  const showDescriptionInput = isOtherTask || (!vegetable && !fruit);
+
 
   React.useEffect(() => {
-    if (!isDescManuallyEdited) {
-        if (vegetable) {
-            setDescription(vegetable);
-        } else if (fruit) {
-            setDescription(fruit);
-        } else {
-            setDescription('');
-        }
+    if (vegetable) {
+        setDescription(vegetable);
+    } else if (fruit) {
+        setDescription(fruit);
+    } else {
+        setDescription('');
     }
-  }, [vegetable, fruit, isDescManuallyEdited]);
+  }, [vegetable, fruit]);
 
 
   async function onSubmit(event: React.FormEvent) {
@@ -212,7 +211,7 @@ export default function AddTaskPage() {
                 <CardContent className="space-y-6 pt-6">
                     <div className="space-y-2">
                         <Label>{t('taskTitle')}</Label>
-                        <Select onValueChange={(val) => { setTitle(val); setFruit(''); setVegetable(''); setIsDescManuallyEdited(false); }} value={title}>
+                        <Select onValueChange={(val) => { setTitle(val); setFruit(''); setVegetable(''); }} value={title}>
                           <SelectTrigger>
                             <SelectValue placeholder={t('selectTask')} />
                           </SelectTrigger>
@@ -229,7 +228,7 @@ export default function AddTaskPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label>{t('selectVegetableOptional')}</Label>
-                                    <Select onValueChange={(val) => { setVegetable(val); setFruit(''); setIsDescManuallyEdited(false); }} value={vegetable}>
+                                    <Select onValueChange={(val) => { setVegetable(val); setFruit(''); }} value={vegetable}>
                                         <SelectTrigger>
                                             <SelectValue placeholder={t('selectVegetable')} />
                                         </SelectTrigger>
@@ -242,7 +241,7 @@ export default function AddTaskPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>{t('selectFruitOptional')}</Label>
-                                    <Select onValueChange={(val) => { setFruit(val); setVegetable(''); setIsDescManuallyEdited(false); }} value={fruit}>
+                                    <Select onValueChange={(val) => { setFruit(val); setVegetable(''); }} value={fruit}>
                                         <SelectTrigger>
                                             <SelectValue placeholder={t('selectFruit')} />
                                         </SelectTrigger>
@@ -254,17 +253,13 @@ export default function AddTaskPage() {
                                     </Select>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor='description'>{t('description')}</Label>
-                                <Input id="description" value={description} disabled className="bg-muted/50" />
-                            </div>
                         </>
                     )}
                     
-                     {isOtherTask && (
+                     {showDescriptionInput && (
                         <div className="space-y-2">
                             <Label htmlFor='description'>{t('description')}</Label>
-                            <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => { setDescription(e.target.value); setIsDescManuallyEdited(true);}} />
+                            <Textarea id="description" placeholder={t('taskDescriptionPlaceholder')} value={description} onChange={(e) => setDescription(e.target.value)} />
                         </div>
                      )}
 
@@ -354,7 +349,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    
-
-    

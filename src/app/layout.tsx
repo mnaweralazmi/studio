@@ -5,8 +5,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/app-layout';
 import { usePathname } from 'next/navigation';
-import React, { useEffect } from 'react';
-import { LanguageProvider } from '@/context/language-context';
+import React, { useEffect, useLayoutEffect } from 'react';
+import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +18,9 @@ const cairo = Cairo({
   weight: ['400', '700'],
   display: 'swap',
 });
+
+// Use useLayoutEffect to prevent flash of untranslated content
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -80,21 +83,37 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 
+function AppHtml({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const { language, t } = useLanguage();
+  useIsomorphicLayoutEffect(() => {
+      document.documentElement.lang = language;
+      document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }, [language]);
+  
+  return (
+     <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <head />
+      <body>
+          <AuthProvider>
+            <RootLayoutContent>{children}</RootLayoutContent>
+          </AuthProvider>
+      </body>
+    </html>
+  )
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl">
-      <head />
-      <body>
-          <AuthProvider>
-              <LanguageProvider>
-                <RootLayoutContent>{children}</RootLayoutContent>
-              </LanguageProvider>
-          </AuthProvider>
-      </body>
-    </html>
+     <LanguageProvider>
+        <AppHtml>{children}</AppHtml>
+    </LanguageProvider>
   );
 }

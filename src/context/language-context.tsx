@@ -29,11 +29,6 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const savedLanguage = localStorage.getItem('language') as Language;
     if (savedLanguage && (savedLanguage === 'ar' || savedLanguage === 'en')) {
       setLanguage(savedLanguage);
-      document.documentElement.lang = savedLanguage;
-      document.documentElement.dir = savedLanguage === 'ar' ? 'rtl' : 'ltr';
-    } else {
-        document.documentElement.lang = 'ar';
-        document.documentElement.dir = 'rtl';
     }
   }, []);
 
