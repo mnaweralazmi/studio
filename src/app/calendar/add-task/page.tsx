@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { db } from '@/lib/firebase';
 import type { TaskData } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const taskTitlesAr = [ "سقي", "تسميد", "تقليم", "مكافحة حشرات", "حصاد", "تعشيب", "فحص النباتات", "مهمة أخرى" ] as const;
 const taskTitlesEn = [ "Watering", "Fertilizing", "Pruning", "Pest Control", "Harvesting", "Weeding", "Plant Inspection", "Other Task" ] as const;
@@ -150,8 +151,46 @@ export default function AddTaskPage() {
     }
   }
   
-  if (loading || !user) {
-    return <div className="flex items-center justify-center h-full"><p>Loading...</p></div>
+  if (loading) {
+    return (
+        <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
+             <div className="w-full max-w-2xl mx-auto">
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-8 w-48" />
+                        <Skeleton className="h-4 w-64 mt-2" />
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                    <CardFooter>
+                        <Skeleton className="h-10 w-24 ml-auto" />
+                    </CardFooter>
+                </Card>
+             </div>
+        </main>
+    )
+  }
+
+  if (!user) {
+    return (
+        <main className="flex flex-1 flex-col items-center justify-center p-4">
+            <div className="w-full max-w-md text-center">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>{t('error')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>يجب أن تكون مسجلاً للدخول لإضافة المهام.</p>
+                        <Button onClick={() => router.push('/login')} className="mt-4">تسجيل الدخول</Button>
+                    </CardContent>
+                </Card>
+            </div>
+        </main>
+    );
   }
 
   return (
@@ -304,3 +343,5 @@ export default function AddTaskPage() {
     </main>
   );
 }
+
+    
