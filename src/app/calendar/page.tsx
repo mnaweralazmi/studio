@@ -19,7 +19,7 @@ import type { Task, ArchivedTask } from '@/lib/types';
 import { useData } from '@/context/data-context';
 
 
-const TaskItem = ({ task, onComplete, language, t }: { task: Task, onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
+const TaskItem = ({ task, onComplete, language, t }: { task: Task | ArchivedTask, onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
     const dueDate = task.dueDate;
     const hasTime = task.dueDate.getHours() !== 0 || task.dueDate.getMinutes() !== 0;
     
