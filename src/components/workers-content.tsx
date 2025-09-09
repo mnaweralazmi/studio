@@ -192,7 +192,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         return total + yearSalaries;
     }, 0);
     
-    const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + (worker.baseSalary * 12), 0);
+    const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + (worker?.baseSalary || 0) * 12, 0);
 
     if (loading) {
         return (

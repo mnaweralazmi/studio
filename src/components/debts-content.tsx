@@ -291,5 +291,3 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 }
 
     
-
-    
