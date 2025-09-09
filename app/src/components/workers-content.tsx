@@ -6,7 +6,7 @@ import { collection, addDoc, doc, Timestamp, writeBatch, updateDoc, arrayUnion }
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
-import { Users, BadgeCheck, Banknote, FileText, PlusCircle, Edit } from 'lucide-react';
+import { Users, BadgeCheck, Banknote, FileText, PlusCircle, Edit, Eye } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
