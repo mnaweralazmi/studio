@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot, getDoc, doc, DocumentData, Unsubscribe } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, DocumentData, Unsubscribe } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { Task, ArchivedTask, SalesItem, ArchivedSale, ExpenseItem, ArchivedExpense, DebtItem, ArchivedDebt, Worker, AgriculturalSection } from '@/lib/types';
 
@@ -54,7 +54,7 @@ const createUserSubscription = <T,>(
     });
 };
 
-// Helper to create a public (non-user-specific) subscription
+// Helper to create a public (non-user-specific) subscription for public data like topics
 const createPublicSubscription = <T,>(
     collectionName: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
@@ -100,7 +100,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         setLoading(true);
-        // Public data subscription (always active)
+        // Public data subscription (always active, does not depend on user)
         const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>(
             'data', setTopics, (d) => ({
                 ...d,
@@ -109,7 +109,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }) as AgriculturalSection
         );
 
-        const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const authUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
                 // User is logged in, now fetch their specific data
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -130,6 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                         // We still set the basic user object.
                         setUser(firebaseUser);
                     }
+                     setLoading(false); // We have user info (or lack thereof), stop main loading
                 });
 
                 // Set up listeners for all user-specific collections
@@ -144,8 +145,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     createUserSubscription<ArchivedDebt>('archive_debts', firebaseUser.uid, setArchivedDebt, d => ({...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate?.toDate() }) as ArchivedDebt),
                     createUserSubscription<Worker>('workers', firebaseUser.uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
                 ];
-
-                setLoading(false); // All listeners are set up, we can show the UI
 
                 // Return a cleanup function for this user's session
                 return () => {
