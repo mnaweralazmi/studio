@@ -27,7 +27,7 @@ export default function TopicDetailsPage() {
     }
   }, [params.topicId, topics]);
   
-  if (topicsLoading) {
+  if (topicsLoading || !topic) {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
             <div className="w-full max-w-5xl mx-auto flex flex-col gap-12">
@@ -41,14 +41,6 @@ export default function TopicDetailsPage() {
             </div>
         </main>
     );
-  }
-
-  if (!topic) {
-      return (
-         <main className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8 md:p-12 bg-background">
-            <p>{t('loading')}...</p>
-         </main>
-      )
   }
 
   const title = topic.titleKey === 'custom' ? topic.title : t(topic.titleKey as any);
