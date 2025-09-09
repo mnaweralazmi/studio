@@ -11,8 +11,12 @@ import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { Leaf, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
+import { doc, getDoc, writeBatch, collection, query, limit, getDocs } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { initialAgriculturalSections } from '@/lib/initial-data';
+import type { AgriculturalSection } from '@/lib/types';
+
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -22,6 +26,44 @@ const GoogleIcon = () => (
         <path d="M12 5.16c1.56 0 2.95.55 4.06 1.6l3.16-3.16C17.45 1.99 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
     </svg>
 )
+
+const createNewUserDocument = async (user: User) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (userDocSnap.exists()) {
+        return; 
+    }
+
+    const batch = writeBatch(db);
+
+    batch.set(userDocRef, {
+        uid: user.uid,
+        name: user.displayName || 'Anonymous User',
+        email: user.email,
+        role: 'user', 
+        createdAt: new Date(),
+        points: 0,
+        level: 1,
+        badges: [],
+        photoURL: user.photoURL || ''
+    });
+    
+    const dataColRef = collection(db, 'data');
+    const q = query(dataColRef, limit(1));
+    const dataSnap = await getDocs(q);
+
+    if (dataSnap.empty) {
+        initialAgriculturalSections.forEach(topic => {
+            const newTopicRef = doc(dataColRef, topic.id);
+            const publicTopicData: AgriculturalSection = { ...topic };
+            batch.set(newTopicRef, publicTopicData);
+        });
+    }
+
+    await batch.commit();
+}
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,7 +97,8 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-        await signInWithPopup(auth, provider);
+        const result = await signInWithPopup(auth, provider);
+        await createNewUserDocument(result.user);
         toast({ title: "تم تسجيل الدخول بنجاح!" });
         router.push('/');
     } catch (error: any) {

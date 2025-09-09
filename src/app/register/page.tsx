@@ -28,18 +28,16 @@ const GoogleIcon = () => (
 );
 
 
-const createNewUserDocument = async (user: User, name: string | null) => {
+const createNewUserDocument = async (user: User, name?: string | null) => {
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
-    // Only create documents if they don't already exist.
     if (userDocSnap.exists()) {
         return; 
     }
 
     const batch = writeBatch(db);
 
-    // 1. Create user document
     batch.set(userDocRef, {
         uid: user.uid,
         name: name || user.displayName || 'Anonymous User',
@@ -59,9 +57,7 @@ const createNewUserDocument = async (user: User, name: string | null) => {
     if (dataSnap.empty) {
         initialAgriculturalSections.forEach(topic => {
             const newTopicRef = doc(dataColRef, topic.id);
-            const publicTopicData: AgriculturalSection = {
-                ...topic,
-            };
+            const publicTopicData: AgriculturalSection = { ...topic };
             batch.set(newTopicRef, publicTopicData);
         });
     }
