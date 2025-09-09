@@ -7,32 +7,55 @@ import {
   collection,
   onSnapshot,
   query,
-  orderBy,
+  where,
   CollectionReference,
   DocumentData,
   QuerySnapshot,
   Unsubscribe,
-  addDoc,
-  deleteDoc,
   doc,
-  Timestamp,
-  getDoc,
-  getDocs
+  DocumentSnapshot,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
-type AnyObj = Record<string, any>;
+import type {
+  Task,
+  ArchivedTask,
+  SalesItem,
+  ArchivedSale,
+  ExpenseItem,
+  ArchivedExpense,
+  DebtItem,
+  ArchivedDebt,
+  Worker,
+  AgriculturalSection
+} from "@/lib/types";
+import { initialAgriculturalSections } from "@/lib/initial-data";
+
+type UserProfile = {
+  name?: string;
+  role?: "admin" | "user";
+  points?: number;
+  level?: number;
+  badges?: string[];
+  photoURL?: string;
+  [key: string]: any;
+};
+
+export interface User extends FirebaseUser, UserProfile {}
 
 interface AppContextType {
-  user: (FirebaseUser & AnyObj) | null;
+  user: User | null;
   loading: boolean;
-  // minimal data for debug
-  tasks: AnyObj[];
-  expenses: AnyObj[];
-  notes: AnyObj[];
-  // debug helpers
-  debugFetchUserDocOnce: () => Promise<void>;
-  debugFetchCollectionOnce: (collectionName: string) => Promise<void>;
+  tasks: Task[];
+  completedTasks: ArchivedTask[];
+  allSales: SalesItem[];
+  archivedSales: ArchivedSale[];
+  allExpenses: ExpenseItem[];
+  archivedExpenses: ArchivedExpense[];
+  allDebts: DebtItem[];
+  archivedDebts: ArchivedDebt[];
+  allWorkers: Worker[];
+  topics: AgriculturalSection[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -55,159 +78,145 @@ function mapSnapshot<T>(snap: QuerySnapshot<DocumentData>) {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<(FirebaseUser & AnyObj) | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [tasks, setTasks] = useState<AnyObj[]>([]);
-  const [expenses, setExpenses] = useState<AnyObj[]>([]);
-  const [notes, setNotes] = useState<AnyObj[]>([]);
+  // Data states
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
+  const [allSales, setAllSales] = useState<SalesItem[]>([]);
+  const [archivedSales, setArchivedSales] = useState<ArchivedSale[]>([]);
+  const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
+  const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
+  const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
+  const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
+  const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
+  const [topics, setTopics] = useState<AgriculturalSection[]>([]);
 
   const unsubRef = useRef<Record<string, Unsubscribe | null>>({});
 
-  // Listen user doc for merging profile fields
-  function listenUserDoc(uid: string) {
-    const key = "userDoc";
-    if (unsubRef.current[key]) unsubRef.current[key]!();
-    try {
-      const userDocRef = doc(db, "users", uid);
-      const unsub = onSnapshot(userDocRef, snap => {
-        if (snap.exists()) {
-          const data = normalizeDocData<AnyObj>(snap.data() as DocumentData);
-          console.debug("[AppProvider] userDoc snapshot:", uid, data);
-          setUser(prev => ({ ...(prev ?? {}), ...data }));
-        } else {
-          console.debug("[AppProvider] userDoc: document does NOT exist for uid:", uid);
-        }
-      }, err => {
-        console.error("[AppProvider] userDoc onSnapshot error:", err);
-      });
-      unsubRef.current[key] = unsub;
-    } catch (e) {
-      console.error("[AppProvider] listenUserDoc setup error:", e);
+  const listenToCollection = <T,>(
+    collectionName: string,
+    setter: React.Dispatch<React.SetStateAction<T[]>>,
+    uid?: string
+  ) => {
+    const key = uid ? `${collectionName}-${uid}` : collectionName;
+    if (unsubRef.current[key]) {
+      unsubRef.current[key]!();
     }
-  }
 
-  function listenCollection<T = any>(uid: string, collectionName: string, setter: (items: T[]) => void, orderField?: string) {
-    try {
-      const key = `col:${collectionName}`;
-      if (unsubRef.current[key]) unsubRef.current[key]!();
-      const colRef = collection(db, "users", uid, collectionName) as CollectionReference<DocumentData>;
-      const q = orderField ? query(colRef, orderBy(orderField, "desc")) : query(colRef);
-      const unsub = onSnapshot(q, snap => {
-        console.debug(`[AppProvider] snapshot ${collectionName} size=${snap.size}`);
-        setter(mapSnapshot<T>(snap));
-      }, err => {
-        console.error(`[AppProvider] onSnapshot error for ${collectionName}:`, err);
-        setter([]);
-      });
-      unsubRef.current[key] = unsub;
-    } catch (err) {
-      console.error("[AppProvider] listenCollection setup error:", err);
-    }
-  }
+    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
+    const q = uid ? query(colRef, where("ownerId", "==", uid)) : query(colRef);
 
-  function clearAllListeners() {
-    Object.keys(unsubRef.current).forEach(k => {
-      const u = unsubRef.current[k];
-      if (typeof u === "function") {
-        try { u(); } catch (e) { /* ignore */ }
-      }
-      unsubRef.current[k] = null;
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = mapSnapshot<T>(snapshot);
+      setter(data);
+    }, (error) => {
+      console.error(`Error listening to ${collectionName}:`, error);
+      setter([]);
     });
-  }
+    unsubRef.current[key] = unsub;
+  };
+
+  const clearAllListeners = () => {
+    Object.values(unsubRef.current).forEach((unsub) => {
+      if (unsub) unsub();
+    });
+    unsubRef.current = {};
+  };
 
   useEffect(() => {
-    console.debug("[AppProvider] mounting - setting auth listener");
-    const unsubAuth = onAuthStateChanged(auth, async firebaseUser => {
-      console.debug("[AppProvider] onAuthStateChanged fired. firebaseUser:", firebaseUser);
+    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearAllListeners();
       if (firebaseUser) {
-        setUser(firebaseUser as any);
         setLoading(true);
-        const uid = firebaseUser.uid;
 
-        // Listen user doc and some example collections
-        listenUserDoc(uid);
-        listenCollection(uid, "tasks", setTasks, "dueDate");
-        listenCollection(uid, "expenses", setExpenses, "date");
-        listenCollection(uid, "notes", setNotes, "updatedAt");
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
+        const currentUser = { ...firebaseUser, ...userProfile } as User;
+        setUser(currentUser);
+
+        // Listen to user-specific collections
+        listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
+        listenToCollection<ArchivedTask>('completed_tasks', setCompletedTasks, firebaseUser.uid);
+        listenToCollection<SalesItem>('sales', setAllSales, firebaseUser.uid);
+        listenToCollection<ArchivedSale>('archive_sales', setArchivedSales, firebaseUser.uid);
+        listenToCollection<ExpenseItem>('expenses', setAllExpenses, firebaseUser.uid);
+        listenToCollection<ArchivedExpense>('archive_expenses', setArchivedExpenses, firebaseUser.uid);
+        listenToCollection<DebtItem>('debts', setAllDebts, firebaseUser.uid);
+        listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
+        listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
+        
+        // Listen to public collections (no UID filter)
+        listenToCollection<AgriculturalSection>('data', setTopics);
+
+        // Listen for user profile updates
+        const unsubUser = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
+          if (docSnap.exists()) {
+            setUser(prevUser => ({ ...prevUser, ...firebaseUser, ...docSnap.data() } as User));
+          }
+        });
+        unsubRef.current['userDoc'] = unsubUser;
 
         setLoading(false);
       } else {
-        console.debug("[AppProvider] no user - clearing state");
         setUser(null);
-        clearAllListeners();
         setTasks([]);
-        setExpenses([]);
-        setNotes([]);
+        setCompletedTasks([]);
+        setAllSales([]);
+        setArchivedSales([]);
+        setAllExpenses([]);
+        setArchivedExpenses([]);
+        setAllDebts([]);
+        setArchivedDebts([]);
+        setAllWorkers([]);
+        setTopics([]); // Clear public data too on logout
         setLoading(false);
       }
     });
 
     return () => {
-      console.debug("[AppProvider] unmounting - cleanup");
       unsubAuth();
       clearAllListeners();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Debug helpers you can call from UI (console) via window
-  async function debugFetchUserDocOnce() {
-    if (!user) {
-      console.warn("[debugFetchUserDocOnce] no user (not authenticated)");
-      return;
-    }
-    try {
-      const snap = await getDoc(doc(db, "users", user.uid));
-      console.debug("[debugFetchUserDocOnce] doc.exists:", snap.exists(), "data:", snap.exists() ? snap.data() : null);
-    } catch (e) {
-      console.error("[debugFetchUserDocOnce] error:", e);
-    }
-  }
-
-  async function debugFetchCollectionOnce(collectionName: string) {
-    if (!user) {
-      console.warn("[debugFetchCollectionOnce] no user (not authenticated)");
-      return;
-    }
-    try {
-      const colRef = collection(db, "users", user.uid, collectionName);
-      const snaps = await getDocs(colRef);
-      console.debug(`[debugFetchCollectionOnce] ${collectionName} size=${snaps.size}`);
-      snaps.forEach(d => console.debug(" doc:", d.id, normalizeDocData(d.data())));
-    } catch (e) {
-      console.error("[debugFetchCollectionOnce] error:", e);
-    }
-  }
-
-  // Expose debug helpers to window for quick manual testing (optional)
-  useEffect(() => {
-    (window as any).__appCtxDebug = {
-      debugFetchUserDocOnce,
-      debugFetchCollectionOnce,
-      getAuthCurrentUser: () => auth.currentUser
-    };
-    console.debug("[AppProvider] debug helpers installed: window.__appCtxDebug");
-    return () => {
-      delete (window as any).__appCtxDebug;
-    };
-  }, [user]);
 
   const value = useMemo<AppContextType>(() => ({
     user,
     loading,
     tasks,
-    expenses,
-    notes,
-    debugFetchUserDocOnce,
-    debugFetchCollectionOnce
-  }), [user, loading, tasks, expenses, notes]);
+    completedTasks,
+    allSales,
+    archivedSales,
+    allExpenses,
+    archivedExpenses,
+    allDebts,
+    archivedDebts,
+    allWorkers,
+    topics,
+  }), [
+    user,
+    loading,
+    tasks,
+    completedTasks,
+    allSales,
+    archivedSales,
+    allExpenses,
+    archivedExpenses,
+    allDebts,
+    archivedDebts,
+    allWorkers,
+    topics,
+  ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export const useAppContext = () => {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error("useAppContext must be used within an AppProvider");
+  if (!ctx) {
+    throw new Error("useAppContext must be used within an AppProvider");
+  }
   return ctx;
 };
