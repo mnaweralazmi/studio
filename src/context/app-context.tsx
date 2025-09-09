@@ -153,7 +153,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return () => {
             subscriptions.forEach(unsub => unsub());
         };
-    }, [user]); // This effect now correctly depends on the *complete* user object
+    }, [user]);
 
     const value = useMemo(() => ({
         user,
@@ -180,5 +180,3 @@ export const useAppContext = () => {
     }
     return context;
 };
-
-    
