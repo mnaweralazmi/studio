@@ -85,7 +85,7 @@ export default function SubTopicDetailsPage() {
     }
   }, [user, subTopic, toast, t]);
 
-  if (topicsLoading) {
+  if (topicsLoading || !topic || !subTopic) {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
             <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
@@ -100,10 +100,6 @@ export default function SubTopicDetailsPage() {
             </div>
         </main>
     )
-  }
-
-  if (!topic || !subTopic) {
-    return <div className="flex items-center justify-center h-screen">{t('loading')}</div>; 
   }
 
   const title = subTopic.titleKey === 'custom' ? subTopic.title : t(subTopic.titleKey as any);
