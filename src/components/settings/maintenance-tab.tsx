@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Wrench, Info } from 'lucide-react';
 import { useLanguage } from "@/context/language-context";
-import { useAuth } from "@/context/auth-context";
+import { useAppContext } from "@/context/app-context";
 import { collection, getDocs, writeBatch, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,7 @@ const collectionsToMigrate = ['sales', 'expenses', 'debts', 'workers', 'tasks'];
 
 export function MaintenanceTab() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user } = useAppContext();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
 

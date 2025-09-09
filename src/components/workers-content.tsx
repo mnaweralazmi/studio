@@ -12,12 +12,11 @@ import { AddWorkerDialog } from '@/components/workers/add-worker-dialog';
 import { SalaryPaymentDialog } from '@/components/workers/salary-payment-dialog';
 import { FinancialRecordDialog } from '@/components/workers/financial-record-dialog';
 import { DeleteWorkerAlert } from '@/components/workers/delete-worker-alert';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
 import type { Department, Worker, Transaction, TransactionFormValues, WorkerFormValues, PaidMonth } from '@/lib/types';
-import { useData } from '@/context/data-context';
 
 
 const monthsAr = [ { value: 1, label: 'يناير' }, { value: 2, label: 'فبراير' }, { value: 3, label: 'مارس' }, { value: 4, label: 'أبريل' }, { value: 5, label: 'مايو' }, { value: 6, label: 'يونيو' }, { value: 7, label: 'يوليو' }, { value: 8, label: 'أغسطس' }, { value: 9, label: 'سبتمبر' }, { value: 10, label: 'أكتوبر' }, { value: 11, 'label': 'نوفمبر' }, { value: 12, label: 'ديسمبر' } ];
@@ -76,8 +75,7 @@ interface WorkersContentProps {
 }
 
 export function WorkersContent({ departmentId }: WorkersContentProps) {
-    const { user: authUser, loading: isAuthLoading } = useAuth();
-    const { allWorkers, loading: isDataLoading } = useData();
+    const { user, allWorkers, loading } = useAppContext();
 
     const { toast } = useToast();
     const { language, t } = useLanguage();
@@ -89,7 +87,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     
 
     async function handleSaveWorker(data: WorkerFormValues, workerId?: string) {
-        if (!authUser) {
+        if (!user) {
              toast({ variant: "destructive", title: t('error'), description: "You cannot manage workers for this user." });
             return;
         }
@@ -105,7 +103,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 await updateWorker(workerId, data);
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
-                const newWorkerData = { ...data, ownerId: authUser.uid, departmentId: departmentId };
+                const newWorkerData = { ...data, ownerId: user.uid, departmentId: departmentId };
                 await addWorker(newWorkerData);
                 toast({ title: t('workerAddedSuccess') });
             }
@@ -116,7 +114,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
     
     async function handleSalaryPayment(workerId: string, month: number, year: number, amount: number) {
-        if (!authUser) return;
+        if (!user) return;
         try {
             const transaction: Omit<Transaction, 'id'|'date'> = {
                 type: 'salary',
@@ -134,7 +132,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
 
     async function handleAddTransaction(workerId: string, transaction: TransactionFormValues) {
-        if (!authUser) return;
+        if (!user) return;
         
         try {
             const newTransactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'> = {
@@ -153,7 +151,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     }
 
     async function handleDeleteWorker(workerId: string) {
-        if(!authUser) return;
+        if(!user) return;
         try {
             await deleteWorker(workerId);
             toast({ title: t('workerDeleted') });
@@ -195,7 +193,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
     
     const totalAnnualBaseSalaries = workers.reduce((sum, worker) => sum + (worker.baseSalary * 12), 0);
 
-    if (isAuthLoading || isDataLoading) {
+    if (loading) {
         return (
             <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>

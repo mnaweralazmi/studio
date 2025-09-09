@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Award, BookOpen, CalendarCheck, HandCoins } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
-import { useAuth } from "@/context/auth-context";
+import { useAppContext } from "@/context/app-context";
 import { Skeleton } from "../ui/skeleton";
 
 const badgeList = {
@@ -18,7 +18,7 @@ const badgeList = {
 type BadgeId = keyof typeof badgeList;
 
 export function AchievementsTab() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAppContext();
   const { t } = useLanguage();
 
   if (loading) {

@@ -12,11 +12,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, CalendarDays, CheckCircle, Repeat, Bell, Clock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
 import type { Task, ArchivedTask } from '@/lib/types';
-import { useData } from '@/context/data-context';
 
 
 const TaskItem = ({ task, onComplete, language, t }: { task: Task | ArchivedTask, onComplete?: (id: string) => void, language: 'ar' | 'en', t: (key: any, params?: any) => string }) => {
@@ -94,8 +93,7 @@ const TaskSection = ({ title, tasks, ...props }: { title: string, tasks: Task[],
 export default function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { tasks, loading, completedTasks } = useData();
+  const { user, tasks, loading, completedTasks } = useAppContext();
   const { language, t } = useLanguage();
 
   const handleCompleteTask = async (taskId: string) => {
@@ -248,5 +246,3 @@ export default function CalendarPage() {
     </main>
   );
 }
-
-    

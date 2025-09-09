@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/context/language-context';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,7 @@ type SettingsSection = 'profile' | 'achievements' | 'display' | 'notifications' 
 
 export default function SettingsPage() {
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading } = useAppContext();
     const { t } = useLanguage();
     const [activeSection, setActiveSection] = React.useState<SettingsSection>('profile');
 

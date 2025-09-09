@@ -9,11 +9,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ArchivedTask } from '@/lib/types';
-import { useData } from '@/context/data-context';
+import { useAppContext } from '@/context/app-context';
 
 
 export function ArchivedTasks() {
-    const { completedTasks, loading } = useData();
+    const { completedTasks, loading } = useAppContext();
     const { t, language } = useLanguage();
 
     const sortedTasks = React.useMemo(() => {

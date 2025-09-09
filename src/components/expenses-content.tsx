@@ -11,12 +11,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, PlusCircle, TrendingUp, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
 import type { Department, ExpenseItem, ExpenseItemData } from '@/lib/types';
-import { useData } from '@/context/data-context';
 
 const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Record<string, string[]> => {
     if (language === 'ar') {
@@ -69,8 +68,7 @@ interface ExpensesContentProps {
 }
 
 export function ExpensesContent({ departmentId }: ExpensesContentProps) {
-    const { user: authUser, loading: isAuthLoading } = useAuth();
-    const { allExpenses, loading: isDataLoading } = useData();
+    const { user, allExpenses, loading } = useAppContext();
 
     const { language, t } = useLanguage();
     const [expenseCategories, setExpenseCategories] = React.useState<Record<string, string[]>>({});
@@ -91,7 +89,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!authUser) {
+        if (!user) {
              toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add expenses."});
             return;
         }
@@ -115,7 +113,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             category: data.category,
             item: data.item,
             amount: data.amount,
-            ownerId: authUser.uid,
+            ownerId: user.uid,
             departmentId: departmentId,
         };
 
@@ -148,7 +146,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     const totalFixedExpenses = fixedExpenses.reduce((sum, item) => sum + item.amount, 0);
     const totalVariableExpenses = variableExpenses.reduce((sum, item) => sum + item.amount, 0);
 
-    if (isAuthLoading || isDataLoading) {
+    if (loading) {
         return (
             <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>

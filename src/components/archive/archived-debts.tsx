@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ArchivedDebt, Department } from '@/lib/types';
-import { useData } from '@/context/data-context';
+import { useAppContext } from '@/context/app-context';
 
 
 const departmentTitles: Record<Department, string> = {
@@ -20,7 +20,7 @@ const departmentTitles: Record<Department, string> = {
 };
 
 export function ArchivedDebts() {
-    const { archivedDebts, loading } = useData();
+    const { archivedDebts, loading } = useAppContext();
     const { t, language } = useLanguage();
     
     const sortedItems = React.useMemo(() => {

@@ -9,7 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { PlusCircle, Wallet, Trash2, Edit } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/language-context';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { db } from '@/lib/firebase';
 import type { Department, SalesItem, SalesItemData } from '@/lib/types';
 import { EditSaleDialog } from './budget/edit-sale-dialog';
-import { useData } from '@/context/data-context';
 
 const vegetableListAr = [ "طماطم", "خيار", "بطاطس", "بصل", "جزر", "فلفل رومي", "باذنجان", "كوسا", "خس", "بروكلي", "سبانخ", "قرنبيط", "بامية", "فاصوليا خضراء", "بازلاء", "ملفوف", "شمندر", "فجل" ] as const;
 const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Bell Pepper", "Eggplant", "Zucchini", "Lettuce", "Broccoli", "Spinach", "Cauliflower", "Okra", "Green Beans", "Peas", "Cabbage", "Beetroot", "Radish" ] as const;
@@ -69,8 +68,7 @@ interface BudgetContentProps {
 }
 
 export function BudgetContent({ departmentId }: BudgetContentProps) {
-  const { user: authUser, loading: isAuthLoading } = useAuth();
-  const { allSales, loading: isDataLoading } = useData();
+  const { user, allSales, loading } = useAppContext();
 
   const { toast } = useToast();
   const { language, t } = useLanguage();
@@ -89,7 +87,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!authUser) {
+    if (!user) {
         toast({ variant: "destructive", title: t('error'), description: "You must be logged in to add sales."});
         return;
     }
@@ -112,7 +110,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
         price,
         total,
         date: new Date(),
-        ownerId: authUser.uid,
+        ownerId: user.uid,
         departmentId: departmentId,
         ...(weightPerUnit && { weightPerUnit }),
     };
@@ -120,7 +118,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     try {
         await addSale(submissionData);
         
-        const userRef = doc(db, 'users', authUser.uid);
+        const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) throw "User document does not exist!";
@@ -303,7 +301,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     )
   }
   
-  if (isAuthLoading || isDataLoading) {
+  if (loading) {
       return (
         <div className="space-y-6">
             <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>

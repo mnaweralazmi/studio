@@ -10,8 +10,7 @@ import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AuthProvider, useAuth } from '@/context/auth-context';
-import { DataProvider } from '@/context/data-context';
+import { AppProvider, useAppContext } from '@/context/app-context';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -25,7 +24,7 @@ const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffec
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading } = useAppContext();
   
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
@@ -52,7 +51,10 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   if (loading && !isAuthPage) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
-            <Skeleton className="h-20 w-20" />
+             <div className="flex flex-col items-center gap-4">
+                <Skeleton className="h-20 w-20 rounded-full" />
+                <Skeleton className="h-6 w-48" />
+            </div>
         </div>
     );
   }
@@ -61,9 +63,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     return <>{children}<Toaster /></>;
   }
   
-  // This is the key change: We ensure user exists before rendering the DataProvider and AppLayout
   if (!user) {
-    // This will be shown briefly while redirecting or if auth fails, preventing errors.
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
             <p>Redirecting to login...</p>
@@ -73,12 +73,10 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <DataProvider>
-        <AppLayout>
-            {children}
-            <Toaster />
-        </AppLayout>
-    </DataProvider>
+    <AppLayout>
+        {children}
+        <Toaster />
+    </AppLayout>
   );
 }
 
@@ -88,7 +86,8 @@ function AppHtml({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
+  
   useIsomorphicLayoutEffect(() => {
       document.documentElement.lang = language;
       document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -98,9 +97,9 @@ function AppHtml({
      <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <head />
       <body>
-          <AuthProvider>
+          <AppProvider>
             <RootLayoutContent>{children}</RootLayoutContent>
-          </AuthProvider>
+          </AppProvider>
       </body>
     </html>
   )
@@ -117,5 +116,3 @@ export default function RootLayout({
     </LanguageProvider>
   );
 }
-
-    

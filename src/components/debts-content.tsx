@@ -16,13 +16,12 @@ import { Landmark, PlusCircle, CalendarIcon, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { PaymentDialog } from './debts/payment-dialog';
 import { Skeleton } from './ui/skeleton';
 import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
 import type { DebtItem, DebtItemData, Department, Payment } from '@/lib/types';
-import { useData } from '@/context/data-context';
 
 async function addDebt(data: DebtItemData): Promise<string> {
     const debtsCollectionRef = collection(db, 'debts');
@@ -75,8 +74,7 @@ interface DebtsContentProps {
 }
 
 export function DebtsContent({ departmentId }: DebtsContentProps) {
-    const { user: authUser, loading: isAuthLoading } = useAuth();
-    const { allDebts, loading: isDataLoading } = useData();
+    const { user, allDebts, loading } = useAppContext();
 
     const { toast } = useToast();
     const { language, t } = useLanguage();
@@ -91,7 +89,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!authUser) {
+        if (!user) {
             toast({ variant: "destructive", title: t('error'), description: "You cannot add debts for this user." });
             return;
         }
@@ -112,7 +110,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             creditor: data.creditor,
             amount: data.amount,
             dueDate: data.dueDate,
-            ownerId: authUser.uid,
+            ownerId: user.uid,
             departmentId: departmentId,
         };
 
@@ -174,7 +172,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         return sum + getRemainingAmount(item);
     }, 0);
 
-    if (isAuthLoading || isDataLoading) {
+    if (loading) {
         return (
             <div className="space-y-6">
                 <Card><CardHeader><Skeleton className="h-16 w-full" /></CardHeader></Card>

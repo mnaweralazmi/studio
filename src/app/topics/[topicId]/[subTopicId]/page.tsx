@@ -6,11 +6,10 @@ import { useParams, useRouter } from 'next/navigation';
 import type { AgriculturalSection, SubTopic } from '@/lib/types';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
-import { useData } from '@/context/data-context';
+import { useAppContext } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { useAuth } from '@/context/auth-context';
 import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +19,7 @@ export default function SubTopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, loading: topicsLoading } = useData();
-  const { user } = useAuth();
+  const { topics, loading, user } = useAppContext();
   const { toast } = useToast();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
   const [subTopic, setSubTopic] = React.useState<SubTopic | null>(null);
@@ -85,7 +83,7 @@ export default function SubTopicDetailsPage() {
     }
   }, [user, subTopic, toast, t]);
 
-  if (topicsLoading || !topic || !subTopic) {
+  if (loading || !topic || !subTopic) {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
             <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">

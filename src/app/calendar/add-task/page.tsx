@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, CalendarIcon, Repeat, Clock } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { db } from '@/lib/firebase';
@@ -47,7 +47,7 @@ export default function AddTaskPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { language, t } = useLanguage();
-  const { user, loading } = useAuth();
+  const { user, loading } = useAppContext();
   
   const taskTitles = language === 'ar' ? taskTitlesAr : taskTitlesEn;
   const vegetableList = language === 'ar' ? vegetableListAr : vegetableListEn;
@@ -349,5 +349,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    

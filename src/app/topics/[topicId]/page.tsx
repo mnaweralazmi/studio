@@ -7,7 +7,7 @@ import type { AgriculturalSection, SubTopic, VideoSection } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/context/language-context';
-import { useData } from '@/context/data-context';
+import { useAppContext } from '@/context/app-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlayCircle, FileText } from 'lucide-react';
@@ -17,7 +17,7 @@ export default function TopicDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topics, loading: topicsLoading } = useData();
+  const { topics, loading } = useAppContext();
   const [topic, setTopic] = React.useState<AgriculturalSection | null>(null);
 
   React.useEffect(() => {
@@ -27,7 +27,7 @@ export default function TopicDetailsPage() {
     }
   }, [params.topicId, topics]);
   
-  if (topicsLoading || !topic) {
+  if (loading || !topic) {
     return (
         <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
             <div className="w-full max-w-5xl mx-auto flex flex-col gap-12">

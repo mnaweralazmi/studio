@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/context/language-context";
-import { useAuth } from "@/context/auth-context";
+import { useAppContext } from "@/context/app-context";
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, updateProfile } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
@@ -27,7 +27,7 @@ import { Separator } from "../ui/separator";
 
 export function ProfileTab() {
   const { toast } = useToast();
-  const { user, loading } = useAuth();
+  const { user, loading } = useAppContext();
   const { t, language } = useLanguage();
 
   const [isProfileSaving, setIsProfileSaving] = React.useState(false);
@@ -79,11 +79,11 @@ export function ProfileTab() {
 
         if (Object.keys(updateData).length > 0) {
             // Update Firebase Auth profile
-            await updateProfile(auth.currentUser, { displayName: updateData.displayName, photoURL: updateData.photoURL });
+            await updateProfile(auth.currentUser, { displayName: updateData.displayName, photoURL: newAvatarUrl || avatarUrl });
             
             // Update Firestore document
             const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, { name: updateData.name, photoURL: updateData.photoURL });
+            await updateDoc(userDocRef, { name: updateData.name, photoURL: newAvatarUrl || avatarUrl });
 
             if (newAvatarUrl) {
                setAvatarUrl(newAvatarUrl);

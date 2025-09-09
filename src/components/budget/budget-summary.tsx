@@ -6,11 +6,11 @@ import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
-import { useData } from '@/context/data-context';
+import { useAppContext } from '@/context/app-context';
 
 export function BudgetSummary() {
     const { t } = useLanguage();
-    const { allSales, allExpenses, allDebts, allWorkers, loading } = useData();
+    const { allSales, allExpenses, allDebts, allWorkers, loading } = useAppContext();
 
     const totalSales = React.useMemo(() => allSales.reduce((sum, item) => sum + item.total, 0), [allSales]);
     

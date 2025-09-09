@@ -6,7 +6,7 @@ import { Leaf, PlayCircle, BookOpen, Droplets, FlaskConical, Bug, Scissors, Spro
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
-import { useData } from '@/context/data-context';
+import { useAppContext } from '@/context/app-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +24,7 @@ const iconComponents: { [key: string]: React.ElementType } = {
 
 export default function Home() {
   const { t } = useLanguage();
-  const { topics, loading } = useData();
+  const { topics, loading } = useAppContext();
   
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">

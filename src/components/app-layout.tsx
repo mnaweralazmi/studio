@@ -6,16 +6,14 @@ import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive, Shield } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
-import { useAuth } from '@/context/auth-context';
+import { useAppContext } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useData } from '@/context/data-context';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user, loading: authLoading } = useAuth();
-  const { loading: dataLoading } = useData();
+  const { user, loading } = useAppContext();
 
   const navItems = [
     { href: '/', label: t('home'), icon: Home },
@@ -31,7 +29,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   // The main loading condition
-  if (authLoading || dataLoading) {
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
