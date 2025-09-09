@@ -267,9 +267,9 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                                         <TableCell>
                                             <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                                 {item.status !== 'paid' && <PaymentDialog debt={item} onConfirm={handlePayment} />}
-                                                 <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
+                                                 {item.status !== 'paid' && <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}>
                                                     <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                </Button>}
                                             </div>
                                         </TableCell>
                                     </TableRow>

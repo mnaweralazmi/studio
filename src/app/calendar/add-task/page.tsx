@@ -64,16 +64,14 @@ export default function AddTaskPage() {
   const [isDescManuallyEdited, setIsDescManuallyEdited] = React.useState(false);
 
   React.useEffect(() => {
-    if (vegetable && !isDescManuallyEdited) {
-        setDescription(vegetable);
+    if (!isDescManuallyEdited) {
+        if (vegetable) {
+            setDescription(vegetable);
+        } else if (fruit) {
+            setDescription(fruit);
+        }
     }
-  }, [vegetable, isDescManuallyEdited]);
-
-  React.useEffect(() => {
-    if (fruit && !isDescManuallyEdited) {
-        setDescription(fruit);
-    }
-  }, [fruit, isDescManuallyEdited]);
+  }, [vegetable, fruit, isDescManuallyEdited]);
 
 
   async function onSubmit(event: React.FormEvent) {
@@ -184,8 +182,8 @@ export default function AddTaskPage() {
                         <CardTitle>{t('error')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p>يجب أن تكون مسجلاً للدخول لإضافة المهام.</p>
-                        <Button onClick={() => router.push('/login')} className="mt-4">تسجيل الدخول</Button>
+                        <p>{t('userProfileDesc')}</p>
+                        <Button onClick={() => router.push('/login')} className="mt-4">{t('login')}</Button>
                     </CardContent>
                 </Card>
             </div>
@@ -207,7 +205,7 @@ export default function AddTaskPage() {
                         {t('addNewTaskDesc')}
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 pt-6">
                     <div className="space-y-2">
                         <Label>{t('taskTitle')}</Label>
                         <Select onValueChange={setTitle} value={title}>
@@ -328,7 +326,7 @@ export default function AddTaskPage() {
                         />
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-end gap-2">
+                <CardFooter className="flex justify-end gap-2 pt-6">
                     <Button type="button" variant="outline" onClick={() => router.back()}>
                         {t('cancel')}
                     </Button>
@@ -343,5 +341,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    
