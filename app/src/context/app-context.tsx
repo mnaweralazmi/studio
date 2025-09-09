@@ -132,6 +132,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
 
         const userDocRef = doc(db, "users", firebaseUser.uid);
+        
+        const userDocSnap = await getDoc(userDocRef);
+        const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
+        const currentUser = { ...firebaseUser, ...userProfile } as User;
+        setUser(currentUser);
 
         // Listen for user profile updates
         const unsubUser = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
@@ -149,12 +154,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         });
         unsubRef.current['userDoc'] = unsubUser;
-        
-        // Initial fetch of user profile to avoid flicker
-        const userDocSnap = await getDoc(userDocRef);
-        const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
-        const currentUser = { ...firebaseUser, ...userProfile } as User;
-        setUser(currentUser);
 
         // Listen to user-specific collections
         listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
