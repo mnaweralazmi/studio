@@ -60,31 +60,28 @@ export function ProfileTab() {
       if (!user || !auth.currentUser) return;
       setIsProfileSaving(true);
       try {
-        let newAvatarUrl: string | undefined = undefined;
+        const updateData: { displayName: string; photoURL?: string; name: string } = {
+          displayName: name,
+          name: name,
+        };
+        
         if (avatarFile) {
           const storage = getStorage();
           const storageRef = ref(storage, `avatars/${user.uid}`);
           await uploadBytes(storageRef, avatarFile);
-          newAvatarUrl = await getDownloadURL(storageRef);
+          const newAvatarUrl = await getDownloadURL(storageRef);
+          updateData.photoURL = newAvatarUrl;
         }
 
-        const profileUpdate: { displayName: string; photoURL?: string } = { displayName: name };
-        if (newAvatarUrl) {
-            profileUpdate.photoURL = newAvatarUrl;
-        }
-
-        await updateProfile(auth.currentUser, profileUpdate);
+        // Update Firebase Auth profile
+        await updateProfile(auth.currentUser, { displayName: updateData.displayName, photoURL: updateData.photoURL });
         
-        const firestoreUpdate: { name: string; photoURL?: string } = { name: name };
-        if (newAvatarUrl) {
-            firestoreUpdate.photoURL = newAvatarUrl;
-        }
-        
+        // Update Firestore document
         const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, firestoreUpdate);
+        await updateDoc(userDocRef, { name: updateData.name, photoURL: updateData.photoURL });
 
-        if (newAvatarUrl) {
-           setAvatarUrl(newAvatarUrl + `?v=${new Date().getTime()}`);
+        if (updateData.photoURL) {
+           setAvatarUrl(updateData.photoURL + `?v=${new Date().getTime()}`);
         }
 
         toast({ title: t("profileUpdated"), description: t("profileUpdatedSuccess") });
@@ -294,3 +291,5 @@ export function ProfileTab() {
     </Card>
   );
 }
+
+    
