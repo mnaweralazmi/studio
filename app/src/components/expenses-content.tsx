@@ -82,8 +82,9 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
     }, [language, departmentId]);
     
     const expenses = React.useMemo(() => {
-        return (allExpenses || [])
-            .filter(item => item.departmentId === departmentId)
+        const list = Array.isArray(allExpenses) ? allExpenses : [];
+        return list
+            .filter(item => item?.departmentId === departmentId)
             .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [allExpenses, departmentId]);
 
@@ -303,5 +304,3 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </div>
     );
 }
-
-    

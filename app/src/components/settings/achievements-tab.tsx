@@ -55,8 +55,8 @@ export function AchievementsTab() {
 
   const userBadges = Array.isArray(user.badges) ? user.badges.filter((b): b is BadgeId => typeof b === 'string' && b in badgeList) : [];
   
-  const points = typeof user.points === "number" ? user.points : 0;
-  const level = typeof user.level === "number" ? user.level : 1;
+  const points = user.points ?? 0;
+  const level = user.level ?? 1;
   const rawProgress = points % 100;
   const progress = Math.max(0, Math.min(100, Number(rawProgress)));
 
