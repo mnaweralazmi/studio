@@ -3,9 +3,9 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot, getDoc, doc, DocumentData, Query, Unsubscribe } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDoc, doc, DocumentData, Unsubscribe } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { Task, ArchivedTask, SalesItem, ArchivedSale, ExpenseItem, ArchivedExpense, DebtItem, ArchivedDebt, Worker, AgriculturalSection, Department } from '@/lib/types';
+import type { Task, ArchivedTask, SalesItem, ArchivedSale, ExpenseItem, ArchivedExpense, DebtItem, ArchivedDebt, Worker, AgriculturalSection } from '@/lib/types';
 
 interface User extends FirebaseUser {
     name?: string;
@@ -69,7 +69,6 @@ const createPublicSubscription = <T,>(
     });
 }
 
-
 export function AppProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
@@ -96,48 +95,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllDebts([]);
         setArchivedDebts([]);
         setAllWorkers([]);
-        // We don't clear public topics data
     };
 
+    // Effect for handling authentication state changes
     useEffect(() => {
         const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setLoading(true);
             if (firebaseUser) {
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
                 const userDocSnap = await getDoc(userDocRef);
-                const userData = userDocSnap.exists() ? userDocSnap.data() : {};
-                setUser({ ...firebaseUser, ...userData });
+                if (userDocSnap.exists()) {
+                    setUser({ ...firebaseUser, ...userDocSnap.data() });
+                } else {
+                    setUser(firebaseUser);
+                }
             } else {
                 setUser(null);
                 clearAllData();
-                setLoading(false); 
+                setLoading(false);
             }
         });
         return () => authUnsubscribe();
     }, []);
-
+    
+    // Effect for setting up data subscriptions
     useEffect(() => {
-        // Setup public data subscription (always on)
+        // Public data subscription (always active)
         const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>(
             'data', setTopics, (d) => ({
-            ...d,
-            subTopics: d.subTopics || [],
-            videos: d.videos || [],
+                ...d,
+                subTopics: d.subTopics || [],
+                videos: d.videos || [],
             }) as AgriculturalSection
         );
 
-        return () => topicsUnsubscribe();
-    }, []);
-    
-    
-     useEffect(() => {
         if (!user) {
-             if (!auth.currentUser) { // Ensures we don't prematurely stop loading on initial load
+            // If there's no user, we are not loading user-specific data.
+            // Authentication loading is handled in the auth effect.
+            // If loading was true from a previous user session, it should be reset.
+             if (auth.currentUser === null) {
                 setLoading(false);
             }
-            return;
+            return () => topicsUnsubscribe();
         }
 
+        // If we have a user, set up their specific data subscriptions
         const uid = user.uid;
         
         const subscriptions = [
@@ -152,17 +154,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             createSubscription<Worker>( 'workers', uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
         ];
         
-        // All subscriptions are set up, so we can stop loading.
+        // All subscriptions are now set up. We can finish loading.
         setLoading(false);
 
-        // Cleanup function to unsubscribe from all listeners when component unmounts or user changes
+        // Cleanup function
         return () => {
             subscriptions.forEach(unsub => unsub());
+            topicsUnsubscribe();
             clearAllData();
         };
 
-    }, [user]);
-
+    }, [user]); // This effect re-runs when the user logs in or out
 
     const value = {
         user,
@@ -189,3 +191,5 @@ export const useAppContext = () => {
     }
     return context;
 };
+
+    
