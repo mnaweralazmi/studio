@@ -66,7 +66,6 @@ export function ProfileTab() {
           const storageRef = ref(storage, `avatars/${user.uid}`);
           await uploadBytes(storageRef, avatarFile);
           newAvatarUrl = await getDownloadURL(storageRef);
-          setAvatarUrl(newAvatarUrl + `?v=${new Date().getTime()}`);
         }
 
         const profileUpdate: { displayName: string; photoURL?: string } = { displayName: name };
@@ -83,6 +82,10 @@ export function ProfileTab() {
         
         const userDocRef = doc(db, "users", user.uid);
         await updateDoc(userDocRef, firestoreUpdate);
+
+        if (newAvatarUrl) {
+           setAvatarUrl(newAvatarUrl + `?v=${new Date().getTime()}`);
+        }
 
         toast({ title: t("profileUpdated"), description: t("profileUpdatedSuccess") });
         setAvatarFile(null);
@@ -291,5 +294,3 @@ export function ProfileTab() {
     </Card>
   );
 }
-
-    
