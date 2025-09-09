@@ -78,10 +78,8 @@ export function ProfileTab() {
         }
 
         if (Object.keys(updateData).length > 0) {
-            // Update Firebase Auth profile
             await updateProfile(auth.currentUser, updateData);
             
-            // Update Firestore document
             const userDocRef = doc(db, "users", user.uid);
             await updateDoc(userDocRef, firestoreUpdateData);
 
@@ -105,7 +103,7 @@ export function ProfileTab() {
       event.preventDefault();
       if (!auth.currentUser) return;
 
-      if (!newPassword || !currentPassword) {
+      if (!newPassword || !currentPassword || !confirmPassword) {
          toast({ variant: "destructive", title: t("error"), description: "Please fill all password fields." });
          return;
       }

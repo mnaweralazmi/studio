@@ -104,7 +104,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 await updateWorker(workerId, data);
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
-                const newWorkerData = { ...data, ownerId: user.uid, departmentId: departmentId };
+                const newWorkerData = { ...data, ownerId: user.uid, departmentId: departmentId, paidMonths: [], transactions: [] };
                 await addWorker(newWorkerData);
                 toast({ title: t('workerAddedSuccess') });
             }
@@ -305,7 +305,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                             <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>
                                                 <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                                             </AddWorkerDialog>
-                                            <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
+                                            <DeleteWorkerAlert workerId={worker.id} workerName={worker.name} onConfirm={handleDeleteWorker} />
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -321,6 +321,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-
-
-    
