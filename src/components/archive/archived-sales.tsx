@@ -25,7 +25,11 @@ export function ArchivedSales() {
     
     const sortedItems = React.useMemo(() => {
         const list = Array.isArray(archivedSales) ? archivedSales : [];
-        return [...list].sort((a,b) => new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime())
+        return [...list].sort((a,b) => {
+            const dateA = a?.archivedAt ? new Date(a.archivedAt).getTime() : 0;
+            const dateB = b?.archivedAt ? new Date(b.archivedAt).getTime() : 0;
+            return dateB - dateA;
+        });
     }, [archivedSales]);
 
     if (loading) {

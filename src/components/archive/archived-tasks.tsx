@@ -18,7 +18,11 @@ export function ArchivedTasks() {
 
     const sortedTasks = React.useMemo(() => {
         const list = Array.isArray(completedTasks) ? completedTasks : [];
-        return [...list].sort((a,b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+        return [...list].sort((a,b) => {
+            const dateA = a?.completedAt ? new Date(a.completedAt).getTime() : 0;
+            const dateB = b?.completedAt ? new Date(b.completedAt).getTime() : 0;
+            return dateB - dateA;
+        });
     }, [completedTasks]);
 
 
