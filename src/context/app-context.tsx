@@ -40,11 +40,17 @@ const createUserSubscription = <T extends { id: string }>(
     collectionName: string,
     uid: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (data: DocumentData) => T
+    transform: (data: DocumentData) => T,
+    sortFn?: (a: T, b: T) => number
 ): Unsubscribe => {
+    // Query without server-side ordering to avoid composite index requirement
     const q = query(collection(db, collectionName), where("ownerId", "==", uid));
     return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
+        let items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
+        // Sort on the client-side
+        if (sortFn) {
+            items = items.sort(sortFn);
+        }
         setData(items);
     }, (error) => {
         console.error(`Error fetching ${collectionName}:`, error);
@@ -56,11 +62,15 @@ const createUserSubscription = <T extends { id: string }>(
 const createPublicSubscription = <T extends { id: string }>(
     collectionName: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (data: DocumentData) => T
+    transform: (data: DocumentData) => T,
+    sortFn?: (a: T, b: T) => number
 ): Unsubscribe => {
     const q = query(collection(db, collectionName));
     return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
+        let items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
+        if (sortFn) {
+            items = items.sort(sortFn);
+        }
         setData(items);
     }, (error) => {
         console.error(`Error fetching public ${collectionName}:`, error);
@@ -123,22 +133,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // Effect for data subscriptions
     useEffect(() => {
+        // Public data subscription (does not depend on user)
         const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>('data', setTopics, d => ({
             ...d,
             subTopics: d.subTopics || [],
             videos: d.videos || [],
         }) as AgriculturalSection);
 
+        // User-specific data subscriptions
         if (user) {
             const userSubscriptions = [
-                createUserSubscription<Task>('tasks', user.uid, setTasks, d => ({ ...d, dueDate: d.dueDate.toDate() }) as Task),
-                createUserSubscription<ArchivedTask>('completed_tasks', user.uid, setCompletedTasks, d => ({ ...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate() }) as ArchivedTask),
-                createUserSubscription<SalesItem>('sales', user.uid, setAllSales, d => ({ ...d, date: d.date.toDate() }) as SalesItem),
-                createUserSubscription<ArchivedSale>('archive_sales', user.uid, setArchivedSales, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedSale),
-                createUserSubscription<ExpenseItem>('expenses', user.uid, setAllExpenses, d => ({ ...d, date: d.date.toDate() }) as ExpenseItem),
-                createUserSubscription<ArchivedExpense>('archive_expenses', user.uid, setArchivedExpenses, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedExpense),
-                createUserSubscription<DebtItem>('debts', user.uid, setAllDebts, d => ({ ...d, dueDate: d.dueDate ? d.dueDate.toDate() : undefined, payments: (d.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })) }) as DebtItem),
-                createUserSubscription<ArchivedDebt>('archive_debts', user.uid, setArchivedDebts, d => ({ ...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate ? d.dueDate.toDate() : undefined }) as ArchivedDebt),
+                createUserSubscription<Task>('tasks', user.uid, setTasks, d => ({ ...d, dueDate: d.dueDate.toDate() }) as Task, (a, b) => b.dueDate.getTime() - a.dueDate.getTime()),
+                createUserSubscription<ArchivedTask>('completed_tasks', user.uid, setCompletedTasks, d => ({ ...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate() }) as ArchivedTask, (a,b) => b.completedAt.getTime() - a.completedAt.getTime()),
+                createUserSubscription<SalesItem>('sales', user.uid, setAllSales, d => ({ ...d, date: d.date.toDate() }) as SalesItem, (a, b) => b.date.getTime() - a.date.getTime()),
+                createUserSubscription<ArchivedSale>('archive_sales', user.uid, setArchivedSales, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedSale, (a, b) => b.archivedAt.getTime() - a.archivedAt.getTime()),
+                createUserSubscription<ExpenseItem>('expenses', user.uid, setAllExpenses, d => ({ ...d, date: d.date.toDate() }) as ExpenseItem, (a, b) => b.date.getTime() - a.date.getTime()),
+                createUserSubscription<ArchivedExpense>('archive_expenses', user.uid, setArchivedExpenses, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedExpense, (a, b) => b.archivedAt.getTime() - a.archivedAt.getTime()),
+                createUserSubscription<DebtItem>('debts', user.uid, setAllDebts, d => ({ ...d, dueDate: d.dueDate ? d.dueDate.toDate() : undefined, payments: (d.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })) }) as DebtItem, (a, b) => (b.dueDate?.getTime() || 0) - (a.dueDate?.getTime() || 0)),
+                createUserSubscription<ArchivedDebt>('archive_debts', user.uid, setArchivedDebts, d => ({ ...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate ? d.dueDate.toDate() : undefined }) as ArchivedDebt, (a, b) => b.archivedAt.getTime() - a.archivedAt.getTime()),
                 createUserSubscription<Worker>('workers', user.uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
             ];
             
@@ -148,6 +160,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             };
         }
         
+        // Cleanup public subscription if user is not logged in
         return () => topicsUnsubscribe();
 
     }, [user]);
@@ -177,3 +190,5 @@ export const useAppContext = () => {
     }
     return context;
 };
+
+    
