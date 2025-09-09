@@ -304,4 +304,3 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </div>
     );
 }
-

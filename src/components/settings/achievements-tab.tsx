@@ -57,7 +57,7 @@ export function AchievementsTab() {
   
   const points = user.points ?? 0;
   const level = user.level ?? 1;
-  const rawProgress = points % 100;
+  const rawProgress = points > 0 ? points % 100 : 0;
   const progress = Math.max(0, Math.min(100, Number(rawProgress)));
 
   return (
@@ -70,7 +70,7 @@ export function AchievementsTab() {
         <div className="space-y-2">
           <div className="flex justify-between items-end">
             <h3 className="font-semibold">{t("level")} {level}</h3>
-            <p className="text-sm text-muted-foreground">{progress} / 100 {t("pointsToNextLevel")}</p>
+            <p className="text-sm text-muted-foreground">{points % 100} / 100 {t("pointsToNextLevel")}</p>
           </div>
           <Progress value={progress} />
           <p className="text-right text-sm text-muted-foreground">{t("points")}: {points}</p>

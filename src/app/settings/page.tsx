@@ -81,7 +81,7 @@ export default function SettingsPage() {
                                     className={cn(
                                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
                                         "justify-start text-base font-medium",
-                                        activeSection === item.id && "bg-primary/10 text-primary border-primary/30 border-r-4"
+                                        activeSection === item.id && "bg-primary/10 text-primary"
                                     )}
                                 >
                                     <Icon className="h-5 w-5" />
@@ -89,7 +89,7 @@ export default function SettingsPage() {
                                 </button>
                                 )}
                             )}
-                            <hr className="my-4" />
+                            <hr className="my-2" />
                              <button
                                 onClick={handleLogout}
                                 className={cn(
