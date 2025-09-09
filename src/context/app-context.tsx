@@ -37,7 +37,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Helper to create a user-specific subscription
-const createSubscription = <T,>(
+const createUserSubscription = <T,>(
     collectionName: string,
     uid: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
@@ -48,7 +48,7 @@ const createSubscription = <T,>(
         const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
         setData(items);
     }, (error) => {
-        console.error(`Error fetching ${collectionName}:`, error);
+        console.error(`Error fetching user-specific ${collectionName}:`, error);
         setData([]);
     });
 };
@@ -81,7 +81,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
     const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
     const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
-    const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
+    const [archivedDebts, setArchivedDebt] = useState<ArchivedDebt[]>([]);
     const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
     const [topics, setTopics] = useState<AgriculturalSection[]>([]);
     
@@ -93,28 +93,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllExpenses([]);
         setArchivedExpenses([]);
         setAllDebts([]);
-        setArchivedDebts([]);
+        setArchivedDebt([]);
         setAllWorkers([]);
     };
 
     useEffect(() => {
-        const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                const userDocRef = doc(db, 'users', firebaseUser.uid);
-                const userDocSnap = await getDoc(userDocRef);
-                const userData = userDocSnap.exists() ? userDocSnap.data() : {};
-                setUser({ ...firebaseUser, ...userData });
-                // Data fetching for logged-in user is handled by the next useEffect
-            } else {
-                setUser(null);
-                clearAllData();
-                setLoading(false); // No user, so stop loading
-            }
-        });
-        return () => authUnsubscribe();
-    }, []);
-
-    useEffect(() => {
+        setLoading(true);
         // Public data subscription (always active)
         const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>(
             'data', setTopics, (d) => ({
@@ -124,10 +108,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }) as AgriculturalSection
         );
 
-        // If there's no user, we just need public data.
+        const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+                
+                const combinedUser = { ...firebaseUser, ...userData };
+                setUser(combinedUser);
+                
+                // Data fetching for logged-in user is now triggered by user state change
+            } else {
+                setUser(null);
+                clearAllData();
+                setLoading(false); // No user, so stop loading (public data is already being fetched)
+            }
+        });
+        return () => {
+            authUnsubscribe();
+            topicsUnsubscribe();
+        };
+    }, []);
+
+    useEffect(() => {
         if (!user) {
-            // Loading is already handled by the auth state change.
-            return () => topicsUnsubscribe();
+            // User is logged out, clear their specific data
+            clearAllData();
+            // Loading is false because auth state is determined
+            setLoading(false);
+            return;
         }
 
         // --- User is logged in, set up all their data subscriptions ---
@@ -135,26 +144,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const uid = user.uid;
         
         const subscriptions = [
-            createSubscription<Task>( 'tasks', uid, setTasks, d => ({...d, dueDate: d.dueDate.toDate()}) as Task),
-            createSubscription<ArchivedTask>( 'completed_tasks', uid, setCompletedTasks, d => ({...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate()}) as ArchivedTask),
-            createSubscription<SalesItem>( 'sales', uid, setAllSales, d => ({...d, date: d.date.toDate()}) as SalesItem),
-            createSubscription<ArchivedSale>( 'archive_sales', uid, setArchivedSales, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedSale),
-            createSubscription<ExpenseItem>( 'expenses', uid, setAllExpenses, d => ({...d, date: d.date.toDate()}) as ExpenseItem),
-            createSubscription<ArchivedExpense>( 'archive_expenses', uid, setArchivedExpenses, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedExpense),
-            createSubscription<DebtItem>( 'debts', uid, setAllDebts, d => ({...d, dueDate: d.dueDate?.toDate(), payments: (d.payments || []).map((p: any) => ({...p, date: p.date.toDate()})) }) as DebtItem),
-            createSubscription<ArchivedDebt>( 'archive_debts', uid, setArchivedDebts, d => ({...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate?.toDate() }) as ArchivedDebt),
-            createSubscription<Worker>( 'workers', uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
+            createUserSubscription<Task>( 'tasks', uid, setTasks, d => ({...d, dueDate: d.dueDate.toDate()}) as Task),
+            createUserSubscription<ArchivedTask>( 'completed_tasks', uid, setCompletedTasks, d => ({...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate()}) as ArchivedTask),
+            createUserSubscription<SalesItem>( 'sales', uid, setAllSales, d => ({...d, date: d.date.toDate()}) as SalesItem),
+            createUserSubscription<ArchivedSale>( 'archive_sales', uid, setArchivedSales, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedSale),
+            createUserSubscription<ExpenseItem>( 'expenses', uid, setAllExpenses, d => ({...d, date: d.date.toDate()}) as ExpenseItem),
+            createUserSubscription<ArchivedExpense>( 'archive_expenses', uid, setArchivedExpenses, d => ({...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate()}) as ArchivedExpense),
+            createUserSubscription<DebtItem>( 'debts', uid, setAllDebts, d => ({...d, dueDate: d.dueDate?.toDate(), payments: (d.payments || []).map((p: any) => ({...p, date: p.date.toDate()})) }) as DebtItem),
+            createUserSubscription<ArchivedDebt>( 'archive_debts', uid, setArchivedDebt, d => ({...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate?.toDate() }) as ArchivedDebt),
+            createUserSubscription<Worker>( 'workers', uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
         ];
         
-        // After setting up all listeners, we can mark loading as false.
-        // The onSnapshot will populate the data asynchronously.
-        // The key is that the app shows the loading screen UNTIL listeners are attached.
         setLoading(false);
 
         // Cleanup function for when user logs out or component unmounts
         return () => {
             subscriptions.forEach(unsub => unsub());
-            topicsUnsubscribe();
             clearAllData();
         };
 
@@ -185,3 +190,5 @@ export const useAppContext = () => {
     }
     return context;
 };
+
+    
