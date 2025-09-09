@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot, doc, DocumentData, Unsubscribe } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, DocumentData, Unsubscribe } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { Task, ArchivedTask, SalesItem, ArchivedSale, ExpenseItem, ArchivedExpense, DebtItem, ArchivedDebt, Worker, AgriculturalSection } from '@/lib/types';
 
@@ -16,12 +16,11 @@ interface UserProfile {
     photoURL?: string;
 }
 
-// The final user object that merges Firebase Auth info with Firestore profile data
 interface User extends FirebaseUser, UserProfile {}
 
 interface AppContextType {
     user: User | null;
-    loading: boolean; // True while authenticating and loading initial data
+    loading: boolean;
     tasks: Task[];
     completedTasks: ArchivedTask[];
     allSales: SalesItem[];
@@ -36,14 +35,12 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Helper to create a user-specific data subscription
-const createUserSubscription = <T extends { id: string }>(
+const createCollectionSubscription = <T extends { id: string }>(
     collectionName: string,
-    uid: string,
     setData: React.Dispatch<React.SetStateAction<T[]>>,
     transform: (data: DocumentData) => T
 ): Unsubscribe => {
-    const q = query(collection(db, collectionName), where("ownerId", "==", uid));
+    const q = query(collection(db, collectionName));
     return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
         setData(items);
@@ -53,25 +50,10 @@ const createUserSubscription = <T extends { id: string }>(
     });
 };
 
-// Helper for public data
-const createPublicSubscription = <T extends { id: string }>(
-    collectionName: string,
-    setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (data: DocumentData) => T
-): Unsubscribe => {
-    const q = query(collection(db, collectionName));
-    return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
-        setData(items);
-    }, (error) => console.error(`Error fetching public ${collectionName}:`, error));
-}
-
-
 export function AppProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Data states
     const [tasks, setTasks] = useState<Task[]>([]);
     const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
     const [allSales, setAllSales] = useState<SalesItem[]>([]);
@@ -83,91 +65,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
     const [topics, setTopics] = useState<AgriculturalSection[]>([]);
     
-    const clearAllData = () => {
-        setTasks([]);
-        setCompletedTasks([]);
-        setAllSales([]);
-        setArchivedSales([]);
-        setAllExpenses([]);
-        setArchivedExpenses([]);
-        setAllDebts([]);
-        setArchivedDebts([]);
-        setAllWorkers([]);
-    };
-
     useEffect(() => {
-        // This is the primary listener for authentication state.
-        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // User is signed in. Now, listen for their profile document.
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
-                const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        // Profile found, merge auth and profile data.
-                        const userProfileData = docSnap.data() as UserProfile;
-                        setUser({ ...firebaseUser, ...userProfileData });
-                    } else {
-                        // Profile not found (e.g., new user), use basic auth data.
-                        // The user creation logic in register/login pages should handle creating the doc.
-                        setUser(firebaseUser);
-                    }
-                    setLoading(false); // Auth and profile check is complete.
-                }, (error) => {
-                    console.error("Error fetching user profile:", error);
-                    setUser(firebaseUser); // Fallback to auth data on error
+                const unsubProfile = onSnapshot(userDocRef, (docSnap) => {
+                    const profileData = docSnap.data() as UserProfile;
+                    setUser({ ...firebaseUser, ...profileData });
                     setLoading(false);
                 });
-                return () => unsubscribeProfile(); // Cleanup profile listener on auth change.
+                return () => unsubProfile();
             } else {
-                // No user is signed in.
                 setUser(null);
-                clearAllData();
-                setLoading(false); // Auth check is complete.
+                setLoading(false);
             }
         });
-
-        // This is the main cleanup function for the auth state listener.
         return () => unsubscribeAuth();
-    }, []); // This effect runs only once on mount.
-
+    }, []);
 
     useEffect(() => {
-        // This effect is responsible for setting up all data subscriptions
-        // and it ONLY runs when the `user` object changes.
-        
-        // Always subscribe to public data regardless of user state
-        const topicsUnsubscribe = createPublicSubscription<AgriculturalSection>('data', setTopics, d => ({
-            ...d,
-            subTopics: d.subTopics || [],
-            videos: d.videos || [],
-        }) as AgriculturalSection);
+        const subscriptions = [
+            createCollectionSubscription<Task>('tasks', setTasks, d => ({ ...d, dueDate: d.dueDate.toDate() }) as Task),
+            createCollectionSubscription<ArchivedTask>('completed_tasks', setCompletedTasks, d => ({ ...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate() }) as ArchivedTask),
+            createCollectionSubscription<SalesItem>('sales', setAllSales, d => ({ ...d, date: d.date.toDate() }) as SalesItem),
+            createCollectionSubscription<ArchivedSale>('archive_sales', setArchivedSales, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedSale),
+            createCollectionSubscription<ExpenseItem>('expenses', setAllExpenses, d => ({ ...d, date: d.date.toDate() }) as ExpenseItem),
+            createCollectionSubscription<ArchivedExpense>('archive_expenses', setArchivedExpenses, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedExpense),
+            createCollectionSubscription<DebtItem>('debts', setAllDebts, d => ({ ...d, dueDate: d.dueDate ? d.dueDate.toDate() : null, payments: (d.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })) }) as DebtItem),
+            createCollectionSubscription<ArchivedDebt>('archive_debts', setArchivedDebts, d => ({ ...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate ? d.dueDate.toDate() : null }) as ArchivedDebt),
+            createCollectionSubscription<Worker>('workers', setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker),
+            createCollectionSubscription<AgriculturalSection>('data', setTopics, d => d as AgriculturalSection)
+        ];
 
-        if (user) {
-            // User is logged in, set up their specific data listeners.
-            const userSubscriptions = [
-                createUserSubscription<Task>('tasks', user.uid, setTasks, d => ({ ...d, dueDate: d.dueDate.toDate() }) as Task),
-                createUserSubscription<ArchivedTask>('completed_tasks', user.uid, setCompletedTasks, d => ({ ...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate() }) as ArchivedTask),
-                createUserSubscription<SalesItem>('sales', user.uid, setAllSales, d => ({ ...d, date: d.date.toDate() }) as SalesItem),
-                createUserSubscription<ArchivedSale>('archive_sales', user.uid, setArchivedSales, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedSale),
-                createUserSubscription<ExpenseItem>('expenses', user.uid, setAllExpenses, d => ({ ...d, date: d.date.toDate() }) as ExpenseItem),
-                createUserSubscription<ArchivedExpense>('archive_expenses', user.uid, setArchivedExpenses, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedExpense),
-                createUserSubscription<DebtItem>('debts', user.uid, setAllDebts, d => ({ ...d, dueDate: d.dueDate ? d.dueDate.toDate() : null, payments: (d.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })) }) as DebtItem),
-                createUserSubscription<ArchivedDebt>('archive_debts', user.uid, setArchivedDebts, d => ({ ...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate ? d.dueDate.toDate() : null }) as ArchivedDebt),
-                createUserSubscription<Worker>('workers', user.uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
-            ];
-            
-            // Return a cleanup function that unsubscribes from everything.
-            return () => {
-                userSubscriptions.forEach(unsub => unsub());
-                topicsUnsubscribe();
-            };
-        }
-        
-        // If there's no user, we still need to clean up the public data listener.
-        return () => topicsUnsubscribe();
-
-    }, [user]); // This dependency array is key: it re-runs everything when user logs in/out.
-
+        return () => {
+            subscriptions.forEach(unsub => unsub());
+        };
+    }, []);
 
     const value = useMemo(() => ({
         user,
