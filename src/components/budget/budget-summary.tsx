@@ -12,16 +12,16 @@ export function BudgetSummary() {
     const { t } = useLanguage();
     const { allSales, allExpenses, allDebts, allWorkers, loading } = useAppContext();
 
-    const totalSales = React.useMemo(() => allSales.reduce((sum, item) => sum + item.total, 0), [allSales]);
+    const totalSales = React.useMemo(() => (allSales || []).reduce((sum, item) => sum + item.total, 0), [allSales]);
     
-    const totalExpenses = React.useMemo(() => allExpenses.reduce((sum, item) => sum + item.amount, 0), [allExpenses]);
+    const totalExpenses = React.useMemo(() => (allExpenses || []).reduce((sum, item) => sum + item.amount, 0), [allExpenses]);
 
-    const totalSalariesPaid = React.useMemo(() => allWorkers.reduce((workerSum, worker) => {
+    const totalSalariesPaid = React.useMemo(() => (allWorkers || []).reduce((workerSum, worker) => {
         const salaries = (worker.transactions || []).filter(t => t.type === 'salary').reduce((sum, t) => sum + t.amount, 0);
         return workerSum + salaries;
     }, 0), [allWorkers]);
     
-    const totalDebts = React.useMemo(() => allDebts.filter(d => d.status !== 'paid').reduce((sum, item) => {
+    const totalDebts = React.useMemo(() => (allDebts || []).filter(d => d.status !== 'paid').reduce((sum, item) => {
         const paidAmount = (item.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
         return sum + (item.amount - paidAmount);
     }, 0), [allDebts]);
