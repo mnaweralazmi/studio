@@ -77,34 +77,34 @@ export default function TopicDetailsPage() {
             </div>
           </div>
           
-            <section className="w-full border-t pt-8">
-                <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
-                {topic.subTopics.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {topic.subTopics.map((subTopic: SubTopic) => {
-                        const subTopicTitle = subTopic.titleKey === 'custom' ? subTopic.title : t(subTopic.titleKey as any);
-                        const subTopicDescription = subTopic.descriptionKey === 'custom' ? subTopic.description : t(subTopic.descriptionKey as any);
-                        return (
-                        <Card key={subTopic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
-                            <Link href={`/topics/${topic.id}/${subTopic.id}`}>
-                                <CardHeader className="p-0 relative">
-                                    <Image src={subTopic.image} alt={subTopicTitle!} width={400} height={200} className="w-full h-40 object-cover" data-ai-hint={subTopic.hint} />
-                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                        <FileText className="h-12 w-12 text-white/80" />
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="p-6 flex-1 flex flex-col">
-                                    <CardTitle className="mb-2 text-lg">
-                                        {subTopicTitle}
-                                    </CardTitle>
-                                    <p className="text-muted-foreground text-sm flex-1">{subTopicDescription!.substring(0, 120)}...</p>
-                                </CardContent>
-                            </Link>
-                        </Card>
-                    )})}
-                </div>
-                 ) : <p className="text-center text-muted-foreground">{t('noSubTopics')}</p>}
-            </section>
+            {topic.subTopics && topic.subTopics.length > 0 && (
+                <section className="w-full border-t pt-8">
+                    <h2 className="text-3xl font-bold text-center mb-8">{t('agriculturalTopics')}</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {topic.subTopics.map((subTopic: SubTopic) => {
+                            const subTopicTitle = subTopic.titleKey === 'custom' ? subTopic.title : t(subTopic.titleKey as any);
+                            const subTopicDescription = subTopic.descriptionKey === 'custom' ? subTopic.description : t(subTopic.descriptionKey as any);
+                            return (
+                            <Card key={subTopic.id} className="group overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col relative">
+                                <Link href={`/topics/${topic.id}/${subTopic.id}`}>
+                                    <CardHeader className="p-0 relative">
+                                        <Image src={subTopic.image} alt={subTopicTitle!} width={400} height={200} className="w-full h-40 object-cover" data-ai-hint={subTopic.hint} />
+                                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                            <FileText className="h-12 w-12 text-white/80" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-6 flex-1 flex flex-col">
+                                        <CardTitle className="mb-2 text-lg">
+                                            {subTopicTitle}
+                                        </CardTitle>
+                                        <p className="text-muted-foreground text-sm flex-1">{subTopicDescription!.substring(0, 120)}...</p>
+                                    </CardContent>
+                                </Link>
+                            </Card>
+                        )})}
+                    </div>
+                </section>
+            )}
 
              {(topic.videos && topic.videos.length > 0) && (
                 <section className="w-full border-t pt-12 mt-12">
@@ -135,8 +135,16 @@ export default function TopicDetailsPage() {
                 </section>
             )}
 
+            {(!topic.subTopics || topic.subTopics.length === 0) && (!topic.videos || topic.videos.length === 0) && (
+                <div className="text-center text-muted-foreground py-16 border-t mt-8">
+                    <p>{t('noSubTopics')}</p>
+                </div>
+            )}
+
         </article>
       </div>
     </main>
   );
 }
+
+    
