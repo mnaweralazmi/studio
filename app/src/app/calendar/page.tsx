@@ -99,7 +99,8 @@ export default function CalendarPage() {
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
     
-    const taskToComplete = tasks.find(t => t.id === taskId);
+    const taskList = Array.isArray(tasks) ? tasks : [];
+    const taskToComplete = taskList.find(t => t.id === taskId);
     if (!taskToComplete) return;
 
     try {
@@ -141,23 +142,15 @@ export default function CalendarPage() {
     }
   };
   
-  const upcomingTasks = React.useMemo(() => {
-    const taskList = Array.isArray(tasks) ? tasks : [];
-    return taskList
-      .filter(task => !task.isCompleted)
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  }, [tasks]);
+  const upcomingTasks = (Array.isArray(tasks) ? tasks : [])
+    .filter(task => !task.isCompleted)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
-  const selectedDayTasks = React.useMemo(() => {
-    return upcomingTasks.filter(task => date && isSameDay(task.dueDate, date));
-  }, [upcomingTasks, date]);
+  const selectedDayTasks = upcomingTasks.filter(task => date && isSameDay(task.dueDate, date));
 
-  const recentCompletedTasks = React.useMemo(() => {
-    const completedList = Array.isArray(completedTasks) ? completedTasks : [];
-    return completedList
-        .sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime())
-        .slice(0, 10);
-  }, [completedTasks]);
+  const recentCompletedTasks = (Array.isArray(completedTasks) ? completedTasks : [])
+      .sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime())
+      .slice(0, 10);
   
   if (loading) {
     return (
@@ -237,7 +230,7 @@ export default function CalendarPage() {
                 <CardContent className="overflow-y-auto max-h-96 pr-2">
                     {recentCompletedTasks.length > 0 ? (
                         <>
-                        <TaskList tasks={recentCompletedTasks} language={language} t={t} onComplete={handleCompleteTask} />
+                        <TaskList tasks={recentCompletedTasks} language={language} t={t} />
                          <p className="text-center text-sm text-muted-foreground py-4 mt-4">
                             {t('completedTasksLogDesc')}
                             <Link href="/archive" className="text-primary hover:underline font-semibold mx-1">
