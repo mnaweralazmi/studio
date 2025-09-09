@@ -60,20 +60,20 @@ export function ProfileTab() {
       if (!user || !auth.currentUser) return;
       setIsProfileSaving(true);
       try {
-        let newAvatarUrl = avatarUrl;
+        let newAvatarUrl: string | undefined = undefined;
         if (avatarFile) {
           const storage = getStorage();
           const storageRef = ref(storage, `avatars/${user.uid}`);
           await uploadBytes(storageRef, avatarFile);
           const downloadUrl = await getDownloadURL(storageRef);
           newAvatarUrl = `${downloadUrl}?v=${new Date().getTime()}`;
-          setAvatarUrl(newAvatarUrl); 
+          setAvatarUrl(newAvatarUrl);
         }
 
         const profileUpdate: { displayName: string; photoURL?: string } = { displayName: name };
         const firestoreUpdate: { name: string; photoURL?: string } = { name: name };
-
-        if (avatarFile && newAvatarUrl) {
+        
+        if (newAvatarUrl) {
             profileUpdate.photoURL = newAvatarUrl;
             firestoreUpdate.photoURL = newAvatarUrl;
         }
@@ -290,3 +290,4 @@ export function ProfileTab() {
     </Card>
   );
 }
+
