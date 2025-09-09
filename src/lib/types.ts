@@ -141,4 +141,5 @@ export interface AgriculturalSection {
     hint?: string;
     subTopics: SubTopic[];
     videos: VideoSection[];
+    ownerId?: string; // Make ownerId optional for public data
 }

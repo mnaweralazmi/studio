@@ -34,7 +34,6 @@ export function ProfileTab() {
   const [isPasswordSaving, setIsPasswordSaving] = React.useState(false);
 
   const [name, setName] = React.useState("");
-  const [avatarUrl, setAvatarUrl] = React.useState("");
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = React.useState("");
@@ -43,8 +42,7 @@ export function ProfileTab() {
 
   React.useEffect(() => {
     if (user) {
-      setName(user.displayName || user.name || "");
-      setAvatarUrl(user.photoURL || "");
+      setName(user.name || user.displayName || "");
     }
   }, [user]);
 
@@ -61,11 +59,12 @@ export function ProfileTab() {
       if (!user || !auth.currentUser) return;
       setIsProfileSaving(true);
       try {
-        const updateData: { displayName?: string; name?: string; photoURL?: string } = {};
+        const updateData: { displayName?: string; photoURL?: string; } = {};
+        const firestoreUpdateData: { name?: string; photoURL?: string; } = {};
         
-        if (name !== (user.displayName || user.name)) {
+        if (name !== (user.name || user.displayName)) {
             updateData.displayName = name;
-            updateData.name = name;
+            firestoreUpdateData.name = name;
         }
 
         let newAvatarUrl;
@@ -75,18 +74,18 @@ export function ProfileTab() {
           await uploadBytes(storageRef, avatarFile);
           newAvatarUrl = await getDownloadURL(storageRef);
           updateData.photoURL = newAvatarUrl;
+          firestoreUpdateData.photoURL = newAvatarUrl;
         }
 
         if (Object.keys(updateData).length > 0) {
             // Update Firebase Auth profile
-            await updateProfile(auth.currentUser, { displayName: updateData.displayName, photoURL: newAvatarUrl || avatarUrl });
+            await updateProfile(auth.currentUser, updateData);
             
             // Update Firestore document
             const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, { name: updateData.name, photoURL: newAvatarUrl || avatarUrl });
+            await updateDoc(userDocRef, firestoreUpdateData);
 
             if (newAvatarUrl) {
-               setAvatarUrl(newAvatarUrl);
                setPreviewUrl(null);
             }
         }
@@ -194,7 +193,7 @@ export function ProfileTab() {
               <div className="flex items-center gap-6 flex-wrap">
                 <Avatar className="h-24 w-24 border">
                   <AvatarImage
-                    src={previewUrl || avatarUrl || undefined}
+                    src={previewUrl || user?.photoURL || undefined}
                     alt={t("profilePicture")}
                   />
                   <AvatarFallback>

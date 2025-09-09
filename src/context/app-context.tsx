@@ -13,6 +13,7 @@ interface User extends FirebaseUser {
     points?: number;
     level?: number;
     badges?: string[];
+    photoURL?: string;
 }
 
 interface AppContextType {
@@ -111,19 +112,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
-                const userDocSnap = await getDoc(userDocRef);
-                const userData = userDocSnap.exists() ? userDocSnap.data() : {};
                 
-                const combinedUser = { ...firebaseUser, ...userData };
-                setUser(combinedUser);
-                
-                // Data fetching for logged-in user is now triggered by user state change
+                // Set up a listener for the user document itself
+                const userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
+                    const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+                    const combinedUser: User = { 
+                        ...firebaseUser, 
+                        ...userData,
+                        name: userData.name || firebaseUser.displayName,
+                        photoURL: userData.photoURL || firebaseUser.photoURL,
+                     };
+                    setUser(combinedUser);
+                });
+
+                // Data fetching for logged-in user is now triggered by user state change in a separate useEffect
+                return () => {
+                    userDocUnsubscribe();
+                }
             } else {
                 setUser(null);
                 clearAllData();
                 setLoading(false); // No user, so stop loading (public data is already being fetched)
             }
         });
+        
         return () => {
             authUnsubscribe();
             topicsUnsubscribe();
@@ -155,6 +167,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             createUserSubscription<Worker>( 'workers', uid, setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker)
         ];
         
+        // This is a bit of a simplification. In a real-world app, you might use Promise.all
+        // with initial fetches to know exactly when all data is loaded. For onSnapshot,
+        // we assume data is "loaded" once the listeners are attached.
         setLoading(false);
 
         // Cleanup function for when user logs out or component unmounts
@@ -163,7 +178,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             clearAllData();
         };
 
-    }, [user]); // This effect re-runs when the user object changes (login/logout)
+    }, [user?.uid]); // Re-run ONLY when user ID changes to avoid re-subscribing on other user data changes
 
     const value = {
         user,
@@ -190,5 +205,3 @@ export const useAppContext = () => {
     }
     return context;
 };
-
-    
