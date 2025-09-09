@@ -113,7 +113,7 @@ export function ProfileTab() {
       if (error?.code === "auth/wrong-password") {
         description = t("wrongCurrentPassword");
       } else if (error?.code === 'auth/requires-recent-login') {
-        description = 'هذه العملية حساسة وتتطلب مصادقة حديثة. يرجى تسجيل الخروج ثم تسجيل الدخول مرة أخرى قبل إعادة محاولة هذا الطلب.';
+        description = 'This operation is sensitive and requires recent authentication. Please log out and log back in before retrying this request.';
       }
       console.error(error);
       toast({ variant: "destructive", title: t("error"), description });
