@@ -3,9 +3,64 @@
 
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, onSnapshot, doc, DocumentData, Unsubscribe, where } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import type { Task, ArchivedTask, SalesItem, ArchivedSale, ExpenseItem, ArchivedExpense, DebtItem, ArchivedDebt, Worker, AgriculturalSection } from '@/lib/types';
+import { initialAgriculturalSections } from '@/lib/initial-data';
+
+// --- DUMMY DATA ---
+
+const dummyUser: User = {
+    uid: 'dummy-user-id-123',
+    email: 'user@example.com',
+    displayName: 'المستخدم الافتراضي',
+    name: 'المستخدم الافتراضي',
+    role: 'user',
+    points: 75,
+    level: 1,
+    badges: ['explorer', 'planner'],
+    photoURL: `https://i.pravatar.cc/150?u=dummy-user-id-123`,
+    // FirebaseUser properties
+    emailVerified: true,
+    isAnonymous: false,
+    metadata: {},
+    providerId: 'password',
+    providerData: [],
+    refreshToken: '',
+    tenantId: null,
+    delete: async () => {},
+    getIdToken: async () => '',
+    getIdTokenResult: async () => ({} as any),
+    reload: async () => {},
+    toJSON: () => ({}),
+};
+
+const dummyTasks: Task[] = [
+    { id: 'task-1', ownerId: dummyUser.uid, title: 'سقي الطماطم', dueDate: new Date(), isCompleted: false, isRecurring: true, reminderDays: 1, description: 'تأكد من ري الطماطم في الصباح الباكر.' },
+    { id: 'task-2', ownerId: dummyUser.uid, title: 'تسميد الخيار', dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), isCompleted: false, isRecurring: false, reminderDays: 2 },
+];
+
+const dummyCompletedTasks: ArchivedTask[] = [
+    { id: 'task-3', ownerId: dummyUser.uid, title: 'تقليم أشجار الليمون', dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), isCompleted: true, isRecurring: false, completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+];
+
+const dummySales: SalesItem[] = [
+    { id: 'sale-1', ownerId: dummyUser.uid, departmentId: 'agriculture', product: 'خيار', quantity: 10, price: 1.5, total: 15, date: new Date() },
+    { id: 'sale-2', ownerId: dummyUser.uid, departmentId: 'livestock', product: 'خروف', quantity: 2, price: 80, total: 160, date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+];
+
+const dummyExpenses: ExpenseItem[] = [
+    { id: 'exp-1', ownerId: dummyUser.uid, departmentId: 'agriculture', type: 'variable', category: 'مستلزمات زراعية', item: 'أسمدة', amount: 25, date: new Date() },
+    { id: 'exp-2', ownerId: dummyUser.uid, departmentId: 'poultry', type: 'fixed', category: 'تغذية', item: 'أعلاف', amount: 120, date: new Date() },
+];
+
+const dummyDebts: DebtItem[] = [
+    { id: 'debt-1', ownerId: dummyUser.uid, departmentId: 'agriculture', creditor: 'شركة الأسمدة المتحدة', amount: 200, dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), status: 'partially-paid', payments: [{ amount: 100, date: new Date() }] },
+];
+
+const dummyWorkers: Worker[] = [
+    { id: 'worker-1', ownerId: dummyUser.uid, departmentId: 'agriculture', name: 'عامل المزرعة ١', baseSalary: 150, paidMonths: [{year: new Date().getFullYear(), month: new Date().getMonth()}], transactions: [] },
+];
+
 
 interface UserProfile {
     name?: string;
@@ -35,139 +90,34 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Helper function to create a subscription for a collection owned by the user
-const createUserCollectionSubscription = <T extends { id: string }>(
-    uid: string,
-    collectionName: string,
-    setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (data: DocumentData) => T
-): Unsubscribe => {
-    const q = query(collection(db, collectionName), where("ownerId", "==", uid));
-    return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
-        setData(items);
-    }, (error) => {
-        console.error(`Error fetching ${collectionName}:`, error);
-        setData([]);
-    });
-};
-
-// Helper for public collections that don't have ownerId
-const createPublicCollectionSubscription = <T extends { id: string }>(
-    collectionName: string,
-    setData: React.Dispatch<React.SetStateAction<T[]>>,
-    transform: (data: DocumentData) => T
-): Unsubscribe => {
-    const q = query(collection(db, collectionName));
-    return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => transform({ id: doc.id, ...doc.data() }));
-        setData(items);
-    }, (error) => {
-        console.error(`Error fetching ${collectionName}:`, error);
-        setData([]);
-    });
-};
-
-
 export function AppProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [completedTasks, setCompletedTasks] = useState<ArchivedTask[]>([]);
-    const [allSales, setAllSales] = useState<SalesItem[]>([]);
-    const [archivedSales, setArchivedSales] = useState<ArchivedSale[]>([]);
-    const [allExpenses, setAllExpenses] = useState<ExpenseItem[]>([]);
-    const [archivedExpenses, setArchivedExpenses] = useState<ArchivedExpense[]>([]);
-    const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
-    const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
-    const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
-    const [topics, setTopics] = useState<AgriculturalSection[]>([]);
-    
     useEffect(() => {
-        setLoading(true);
-        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-            if (firebaseUser) {
-                const userDocRef = doc(db, 'users', firebaseUser.uid);
-                const unsubProfile = onSnapshot(userDocRef, (docSnap) => {
-                    const profileData = docSnap.data() as UserProfile;
-                    // Combine auth data with profile data
-                    setUser({ ...firebaseUser, ...profileData });
-                    // Only set loading to false after user profile is fetched
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Error fetching user profile:", error);
-                    setUser(firebaseUser); // Fallback to auth data
-                    setLoading(false);
-                });
+        // Simulate checking auth state and fetching data
+        const timer = setTimeout(() => {
+            setUser(dummyUser);
+            setLoading(false);
+        }, 1500); // 1.5 second delay to simulate loading
 
-                return () => {
-                    unsubProfile();
-                };
-            } else {
-                setUser(null);
-                setLoading(false); // No user, so loading is done
-            }
-        });
-
-        return () => unsubscribeAuth();
+        return () => clearTimeout(timer);
     }, []);
-
-
-    useEffect(() => {
-        // This effect runs when the user object is available or changes.
-        // It sets up all data subscriptions.
-        if (user) {
-            const uid = user.uid;
-            
-            const subscriptions = [
-                createUserCollectionSubscription<Task>(uid, 'tasks', setTasks, d => ({ ...d, dueDate: d.dueDate.toDate() }) as Task),
-                createUserCollectionSubscription<ArchivedTask>(uid, 'completed_tasks', setCompletedTasks, d => ({ ...d, dueDate: d.dueDate.toDate(), completedAt: d.completedAt.toDate() }) as ArchivedTask),
-                createUserCollectionSubscription<SalesItem>(uid, 'sales', setAllSales, d => ({ ...d, date: d.date.toDate() }) as SalesItem),
-                createUserCollectionSubscription<ArchivedSale>(uid, 'archive_sales', setArchivedSales, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedSale),
-                createUserCollectionSubscription<ExpenseItem>(uid, 'expenses', setAllExpenses, d => ({ ...d, date: d.date.toDate() }) as ExpenseItem),
-                createUserCollectionSubscription<ArchivedExpense>(uid, 'archive_expenses', setArchivedExpenses, d => ({ ...d, date: d.date.toDate(), archivedAt: d.archivedAt.toDate() }) as ArchivedExpense),
-                createUserCollectionSubscription<DebtItem>(uid, 'debts', setAllDebts, d => ({ ...d, dueDate: d.dueDate ? d.dueDate.toDate() : null, payments: (d.payments || []).map((p: any) => ({ ...p, date: p.date.toDate() })) }) as DebtItem),
-                createUserCollectionSubscription<ArchivedDebt>(uid, 'archive_debts', setArchivedDebts, d => ({ ...d, archivedAt: d.archivedAt.toDate(), dueDate: d.dueDate ? d.dueDate.toDate() : null }) as ArchivedDebt),
-                createUserCollectionSubscription<Worker>(uid, 'workers', setAllWorkers, d => ({...d, transactions: (d.transactions || []).map((t: any) => ({...t, date: t.date.toDate()}))}) as Worker),
-                
-                // Public data subscription (no ownerId needed)
-                createPublicCollectionSubscription<AgriculturalSection>('data', setTopics, d => d as AgriculturalSection)
-            ];
-
-            // Cleanup function to unsubscribe from all listeners when user logs out
-            return () => {
-                subscriptions.forEach(unsub => unsub());
-            };
-        } else {
-             // If there is no user, clear all private data
-             setTasks([]);
-             setCompletedTasks([]);
-             setAllSales([]);
-             setArchivedSales([]);
-             setAllExpenses([]);
-             setArchivedExpenses([]);
-             setAllDebts([]);
-             setArchivedDebts([]);
-             setAllWorkers([]);
-             // We can keep public data like topics if we want
-        }
-    }, [user]); // This effect depends only on the user object
 
     const value = useMemo(() => ({
         user,
         loading,
-        tasks,
-        completedTasks,
-        allSales,
-        archivedSales,
-        allExpenses,
-        archivedExpenses,
-        allDebts,
-        archivedDebts,
-        allWorkers,
-        topics,
-    }), [user, loading, tasks, completedTasks, allSales, archivedSales, allExpenses, archivedExpenses, allDebts, archivedDebts, allWorkers, topics]);
+        tasks: dummyTasks,
+        completedTasks: dummyCompletedTasks,
+        allSales: dummySales,
+        archivedSales: [],
+        allExpenses: dummyExpenses,
+        archivedExpenses: [],
+        allDebts: dummyDebts,
+        archivedDebts: [],
+        allWorkers: dummyWorkers,
+        topics: initialAgriculturalSections,
+    }), [user, loading]);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
