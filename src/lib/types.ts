@@ -77,9 +77,7 @@ export interface DebtItem extends BaseItem {
 }
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-export interface ArchivedDebt extends Omit<DebtItem, 'id' | 'ownerId'> {
-    id: string;
-    ownerId: string;
+export interface ArchivedDebt extends DebtItem {
     archivedAt: Date;
 }
 

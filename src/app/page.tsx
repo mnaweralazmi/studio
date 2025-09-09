@@ -1,16 +1,15 @@
 
+"use client";
+
 import * as React from 'react';
 import { Leaf, PlayCircle, BookOpen, Droplets, FlaskConical, Bug, Scissors, Sprout } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getTopics } from '@/lib/data-fetching'; // Switched to server-side data fetching
-import ar from '@/locales/ar.json';
-import en from '@/locales/en.json';
-
-// Define translations directly for server component
-const translations = { ar, en };
+import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/context/language-context';
+import { useAppContext } from '@/context/app-context';
 
 const iconComponents: { [key: string]: React.ElementType } = {
   Droplets,
@@ -21,21 +20,43 @@ const iconComponents: { [key: string]: React.ElementType } = {
   Leaf
 };
 
-// This is now a Server Component
-export default async function Home() {
-  const lang = 'ar'; // Defaulting to Arabic on the server, language can be passed via params later
-  const t = (key: keyof typeof ar, params?: Record<string, string>): string => {
-    let translation = translations[lang][key] || translations['en'][key] || key;
-    if (params) {
-      Object.keys(params).forEach(pKey => {
-        translation = translation.replace(`{${pKey}}`, params[pKey]);
-      });
-    }
-    return translation;
-  };
-
-  const topics = await getTopics();
+export default function Home() {
+  const { t } = useLanguage();
+  const { topics, loading } = useAppContext();
   
+  if (loading) {
+    return (
+        <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
+          <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">
+             <header className="space-y-4 text-center">
+              <Skeleton className="h-10 w-48 mx-auto" />
+              <Skeleton className="h-16 w-3/4 mx-auto" />
+              <Skeleton className="h-6 w-1/2 mx-auto" />
+            </header>
+            <section className="w-full border-t pt-8">
+              <Skeleton className="h-10 w-64 mb-8" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i} className="h-full flex flex-col">
+                    <Skeleton className="w-full h-40" />
+                    <CardContent className="p-4 flex flex-col flex-1 space-y-4">
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                      <div className="flex flex-col gap-2 mt-auto pt-4">
+                        <Skeleton className="h-9 w-full" />
+                        <Skeleton className="h-9 w-full" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          </div>
+        </main>
+    )
+  }
+
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
       <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-12">

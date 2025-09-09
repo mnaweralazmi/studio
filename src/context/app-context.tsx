@@ -55,6 +55,7 @@ interface AppContextType {
   allDebts: DebtItem[];
   archivedDebts: ArchivedDebt[];
   allWorkers: Worker[];
+  topics: AgriculturalSection[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -90,6 +91,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [allDebts, setAllDebts] = useState<DebtItem[]>([]);
   const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
+  const [topics, setTopics] = useState<AgriculturalSection[]>([]);
 
   const unsubRef = useRef<Record<string, Unsubscribe | null>>({});
 
@@ -131,30 +133,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const userDocRef = doc(db, "users", firebaseUser.uid);
         
-        // Listen for user profile updates first
+        const userDocSnap = await getDoc(userDocRef);
+        const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
+        const currentUser = { ...firebaseUser, ...userProfile } as User;
+        setUser(currentUser);
+
+        // Listen for user profile updates
         const unsubUser = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
           if (docSnap.exists()) {
              const userProfile = docSnap.data() as UserProfile;
+             // Important: merge fresh data from auth and firestore
              setUser(prevUser => ({
                  ...(prevUser || {}),
                  ...firebaseUser,
                  ...userProfile,
              } as User));
           } else {
+             // Handle case where user exists in auth but not firestore (e.g. during registration)
              setUser(firebaseUser as User);
           }
         });
         unsubRef.current['userDoc'] = unsubUser;
-        
-        // Fetch initial user data
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-            const userProfile = userDocSnap.data() as UserProfile;
-            const currentUser = { ...firebaseUser, ...userProfile } as User;
-            setUser(currentUser);
-        } else {
-            setUser(firebaseUser as User);
-        }
 
         // Listen to user-specific collections
         listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
@@ -166,6 +165,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         listenToCollection<DebtItem>('debts', setAllDebts, firebaseUser.uid);
         listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
         listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
+        
+        // Listen to public collections (no UID filter)
+        listenToCollection<AgriculturalSection>('data', setTopics);
 
         setLoading(false);
       } else {
@@ -179,6 +181,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAllDebts([]);
         setArchivedDebts([]);
         setAllWorkers([]);
+        setTopics([]); // Clear public data too on logout
         setLoading(false);
       }
     });
@@ -201,6 +204,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     allDebts,
     archivedDebts,
     allWorkers,
+    topics,
   }), [
     user,
     loading,
@@ -210,9 +214,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     archivedSales,
     allExpenses,
     archivedExpenses,
-allDebts,
+    allDebts,
     archivedDebts,
     allWorkers,
+    topics,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
