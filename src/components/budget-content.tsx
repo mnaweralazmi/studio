@@ -80,8 +80,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
   const fishList = language === 'ar' ? fishListAr : fishListEn;
   
   const salesItems = React.useMemo(() => {
-    return (allSales || [])
-        .filter(item => item.departmentId === departmentId)
+    const list = Array.isArray(allSales) ? allSales : [];
+    return list
+        .filter(item => item?.departmentId === departmentId)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [allSales, departmentId]);
 
@@ -358,5 +359,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
+
+    
 
     

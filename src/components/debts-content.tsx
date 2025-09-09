@@ -82,9 +82,14 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
     const [dueDate, setDueDate] = React.useState<Date | undefined>();
 
     const debts = React.useMemo(() => {
-        return allDebts
-            .filter(item => item.departmentId === departmentId)
-            .sort((a,b) => (a.dueDate ? new Date(a.dueDate).getTime() : Infinity) - (b.dueDate ? new Date(b.dueDate).getTime() : Infinity));
+        const list = Array.isArray(allDebts) ? allDebts : [];
+        return list
+            .filter(item => item?.departmentId === departmentId)
+            .sort((a,b) => {
+                const ta = a?.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+                const tb = b?.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+                return ta - tb;
+            });
     }, [allDebts, departmentId]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -284,3 +289,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
+
+    
+
+    
