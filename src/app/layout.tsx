@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { Providers } from '@/components/providers';
-import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'Kuwaiti Farmer',
@@ -16,10 +15,8 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <body>
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        {children}
+        <Toaster />
       </body>
     </html>
   );
