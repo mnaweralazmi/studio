@@ -136,7 +136,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         if (!user) return;
         
         try {
-            const newTransactionData: Omit<Transaction, 'id' | 'date' | 'month' | 'year'> = {
+            const newTransactionData: Omit<Transaction, 'id' | 'date'> = {
                 type: transaction.type,
                 amount: transaction.amount,
                 description: transaction.description,
@@ -325,3 +325,5 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
+
+    

@@ -84,7 +84,7 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
                         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-md">
                             <div className="space-y-2">
                                 <Label>{t('transactionType')}</Label>
-                                <Select name="type" defaultValue="bonus">
+                                <Select name="type" defaultValue="bonus" required>
                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="bonus">{t('bonus')}</SelectItem>
@@ -117,3 +117,5 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
 }
 
 export const FinancialRecordDialog = React.memo(FinancialRecordDialogComponent);
+
+    
