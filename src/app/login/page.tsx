@@ -67,12 +67,12 @@ export default function LoginPage() {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
-      toast({ title: "تم تسجيل الدخول بنجاح!" });
+      toast({ title: t('loginSuccess' as any) });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "فشل تسجيل الدخول",
-        description: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+        title: t('loginFailed' as any),
+        description: t('loginFailedDesc' as any),
       });
     } finally {
       setIsLoading(false);
@@ -85,23 +85,23 @@ export default function LoginPage() {
     try {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
-        toast({ title: "تم تسجيل الدخول بنجاح!" });
+        toast({ title: t('loginSuccess' as any) });
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
-        let description = "Could not sign you in with Google.";
+        let description = t('googleLoginFailedDesc' as any);
         if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-            description = "The sign-in window was closed. Please try again.";
+            description = t('popupClosedError' as any);
         }
         toast({
             variant: "destructive",
-            title: "Login Failed",
+            title: t('loginFailed' as any),
             description: description,
         });
     } finally {
         setIsGoogleLoading(false);
     }
   }
-  
+
   if (loading || user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
@@ -161,7 +161,7 @@ export default function LoginPage() {
                 </form>
                  <Separator className="my-6">{t('or' as any, {})}</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? t('loading' as any) : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any, {})}</span></> }
+                    {isGoogleLoading ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any, {})}</span></> }
                  </Button>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
@@ -178,5 +178,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
