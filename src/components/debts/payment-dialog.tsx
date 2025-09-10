@@ -10,7 +10,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { HandCoins } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import type { DebtItem } from '@/lib/types';
-import { Label } from '../ui/label';
+import { Label } from '@/components/ui/label';
 
 interface PaymentDialogProps {
     debt: DebtItem;
@@ -99,7 +99,7 @@ export function PaymentDialog({ debt, onConfirm }: PaymentDialogProps) {
                                 <TableBody>
                                     {(debt.payments || []).length > 0 ? debt.payments.map((p, index) => (
                                         <TableRow key={index}>
-                                            <TableCell>{format(new Date(p.date), 'yyyy/MM/dd')}</TableCell>
+                                            <TableCell>{p.date ? format(new Date(p.date), 'yyyy/MM/dd') : '-'}</TableCell>
                                             <TableCell className="text-right font-mono">{p.amount.toFixed(2)}</TableCell>
                                         </TableRow>
                                     )) : (
