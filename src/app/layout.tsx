@@ -1,8 +1,9 @@
+import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata = {
-  title: "App",
-  description: "App",
+export const metadata: Metadata = {
+  title: "مزرعتي",
+  description: "تطبيق لإدارة المزارع والتعليم الزراعي",
 };
 
 export default function RootLayout({
@@ -11,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html>
+    <html lang="ar" dir="rtl">
       <body>{children}</body>
     </html>
   );
