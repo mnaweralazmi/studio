@@ -96,16 +96,17 @@ export default function AddTaskPage() {
             finalDueDate.setHours(hours, minutes);
         }
 
-        const taskData: Omit<TaskData, 'isCompleted'> = {
+        const taskData: TaskData = {
             title: title,
             description: description,
             dueDate: finalDueDate,
+            isCompleted: false,
             isRecurring: isRecurring,
             reminderDays: reminderDays,
             ownerId: user.uid,
         };
 
-        await addTask({ ...taskData, isCompleted: false });
+        await addTask(taskData);
 
         const userRef = doc(db, 'users', user.uid);
         await runTransaction(db, async (transaction) => {

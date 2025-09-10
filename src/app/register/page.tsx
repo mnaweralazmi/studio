@@ -15,7 +15,7 @@ import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleA
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAppContext } from '@/context/app-context';
-
+import { useLanguage } from '@/context/language-context';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -51,6 +51,7 @@ const createNewUserDocument = async (user: User, name?: string | null) => {
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const { user, loading } = useAppContext();
@@ -64,11 +65,11 @@ export default function RegisterPage() {
     event.preventDefault();
     
     if (password !== confirmPassword) {
-        toast({ variant: "destructive", title: "خطأ", description: "كلمتا المرور غير متطابقتين." });
+        toast({ variant: "destructive", title: t("error"), description: t('passwordsDoNotMatch' as any) });
         return;
     }
     if (password.length < 6) {
-        toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
+        toast({ variant: "destructive", title: t("error"), description: t('passwordTooShort' as any) });
         return;
     }
 
@@ -81,20 +82,20 @@ export default function RegisterPage() {
         await createNewUserDocument(user, name);
         
         toast({
-            title: "تم إنشاء الحساب بنجاح!",
-            description: "يمكنك الآن تسجيل الدخول باستخدام حسابك الجديد.",
+            title: t('accountCreatedSuccess' as any),
+            description: t('accountCreatedSuccessDesc' as any),
         });
 
         router.push('/login');
 
     } catch (error: any) {
-        let description = "حدث خطأ ما أثناء إنشاء حسابك.";
+        let description = t('genericRegisterError' as any);
         if (error.code === 'auth/email-already-in-use') {
-            description = "هذا البريد الإلكتروني مستخدم بالفعل.";
+            description = t('emailInUseError' as any);
         }
         toast({
             variant: "destructive",
-            title: "خطأ في التسجيل",
+            title: t('registerError' as any),
             description: description,
         });
     } finally {
@@ -111,12 +112,12 @@ export default function RegisterPage() {
         
         await createNewUserDocument(user, user.displayName);
         
-        toast({ title: "تم تسجيل الدخول بنجاح!" });
+        toast({ title: t('loginSuccess' as any) });
     } catch (error: any) {
         toast({
             variant: "destructive",
-            title: "فشل تسجيل الدخول",
-            description: "لم نتمكن من تسجيل دخولك باستخدام Google.",
+            title: t('loginFailed' as any),
+            description: t('googleLoginFailedDesc' as any),
         });
     } finally {
         setIsGoogleLoading(false);
@@ -128,7 +129,7 @@ export default function RegisterPage() {
         <div className="flex h-screen w-full bg-background items-center justify-center">
              <div className="flex flex-col items-center gap-4 animate-pulse">
                 <Leaf className="h-20 w-20 text-primary" />
-                <p className="text-lg text-muted-foreground">جاري التحميل...</p>
+                <p className="text-lg text-muted-foreground">{t('loading')}</p>
             </div>
         </div>
     );
@@ -139,51 +140,51 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
          <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full mb-6">
             <Leaf className="h-6 w-6 text-primary" />
-            <span className="font-headline text-lg font-semibold text-primary-foreground">مزارع كويتي</span>
+            <span className="font-headline text-lg font-semibold text-primary">{t('kuwaitiFarmer')}</span>
         </div>
         <Card className="w-full">
             <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2">
                     <UserPlus />
-                    إنشاء حساب جديد
+                    {t('createAccount' as any)}
                 </CardTitle>
                 <CardDescription>
-                    أدخل بياناتك لإنشاء حساب جديد.
+                    {t('createAccountDesc' as any)}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={onSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">الاسم</Label>
-                        <Input id="name" placeholder="أدخل اسمك..." value={name} onChange={(e) => setName(e.target.value)} required />
+                    <div className="space-y-2 text-left">
+                        <Label htmlFor="name">{t('fullName')}</Label>
+                        <Input id="name" placeholder={t('enterFullName')} value={name} onChange={(e) => setName(e.target.value)} required />
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="email">البريد الإلكتروني</Label>
+                     <div className="space-y-2 text-left">
+                        <Label htmlFor="email">{t('email')}</Label>
                         <Input id="email" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="password">كلمة المرور</Label>
-                        <Input id="password" type="password" placeholder="اختر كلمة مرور قوية..." value={password} onChange={(e) => setPassword(e.target.value)} required />
+                     <div className="space-y-2 text-left">
+                        <Label htmlFor="password">{t('password' as any)}</Label>
+                        <Input id="password" type="password" placeholder={t('chooseStrongPassword' as any)} value={password} onChange={(e) => setPassword(e.target.value)} required />
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
-                        <Input id="confirmPassword" type="password" placeholder="أعد إدخال كلمة المرور..." value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                     <div className="space-y-2 text-left">
+                        <Label htmlFor="confirmPassword">{t('confirmNewPassword')}</Label>
+                        <Input id="confirmPassword" type="password" placeholder={t('confirmPasswordPlaceholder' as any)} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? "جاري الإنشاء..." : "إنشاء الحساب"}
+                        {isLoading ? t('creatingAccount' as any) : t('createAccount' as any)}
                     </Button>
                 </form>
-                <Separator className="my-6">أو</Separator>
+                <Separator className="my-6">{t('or' as any)}</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? "جاري..." : <><GoogleIcon/> <span className="mx-2">إنشاء حساب باستخدام Google</span></> }
+                    {isGoogleLoading ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('createWithGoogle' as any)}</span></> }
                  </Button>
             </CardContent>
              <CardFooter className="flex flex-col gap-4">
                 <Separator />
                 <p className="text-sm text-muted-foreground">
-                    لديك حساب بالفعل؟{' '}
+                    {t('haveAccount' as any)}{' '}
                     <NextLink href="/login" className="font-semibold text-primary hover:underline">
-                        تسجيل الدخول
+                        {t('login' as any)}
                     </NextLink>
                 </p>
             </CardFooter>

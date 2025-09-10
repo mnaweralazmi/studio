@@ -23,6 +23,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAppContext();
+  const { t } = useLanguage();
   
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
@@ -103,11 +104,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { t } = useLanguage();
   return (
      <LanguageProvider>
         <AppHtml>{children}</AppHtml>
     </LanguageProvider>
   );
 }
-

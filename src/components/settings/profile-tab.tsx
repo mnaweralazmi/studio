@@ -112,7 +112,7 @@ export function ProfileTab() {
         return;
       }
       if (newPassword.length < 6) {
-        toast({ variant: "destructive", title: t("error"), description: t('newPassword') + " must be at least 6 characters." });
+        toast({ variant: "destructive", title: t("error"), description: `${t('newPassword')} must be at least 6 characters.` });
         return;
       }
 
@@ -299,5 +299,3 @@ export function ProfileTab() {
     </Card>
   );
 }
-
-    

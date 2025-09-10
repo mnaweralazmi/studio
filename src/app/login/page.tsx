@@ -102,7 +102,7 @@ export default function LoginPage() {
     }
   }
   
-  if (loading) {
+  if (loading || user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
              <div className="flex flex-col items-center gap-4 animate-pulse">
