@@ -46,7 +46,7 @@ export interface User extends FirebaseUser, UserProfile {}
 
 interface AppContextType {
   user: User | null;
-  loading: boolean; // True while waiting for user auth AND profile data
+  loading: boolean;
   tasks: Task[];
   completedTasks: ArchivedTask[];
   allSales: SalesItem[];
@@ -169,7 +169,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     });
 
-    // --- Public data listener (can run independently) ---
     const initializePublicData = async () => {
         try {
             const dataColRef = collection(db, 'data');

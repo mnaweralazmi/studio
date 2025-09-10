@@ -240,7 +240,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-green-600">{totalSalariesThisYear.toFixed(2)} {t('dinar')}</div>
-                    <p className="text-xs text-muted-foreground">{t('totalSalariesPaidThisYearDesc')} {currentYear}</p>
+                    <p className="text-xs text-muted-foreground">{`${t('totalSalariesPaidThisYearDesc')} ${currentYear}`}</p>
                 </CardContent>
             </Card>
              <Card>
@@ -250,7 +250,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-destructive">{totalUnpaidSalariesThisMonth.toFixed(2)} {t('dinar')}</div>
-                    <p className="text-xs text-muted-foreground">{t('unpaidSalariesThisMonthDesc')} {months.find(m => m.value === currentMonth)?.label}</p>
+                    <p className="text-xs text-muted-foreground">{`${t('unpaidSalariesThisMonthDesc')} ${months.find(m => m.value === currentMonth)?.label || ''}`}</p>
                 </CardContent>
             </Card>
         </div>
