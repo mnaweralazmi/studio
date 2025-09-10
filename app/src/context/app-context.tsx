@@ -126,11 +126,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
   
-  const unsubscribersRef = useRef<Unsubscribe[]>([]);
+  const dataUnsubscribersRef = useRef<Unsubscribe[]>([]);
 
-  const clearAllListeners = useCallback(() => {
-    unsubscribersRef.current.forEach(unsub => unsub());
-    unsubscribersRef.current = [];
+  const clearDataListeners = useCallback(() => {
+    dataUnsubscribersRef.current.forEach(unsub => unsub());
+    dataUnsubscribersRef.current = [];
   }, []);
   
   const resetAllData = useCallback(() => {
@@ -143,79 +143,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAllDebts([]);
     setArchivedDebts([]);
     setAllWorkers([]);
-    // Public data like 'topics' is not reset here intentionally
   }, []);
-
-  const listenToCollection = useCallback(<T,>(
-    collectionName: string,
-    setter: React.Dispatch<React.SetStateAction<T[]>>,
-    uid: string
-  ) => {
-    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
-    const q = query(colRef, where("ownerId", "==", uid));
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const data = mapSnapshot<T>(snapshot);
-      setter(data);
-    }, (error) => {
-      console.error(`Error listening to ${collectionName}:`, error);
-      setter([]);
-    });
-    unsubscribersRef.current.push(unsub);
-  }, []);
-  
-  const listenToPublicCollection = useCallback(<T,>(
-    collectionName: string,
-    setter: React.Dispatch<React.SetStateAction<T[]>>
-  ) => {
-    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
-    const q = query(colRef);
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const data = mapSnapshot<T>(snapshot);
-      setter(data);
-    }, (error) => {
-      console.error(`Error listening to public ${collectionName}:`, error);
-      setter([]);
-    });
-    unsubscribersRef.current.push(unsub);
-  }, []);
-
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-        clearAllListeners();
+    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+        clearDataListeners();
         resetAllData();
-
+        
         if (firebaseUser) {
             const userDocRef = doc(db, "users", firebaseUser.uid);
-            
             const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
                 const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
                 const fullUser: User = { ...firebaseUser, ...userProfile };
                 setUser(fullUser);
-
-                // --- Start listening to user-specific data ONLY after user is fully loaded ---
-                listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
-                listenToCollection<ArchivedTask>('completed_tasks', setCompletedTasks, firebaseUser.uid);
-                listenToCollection<SalesItem>('sales', setAllSales, firebaseUser.uid);
-                listenToCollection<ArchivedSale>('archive_sales', setArchivedSales, firebaseUser.uid);
-                listenToCollection<ExpenseItem>('expenses', setAllExpenses, firebaseUser.uid);
-                listenToCollection<ArchivedExpense>('archive_expenses', setArchivedExpenses, firebaseUser.uid);
-                listenToCollection<DebtItem>('debts', setAllDebts, firebaseUser.uid);
-                listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
-                listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
-                
-                setLoading(false); // User data is loaded
+                setLoading(false);
             }, (error) => {
                 console.error("Error listening to user document:", error);
                 setUser(firebaseUser as User); 
                 setLoading(false);
             });
-            unsubscribersRef.current.push(unsubUser);
+            dataUnsubscribersRef.current.push(unsubUser);
         } else {
             setUser(null);
-            setLoading(false); // No user, stop loading
+            setLoading(false);
         }
     });
 
@@ -240,13 +190,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     };
     initializePublicData();
-    listenToPublicCollection<AgriculturalSection>('data', setTopics);
+    const unsubTopics = onSnapshot(query(collection(db, 'data')), (snapshot) => {
+      setTopics(mapSnapshot<AgriculturalSection>(snapshot));
+    }, error => console.error("Error listening to public 'data' collection:", error));
 
     return () => {
       unsubAuth();
-      clearAllListeners();
+      unsubTopics();
+      clearDataListeners();
     };
-  }, [clearAllListeners, listenToCollection, resetAllData, listenToPublicCollection]);
+  }, [clearDataListeners, resetAllData]);
+
+  // Effect for fetching user-specific data, runs ONLY when user object is available
+  useEffect(() => {
+    if (user) {
+        const listenToCollection = <T,>(
+            collectionName: string,
+            setter: React.Dispatch<React.SetStateAction<T[]>>,
+            uid: string
+        ) => {
+            const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
+            const q = query(colRef, where("ownerId", "==", uid));
+            const unsub = onSnapshot(q, (snapshot) => {
+                setter(mapSnapshot<T>(snapshot));
+            }, (error) => {
+                console.error(`Error listening to ${collectionName}:`, error);
+                setter([]);
+            });
+            dataUnsubscribersRef.current.push(unsub);
+        };
+        
+        listenToCollection<Task>('tasks', setTasks, user.uid);
+        listenToCollection<ArchivedTask>('completed_tasks', setCompletedTasks, user.uid);
+        listenToCollection<SalesItem>('sales', setAllSales, user.uid);
+        listenToCollection<ArchivedSale>('archive_sales', setArchivedSales, user.uid);
+        listenToCollection<ExpenseItem>('expenses', setAllExpenses, user.uid);
+        listenToCollection<ArchivedExpense>('archive_expenses', setArchivedExpenses, user.uid);
+        listenToCollection<DebtItem>('debts', setAllDebts, user.uid);
+        listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, user.uid);
+        listenToCollection<Worker>('workers', setAllWorkers, user.uid);
+    }
+    // This effect intentionally re-runs when the user logs in or out.
+    // The cleanup of listeners is handled in the main useEffect.
+  }, [user]);
 
 
   const value = useMemo<AppContextType>(() => ({
@@ -287,3 +273,5 @@ export const useAppContext = () => {
   }
   return ctx;
 };
+
+    
