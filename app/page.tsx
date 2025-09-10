@@ -1,8 +1,8 @@
-export default function Home() {
+export default function HomePage() {
   return (
-    <main>
-      <h1>التطبيق يعمل الآن</h1>
-      <p>أنا آسف جدًا على المشاكل السابقة. يمكننا الآن إعادة بناء التطبيق من هذه النقطة المستقرة.</p>
-    </main>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold">المواضيع للتعليم</h1>
+      <p className="mt-2 text-gray-700">هنا ستجد مواضيع تعليمية حول الزراعة.</p>
+    </div>
   );
 }
