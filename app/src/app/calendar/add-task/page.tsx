@@ -33,7 +33,7 @@ const vegetableListEn = [ "Tomato", "Cucumber", "Potato", "Onion", "Carrot", "Be
 const fruitListAr = [ "فراولة", "توت", "تين", "عنب", "بطيخ", "شمام", "رمان", "مانجو", "موز", "تفاح", "برتقال", "ليمون" ] as const;
 const fruitListEn = [ "Strawberry", "Berry", "Fig", "Grape", "Watermelon", "Melon", "Pomegranate", "Mango", "Banana", "Apple", "Orange", "Lemon" ] as const;
 
-async function addTask(data: TaskData & { ownerId: string }): Promise<string> {
+async function addTask(data: TaskData): Promise<string> {
     const tasksCollectionRef = collection(db, 'tasks');
     const docRef = await addDoc(tasksCollectionRef, {
         ...data,
@@ -96,7 +96,7 @@ export default function AddTaskPage() {
             finalDueDate.setHours(hours, minutes);
         }
 
-        const taskData: TaskData & { ownerId: string; isCompleted: boolean } = {
+        const taskData: TaskData = {
             title: title,
             description: description,
             dueDate: finalDueDate,
@@ -349,5 +349,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    

@@ -152,7 +152,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             toast({ title: t('workerDeleted') });
         } catch(e) {
             console.error("Error deleting worker: ", e);
-             toast({ variant: "destructive", title: t('error'), description: t('workerDeleted') });
+             toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker" });
         }
     }
   
@@ -319,5 +319,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-
-    

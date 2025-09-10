@@ -299,5 +299,3 @@ export function ProfileTab() {
     </Card>
   );
 }
-
-    

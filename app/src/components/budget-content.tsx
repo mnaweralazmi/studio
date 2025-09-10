@@ -30,7 +30,7 @@ const poultryListEn = ["Broiler Chicken", "Layer Chicken", "Eggs"];
 const fishListAr = ["سبيطي", "هامور", "شعم"];
 const fishListEn = ["Spgre", "Hamour", "Sheim"];
 
-async function addSale(data: SalesItemData & { ownerId: string }): Promise<string> {
+async function addSale(data: SalesItemData): Promise<string> {
     const salesCollectionRef = collection(db, 'sales');
     const docRef = await addDoc(salesCollectionRef, {
         ...data,
@@ -52,10 +52,14 @@ async function archiveSale(sale: SalesItem): Promise<void> {
     batch.delete(originalSaleRef);
 
     const archiveSaleRef = doc(collection(db, 'archive_sales'));
+    
     const archivedSaleData = {
         ...sale,
         archivedAt: Timestamp.now(),
     };
+    // remove id from the object
+    delete (archivedSaleData as any).id;
+
     batch.set(archiveSaleRef, archivedSaleData);
 
     await batch.commit();
@@ -104,7 +108,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     }
 
     const total = quantity * price;
-    const submissionData: SalesItemData & { ownerId: string } = {
+    const submissionData: SalesItemData = {
         product,
         quantity,
         price,
@@ -360,5 +364,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-
-    

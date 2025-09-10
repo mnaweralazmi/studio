@@ -37,7 +37,7 @@ const getInitialCategories = (language: 'ar' | 'en', departmentId: string): Reco
     }
 };
 
-async function addExpense(data: ExpenseItemData & { ownerId: string }): Promise<string> {
+async function addExpense(data: ExpenseItemData): Promise<string> {
     const expensesCollectionRef = collection(db, 'expenses');
     const docRef = await addDoc(expensesCollectionRef, {
         ...data,
@@ -57,6 +57,7 @@ async function archiveExpense(expense: ExpenseItem): Promise<void> {
         ...expense,
         archivedAt: Timestamp.now(),
     };
+    delete (archivedExpenseData as any).id;
     batch.set(archiveExpenseRef, archivedExpenseData);
 
     await batch.commit();
@@ -107,7 +108,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
             return;
         }
         
-        const newExpenseData: ExpenseItemData & { ownerId: string } = {
+        const newExpenseData: ExpenseItemData = {
             date: new Date(),
             type: data.type,
             category: data.category,
@@ -303,5 +304,3 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </div>
     );
 }
-
-    

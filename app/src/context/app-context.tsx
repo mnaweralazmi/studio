@@ -126,11 +126,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
   
-  const unsubscribersRef = useRef<Unsubscribe[]>([]);
+  const dataUnsubscribersRef = useRef<Unsubscribe[]>([]);
 
   const clearDataListeners = useCallback(() => {
-    unsubscribersRef.current.forEach(unsub => unsub());
-    unsubscribersRef.current = [];
+    dataUnsubscribersRef.current.forEach(unsub => unsub());
+    dataUnsubscribersRef.current = [];
   }, []);
   
   const resetAllData = useCallback(() => {
@@ -146,6 +146,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+        clearDataListeners();
+        resetAllData();
+        
+        if (firebaseUser) {
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
+                const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
+                const fullUser: User = { ...firebaseUser, ...userProfile };
+                setUser(fullUser);
+                setLoading(false);
+            }, (error) => {
+                console.error("Error listening to user document:", error);
+                setUser(firebaseUser as User); 
+                setLoading(false);
+            });
+            dataUnsubscribersRef.current.push(unsubUser);
+        } else {
+            setUser(null);
+            setLoading(false);
+        }
+    });
+
     const initializePublicData = async () => {
         try {
             const dataColRef = collection(db, 'data');
@@ -166,41 +189,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     };
     initializePublicData();
-    const unsubTopics = onSnapshot(query(collection(db, 'data')), 
-      (snapshot) => setTopics(mapSnapshot<AgriculturalSection>(snapshot)),
-      (error) => console.error("Error listening to public 'data' collection:", error)
-    );
-    unsubscribersRef.current.push(unsubTopics);
+    const unsubTopics = onSnapshot(query(collection(db, 'data')), (snapshot) => {
+      setTopics(mapSnapshot<AgriculturalSection>(snapshot));
+    }, error => console.error("Error listening to public 'data' collection:", error));
     
-    return () => unsubTopics();
-  }, []);
-  
-  useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-        clearDataListeners();
-        resetAllData();
-        
-        if (firebaseUser) {
-            const userDocRef = doc(db, "users", firebaseUser.uid);
-            const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
-                const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
-                const fullUser: User = { ...firebaseUser, ...userProfile };
-                setUser(fullUser);
-                setLoading(false);
-            }, (error) => {
-                console.error("Error listening to user document:", error);
-                setUser(firebaseUser as User); 
-                setLoading(false);
-            });
-            unsubscribersRef.current.push(unsubUser);
-        } else {
-            setUser(null);
-            setLoading(false);
-        }
-    });
-
     return () => {
       unsubAuth();
+      unsubTopics();
       clearDataListeners();
     };
   }, [clearDataListeners, resetAllData]);
@@ -221,7 +216,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 console.error(`Error listening to ${collectionName}:`, error);
                 setter([]);
             });
-            unsubscribersRef.current.push(unsub);
+            dataUnsubscribersRef.current.push(unsub);
         };
         
         listenToCollection<Task>('tasks', setTasks, user.uid);
@@ -234,15 +229,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, user.uid);
         listenToCollection<Worker>('workers', setAllWorkers, user.uid);
     } else {
+      // Clear all user-specific data when user logs out
       resetAllData();
     }
     
+    // Cleanup listeners when the user object changes (e.g., on logout)
     return () => {
-      if (user) {
+      if (user) { 
         clearDataListeners();
       }
     };
-  }, [user, clearDataListeners, resetAllData]);
+  }, [user, resetAllData, clearDataListeners]);
 
 
   const value = useMemo<AppContextType>(() => ({
@@ -283,5 +280,3 @@ export const useAppContext = () => {
   }
   return ctx;
 };
-
-    

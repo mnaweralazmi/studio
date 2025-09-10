@@ -20,7 +20,7 @@ export interface Task extends BaseItem {
   isRecurring: boolean;
   reminderDays?: number;
 }
-export type TaskData = Omit<Task, 'id' | 'isCompleted' | 'ownerId'>;
+export type TaskData = Omit<Task, 'id'>;
 
 export interface ArchivedTask extends Task {
     completedAt: Date;
@@ -37,7 +37,7 @@ export interface SalesItem extends BaseItem {
   date: Date;
   departmentId: Department;
 }
-export type SalesItemData = Omit<SalesItem, 'id' | 'ownerId'>;
+export type SalesItemData = Omit<SalesItem, 'id'>;
 
 export interface ArchivedSale extends SalesItem {
     archivedAt: Date;
@@ -53,7 +53,7 @@ export interface ExpenseItem extends BaseItem {
   amount: number;
   departmentId: Department;
 }
-export type ExpenseItemData = Omit<ExpenseItem, 'id' | 'ownerId'>;
+export type ExpenseItemData = Omit<ExpenseItem, 'id'>;
 
 export interface ArchivedExpense extends ExpenseItem {
     archivedAt: Date;
@@ -62,7 +62,7 @@ export interface ArchivedExpense extends ExpenseItem {
 
 // ========== FINANCIALS - DEBTS ==========
 export interface Payment {
-  id?: string;
+  id?: string; // Can be optional if not stored as a separate document
   amount: number;
   date: Date;
 }
@@ -70,12 +70,12 @@ export interface Payment {
 export interface DebtItem extends BaseItem {
   creditor: string;
   amount: number;
-  dueDate?: Date | null;
+  dueDate?: Date | null; // Allow null for optional dates
   status: 'unpaid' | 'paid' | 'partially-paid';
   payments: Payment[];
   departmentId: Department;
 }
-export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status' | 'ownerId'>;
+export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
 export interface ArchivedDebt extends DebtItem {
     archivedAt: Date;
@@ -145,5 +145,3 @@ export interface AgriculturalSection {
     videos: VideoSection[];
     ownerId?: string; // Make ownerId optional for public data
 }
-
-    
