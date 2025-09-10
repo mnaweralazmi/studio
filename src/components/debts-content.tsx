@@ -17,9 +17,9 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/context/language-context';
 import { useAppContext } from '@/context/app-context';
-import { PaymentDialog } from './debts/payment-dialog';
-import { Skeleton } from './ui/skeleton';
-import { Label } from './ui/label';
+import { PaymentDialog } from '@/components/debts/payment-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 import { db } from '@/lib/firebase';
 import type { DebtItem, DebtItemData, Department, Payment } from '@/lib/types';
 

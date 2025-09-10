@@ -3,7 +3,6 @@
 
 import * as React from 'react';
 import NextLink from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -49,7 +48,6 @@ const createNewUserDocument = async (user: User) => {
 
 
 export default function LoginPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = React.useState(false);

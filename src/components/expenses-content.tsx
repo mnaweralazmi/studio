@@ -12,8 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Repeat, PlusCircle, TrendingUp, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { useAppContext } from '@/context/app-context';
-import { Skeleton } from './ui/skeleton';
-import { Label } from './ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 import { db } from '@/lib/firebase';
 import type { Department, ExpenseItem, ExpenseItemData } from '@/lib/types';
 
