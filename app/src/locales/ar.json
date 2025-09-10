@@ -360,6 +360,7 @@
     "netProfit": "صافي الربح",
     "incomeVsExpenses": "الدخل مقابل المصروفات",
     "outstandingDebts": "الديون القائمة",
+    "totalUnpaidDebts": "إجمالي الديون غير المسددة",
     "tableProduct": "المنتج",
     "livestockSalesDesc": "تتبع مبيعات الأغنام، الأبقار، الإبل، إلخ.",
     "animalType": "نوع الحيوان",
@@ -437,3 +438,5 @@
     "migrationErrorDesc": "يرجى المحاولة مرة أخرى أو الاتصال بالدعم.",
     "selectDepartmentDesc": "اختر القسم لعرض وإدارة بياناته المالية."
 }
+
+    

@@ -360,6 +360,7 @@
     "netProfit": "Net Profit",
     "incomeVsExpenses": "Income vs. Expenses",
     "outstandingDebts": "Outstanding Debts",
+    "totalUnpaidDebts": "Total unpaid debts",
     "tableProduct": "Product",
     "livestockSalesDesc": "Track sales of sheep, cows, camels, etc.",
     "animalType": "Animal Type",
@@ -437,3 +438,5 @@
     "migrationErrorDesc": "Please try again or contact support.",
     "selectDepartmentDesc": "Select the department to view and manage its financial data."
 }
+
+    

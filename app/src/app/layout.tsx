@@ -17,7 +17,6 @@ const cairo = Cairo({
   display: 'swap',
 });
 
-// Use useLayoutEffect to prevent flash of untranslated content
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
@@ -28,22 +27,18 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   useEffect(() => {
-    // --- App styling setup ---
     const theme = localStorage.getItem("theme") || "theme-green";
     document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
     document.body.classList.add(theme);
 
     const mode = localStorage.getItem("mode") || "dark";
-    const html = document.documentElement;
-    html.classList.remove("light", "dark");
-    html.classList.add(mode);
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(mode);
 
-    html.style.fontFamily = cairo.style.fontFamily;
+    document.documentElement.style.fontFamily = cairo.style.fontFamily;
   }, []);
 
-  // Effect to handle redirection logic
   useEffect(() => {
-    // Don't redirect until loading is fully complete
     if (loading) return;
 
     if (!user && !isAuthPage) {
@@ -56,10 +51,6 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   }, [user, loading, isAuthPage, router]);
 
-  // --- Render logic based on auth state ---
-
-  // 1. Initial loading state for the entire app.
-  // This shows a loader until Firebase auth state is determined.
   if (loading) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
@@ -71,14 +62,11 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // 2. If loading is done AND we are on an auth page, render it.
-  // (The redirection effect above will navigate away if user is already logged in)
-  if (isAuthPage) {
+  if (isAuthPage && !user) {
     return <>{children}<Toaster /></>;
   }
   
-  // 3. If loading is done AND there is a user, show the main app layout.
-  if (user) {
+  if (!isAuthPage && user) {
     return (
         <AppLayout>
             {children}
@@ -87,24 +75,17 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 4. Fallback: If loading is done, no user, and not on an auth page,
-  // the redirection effect will handle it. While it's redirecting,
-  // we can show a loader.
   return (
     <div className="flex h-screen w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
             <Leaf className="h-20 w-20 text-primary" />
-            <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
+            <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
         </div>
     </div>
   );
 }
 
-function AppHtml({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function AppHtml({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
   
   useIsomorphicLayoutEffect(() => {
@@ -114,7 +95,11 @@ function AppHtml({
   
   return (
      <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <head />
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>مزارع كويتي</title>
+      </head>
       <body>
           <AppProvider>
             <RootLayoutContent>{children}</RootLayoutContent>
@@ -135,3 +120,5 @@ export default function RootLayout({
     </LanguageProvider>
   );
 }
+
+    

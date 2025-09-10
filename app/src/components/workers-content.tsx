@@ -52,7 +52,7 @@ async function paySalary(workerId: string, paidMonth: PaidMonth, transactionData
 
 async function addTransaction(workerId: string, transactionData: TransactionFormValues) {
     const workerRef = doc(db, 'workers', workerId);
-    const newTransaction: Omit<Transaction, 'id' | 'date'> & { id?: string; date?: Timestamp } = {
+    const newTransaction: Omit<Transaction, 'date'> & { date: Timestamp; id: string } = {
         ...transactionData,
         id: new Date().toISOString() + Math.random(),
         date: Timestamp.now(),
@@ -319,3 +319,5 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
+
+    

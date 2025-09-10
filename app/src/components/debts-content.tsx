@@ -23,7 +23,7 @@ import { Label } from './ui/label';
 import { db } from '@/lib/firebase';
 import type { DebtItem, DebtItemData, Department, Payment } from '@/lib/types';
 
-async function addDebt(data: DebtItemData): Promise<string> {
+async function addDebt(data: DebtItemData & { ownerId: string }): Promise<string> {
     const debtsCollectionRef = collection(db, 'debts');
     const docRef = await addDoc(debtsCollectionRef, {
         ...data,
@@ -45,7 +45,6 @@ async function archiveDebt(debt: DebtItem): Promise<void> {
     const archivedData: any = {
         ...debt,
         archivedAt: Timestamp.now(),
-        ownerId: debt.ownerId
     };
     
     batch.set(archiveDebtRef, archivedData);
@@ -111,7 +110,7 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
             return;
         }
 
-        const newDebtData: DebtItemData = {
+        const newDebtData: DebtItemData & { ownerId: string } = {
             creditor: data.creditor,
             amount: data.amount,
             dueDate: data.dueDate,
@@ -289,3 +288,5 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
+
+    

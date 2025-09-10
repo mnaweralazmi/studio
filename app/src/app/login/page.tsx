@@ -15,6 +15,7 @@ import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User }
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAppContext } from '@/context/app-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const GoogleIcon = () => (
@@ -66,7 +67,6 @@ export default function LoginPage() {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
       toast({ title: "تم تسجيل الدخول بنجاح!" });
-      // The context listener and useEffect in layout will handle the redirect
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -85,17 +85,12 @@ export default function LoginPage() {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
         toast({ title: "تم تسجيل الدخول بنجاح!" });
-        // The context listener and useEffect in layout will handle the redirect
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
         let description = "Could not sign you in with Google.";
-
         if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
             description = "The sign-in window was closed. Please try again.";
-        } else if (error.code === 'auth/unauthorized-domain') {
-            description = "This domain is not authorized for Google Sign-In. Please add it to the list of authorized domains in your Firebase project settings.";
         }
-        
         toast({
             variant: "destructive",
             title: "Login Failed",
@@ -106,8 +101,6 @@ export default function LoginPage() {
     }
   }
 
-  // Show a loader while the initial auth state is being determined.
-  // The redirect logic is handled in the main RootLayout.
   if (loading || user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
@@ -118,7 +111,6 @@ export default function LoginPage() {
         </div>
     );
   }
-
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4 bg-background">
@@ -185,3 +177,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
