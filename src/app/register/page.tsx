@@ -60,12 +60,6 @@ export default function RegisterPage() {
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
 
-  React.useEffect(() => {
-    if (!loading && user) {
-        router.replace('/');
-    }
-  }, [user, loading, router]);
-
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -119,7 +113,7 @@ export default function RegisterPage() {
         await createNewUserDocument(user, user.displayName);
         
         toast({ title: "تم تسجيل الدخول بنجاح!" });
-        // The context listener and useEffect will handle the redirect
+        // The context listener and useEffect in layout will handle the redirect
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -131,7 +125,9 @@ export default function RegisterPage() {
     }
   }
 
-  if (loading || user) {
+  // Show a loader while the initial auth state is being determined.
+  // The redirect logic is now handled in the main RootLayout.
+  if (loading) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
              <div className="flex flex-col items-center gap-4 animate-pulse">
@@ -200,3 +196,5 @@ export default function RegisterPage() {
     </main>
   );
 }
+
+    

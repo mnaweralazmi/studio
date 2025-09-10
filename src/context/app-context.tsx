@@ -143,83 +143,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAllDebts([]);
     setArchivedDebts([]);
     setAllWorkers([]);
-    setTopics([]);
+    // Public data like 'topics' is not reset here intentionally
   }, []);
-
-  const listenToCollection = useCallback(<T,>(
-    collectionName: string,
-    setter: React.Dispatch<React.SetStateAction<T[]>>,
-    uid: string
-  ) => {
-    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
-    const q = query(colRef, where("ownerId", "==", uid));
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const data = mapSnapshot<T>(snapshot);
-      setter(data);
-    }, (error) => {
-      console.error(`Error listening to ${collectionName}:`, error);
-      setter([]);
-    });
-    unsubscribersRef.current.push(unsub);
-  }, []);
-  
-  const listenToPublicCollection = useCallback(<T,>(
-    collectionName: string,
-    setter: React.Dispatch<React.SetStateAction<T[]>>
-  ) => {
-    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
-    const q = query(colRef);
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const data = mapSnapshot<T>(snapshot);
-      setter(data);
-    }, (error) => {
-      console.error(`Error listening to public ${collectionName}:`, error);
-      setter([]);
-    });
-    unsubscribersRef.current.push(unsub);
-  }, []);
-
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-        clearAllListeners();
-        resetAllData();
+      clearAllListeners();
+      resetAllData();
+      setUser(null);
 
-        if (firebaseUser) {
-            const userDocRef = doc(db, "users", firebaseUser.uid);
-            
-            const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
-                const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
-                const fullUser: User = { ...firebaseUser, ...userProfile };
-                setUser(fullUser);
-
-                // --- Start listening to user-specific data ONLY after user is fully loaded ---
-                listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
-                listenToCollection<ArchivedTask>('completed_tasks', setCompletedTasks, firebaseUser.uid);
-                listenToCollection<SalesItem>('sales', setAllSales, firebaseUser.uid);
-                listenToCollection<ArchivedSale>('archive_sales', setArchivedSales, firebaseUser.uid);
-                listenToCollection<ExpenseItem>('expenses', setAllExpenses, firebaseUser.uid);
-                listenToCollection<ArchivedExpense>('archive_expenses', setArchivedExpenses, firebaseUser.uid);
-                listenToCollection<DebtItem>('debts', setAllDebts, firebaseUser.uid);
-                listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
-                listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
-                
-                setLoading(false); // User data is loaded
-            }, (error) => {
-                console.error("Error listening to user document:", error);
-                setUser(firebaseUser as User); 
-                setLoading(false);
-            });
-            unsubscribersRef.current.push(unsubUser);
-        } else {
-            setUser(null);
-            setLoading(false); // No user, stop loading
-        }
+      if (firebaseUser) {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
+          const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
+          const fullUser: User = { ...firebaseUser, ...userProfile };
+          setUser(fullUser);
+          setLoading(false); // Set loading to false only after user and profile are loaded
+        }, (error) => {
+          console.error("Error listening to user document:", error);
+          setUser(firebaseUser as User); // Fallback to firebaseUser if profile fails
+          setLoading(false);
+        });
+        unsubscribersRef.current.push(unsubUser);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
     });
 
-    // --- Public data listener (can run independently) ---
+    // Public data listener (can run independently)
     const initializePublicData = async () => {
         try {
             const dataColRef = collection(db, 'data');
@@ -240,14 +192,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     };
     initializePublicData();
-    listenToPublicCollection<AgriculturalSection>('data', setTopics);
+    const unsubTopics = onSnapshot(query(collection(db, 'data')), (snapshot) => {
+      setTopics(mapSnapshot<AgriculturalSection>(snapshot));
+    });
+    unsubscribersRef.current.push(unsubTopics);
 
     return () => {
       unsubAuth();
       clearAllListeners();
     };
-  }, [clearAllListeners, listenToCollection, resetAllData, listenToPublicCollection]);
+  }, [clearAllListeners, resetAllData]);
 
+  // Effect to listen to user-specific collections only when a user is present
+  useEffect(() => {
+    if (user) {
+      const listen = <T,>(collectionName: string, setter: React.Dispatch<React.SetStateAction<T[]>>) => {
+        const q = query(collection(db, collectionName), where("ownerId", "==", user.uid));
+        const unsub = onSnapshot(q, (snapshot) => setter(mapSnapshot<T>(snapshot)));
+        unsubscribersRef.current.push(unsub);
+      };
+
+      listen<Task>('tasks', setTasks);
+      listen<ArchivedTask>('completed_tasks', setCompletedTasks);
+      listen<SalesItem>('sales', setAllSales);
+      listen<ArchivedSale>('archive_sales', setArchivedSales);
+      listen<ExpenseItem>('expenses', setAllExpenses);
+      listen<ArchivedExpense>('archive_expenses', setArchivedExpenses);
+      listen<DebtItem>('debts', setAllDebts);
+      listen<ArchivedDebt>('archive_debts', setArchivedDebts);
+      listen<Worker>('workers', setAllWorkers);
+    }
+    // This effect should re-run if the user changes (login/logout)
+  }, [user]);
 
   const value = useMemo<AppContextType>(() => ({
     user,
@@ -287,3 +263,5 @@ export const useAppContext = () => {
   }
   return ctx;
 };
+
+    
