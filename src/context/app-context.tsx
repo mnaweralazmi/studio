@@ -228,9 +228,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, user.uid);
         listenToCollection<Worker>('workers', setAllWorkers, user.uid);
     } else {
+      // Clear all user-specific data when user logs out
       resetAllData();
     }
-
+    
+    // Cleanup listeners when the user object changes (e.g., on logout)
+    return () => {
+      if (!user) { // Only clear user-specific listeners
+        dataUnsubscribersRef.current.forEach(unsub => unsub());
+        dataUnsubscribersRef.current = [];
+      }
+    };
   }, [user, resetAllData]);
 
 

@@ -86,7 +86,11 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AppHtml({ children }: { children: React.ReactNode }) {
+function AppHtml({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   const { language } = useLanguage();
   
   useIsomorphicLayoutEffect(() => {
@@ -106,7 +110,11 @@ function AppHtml({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
      <LanguageProvider>
         <AppHtml>{children}</AppHtml>
