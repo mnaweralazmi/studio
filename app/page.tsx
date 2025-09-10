@@ -9,7 +9,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
+      <header className="space-y-2 text-center">
         <h1 className="text-3xl font-bold text-primary">
           مزارع كويتي
         </h1>
