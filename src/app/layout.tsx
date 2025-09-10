@@ -1,14 +1,7 @@
-"use client";
-
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
-import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect } from 'react';
-import { LanguageProvider, useLanguage } from '@/context/language-context';
+import type { Metadata } from 'next';
 import { Cairo } from 'next/font/google';
-import { Leaf } from 'lucide-react';
-import { AppProvider, useAppContext } from '@/context/app-context';
-import { AppLayout } from '@/components/app-layout';
+import { Providers } from '@/components/providers';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -16,76 +9,20 @@ const cairo = Cairo({
   display: 'swap',
 });
 
-function RootLayoutContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, loading } = useAppContext();
-  const { t } = useLanguage();
-  
-  const isAuthPage = pathname === '/login' || pathname === '/register';
-
-  useEffect(() => {
-    if (loading) {
-      return; 
-    }
-    if (!user && !isAuthPage) {
-      router.replace('/login');
-    }
-    if (user && isAuthPage) {
-      router.replace('/');
-    }
-  }, [user, loading, isAuthPage, router, pathname]);
-  
-  const showLoadingSpinner = loading || (!user && !isAuthPage);
-
-  if (showLoadingSpinner) {
-    return (
-      <div className="flex h-screen w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <Leaf className="h-20 w-20 text-primary" />
-          <p className="text-lg text-muted-foreground">{t('loading')}</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isAuthPage) {
-     return <>{children}</>;
-  }
-  
-  return <AppLayout>{children}</AppLayout>
-}
+export const metadata: Metadata = {
+  title: 'Kuwaiti Farmer',
+  description: 'Your gateway to the world of farming.',
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
-  useEffect(() => {
-    const theme = localStorage.getItem("theme") || "theme-green";
-    document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
-    document.body.classList.add(theme);
-
-    const mode = localStorage.getItem("mode") || "dark";
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(mode);
-  }, []);
-
   return (
-     <html lang="ar" dir="rtl">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Kuwaiti Farmer</title>
-      </head>
-      <body className={`${cairo.className} bg-background text-foreground`}>
-        <LanguageProvider>
-          <AppProvider>
-            <RootLayoutContent>{children}</RootLayoutContent>
-            <Toaster />
-          </AppProvider>
-        </LanguageProvider>
+    <html lang="ar" dir="rtl">
+      <body className={cairo.className}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

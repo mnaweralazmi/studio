@@ -1,27 +1,32 @@
 "use client";
 
 import * as React from 'react';
-import { Leaf } from 'lucide-react';
-import { useLanguage } from '@/context/language-context';
-import { Button } from '@/components/ui/button';
-import { useAppContext } from '@/context/app-context';
+import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useAppContext } from '@/context/app-context';
+import { useLanguage } from '@/context/language-context';
+import { Button } from '@/components/ui/button';
+import { Leaf } from 'lucide-react';
 
 export default function Home() {
-  const { t } = useLanguage();
   const { user, loading } = useAppContext();
+  const { t } = useLanguage();
   const router = useRouter();
+
+  React.useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
   };
-  
+
   if (loading || !user) {
-    // The loading spinner is handled by RootLayoutContent
-    // This prevents flashing the page content before user is confirmed.
+    // The loading screen is handled by the AppProvider
     return null;
   }
 
@@ -39,11 +44,11 @@ export default function Home() {
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
             {t('homeHeaderSubtitle')}
           </p>
-            <div className='pt-4 space-y-4'>
-              <p className='text-lg'>{t('welcome')}, {user.name || user.displayName || user.email}!</p>
-              <p>The application is now on a stable foundation.</p>
-              <Button onClick={handleLogout}>{t('logout')}</Button>
-            </div>
+          <div className='pt-4 space-y-4'>
+            <p className='text-lg'>{t('welcome')}, {user.name || user.displayName || user.email}!</p>
+            <p>The application is now working.</p>
+            <Button onClick={handleLogout}>{t('logout')}</Button>
+          </div>
         </header>
       </div>
     </main>
