@@ -1,5 +1,6 @@
 
 {
+    "welcome": "أهلاً بك",
     "kuwaitiFarmer": "مزارع كويتي",
     "home": "الرئيسية",
     "calendarAndTasks": "التقويم والمهام",
@@ -425,7 +426,7 @@
     "department": "القسم",
     "itemArchived": "تمت الأرشفة!",
     "itemArchivedDesc": "تم نقل البند إلى الأرشيف بنجاح.",
-    "fromMonths": "من الأشهر",
+    "fromMonths": "from months",
     "noSalesYet": "لا توجد مبيعات في هذا القسم بعد.",
     "noExpensesYet": "لا توجد مصروفات في هذا القسم بعد.",
     "noDebtsYet": "لا توجد ديون في هذا القسم بعد.",

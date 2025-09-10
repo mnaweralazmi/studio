@@ -1,9 +1,7 @@
-
 "use client";
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { AppLayout } from '@/components/app-layout';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useLayoutEffect } from 'react';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
@@ -37,7 +35,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     if (user && isAuthPage) {
       router.replace('/');
     }
-  }, [user, loading, isAuthPage, router, pathname]);
+  }, [user, loading, isAuthPage, router]);
 
   if (loading) {
     return (
@@ -50,15 +48,14 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
   
-  if (!user && isAuthPage) {
-    return <>{children}</>;
-  }
-  
-  if (user && !isAuthPage) {
-     return <AppLayout>{children}</AppLayout>;
+  // This covers two cases:
+  // 1. User is logged in, show the app with layout.
+  // 2. User is NOT logged in, but is on an auth page.
+  if ((user && !isAuthPage) || (!user && isAuthPage)) {
+     return <>{children}</>;
   }
 
-  // Fallback loading state for edge cases during redirection
+  // Fallback for edge cases during redirection
   return (
       <div className="flex h-screen w-full bg-background items-center justify-center">
            <div className="flex flex-col items-center gap-4 animate-pulse">
@@ -95,7 +92,7 @@ function AppHtml({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Kuwaiti Farmer</title>
       </head>
-      <body>
+      <body className={cairo.className}>
           <AppProvider>
             <RootLayoutContent>{children}</RootLayoutContent>
             <Toaster />
