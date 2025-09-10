@@ -66,7 +66,7 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
                         <Table>
                             <TableHeader><TableRow><TableHead>{t('tableDate')}</TableHead><TableHead>{t('tableDescription')}</TableHead><TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableAmount')}</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {(worker.transactions || []).length > 0 ? worker.transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
+                                {(worker.transactions || []).length > 0 ? [...worker.transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
                                     <TableRow key={t.id}>
                                         <TableCell>{format(new Date(t.date), 'yyyy/MM/dd')}</TableCell>
                                         <TableCell>{t.description}</TableCell>

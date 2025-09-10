@@ -88,7 +88,8 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   // 4. Fallback: If loading is done, no user, and not on an auth page,
-  // show a message while the redirection effect kicks in.
+  // the redirection effect will handle it. While it's redirecting,
+  // we can show a loader.
   return (
     <div className="flex h-screen w-full bg-background items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -134,5 +135,3 @@ export default function RootLayout({
     </LanguageProvider>
   );
 }
-
-    
