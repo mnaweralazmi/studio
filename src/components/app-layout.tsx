@@ -4,7 +4,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive, Shield } from 'lucide-react';
+import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
 

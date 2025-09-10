@@ -27,67 +27,48 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  useIsomorphicLayoutEffect(() => {
-    const theme = localStorage.getItem("theme") || "theme-green";
-    document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
-    document.body.classList.add(theme);
-
-    const mode = localStorage.getItem("mode") || "dark";
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(mode);
-
-    document.documentElement.style.fontFamily = cairo.style.fontFamily;
-  }, []);
-
   useEffect(() => {
-    if (loading) return; // Wait until loading is false
-
-    // If not loading, and there's no user, and we are not on an auth page, redirect to login
+    if (loading) {
+      return; 
+    }
     if (!user && !isAuthPage) {
       router.replace('/login');
     }
-    
-    // If not loading, and there is a user, and we are on an auth page, redirect to home
     if (user && isAuthPage) {
       router.replace('/');
     }
-  }, [user, loading, isAuthPage, router]);
+  }, [user, loading, isAuthPage, router, pathname]);
 
-
-  // This is the "gatekeeper" logic. It shows a loading screen under these conditions:
-  // 1. The initial `loading` state from the context is true.
-  // 2. We are waiting for the redirect to happen (e.g., a logged-in user on /login).
-  if (loading || (!user && !isAuthPage) || (user && isAuthPage)) {
+  if (loading) {
     return (
-        <div className="flex h-screen w-full bg-background items-center justify-center">
-             <div className="flex flex-col items-center gap-4 animate-pulse">
-                <Leaf className="h-20 w-20 text-primary" />
-                <p className="text-lg text-muted-foreground">{t('loading')}</p>
-            </div>
+      <div className="flex h-screen w-full bg-background items-center justify-center">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <Leaf className="h-20 w-20 text-primary" />
+          <p className="text-lg text-muted-foreground">{t('loading')}</p>
         </div>
+      </div>
     );
   }
   
-  // If we are on an auth page and the logic above has passed, it means we don't have a user.
-  // So we can safely render the auth page content.
-  if (isAuthPage) {
-      return (
-        <>
-          {children}
-          <Toaster />
-        </>
-      );
+  if (!user && isAuthPage) {
+    return <>{children}</>;
+  }
+  
+  if (user && !isAuthPage) {
+     return <AppLayout>{children}</AppLayout>;
   }
 
-  // If we are not on an auth page, and the logic above has passed, it means we have a user.
-  // So we can safely render the main app layout.
+  // Fallback loading state for edge cases during redirection
   return (
-    <AppLayout>
-        {children}
-        <Toaster />
-    </AppLayout>
+      <div className="flex h-screen w-full bg-background items-center justify-center">
+           <div className="flex flex-col items-center gap-4 animate-pulse">
+              <Leaf className="h-20 w-20 text-primary" />
+              <p className="text-lg text-muted-foreground">{t('loading')}</p>
+          </div>
+      </div>
   );
 }
+
 
 function AppHtml({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
@@ -95,6 +76,16 @@ function AppHtml({ children }: { children: React.ReactNode }) {
   useIsomorphicLayoutEffect(() => {
       document.documentElement.lang = language;
       document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+      document.body.style.fontFamily = cairo.style.fontFamily;
+
+      const theme = localStorage.getItem("theme") || "theme-green";
+      document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
+      document.body.classList.add(theme);
+
+      const mode = localStorage.getItem("mode") || "dark";
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(mode);
+
   }, [language]);
   
   return (
@@ -107,6 +98,7 @@ function AppHtml({ children }: { children: React.ReactNode }) {
       <body>
           <AppProvider>
             <RootLayoutContent>{children}</RootLayoutContent>
+            <Toaster />
           </AppProvider>
       </body>
     </html>
