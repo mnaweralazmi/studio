@@ -1,9 +1,17 @@
-import { Calendar, Plus } from "lucide-react";
+import { Plus, Circle, CircleCheck } from "lucide-react";
+import { useEffect, useState } from 'react';
+
 
 export default function TasksPage() {
-  const today = new Date();
-  const day = today.getDate();
-  const month = today.toLocaleString('ar-SA', { month: 'long' });
+  const [dateInfo, setDateInfo] = useState({ day: '', month: ''});
+
+  useEffect(() => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.toLocaleString('ar-SA', { month: 'long' });
+    setDateInfo({ day: String(day), month });
+  }, []);
+
 
   const tasks = [
     { time: "٠٨:٠٠ ص", title: "ري قسم البطاطس", completed: true },
@@ -18,17 +26,17 @@ export default function TasksPage() {
           <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
           <p className="mt-1 text-muted-foreground">جدول مهامك اليومية والأسبوعية.</p>
         </div>
-        <button className="bg-primary text-primary-foreground p-3 rounded-full shadow-lg">
+        <button className="bg-primary text-primary-foreground p-3 rounded-full shadow-lg hover:bg-primary/90 transition-transform active:scale-95">
           <Plus className="h-6 w-6" />
         </button>
       </header>
 
       <div className="bg-card p-4 rounded-xl shadow-md flex items-center space-x-4 rtl:space-x-reverse">
         <div className="flex flex-col items-center justify-center bg-primary/20 text-primary p-4 rounded-lg">
-          <span className="text-3xl font-bold">{day}</span>
-          <span className="font-medium">{month}</span>
+          <span className="text-3xl font-bold">{dateInfo.day || '...'}</span>
+          <span className="font-medium">{dateInfo.month || '...'}</span>
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="text-lg font-semibold text-card-foreground">مهام اليوم</h2>
           <p className="text-muted-foreground">{tasks.filter(t => !t.completed).length} مهام متبقية</p>
         </div>
@@ -38,26 +46,35 @@ export default function TasksPage() {
         {tasks.map((task, index) => (
           <div
             key={index}
-            className={`flex items-center p-4 rounded-lg ${
-              task.completed ? "bg-muted" : "bg-card shadow-sm"
+            className={`flex items-center p-4 rounded-lg transition-all cursor-pointer ${
+              task.completed
+                ? "bg-muted hover:bg-muted/80"
+                : "bg-card shadow-sm hover:bg-secondary"
             }`}
           >
-            <div className="flex flex-col items-center justify-center mr-4">
+            {task.completed ? (
+              <CircleCheck className="h-6 w-6 text-green-500 ml-4" />
+            ) : (
+              <Circle className="h-6 w-6 text-muted-foreground ml-4" />
+            )}
+            <div className="flex flex-col">
+              <p
+                className={`font-medium ${
+                  task.completed
+                    ? "text-muted-foreground line-through"
+                    : "text-card-foreground"
+                }`}
+              >
+                {task.title}
+              </p>
               <span
-                className={`font-semibold ${
+                className={`text-sm ${
                   task.completed ? "text-muted-foreground" : "text-primary"
                 }`}
               >
                 {task.time}
               </span>
             </div>
-            <p
-              className={`font-medium ${
-                task.completed ? "text-muted-foreground line-through" : "text-card-foreground"
-              }`}
-            >
-              {task.title}
-            </p>
           </div>
         ))}
       </div>

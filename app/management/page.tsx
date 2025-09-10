@@ -2,10 +2,10 @@ import { DollarSign, ShoppingCart, HandCoins, User } from "lucide-react";
 
 export default function ManagementPage() {
   const managementItems = [
-    { title: "المصاريف", icon: DollarSign, color: "text-red-600" },
-    { title: "المبيعات", icon: ShoppingCart, color: "text-green-600" },
-    { title: "الديون", icon: HandCoins, color: "text-yellow-600" },
-    { title: "العمال", icon: User, color: "text-blue-600" },
+    { title: "المصاريف", icon: DollarSign, color: "text-primary" },
+    { title: "المبيعات", icon: ShoppingCart, color: "text-primary" },
+    { title: "الديون", icon: HandCoins, color: "text-primary" },
+    { title: "العمال", icon: User, color: "text-primary" },
   ];
 
   return (
@@ -20,7 +20,7 @@ export default function ManagementPage() {
         {managementItems.map((item) => (
           <div
             key={item.title}
-            className="bg-card p-6 rounded-xl shadow-md flex flex-col items-center justify-center space-y-3 hover:bg-secondary transition-all"
+            className="bg-card p-6 rounded-xl shadow-md flex flex-col items-center justify-center space-y-3 hover:bg-secondary transition-all cursor-pointer"
           >
             <item.icon className={`h-10 w-10 ${item.color}`} />
             <h2 className="text-lg font-semibold text-card-foreground">
