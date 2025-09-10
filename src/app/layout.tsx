@@ -40,17 +40,23 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading) return; 
+    if (loading) return; // Wait until loading is false
 
+    // If not loading, and there's no user, and we are not on an auth page, redirect to login
     if (!user && !isAuthPage) {
       router.replace('/login');
     }
     
+    // If not loading, and there is a user, and we are on an auth page, redirect to home
     if (user && isAuthPage) {
       router.replace('/');
     }
   }, [user, loading, isAuthPage, router]);
 
+
+  // This is the "gatekeeper" logic. It shows a loading screen under these conditions:
+  // 1. The initial `loading` state from the context is true.
+  // 2. We are waiting for the redirect to happen (e.g., a logged-in user on /login).
   if (loading || (!user && !isAuthPage) || (user && isAuthPage)) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
@@ -62,6 +68,8 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
   
+  // If we are on an auth page and the logic above has passed, it means we don't have a user.
+  // So we can safely render the auth page content.
   if (isAuthPage) {
       return (
         <>
@@ -71,6 +79,8 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       );
   }
 
+  // If we are not on an auth page, and the logic above has passed, it means we have a user.
+  // So we can safely render the main app layout.
   return (
     <AppLayout>
         {children}

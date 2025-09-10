@@ -104,8 +104,8 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 await updateWorker(workerId, data);
                 toast({ title: t('workerUpdatedSuccess') });
             } else {
-                const newWorkerData = { ...data, ownerId: user.uid, departmentId: departmentId, paidMonths: [], transactions: [] };
-                await addWorker(newWorkerData);
+                const newWorkerData = { ...data, ownerId: user.uid, departmentId: departmentId };
+                await addWorker(newWorkerData as any);
                 toast({ title: t('workerAddedSuccess') });
             }
         } catch (e) {
