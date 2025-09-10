@@ -42,6 +42,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='hsl(var(--primary) / 0.1)'%3e%3cpath d='M18 14c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4v2'/%3e%3cpath d='M10 14h.01'/%3e%3cpath d='M14 14h.01'/%3e%3cpath d='M18 14h.01'/%3e%3cpath d='M22 14c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4v2'/%3e%3cpath d='M14 14h.01'/%3e%3cpath d='M18 14h.01'/%3e%3cpath d='M22 14h.01'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='hsl(var(--primary) / 0.1)'%3e%3cpath d='M8 20c0-4.42 3.58-8 8-8s8 3.58 8 8c0 2.21-1.79 4-4 4-1.29 0-2.45-.61-3.21-1.57C15.82 23.39 15 24.62 15 26c0 2.21-1.79 4-4 4s-4-1.79-4-4c0-1.38.69-2.61 1.79-3.37C7.81 22.45 7 21.29 7 20zm8-8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM2 12c0 4.42 3.58 8 8 8s8-3.58 8-8c0-2.21-1.79-4-4-4-1.29 0-2.45.61-3.21 1.57C9.82 8.61 9 7.38 9 6c0-2.21-1.79-4-4-4S1 3.79 1 6c0 1.38.69 2.61 1.79 3.37C1.81 9.55 1 10.71 1 12z'/%3e%3c/svg%3e");
   }
 }
