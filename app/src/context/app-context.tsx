@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, useMemo, useRef } from "react";
+import React, { createContext, useState, useContext, useEffect, useMemo, useRef, useCallback } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
   collection,
@@ -62,36 +62,36 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
+const initialAgriculturalSections: Omit<AgriculturalSection, 'id' | 'ownerId'>[] = [
     {
-      titleKey: "topicIrrigation", descriptionKey: "topicIrrigationDesc", iconName: 'Droplets', image: 'https://picsum.photos/400/200', hint: 'watering plants', subTopics: [
-        { id: '1-1', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://picsum.photos/400/200', hint: 'drip irrigation' },
-        { id: '1-2', titleKey: 'subTopicSprinklerIrrigation', descriptionKey: 'subTopicSprinklerIrrigationDesc', image: 'https://picsum.photos/400/200', hint: 'sprinkler irrigation' },
-      ], videos: [ { id: 'v-1', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'gardening basics' } ]
+      titleKey: "topicIrrigation", descriptionKey: "topicIrrigationDesc", iconName: 'Droplets', image: 'https://picsum.photos/seed/topic1/400/200', hint: 'watering plants', subTopics: [
+        { id: '1-1', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://picsum.photos/seed/subtopic1/400/200', hint: 'drip irrigation' },
+        { id: '1-2', titleKey: 'subTopicSprinklerIrrigation', descriptionKey: 'subTopicSprinklerIrrigationDesc', image: 'https://picsum.photos/seed/subtopic2/400/200', hint: 'sprinkler irrigation' },
+      ], videos: [ { id: 'v-1', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/seed/video1/400/200', videoUrl: '#', hint: 'gardening basics' } ]
     },
     {
-      titleKey: "topicFertilization", descriptionKey: "topicFertilizationDesc", iconName: 'FlaskConical', image: 'https://picsum.photos/400/200', hint: 'fertilizer', subTopics: [
-         { id: '5-1', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://picsum.photos/400/200', hint: 'fertilizer types' },
-      ], videos: [ { id: 'v-2', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'compost bin' } ]
+      titleKey: "topicFertilization", descriptionKey: "topicFertilizationDesc", iconName: 'FlaskConical', image: 'https://picsum.photos/seed/topic2/400/200', hint: 'fertilizer', subTopics: [
+         { id: '5-1', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://picsum.photos/seed/subtopic3/400/200', hint: 'fertilizer types' },
+      ], videos: [ { id: 'v-2', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://picsum.photos/seed/video2/400/200', videoUrl: '#', hint: 'compost bin' } ]
     },
     {
-      titleKey: "topicPests", descriptionKey: "topicPestsDesc", iconName: 'Bug', image: 'https://picsum.photos/400/200', hint: 'insect pest', subTopics: [
-        { id: '2-1', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://picsum.photos/400/200', hint: 'ladybug pests' },
-        { id: '2-2', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://picsum.photos/400/200', hint: 'spraying pesticides' },
-      ], videos: [ { id: 'v-5', titleKey: 'videoPestControl', durationKey: 'videoDuration18', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'pest control' } ]
+      titleKey: "topicPests", descriptionKey: "topicPestsDesc", iconName: 'Bug', image: 'https://picsum.photos/seed/topic3/400/200', hint: 'insect pest', subTopics: [
+        { id: '2-1', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://picsum.photos/seed/subtopic4/400/200', hint: 'ladybug pests' },
+        { id: '2-2', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://picsum.photos/seed/subtopic5/400/200', hint: 'spraying pesticides' },
+      ], videos: [ { id: 'v-5', titleKey: 'videoPestControl', durationKey: 'videoDuration18', image: 'https://picsum.photos/seed/video3/400/200', videoUrl: '#', hint: 'pest control' } ]
     },
     {
-      titleKey: "topicPruning", descriptionKey: "topicPruningDesc", iconName: 'Scissors', image: 'https://picsum.photos/400/200', hint: 'pruning shears', subTopics: [
-        { id: '3-1', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://picsum.photos/400/200', hint: 'young tree' },
-      ], videos: [ { id: 'v-3', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'tomato plant' } ]
+      titleKey: "topicPruning", descriptionKey: "topicPruningDesc", iconName: 'Scissors', image: 'https://picsum.photos/seed/topic4/400/200', hint: 'pruning shears', subTopics: [
+        { id: '3-1', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://picsum.photos/seed/subtopic6/400/200', hint: 'young tree' },
+      ], videos: [ { id: 'v-3', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://picsum.photos/seed/video4/400/200', videoUrl: '#', hint: 'tomato plant' } ]
     },
     {
-      titleKey: "topicSoil", descriptionKey: "topicSoilDesc", iconName: 'Sprout', image: 'https://picsum.photos/400/200', hint: 'rich soil', subTopics: [
-         { id: '4-1', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://picsum.photos/400/200', hint: 'soil test' },
-      ], videos: [ { id: 'v-4', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'gardening tools' } ]
+      titleKey: "topicSoil", descriptionKey: "topicSoilDesc", iconName: 'Sprout', image: 'https://picsum.photos/seed/topic5/400/200', hint: 'rich soil', subTopics: [
+         { id: '4-1', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://picsum.photos/seed/subtopic7/400/200', hint: 'soil test' },
+      ], videos: [ { id: 'v-4', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/seed/video5/400/200', videoUrl: '#', hint: 'gardening tools' } ]
     },
-    { titleKey: "topicSeeds", descriptionKey: "topicSeedsDesc", iconName: 'Sprout', image: 'https://picsum.photos/400/200', hint: 'seeds planting', subTopics: [], videos: [] },
-    { titleKey: "topicHarvesting", descriptionKey: "topicHarvestingDesc", iconName: 'Leaf', image: 'https://picsum.photos/400/200', hint: 'harvest basket', subTopics: [], videos: [] }
+    { titleKey: "topicSeeds", descriptionKey: "topicSeedsDesc", iconName: 'Sprout', image: 'https://picsum.photos/seed/topic6/400/200', hint: 'seeds planting', subTopics: [], videos: [] },
+    { titleKey: "topicHarvesting", descriptionKey: "topicHarvestingDesc", iconName: 'Leaf', image: 'https://picsum.photos/seed/topic7/400/200', hint: 'harvest basket', subTopics: [], videos: [] }
 ];
 
 
@@ -127,103 +127,112 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [archivedDebts, setArchivedDebts] = useState<ArchivedDebt[]>([]);
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [topics, setTopics] = useState<AgriculturalSection[]>([]);
+  
+  const unsubscribersRef = useRef<Unsubscribe[]>([]);
 
-  const unsubRef = useRef<Record<string, Unsubscribe | null>>({});
+  const clearAllListeners = useCallback(() => {
+    unsubscribersRef.current.forEach(unsub => unsub());
+    unsubscribersRef.current = [];
+  }, []);
+  
+  const resetAllData = useCallback(() => {
+    setTasks([]);
+    setCompletedTasks([]);
+    setAllSales([]);
+    setArchivedSales([]);
+    setAllExpenses([]);
+    setArchivedExpenses([]);
+    setAllDebts([]);
+    setArchivedDebts([]);
+    setAllWorkers([]);
+    setTopics([]);
+  }, []);
 
-  const listenToCollection = <T,>(
+  const listenToCollection = useCallback(<T,>(
     collectionName: string,
     setter: React.Dispatch<React.SetStateAction<T[]>>,
     uid?: string
   ) => {
-    const key = uid ? `${collectionName}-${uid}` : collectionName;
-    if (unsubRef.current[key]) {
-      unsubRef.current[key]!();
+    try {
+        const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
+        const q = uid ? query(colRef, where("ownerId", "==", uid)) : query(colRef);
+
+        const unsub = onSnapshot(q, (snapshot) => {
+          const data = mapSnapshot<T>(snapshot);
+          setter(data);
+        }, (error) => {
+          console.error(`Error listening to ${collectionName}:`, error);
+          setter([]);
+        });
+        unsubscribersRef.current.push(unsub);
+    } catch (error) {
+        console.error(`Failed to set up listener for ${collectionName}:`, error);
     }
-
-    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
-    const q = uid ? query(colRef, where("ownerId", "==", uid)) : query(colRef);
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const data = mapSnapshot<T>(snapshot);
-      setter(data);
-    }, (error) => {
-      console.error(`Error listening to ${collectionName}:`, error);
-      setter([]);
-    });
-    unsubRef.current[key] = unsub;
-  };
-
-  const clearAllListeners = () => {
-    Object.values(unsubRef.current).forEach((unsub) => {
-      if (unsub) unsub();
-    });
-    unsubRef.current = {};
-  };
-
+  }, []);
+  
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      clearAllListeners();
-      if (firebaseUser) {
-        setLoading(true);
+        clearAllListeners();
+        resetAllData();
 
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        
-        unsubRef.current['userDoc'] = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
-          const userProfile = docSnap.exists() ? (docSnap.data() as UserProfile) : {};
-          setUser({ ...firebaseUser, ...userProfile } as User);
-        }, (error) => {
-            console.error("Error listening to user document:", error);
-            setUser(firebaseUser as User); 
-        });
+        if (firebaseUser) {
+            setLoading(true);
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            
+            const unsubUser = onSnapshot(userDocRef, async (userDocSnap) => {
+                const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
+                const fullUser = { ...firebaseUser, ...userProfile };
+                setUser(fullUser);
 
-        // Listen to user-specific collections
-        listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
-        listenToCollection<ArchivedTask>('completed_tasks', setCompletedTasks, firebaseUser.uid);
-        listenToCollection<SalesItem>('sales', setAllSales, firebaseUser.uid);
-        listenToCollection<ArchivedSale>('archive_sales', setArchivedSales, firebaseUser.uid);
-        listenToCollection<ExpenseItem>('expenses', setAllExpenses, firebaseUser.uid);
-        listenToCollection<ArchivedExpense>('archive_expenses', setArchivedExpenses, firebaseUser.uid);
-        listenToCollection<DebtItem>('debts', setAllDebts, firebaseUser.uid);
-        listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
-        listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
-        
-        // Listen to public data and populate if empty
-        const dataColRef = collection(db, 'data');
-        const q = query(dataColRef, limit(1));
-        const dataSnap = await getDocs(q);
+                // Now that we have the full user object, start listening to other collections
+                listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
+                listenToCollection<ArchivedTask>('completed_tasks', setCompletedTasks, firebaseUser.uid);
+                listenToCollection<SalesItem>('sales', setAllSales, firebaseUser.uid);
+                listenToCollection<ArchivedSale>('archive_sales', setArchivedSales, firebaseUser.uid);
+                listenToCollection<ExpenseItem>('expenses', setAllExpenses, firebaseUser.uid);
+                listenToCollection<ArchivedExpense>('archive_expenses', setArchivedExpenses, firebaseUser.uid);
+                listenToCollection<DebtItem>('debts', setAllDebts, firebaseUser.uid);
+                listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
+                listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
+                
+                // Handle public data
+                try {
+                    const dataColRef = collection(db, 'data');
+                    const q = query(dataColRef, limit(1));
+                    const dataSnap = await getDocs(q);
 
-        if (dataSnap.empty) {
-            const batch = writeBatch(db);
-            initialAgriculturalSections.forEach((topic, index) => {
-                const newTopicRef = doc(dataColRef, (index + 1).toString());
-                batch.set(newTopicRef, topic);
+                    if (dataSnap.empty) {
+                        const batch = writeBatch(db);
+                        initialAgriculturalSections.forEach((topic) => {
+                            const newTopicRef = doc(collection(db, 'data'));
+                            batch.set(newTopicRef, topic);
+                        });
+                        await batch.commit();
+                    }
+                } catch (error) {
+                     console.error("Failed to initialize public data:", error);
+                }
+                listenToCollection<AgriculturalSection>('data', setTopics);
+
+                setLoading(false);
+            }, (error) => {
+                console.error("Error listening to user document:", error);
+                setUser(firebaseUser as User); 
+                setLoading(false);
             });
-            await batch.commit();
+            unsubscribersRef.current.push(unsubUser);
+        } else {
+            setUser(null);
+            setLoading(false);
         }
-        listenToCollection<AgriculturalSection>('data', setTopics);
-
-        setLoading(false);
-      } else {
-        setUser(null);
-        setTasks([]);
-        setCompletedTasks([]);
-        setAllSales([]);
-        setArchivedSales([]);
-        setAllExpenses([]);
-        setArchivedExpenses([]);
-        setAllDebts([]);
-        setArchivedDebts([]);
-        setAllWorkers([]);
-        setTopics([]);
-        setLoading(false);
-      }
     });
 
     return () => {
       unsubAuth();
       clearAllListeners();
     };
-  }, []);
+  }, [clearAllListeners, listenToCollection, resetAllData]);
+
 
   const value = useMemo<AppContextType>(() => ({
     user,

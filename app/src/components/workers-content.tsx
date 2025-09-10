@@ -301,9 +301,13 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                                     <TableCell>
                                         <div className={`flex gap-2 ${language === 'ar' ? 'justify-start' : 'justify-end'}`}>
                                             <SalaryPaymentDialog worker={worker} onConfirm={handleSalaryPayment} />
-                                            <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction} />
+                                            <FinancialRecordDialog worker={worker} onAddTransaction={handleAddTransaction}>
+                                                <Button variant="ghost" size="icon" title={t('viewFinancialRecord')}>
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                            </FinancialRecordDialog>
                                             <AddWorkerDialog worker={worker} onSave={handleSaveWorker} departmentId={departmentId}>
-                                                <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" title={t('editWorker')}><Edit className="h-4 w-4" /></Button>
                                             </AddWorkerDialog>
                                             <DeleteWorkerAlert workerName={worker.name} onConfirm={() => handleDeleteWorker(worker.id)} />
                                         </div>
