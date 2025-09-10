@@ -21,10 +21,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        setUser(firebaseUser);
-        setLoading(false);
+      setUser(firebaseUser);
+      setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -40,12 +39,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AppContext.Provider value={{ user, loading }}>
+    <AppContext.Provider value={{ user, loading: loading }}>
       {children}
     </AppContext.Provider>
   );
 }
 
 export const useAppContext = () => {
-  return useContext(AppContext);
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error("useAppContext must be used within an AppProvider");
+  }
+  return context;
 };
