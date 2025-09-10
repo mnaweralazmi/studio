@@ -117,3 +117,5 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
 }
 
 export const FinancialRecordDialog = React.memo(FinancialRecordDialogComponent);
+
+    

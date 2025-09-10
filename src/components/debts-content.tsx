@@ -212,11 +212,11 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
                     <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <div className="space-y-2">
                             <Label htmlFor="creditor">{t('creditorName')}</Label>
-                            <Input id="creditor" name="creditor" placeholder={t('creditorNamePlaceholder')} />
+                            <Input id="creditor" name="creditor" placeholder={t('creditorNamePlaceholder')} required />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="amount">{t('amountInDinar')}</Label>
-                            <Input id="amount" name="amount" type="number" step="0.01" />
+                            <Input id="amount" name="amount" type="number" step="0.01" required />
                         </div>
                         <div className="flex flex-col space-y-2">
                             <Label>{t('dueDateOptional')}</Label>
@@ -289,3 +289,5 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
+
+    

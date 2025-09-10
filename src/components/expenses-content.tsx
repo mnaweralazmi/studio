@@ -201,10 +201,10 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                 </CardHeader>
                 <CardContent>
                     <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label htmlFor="type">{t('expenseType')}</Label>
-                                <Select name="type">
+                                <Select name="type" required>
                                     <SelectTrigger id="type"><SelectValue placeholder={t('selectType')} /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="fixed">{t('expenseTypeFixed')}</SelectItem>
@@ -214,7 +214,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="category">{t('category')}</Label>
-                                <Select name="category" onValueChange={setSelectedCategory} value={selectedCategory}>
+                                <Select name="category" onValueChange={setSelectedCategory} value={selectedCategory} required>
                                     <SelectTrigger id="category"><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
                                     <SelectContent>
                                         {Object.keys(expenseCategories).map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
@@ -223,7 +223,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="item">{t('item')}</Label>
-                                <Select name="item" disabled={!selectedCategory}>
+                                <Select name="item" disabled={!selectedCategory} required>
                                     <SelectTrigger id="item"><SelectValue placeholder={t('selectItem')} /></SelectTrigger>
                                     <SelectContent>
                                         {expenseCategories[selectedCategory]?.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
@@ -232,7 +232,7 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="amount">{t('amountInDinar')}</Label>
-                                <Input id="amount" name="amount" type="number" step="0.01" />
+                                <Input id="amount" name="amount" type="number" step="0.01" required />
                             </div>
                         </div>
                         <div className="flex justify-end pt-4">
@@ -304,3 +304,5 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </div>
     );
 }
+
+    

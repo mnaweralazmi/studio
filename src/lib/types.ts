@@ -77,7 +77,7 @@ export interface DebtItem extends BaseItem {
 }
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-export interface ArchivedDebt extends Omit<DebtItem, 'id' | 'ownerId'>, BaseItem {
+export interface ArchivedDebt extends DebtItem {
     archivedAt: Date;
 }
 
@@ -132,7 +132,7 @@ export interface SubTopic {
 }
   
 export interface AgriculturalSection {
-    id?: string;
+    id: string;
     titleKey: string;
     title?: string;
     descriptionKey: string;
@@ -144,3 +144,5 @@ export interface AgriculturalSection {
     videos: VideoSection[];
     ownerId?: string; // Make ownerId optional for public data
 }
+
+    
