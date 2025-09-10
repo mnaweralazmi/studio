@@ -11,8 +11,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
-// This is a simplified UserProfile for now.
-type UserProfile = {
+export type UserProfile = {
   name?: string;
   role?: "admin" | "user";
   points?: number;
@@ -42,8 +41,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let userProfileUnsubscribe: Unsubscribe | undefined;
 
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      setLoading(true);
-      
       // Cleanup previous user's profile listener
       if (userProfileUnsubscribe) {
         userProfileUnsubscribe();
@@ -61,8 +58,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             )
           );
 
-          const fullUser: User = { ...firebaseUser, ...profileWithDates };
-          setUser(fullUser);
+          setUser({ ...firebaseUser, ...profileWithDates });
           setLoading(false);
 
         }, (error) => {

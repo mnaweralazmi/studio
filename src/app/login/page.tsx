@@ -14,6 +14,8 @@ import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User }
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useLanguage } from '@/context/language-context';
+import { useAppContext } from '@/context/app-context';
+import { useRouter } from 'next/navigation';
 
 
 const GoogleIcon = () => (
@@ -50,20 +52,29 @@ const createNewUserDocument = async (user: User) => {
 export default function LoginPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
-  const [showPassword, setShowPassword] = React.useState(false);
+  const router = useRouter();
+  const { user, loading } = useAppContext();
   
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
+  React.useEffect(() => {
+    if (!loading && user) {
+      router.replace('/');
+    }
+  }, [user, loading, router]);
+
+
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
       toast({ title: t('loginSuccess' as any) });
+      // The redirect will be handled by the effect
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -71,19 +82,19 @@ export default function LoginPage() {
         description: t('loginFailedDesc' as any),
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   }
 
   async function handleGoogleSignIn() {
-    setIsGoogleLoading(true);
+    setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
         toast({ title: t('loginSuccess' as any) });
+        // The redirect will be handled by the effect
     } catch (error: any) {
-        console.error("Google Sign-In Error:", error);
         let description = t('googleLoginFailedDesc' as any);
         if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
             description = t('popupClosedError' as any);
@@ -94,12 +105,23 @@ export default function LoginPage() {
             description: description,
         });
     } finally {
-        setIsGoogleLoading(false);
+        setIsSubmitting(false);
     }
+  }
+  
+  if (loading || user) {
+     return (
+      <div className="flex h-screen w-full bg-background items-center justify-center">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <Leaf className="h-20 w-20 text-primary" />
+          <p className="text-lg text-muted-foreground">{t('loading')}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4 bg-background">
+    <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4">
        <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full mb-6">
             <Leaf className="h-6 w-6 text-primary" />
@@ -140,13 +162,13 @@ export default function LoginPage() {
                             </div>
                         </div>
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? t('loggingIn' as any, {}) : t('login' as any, {})}
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting ? t('loggingIn' as any, {}) : t('login' as any, {})}
                     </Button>
                 </form>
                  <Separator className="my-6">{t('or' as any, {})}</Separator>
-                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any, {})}</span></> }
+                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+                    {isSubmitting ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any, {})}</span></> }
                  </Button>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">

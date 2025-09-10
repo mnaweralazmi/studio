@@ -8,17 +8,24 @@ import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/app-context';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const { t } = useLanguage();
-  const { user } = useAppContext();
+  const { user, loading } = useAppContext();
+  const router = useRouter();
 
   const handleLogout = async () => {
     await signOut(auth);
+    router.push('/login');
   };
+  
+  if (loading) {
+    return null; // The loading spinner is in RootLayoutContent
+  }
 
   return (
-    <main className="flex min-h-screen flex-1 flex-col items-center justify-center p-4 sm:p-8 md:p-12 bg-background">
+    <main className="flex min-h-screen flex-1 flex-col items-center justify-center p-4 sm:p-8 md:p-12">
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-8 text-center">
         <header className="space-y-4">
           <div className="inline-flex items-center gap-3 bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">

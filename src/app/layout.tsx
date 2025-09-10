@@ -19,6 +19,7 @@ const cairo = Cairo({
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
+
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -38,6 +39,17 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       router.replace('/');
     }
   }, [user, loading, isAuthPage, router]);
+
+  useIsomorphicLayoutEffect(() => {
+      const language = localStorage.getItem('language') || 'ar';
+      const theme = localStorage.getItem("theme") || "theme-green";
+      document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
+      document.body.classList.add(theme);
+
+      const mode = localStorage.getItem("mode") || "dark";
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(mode);
+  }, []);
   
   const showLoadingSpinner = loading || (!user && !isAuthPage);
 
@@ -56,33 +68,26 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
      return <>{children}</>;
   }
   
-  if (user) {
-    return <AppLayout>{children}</AppLayout>
-  }
-
-  // Fallback for edge cases, should ideally not be reached
-  return null;
+  return <AppLayout>{children}</AppLayout>
 }
 
 
-function AppHtml({ children }: { children: React.ReactNode }) {
-  const { language } = useLanguage();
-  
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const [language, setLanguage] = React.useState('ar');
+
   useIsomorphicLayoutEffect(() => {
+      const savedLanguage = localStorage.getItem('language') as 'ar' | 'en';
+      if (savedLanguage) {
+          setLanguage(savedLanguage);
+      }
       document.documentElement.lang = language;
       document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-      document.body.style.fontFamily = cairo.style.fontFamily;
-
-      const theme = localStorage.getItem("theme") || "theme-green";
-      document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
-      document.body.classList.add(theme);
-
-      const mode = localStorage.getItem("mode") || "dark";
-      document.documentElement.classList.remove("light", "dark");
-      document.documentElement.classList.add(mode);
-
   }, [language]);
-  
+
   return (
      <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <head>
@@ -90,24 +95,14 @@ function AppHtml({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Kuwaiti Farmer</title>
       </head>
-      <body className={cairo.className}>
+      <body className={`${cairo.className} bg-background text-foreground`}>
+        <LanguageProvider>
           <AppProvider>
             <RootLayoutContent>{children}</RootLayoutContent>
             <Toaster />
           </AppProvider>
+        </LanguageProvider>
       </body>
     </html>
-  )
-}
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-     <LanguageProvider>
-        <AppHtml>{children}</AppHtml>
-    </LanguageProvider>
   );
 }

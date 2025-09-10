@@ -15,6 +15,8 @@ import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleA
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useLanguage } from '@/context/language-context';
+import { useAppContext } from '@/context/app-context';
+
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -51,13 +53,20 @@ export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
-
+  const { user, loading } = useAppContext();
+  
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+
+  React.useEffect(() => {
+    if (!loading && user) {
+      router.replace('/');
+    }
+  }, [user, loading, router]);
+
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -71,7 +80,7 @@ export default function RegisterPage() {
         return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -97,12 +106,12 @@ export default function RegisterPage() {
             description: description,
         });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   }
 
   async function handleGoogleSignIn() {
-    setIsGoogleLoading(true);
+    setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
@@ -111,6 +120,7 @@ export default function RegisterPage() {
         await createNewUserDocument(user, user.displayName);
         
         toast({ title: t('loginSuccess' as any, {}) });
+        // The redirect will be handled by the effect
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -118,12 +128,23 @@ export default function RegisterPage() {
             description: t('googleLoginFailedDesc' as any, {}),
         });
     } finally {
-        setIsGoogleLoading(false);
+        setIsSubmitting(false);
     }
+  }
+  
+  if (loading || user) {
+     return (
+      <div className="flex h-screen w-full bg-background items-center justify-center">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <Leaf className="h-20 w-20 text-primary" />
+          <p className="text-lg text-muted-foreground">{t('loading')}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4 bg-background">
+    <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
          <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full mb-6">
             <Leaf className="h-6 w-6 text-primary" />
@@ -157,13 +178,13 @@ export default function RegisterPage() {
                         <Label htmlFor="confirmPassword">{t('confirmNewPassword')}</Label>
                         <Input id="confirmPassword" type="password" placeholder={t('confirmPasswordPlaceholder' as any, {})} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? t('creatingAccount' as any, {}) : t('createAccount' as any, {})}
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting ? t('creatingAccount' as any, {}) : t('createAccount' as any, {})}
                     </Button>
                 </form>
                 <Separator className="my-6">{t('or' as any, {})}</Separator>
-                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('createWithGoogle' as any, {})}</span></> }
+                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+                    {isSubmitting ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('createWithGoogle' as any, {})}</span></> }
                  </Button>
             </CardContent>
              <CardFooter className="flex flex-col gap-4">
