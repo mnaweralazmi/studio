@@ -14,7 +14,6 @@ import { Separator } from '@/components/ui/separator';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { useAppContext } from '@/context/app-context';
 import { useLanguage } from '@/context/language-context';
 
 

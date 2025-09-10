@@ -14,7 +14,6 @@ import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { useAppContext } from '@/context/app-context';
 import { useLanguage } from '@/context/language-context';
 
 const GoogleIcon = () => (
@@ -54,7 +53,6 @@ export default function RegisterPage() {
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
-  const { user, loading } = useAppContext();
 
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -122,17 +120,6 @@ export default function RegisterPage() {
     } finally {
         setIsGoogleLoading(false);
     }
-  }
-
-  if (loading || user) {
-     return (
-        <div className="flex h-screen w-full bg-background items-center justify-center">
-             <div className="flex flex-col items-center gap-4 animate-pulse">
-                <Leaf className="h-20 w-20 text-primary" />
-                <p className="text-lg text-muted-foreground">{t('loading')}</p>
-            </div>
-        </div>
-    );
   }
 
   return (

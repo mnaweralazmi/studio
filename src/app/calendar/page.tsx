@@ -232,7 +232,7 @@ export default function CalendarPage() {
                         <>
                         <TaskList tasks={recentCompletedTasks} language={language} t={t} />
                          <p className="text-center text-sm text-muted-foreground py-4 mt-4">
-                            {t('completedTasksLogDesc')}
+                            {t('completedTasksLogDesc')}{' '}
                             <Link href="/archive" className="text-primary hover:underline font-semibold mx-1">
                                 {t('archivePageTitle')}
                             </Link>
