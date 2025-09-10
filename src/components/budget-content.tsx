@@ -52,12 +52,12 @@ async function archiveSale(sale: SalesItem): Promise<void> {
     batch.delete(originalSaleRef);
 
     const archiveSaleRef = doc(collection(db, 'archive_sales'));
-    const archivedSaleData = {
+    const archivedSaleData: any = {
         ...sale,
         archivedAt: Timestamp.now(),
-        ownerId: sale.ownerId, // Ensure ownerId is carried over
+        ownerId: sale.ownerId, 
     };
-    delete (archivedSaleData as Partial<SalesItem & {id?: string}>).id;
+    delete archivedSaleData.id;
 
     batch.set(archiveSaleRef, archivedSaleData);
 

@@ -27,7 +27,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const theme = localStorage.getItem("theme") || "theme-green";
     document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
     document.body.classList.add(theme);
@@ -40,18 +40,21 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) return; // Wait until loading is complete before doing anything
 
     if (!user && !isAuthPage) {
       router.replace('/login');
     }
     
     if (user && isAuthPage) {
-        router.replace('/');
+      router.replace('/');
     }
-
   }, [user, loading, isAuthPage, router]);
 
+  // This is the crucial part. We show a loading screen...
+  // 1. If the auth state is still loading.
+  // 2. Or if we are on a protected page and there is no user yet (prevents flash of content).
+  // 3. Or if we are on an auth page and there is a user (we are about to redirect).
   if (loading || (!user && !isAuthPage) || (user && isAuthPage)) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
@@ -64,7 +67,12 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   }
   
   if (isAuthPage) {
-      return <>{children}<Toaster /></>;
+      return (
+        <>
+          {children}
+          <Toaster />
+        </>
+      );
   }
 
   return (
@@ -76,7 +84,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 function AppHtml({ children }: { children: React.ReactNode }) {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   
   useIsomorphicLayoutEffect(() => {
       document.documentElement.lang = language;
@@ -88,7 +96,7 @@ function AppHtml({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{t('kuwaitiFarmer')}</title>
+        <title>Kuwaiti Farmer</title>
       </head>
       <body>
           <AppProvider>
