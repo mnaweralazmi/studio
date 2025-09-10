@@ -64,34 +64,34 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const initialAgriculturalSections: Omit<AgriculturalSection, 'id'>[] = [
     {
-      titleKey: "topicIrrigation", descriptionKey: "topicIrrigationDesc", iconName: 'Droplets', image: 'https://picsum.photos/400/200', hint: 'watering plants', subTopics: [
-        { id: '1-1', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://picsum.photos/400/200', hint: 'drip irrigation' },
-        { id: '1-2', titleKey: 'subTopicSprinklerIrrigation', descriptionKey: 'subTopicSprinklerIrrigationDesc', image: 'https://picsum.photos/400/200', hint: 'sprinkler irrigation' },
-      ], videos: [ { id: 'v-1', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'gardening basics' } ]
+      titleKey: "topicIrrigation", descriptionKey: "topicIrrigationDesc", iconName: 'Droplets', image: 'https://picsum.photos/seed/topic1/400/200', hint: 'watering plants', subTopics: [
+        { id: '1-1', titleKey: 'subTopicDripIrrigation', descriptionKey: 'subTopicDripIrrigationDesc', image: 'https://picsum.photos/seed/subtopic1/400/200', hint: 'drip irrigation' },
+        { id: '1-2', titleKey: 'subTopicSprinklerIrrigation', descriptionKey: 'subTopicSprinklerIrrigationDesc', image: 'https://picsum.photos/seed/subtopic2/400/200', hint: 'sprinkler irrigation' },
+      ], videos: [ { id: 'v-1', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/seed/video1/400/200', videoUrl: '#', hint: 'gardening basics' } ]
     },
     {
-      titleKey: "topicFertilization", descriptionKey: "topicFertilizationDesc", iconName: 'FlaskConical', image: 'https://picsum.photos/400/200', hint: 'fertilizer', subTopics: [
-         { id: '5-1', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://picsum.photos/400/200', hint: 'fertilizer types' },
-      ], videos: [ { id: 'v-2', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'compost bin' } ]
+      titleKey: "topicFertilization", descriptionKey: "topicFertilizationDesc", iconName: 'FlaskConical', image: 'https://picsum.photos/seed/topic2/400/200', hint: 'fertilizer', subTopics: [
+         { id: '5-1', titleKey: 'subTopicFertilizationTypes', descriptionKey: 'subTopicFertilizationTypesDesc', image: 'https://picsum.photos/seed/subtopic3/400/200', hint: 'fertilizer types' },
+      ], videos: [ { id: 'v-2', titleKey: 'videoComposting', durationKey: 'videoDuration20', image: 'https://picsum.photos/seed/video2/400/200', videoUrl: '#', hint: 'compost bin' } ]
     },
     {
-      titleKey: "topicPests", descriptionKey: "topicPestsDesc", iconName: 'Bug', image: 'https://picsum.photos/400/200', hint: 'insect pest', subTopics: [
-        { id: '2-1', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://picsum.photos/400/200', hint: 'ladybug pests' },
-        { id: '2-2', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://picsum.photos/400/200', hint: 'spraying pesticides' },
-      ], videos: [ { id: 'v-5', titleKey: 'videoPestControl', durationKey: 'videoDuration18', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'pest control' } ]
+      titleKey: "topicPests", descriptionKey: "topicPestsDesc", iconName: 'Bug', image: 'https://picsum.photos/seed/topic3/400/200', hint: 'insect pest', subTopics: [
+        { id: '2-1', titleKey: 'subTopicNaturalPestControl', descriptionKey: 'subTopicNaturalPestControlDesc', image: 'https://picsum.photos/seed/subtopic4/400/200', hint: 'ladybug pests' },
+        { id: '2-2', titleKey: 'subTopicChemicalPesticides', descriptionKey: 'subTopicChemicalPesticidesDesc', image: 'https://picsum.photos/seed/subtopic5/400/200', hint: 'spraying pesticides' },
+      ], videos: [ { id: 'v-5', titleKey: 'videoPestControl', durationKey: 'videoDuration18', image: 'https://picsum.photos/seed/video3/400/200', videoUrl: '#', hint: 'pest control' } ]
     },
     {
-      titleKey: "topicPruning", descriptionKey: "topicPruningDesc", iconName: 'Scissors', image: 'https://picsum.photos/400/200', hint: 'pruning shears', subTopics: [
-        { id: '3-1', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://picsum.photos/400/200', hint: 'young tree' },
-      ], videos: [ { id: 'v-3', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'tomato plant' } ]
+      titleKey: "topicPruning", descriptionKey: "topicPruningDesc", iconName: 'Scissors', image: 'https://picsum.photos/seed/topic4/400/200', hint: 'pruning shears', subTopics: [
+        { id: '3-1', titleKey: 'subTopicFormativePruning', descriptionKey: 'subTopicFormativePruningDesc', image: 'https://picsum.photos/seed/subtopic6/400/200', hint: 'young tree' },
+      ], videos: [ { id: 'v-3', titleKey: 'videoGrowingTomatoes', durationKey: 'videoDuration15', image: 'https://picsum.photos/seed/video4/400/200', videoUrl: '#', hint: 'tomato plant' } ]
     },
     {
-      titleKey: "topicSoil", descriptionKey: "topicSoilDesc", iconName: 'Sprout', image: 'https://picsum.photos/400/200', hint: 'rich soil', subTopics: [
-         { id: '4-1', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://picsum.photos/400/200', hint: 'soil test' },
-      ], videos: [ { id: 'v-4', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/400/200', videoUrl: '#', hint: 'gardening tools' } ]
+      titleKey: "topicSoil", descriptionKey: "topicSoilDesc", iconName: 'Sprout', image: 'https://picsum.photos/seed/topic5/400/200', hint: 'rich soil', subTopics: [
+         { id: '4-1', titleKey: 'subTopicSoilAnalysis', descriptionKey: 'subTopicSoilAnalysisDesc', image: 'https://picsum.photos/seed/subtopic7/400/200', hint: 'soil test' },
+      ], videos: [ { id: 'v-4', titleKey: 'videoGardeningBasics', durationKey: 'videoDuration45', image: 'https://picsum.photos/seed/video5/400/200', videoUrl: '#', hint: 'gardening tools' } ]
     },
-    { titleKey: "topicSeeds", descriptionKey: "topicSeedsDesc", iconName: 'Sprout', image: 'https://picsum.photos/400/200', hint: 'seeds planting', subTopics: [], videos: [] },
-    { titleKey: "topicHarvesting", descriptionKey: "topicHarvestingDesc", iconName: 'Leaf', image: 'https://picsum.photos/400/200', hint: 'harvest basket', subTopics: [], videos: [] }
+    { titleKey: "topicSeeds", descriptionKey: "topicSeedsDesc", iconName: 'Sprout', image: 'https://picsum.photos/seed/topic6/400/200', hint: 'seeds planting', subTopics: [], videos: [] },
+    { titleKey: "topicHarvesting", descriptionKey: "topicHarvestingDesc", iconName: 'Leaf', image: 'https://picsum.photos/seed/topic7/400/200', hint: 'harvest basket', subTopics: [], videos: [] }
 ];
 
 
@@ -168,18 +168,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const userDocRef = doc(db, "users", firebaseUser.uid);
         
-        // Listen for user profile updates
         unsubRef.current['userDoc'] = onSnapshot(userDocRef, (docSnap: DocumentSnapshot<DocumentData>) => {
-          if (docSnap.exists()) {
-             const userProfile = docSnap.data() as UserProfile;
-             setUser(prevUser => ({
-                 ...(prevUser || {}),
-                 ...firebaseUser,
-                 ...userProfile,
-             } as User));
-          } else {
-             setUser(firebaseUser as User);
-          }
+            const userProfile = docSnap.exists() ? (docSnap.data() as UserProfile) : {};
+            setUser(prevUser => ({ ...prevUser, ...firebaseUser, ...userProfile }));
         });
 
         // Listen to user-specific collections
@@ -200,8 +191,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         if (dataSnap.empty) {
             const batch = writeBatch(db);
-            initialAgriculturalSections.forEach((topic, index) => {
-                const newTopicRef = doc(dataColRef, (index + 1).toString());
+            initialAgriculturalSections.forEach((topic) => {
+                const newTopicRef = doc(collection(db, 'data'));
                 batch.set(newTopicRef, topic);
             });
             await batch.commit();

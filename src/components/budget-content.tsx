@@ -184,7 +184,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     switch(departmentId) {
         case 'agriculture':
             return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="product">{t('vegetableType')}</Label>
                         <Select name="product" required>
@@ -197,7 +197,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
                         <Input id="quantity" name="quantity" type="number" step="1" required/>
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="weightPerUnit">{t('weightPerCartonInKg')}</Label>
+                        <Label htmlFor="weightPerUnit">{t('weightPerCartonInKg')} ({t('optional')})</Label>
                         <Input id="weightPerUnit" name="weightPerUnit" type="number" step="0.1" />
                     </div>
                      <div className="space-y-2">
@@ -208,7 +208,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             )
         case 'livestock':
              return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="product">{t('animalType')}</Label>
                         <Select name="product" required>
@@ -228,7 +228,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             )
         case 'poultry':
              return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="product">{t('poultryType')}</Label>
                         <Select name="product" required>
@@ -241,7 +241,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
             )
         case 'fish':
              return (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="product">{t('fishType')}</Label>
                         <Select name="product" required>
@@ -325,7 +325,9 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
           </CardHeader>
           <CardContent>
               <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-                 {renderFormFields()}
+                 <div className="space-y-4">
+                    {renderFormFields()}
+                 </div>
                 <div className="flex justify-end pt-4">
                     <Button type="submit" className="">
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -359,7 +361,3 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     </div>
   );
 }
-
-    
-
-    
