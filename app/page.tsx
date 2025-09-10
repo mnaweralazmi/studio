@@ -10,8 +10,8 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">
-          أهلاً بك في <span className="text-primary">مزارع كويتي</span>
+        <h1 className="text-3xl font-bold text-primary">
+          مزارع كويتي
         </h1>
         <p className="text-muted-foreground">
           دليلك التعليمي لاستدامة مزرعتك ونموها.
