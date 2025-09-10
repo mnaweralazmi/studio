@@ -17,15 +17,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <main className="flex-1 flex flex-col">{children}</main>
-      <footer className="sticky bottom-0 w-full bg-background border-t">
-        <nav className="flex justify-around items-center h-16">
+      <main className="flex-1 flex flex-col pb-16">{children}</main>
+      <footer className="fixed bottom-0 w-full bg-background border-t">
+        <nav className="flex justify-around items-center h-16 max-w-md mx-auto">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={label}
               href={href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 text-sm font-medium",
+                "flex flex-col items-center justify-center gap-1 text-sm font-medium w-1/4",
                 pathname === href
                   ? "text-primary"
                   : "text-muted-foreground hover:text-primary"
