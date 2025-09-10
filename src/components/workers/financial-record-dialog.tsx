@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
-import type { Worker, TransactionFormValues } from '@/lib/types';
+import type { Worker, Transaction, TransactionFormValues } from '@/lib/types';
 import { Label } from '../ui/label';
 
 interface FinancialRecordDialogProps {
@@ -41,7 +41,7 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
         formRef.current?.reset();
     };
 
-    const workerBalance = (worker.transactions || []).reduce((acc, t) => {
+    const workerBalance = (worker.transactions || []).reduce((acc, t: Transaction) => {
         if (t.type === 'bonus') return acc + t.amount;
         if (t.type === 'deduction' || t.type === 'salary') return acc - t.amount;
         return acc;
@@ -66,9 +66,9 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
                         <Table>
                             <TableHeader><TableRow><TableHead>{t('tableDate')}</TableHead><TableHead>{t('tableDescription')}</TableHead><TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{t('tableAmount')}</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {(worker.transactions || []).length > 0 ? [...worker.transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
+                                {(worker.transactions || []).length > 0 ? [...worker.transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t: Transaction) => (
                                     <TableRow key={t.id}>
-                                        <TableCell>{format(new Date(t.date), 'yyyy/MM/dd')}</TableCell>
+                                        <TableCell>{t.date ? format(new Date(t.date), 'yyyy/MM/dd') : '-'}</TableCell>
                                         <TableCell>{t.description}</TableCell>
                                         <TableCell className={`font-mono ${t.type === 'bonus' ? 'text-green-500' : 'text-red-500'} ${language === 'ar' ? 'text-left' : 'text-right'}`}>
                                             {t.type === 'bonus' ? '+' : '-'}{t.amount.toFixed(2)}
@@ -117,5 +117,3 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
 }
 
 export const FinancialRecordDialog = React.memo(FinancialRecordDialogComponent);
-
-    

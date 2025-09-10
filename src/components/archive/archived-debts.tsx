@@ -58,7 +58,7 @@ export function ArchivedDebts() {
                                     <TableCell>{t(departmentTitles[item.departmentId] as any)}</TableCell>
                                     <TableCell>{item.creditor}</TableCell>
                                     <TableCell>{item.amount.toFixed(2)} {t('dinar')}</TableCell>
-                                    <TableCell>{format(new Date(item.archivedAt), "PPP p", { locale: language === 'ar' ? arSA : enUS })}</TableCell>
+                                    <TableCell>{item.archivedAt ? format(new Date(item.archivedAt), "PPP p", { locale: language === 'ar' ? arSA : enUS }) : '-'}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

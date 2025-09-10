@@ -147,25 +147,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-        clearDataListeners();
-        resetAllData();
-        
         if (firebaseUser) {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
                 const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
-                const fullUser: User = { ...firebaseUser, ...userProfile };
-                setUser(fullUser);
+                setUser({ ...firebaseUser, ...userProfile });
                 setLoading(false);
             }, (error) => {
                 console.error("Error listening to user document:", error);
                 setUser(firebaseUser as User); 
                 setLoading(false);
             });
-            dataUnsubscribersRef.current.push(unsubUser);
+            return () => unsubUser();
         } else {
             setUser(null);
             setLoading(false);
+            clearDataListeners();
+            resetAllData();
         }
     });
 
@@ -235,9 +233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     // Cleanup listeners when the user object changes (e.g., on logout)
     return () => {
-      if (user) { 
-        clearDataListeners();
-      }
+      clearDataListeners();
     };
   }, [user, resetAllData, clearDataListeners]);
 

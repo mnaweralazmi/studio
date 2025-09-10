@@ -20,7 +20,7 @@ export interface Task extends BaseItem {
   isRecurring: boolean;
   reminderDays?: number;
 }
-export type TaskData = Omit<Task, 'id'>;
+export type TaskData = Omit<Task, 'id' | 'isCompleted'>;
 
 export interface ArchivedTask extends Task {
     completedAt: Date;

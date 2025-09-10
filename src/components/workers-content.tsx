@@ -52,16 +52,13 @@ async function paySalary(workerId: string, paidMonth: PaidMonth, transactionData
 
 async function addTransaction(workerId: string, transactionData: TransactionFormValues) {
     const workerRef = doc(db, 'workers', workerId);
-    const newTransaction: Transaction = {
+    const newTransaction: Omit<Transaction, 'date'> & { date: Timestamp; id: string } = {
         ...transactionData,
-        id: new Date().toISOString() + Math.random().toString(),
-        date: new Date(),
+        id: new Date().toISOString() + Math.random(),
+        date: Timestamp.now(),
     };
     await updateDoc(workerRef, {
-        transactions: arrayUnion({
-            ...newTransaction,
-            date: Timestamp.fromDate(newTransaction.date)
-        })
+        transactions: arrayUnion(newTransaction)
     });
 }
 

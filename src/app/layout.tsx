@@ -62,27 +62,20 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
   
-  if (isAuthPage && !user) {
-    return <>{children}<Toaster /></>;
+  if (isAuthPage) {
+      return user ? null : <>{children}<Toaster /></>;
   }
-  
-  if (!isAuthPage && user) {
-    return (
+
+  if (!isAuthPage) {
+    return user ? (
         <AppLayout>
             {children}
             <Toaster />
         </AppLayout>
-    );
+    ) : null;
   }
-
-  return (
-    <div className="flex h-screen w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-            <Leaf className="h-20 w-20 text-primary" />
-            <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
-        </div>
-    </div>
-  );
+  
+  return null;
 }
 
 function AppHtml({ children }: { children: React.ReactNode }) {

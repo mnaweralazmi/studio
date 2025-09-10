@@ -66,6 +66,7 @@ export default function LoginPage() {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
       toast({ title: "تم تسجيل الدخول بنجاح!" });
+      router.push('/');
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -84,6 +85,7 @@ export default function LoginPage() {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
         toast({ title: "تم تسجيل الدخول بنجاح!" });
+        router.push('/');
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
         let description = "Could not sign you in with Google.";
@@ -100,7 +102,7 @@ export default function LoginPage() {
     }
   }
 
-  if (loading || user) {
+  if (loading) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
              <div className="flex flex-col items-center gap-4 animate-pulse">
