@@ -1,14 +1,8 @@
-import AppLayout from "@/components/app-layout";
-
 export default function HomePage() {
   return (
-    <AppLayout>
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold">المواضيع التعليمية</h1>
-        <p className="mt-4 text-muted-foreground">
-          هنا سيتم عرض المواضيع التعليمية الخاصة بالزراعة.
-        </p>
-      </div>
-    </AppLayout>
+    <div>
+      <h1>أهلاً بك</h1>
+      <p>هذه هي الصفحة الرئيسية.</p>
+    </div>
   );
 }
