@@ -5,21 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck",
-    "fix": "next lint --fix",
-    "format": "npx prettier --write .",
-    "clean": "rm -rf .next"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "14.2.4",
     "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0",
-    "tailwindcss-animate": "^1.0.7"
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
