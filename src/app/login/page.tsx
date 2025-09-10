@@ -107,7 +107,7 @@ export default function LoginPage() {
   }
 
   // Show a loader while the initial auth state is being determined.
-  // The redirect logic is now handled in the main RootLayout.
+  // The redirect logic is handled in the main RootLayout.
   if (loading || user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
@@ -185,3 +185,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    

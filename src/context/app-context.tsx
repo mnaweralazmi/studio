@@ -193,10 +193,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const unsubTopics = onSnapshot(query(collection(db, 'data')), (snapshot) => {
       setTopics(mapSnapshot<AgriculturalSection>(snapshot));
     }, error => console.error("Error listening to public 'data' collection:", error));
+    dataUnsubscribersRef.current.push(unsubTopics);
 
     return () => {
       unsubAuth();
-      unsubTopics();
       clearDataListeners();
     };
   }, [clearDataListeners, resetAllData]);
@@ -229,10 +229,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         listenToCollection<DebtItem>('debts', setAllDebts, user.uid);
         listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, user.uid);
         listenToCollection<Worker>('workers', setAllWorkers, user.uid);
+    } else {
+      // Clear all user-specific data when user logs out
+      resetAllData();
     }
-    // This effect intentionally re-runs when the user logs in or out.
-    // The cleanup of listeners is handled in the main useEffect.
-  }, [user]);
+    
+    // Cleanup listeners when the user object changes (e.g., on logout)
+    return () => {
+      if (!user) { // Only clear user-specific listeners
+        dataUnsubscribersRef.current.forEach(unsub => unsub());
+        dataUnsubscribersRef.current = [];
+      }
+    };
+  }, [user, resetAllData]);
 
 
   const value = useMemo<AppContextType>(() => ({
@@ -273,3 +282,5 @@ export const useAppContext = () => {
   }
   return ctx;
 };
+
+    

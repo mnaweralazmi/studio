@@ -50,9 +50,9 @@ async function paySalary(workerId: string, paidMonth: PaidMonth, transactionData
     });
 }
 
-async function addTransaction(workerId: string, transactionData: Omit<Transaction, 'id' | 'date'>) {
+async function addTransaction(workerId: string, transactionData: TransactionFormValues) {
     const workerRef = doc(db, 'workers', workerId);
-    const newTransaction = {
+    const newTransaction: Omit<Transaction, 'id' | 'date'> & { id?: string; date?: Timestamp } = {
         ...transactionData,
         id: new Date().toISOString() + Math.random(),
         date: Timestamp.now(),
@@ -136,13 +136,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
         if (!user) return;
         
         try {
-            const newTransactionData: Omit<Transaction, 'id' | 'date'> = {
-                type: transaction.type,
-                amount: transaction.amount,
-                description: transaction.description,
-            };
-
-            await addTransaction(workerId, newTransactionData);
+            await addTransaction(workerId, transaction);
             toast({ title: t('transactionAddedSuccess') });
 
         } catch (e) {
