@@ -200,6 +200,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [clearDataListeners, resetAllData]);
 
+  // Effect for fetching user-specific data, runs ONLY when user object is available
   useEffect(() => {
     if (user) {
         const listenToCollection = <T,>(
@@ -280,5 +281,3 @@ export const useAppContext = () => {
   }
   return ctx;
 };
-
-    
