@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { useAppContext } from '@/context/app-context';
 
 
 const GoogleIcon = () => (
@@ -33,7 +34,6 @@ const createNewUserDocument = async (user: User) => {
         return; 
     }
 
-    // Only create the user document. The app-context will handle populating `data` collection if needed.
     await setDoc(userDocRef, {
         uid: user.uid,
         name: user.displayName || 'Anonymous User',
@@ -54,9 +54,17 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const { user, loading } = useAppContext();
   
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+
+  React.useEffect(() => {
+    if (!loading && user) {
+        router.replace('/');
+    }
+  }, [user, loading, router]);
+
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -65,7 +73,7 @@ export default function LoginPage() {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
       toast({ title: "تم تسجيل الدخول بنجاح!" });
-      router.push('/');
+      // The context listener and useEffect will handle the redirect
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -84,7 +92,7 @@ export default function LoginPage() {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
         toast({ title: "تم تسجيل الدخول بنجاح!" });
-        router.push('/');
+        // The context listener and useEffect will handle the redirect
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
         let description = "Could not sign you in with Google.";
@@ -103,6 +111,17 @@ export default function LoginPage() {
     } finally {
         setIsGoogleLoading(false);
     }
+  }
+
+  if (loading || user) {
+     return (
+        <div className="flex h-screen w-full bg-background items-center justify-center">
+             <div className="flex flex-col items-center gap-4 animate-pulse">
+                <Leaf className="h-20 w-20 text-primary" />
+                <p className="text-lg text-muted-foreground">جاري التحميل...</p>
+            </div>
+        </div>
+    );
   }
 
 
@@ -148,12 +167,12 @@ export default function LoginPage() {
                             </div>
                         </div>
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                         {isLoading ? "جاري التحقق..." : "تسجيل الدخول"}
                     </Button>
                 </form>
                  <Separator className="my-6">أو</Separator>
-                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
                     {isGoogleLoading ? "جاري..." : <><GoogleIcon/> <span className="mx-2">تسجيل الدخول باستخدام Google</span></> }
                  </Button>
             </CardContent>

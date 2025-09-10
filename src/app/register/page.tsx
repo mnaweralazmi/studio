@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { useAppContext } from '@/context/app-context';
 
 
 const GoogleIcon = () => (
@@ -33,7 +34,6 @@ const createNewUserDocument = async (user: User, name?: string | null) => {
         return; 
     }
 
-    // Only create the user document. The app-context will handle populating `data` collection if needed.
     await setDoc(userDocRef, {
         uid: user.uid,
         name: name || user.displayName || 'Anonymous User',
@@ -53,11 +53,19 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
-  
+  const { user, loading } = useAppContext();
+
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+
+  React.useEffect(() => {
+    if (!loading && user) {
+        router.replace('/');
+    }
+  }, [user, loading, router]);
+
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -111,7 +119,7 @@ export default function RegisterPage() {
         await createNewUserDocument(user, user.displayName);
         
         toast({ title: "تم تسجيل الدخول بنجاح!" });
-        router.push('/');
+        // The context listener and useEffect will handle the redirect
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -123,6 +131,16 @@ export default function RegisterPage() {
     }
   }
 
+  if (loading || user) {
+     return (
+        <div className="flex h-screen w-full bg-background items-center justify-center">
+             <div className="flex flex-col items-center gap-4 animate-pulse">
+                <Leaf className="h-20 w-20 text-primary" />
+                <p className="text-lg text-muted-foreground">جاري التحميل...</p>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4 bg-background">
@@ -159,12 +177,12 @@ export default function RegisterPage() {
                         <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
                         <Input id="confirmPassword" type="password" placeholder="أعد إدخال كلمة المرور..." value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                         {isLoading ? "جاري الإنشاء..." : "إنشاء الحساب"}
                     </Button>
                 </form>
                 <Separator className="my-6">أو</Separator>
-                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
                     {isGoogleLoading ? "جاري..." : <><GoogleIcon/> <span className="mx-2">إنشاء حساب باستخدام Google</span></> }
                  </Button>
             </CardContent>

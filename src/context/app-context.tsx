@@ -13,7 +13,6 @@ import {
   QuerySnapshot,
   Unsubscribe,
   doc,
-  DocumentSnapshot,
   getDocs,
   writeBatch,
   limit,
@@ -47,7 +46,7 @@ export interface User extends FirebaseUser, UserProfile {}
 
 interface AppContextType {
   user: User | null;
-  loading: boolean;
+  loading: boolean; // True while waiting for user auth AND profile data
   tasks: Task[];
   completedTasks: ArchivedTask[];
   allSales: SalesItem[];
@@ -94,9 +93,8 @@ const initialAgriculturalSections: Omit<AgriculturalSection, 'id' | 'ownerId'>[]
     { titleKey: "topicHarvesting", descriptionKey: "topicHarvestingDesc", iconName: 'Leaf', image: 'https://picsum.photos/seed/topic7/400/200', hint: 'harvest basket', subTopics: [], videos: [] }
 ];
 
-
-function normalizeDocData<T = any>(docData: DocumentData): T {
-  const out: any = {};
+function normalizeDocData<T>(docData: DocumentData): T {
+  const out: { [key: string]: any } = {};
   for (const k of Object.keys(docData)) {
     const v = docData[k];
     if (v && typeof v === "object" && typeof (v as any).toDate === "function") {
@@ -108,7 +106,7 @@ function normalizeDocData<T = any>(docData: DocumentData): T {
   return out as T;
 }
 
-function mapSnapshot<T>(snap: QuerySnapshot<DocumentData>) {
+function mapSnapshot<T>(snap: QuerySnapshot<DocumentData>): T[] {
   return snap.docs.map(d => ({ id: d.id, ...normalizeDocData(d.data()) })) as T[];
 }
 
@@ -151,40 +149,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const listenToCollection = useCallback(<T,>(
     collectionName: string,
     setter: React.Dispatch<React.SetStateAction<T[]>>,
-    uid?: string
+    uid: string
   ) => {
-    try {
-        const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
-        const q = uid ? query(colRef, where("ownerId", "==", uid)) : query(colRef);
+    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
+    const q = query(colRef, where("ownerId", "==", uid));
 
-        const unsub = onSnapshot(q, (snapshot) => {
-          const data = mapSnapshot<T>(snapshot);
-          setter(data);
-        }, (error) => {
-          console.error(`Error listening to ${collectionName}:`, error);
-          setter([]);
-        });
-        unsubscribersRef.current.push(unsub);
-    } catch (error) {
-        console.error(`Failed to set up listener for ${collectionName}:`, error);
-    }
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = mapSnapshot<T>(snapshot);
+      setter(data);
+    }, (error) => {
+      console.error(`Error listening to ${collectionName}:`, error);
+      setter([]);
+    });
+    unsubscribersRef.current.push(unsub);
   }, []);
   
+  const listenToPublicCollection = useCallback(<T,>(
+    collectionName: string,
+    setter: React.Dispatch<React.SetStateAction<T[]>>
+  ) => {
+    const colRef = collection(db, collectionName) as CollectionReference<DocumentData>;
+    const q = query(colRef);
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = mapSnapshot<T>(snapshot);
+      setter(data);
+    }, (error) => {
+      console.error(`Error listening to public ${collectionName}:`, error);
+      setter([]);
+    });
+    unsubscribersRef.current.push(unsub);
+  }, []);
+
+
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
         clearAllListeners();
         resetAllData();
 
         if (firebaseUser) {
-            setLoading(true);
             const userDocRef = doc(db, "users", firebaseUser.uid);
             
-            const unsubUser = onSnapshot(userDocRef, async (userDocSnap) => {
+            const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
                 const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
-                const fullUser = { ...firebaseUser, ...userProfile };
+                const fullUser: User = { ...firebaseUser, ...userProfile };
                 setUser(fullUser);
 
-                // Now that we have the full user object, start listening to other collections
+                // --- Start listening to user-specific data ONLY after user is fully loaded ---
                 listenToCollection<Task>('tasks', setTasks, firebaseUser.uid);
                 listenToCollection<ArchivedTask>('completed_tasks', setCompletedTasks, firebaseUser.uid);
                 listenToCollection<SalesItem>('sales', setAllSales, firebaseUser.uid);
@@ -195,26 +206,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, firebaseUser.uid);
                 listenToCollection<Worker>('workers', setAllWorkers, firebaseUser.uid);
                 
-                // Handle public data
-                try {
-                    const dataColRef = collection(db, 'data');
-                    const q = query(dataColRef, limit(1));
-                    const dataSnap = await getDocs(q);
-
-                    if (dataSnap.empty) {
-                        const batch = writeBatch(db);
-                        initialAgriculturalSections.forEach((topic) => {
-                            const newTopicRef = doc(collection(db, 'data'));
-                            batch.set(newTopicRef, topic);
-                        });
-                        await batch.commit();
-                    }
-                } catch (error) {
-                     console.error("Failed to initialize public data:", error);
-                }
-                listenToCollection<AgriculturalSection>('data', setTopics);
-
-                setLoading(false);
+                setLoading(false); // User data is loaded
             }, (error) => {
                 console.error("Error listening to user document:", error);
                 setUser(firebaseUser as User); 
@@ -223,15 +215,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             unsubscribersRef.current.push(unsubUser);
         } else {
             setUser(null);
-            setLoading(false);
+            setLoading(false); // No user, stop loading
         }
     });
+
+    // --- Public data listener (can run independently) ---
+    const initializePublicData = async () => {
+        try {
+            const dataColRef = collection(db, 'data');
+            const q = query(dataColRef, limit(1));
+            const dataSnap = await getDocs(q);
+
+            if (dataSnap.empty) {
+                console.log("Initializing public 'data' collection...");
+                const batch = writeBatch(db);
+                initialAgriculturalSections.forEach((topic) => {
+                    const newTopicRef = doc(collection(db, 'data'));
+                    batch.set(newTopicRef, topic);
+                });
+                await batch.commit();
+            }
+        } catch (error) {
+             console.error("Failed to initialize public data:", error);
+        }
+    };
+    initializePublicData();
+    listenToPublicCollection<AgriculturalSection>('data', setTopics);
 
     return () => {
       unsubAuth();
       clearAllListeners();
     };
-  }, [clearAllListeners, listenToCollection, resetAllData]);
+  }, [clearAllListeners, listenToCollection, resetAllData, listenToPublicCollection]);
 
 
   const value = useMemo<AppContextType>(() => ({
@@ -272,5 +287,3 @@ export const useAppContext = () => {
   }
   return ctx;
 };
-
-    

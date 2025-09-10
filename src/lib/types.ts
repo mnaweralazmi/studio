@@ -77,8 +77,7 @@ export interface DebtItem extends BaseItem {
 }
 export type DebtItemData = Omit<DebtItem, 'id' | 'payments' | 'status'>;
 
-export interface ArchivedDebt extends Omit<DebtItem, 'id'> {
-    id: string;
+export interface ArchivedDebt extends DebtItem {
     archivedAt: Date;
 }
 
@@ -93,7 +92,8 @@ export interface Transaction {
     month?: number;
     year?: number;
 }
-export type TransactionFormValues = Omit<Transaction, 'id' | 'date' | 'month' | 'year'>;
+export type TransactionFormValues = Pick<Transaction, 'type' | 'amount' | 'description'>;
+
 
 export interface PaidMonth {
     year: number;
@@ -145,5 +145,3 @@ export interface AgriculturalSection {
     videos: VideoSection[];
     ownerId?: string; // Make ownerId optional for public data
 }
-
-    

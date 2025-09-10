@@ -33,7 +33,7 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
             description: formData.get('description') as string,
         };
 
-        if (data.amount <= 0 || data.description.length < 3) {
+        if (!data.type || !data.description || data.amount <= 0 || data.description.length < 3) {
             return;
         }
 
@@ -117,5 +117,3 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: 
 }
 
 export const FinancialRecordDialog = React.memo(FinancialRecordDialogComponent);
-
-    

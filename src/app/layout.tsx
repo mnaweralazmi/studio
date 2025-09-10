@@ -4,12 +4,11 @@
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/app-layout';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useLayoutEffect } from 'react';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
-import { useRouter } from 'next/navigation';
 import { Cairo } from 'next/font/google';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Leaf } from 'lucide-react';
 import { AppProvider, useAppContext } from '@/context/app-context';
 
 const cairo = Cairo({
@@ -29,6 +28,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
   useEffect(() => {
+    // --- App styling setup ---
     const theme = localStorage.getItem("theme") || "theme-green";
     document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
     document.body.classList.add(theme);
@@ -36,60 +36,68 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     const mode = localStorage.getItem("mode") || "dark";
     const html = document.documentElement;
     html.classList.remove("light", "dark");
-html.classList.add(mode);
+    html.classList.add(mode);
 
     html.style.fontFamily = cairo.style.fontFamily;
   }, []);
 
+  // Effect to handle redirection logic
   useEffect(() => {
-    // This effect handles redirection *after* loading is complete.
-    if (!loading && !user && !isAuthPage) {
+    // Don't redirect until loading is fully complete
+    if (loading) return;
+
+    if (!user && !isAuthPage) {
       router.replace('/login');
     }
+    
+    if (user && isAuthPage) {
+        router.replace('/');
+    }
+
   }, [user, loading, isAuthPage, router]);
 
+  // --- Render logic based on auth state ---
 
-  // Primary loading state for the entire app.
-  // It ensures we have a user object before rendering anything sensitive.
-  if (loading && !isAuthPage) {
+  // 1. Initial loading state for the entire app.
+  // This shows a loader until Firebase auth state is determined.
+  if (loading) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
-             <div className="flex flex-col items-center gap-4">
-                <Skeleton className="h-20 w-20 rounded-full" />
-                <Skeleton className="h-6 w-48" />
+             <div className="flex flex-col items-center gap-4 animate-pulse">
+                <Leaf className="h-20 w-20 text-primary" />
+                <p className="text-lg text-muted-foreground">جاري التحميل...</p>
             </div>
         </div>
     );
   }
   
+  // 2. If loading is done AND we are on an auth page, render it.
+  // (The redirection effect above will navigate away if user is already logged in)
   if (isAuthPage) {
     return <>{children}<Toaster /></>;
   }
   
-  // If loading is done and there's still no user, it means we should be on a page 
-  // that allows anonymous access or the redirect is in progress.
-  // The useEffect above handles the redirect. So we can show a loader or a message.
-  if (!user) {
-     return (
-        <div className="flex h-screen w-full bg-background items-center justify-center">
-             <div className="flex flex-col items-center gap-4">
-                <Skeleton className="h-20 w-20 rounded-full" />
-                <Skeleton className="h-6 w-48" />
-                <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
-            </div>
-        </div>
+  // 3. If loading is done AND there is a user, show the main app layout.
+  if (user) {
+    return (
+        <AppLayout>
+            {children}
+            <Toaster />
+        </AppLayout>
     );
   }
 
-
+  // 4. Fallback: If loading is done, no user, and not on an auth page,
+  // show a message while the redirection effect kicks in.
   return (
-    <AppLayout>
-        {children}
-        <Toaster />
-    </AppLayout>
+    <div className="flex h-screen w-full bg-background items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+            <Leaf className="h-20 w-20 text-primary" />
+            <p className="mt-4 text-muted-foreground">Redirecting to login...</p>
+        </div>
+    </div>
   );
 }
-
 
 function AppHtml({
   children,
