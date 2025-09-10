@@ -186,7 +186,7 @@ export default function AddTaskPage() {
                     </CardHeader>
                     <CardContent>
                         <p>{t('userProfileDesc')}</p>
-                        <Button onClick={() => router.push('/login')} className="mt-4">{t('login')}</Button>
+                        <Button onClick={() => router.push('/login')} className="mt-4">{t('login' as any)}</Button>
                     </CardContent>
                 </Card>
             </div>
@@ -349,5 +349,3 @@ export default function AddTaskPage() {
     </main>
   );
 }
-
-    
