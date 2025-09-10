@@ -92,7 +92,7 @@ export interface Transaction {
     month?: number;
     year?: number;
 }
-export type TransactionFormValues = Omit<Transaction, 'id' | 'date' | 'month' | 'year'>;
+export type TransactionFormValues = Omit<Transaction, 'id' | 'date'>;
 
 export interface PaidMonth {
     year: number;
@@ -144,5 +144,3 @@ export interface AgriculturalSection {
     videos: VideoSection[];
     ownerId?: string; // Make ownerId optional for public data
 }
-
-    
