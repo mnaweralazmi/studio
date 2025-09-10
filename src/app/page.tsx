@@ -1,33 +1,7 @@
-"use client";
-
-import { useAuth } from "@/hooks/useAuth";
-import AppLayout from "@/components/app-layout";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import LoadingScreen from "@/components/loading-screen";
-
 export default function Home() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
-
-  if (loading || !user) {
-    return <LoadingScreen />;
-  }
-
   return (
-    <AppLayout>
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold">الصفحة الرئيسية</h1>
-        <p className="text-muted-foreground mt-2">
-          مرحباً بك في لوحة التحكم الخاصة بك.
-        </p>
-      </div>
-    </AppLayout>
+    <main className="flex min-h-screen flex-col items-center justify-center">
+      <h1 className="text-4xl font-bold">مزارع كويتي</h1>
+    </main>
   );
 }

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
-import { Providers } from "@/components/providers";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
@@ -18,12 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={cairo.className}>
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
-      </body>
+      <body className={cairo.className}>{children}</body>
     </html>
   );
 }
