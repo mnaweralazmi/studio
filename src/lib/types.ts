@@ -145,5 +145,3 @@ export interface AgriculturalSection {
     videos: VideoSection[];
     ownerId?: string; // Make ownerId optional for public data
 }
-
-    

@@ -192,10 +192,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const unsubTopics = onSnapshot(query(collection(db, 'data')), (snapshot) => {
       setTopics(mapSnapshot<AgriculturalSection>(snapshot));
     }, error => console.error("Error listening to public 'data' collection:", error));
-    dataUnsubscribersRef.current.push(unsubTopics);
-
+    
     return () => {
       unsubAuth();
+      unsubTopics();
       clearDataListeners();
     };
   }, [clearDataListeners, resetAllData]);
@@ -235,12 +235,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     // Cleanup listeners when the user object changes (e.g., on logout)
     return () => {
-      if (!user) { // Only clear user-specific listeners
-        dataUnsubscribersRef.current.forEach(unsub => unsub());
-        dataUnsubscribersRef.current = [];
+      if (user) { 
+        clearDataListeners();
       }
     };
-  }, [user, resetAllData]);
+  }, [user, resetAllData, clearDataListeners]);
 
 
   const value = useMemo<AppContextType>(() => ({

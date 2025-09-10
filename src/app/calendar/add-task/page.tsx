@@ -211,7 +211,7 @@ export default function AddTaskPage() {
                 <CardContent className="space-y-6 pt-6">
                     <div className="space-y-2">
                         <Label>{t('taskTitle')}</Label>
-                        <Select onValueChange={(val) => { setTitle(val); setFruit(''); setVegetable(''); }} value={title}>
+                        <Select onValueChange={(val) => { setTitle(val); setFruit(''); setVegetable(''); }} value={title} required>
                           <SelectTrigger>
                             <SelectValue placeholder={t('selectTask')} />
                           </SelectTrigger>

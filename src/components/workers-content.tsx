@@ -52,13 +52,16 @@ async function paySalary(workerId: string, paidMonth: PaidMonth, transactionData
 
 async function addTransaction(workerId: string, transactionData: TransactionFormValues) {
     const workerRef = doc(db, 'workers', workerId);
-    const newTransaction: Omit<Transaction, 'id' | 'date'> & { id?: string; date?: Timestamp } = {
+    const newTransaction: Transaction = {
         ...transactionData,
-        id: new Date().toISOString() + Math.random(),
-        date: Timestamp.now(),
+        id: new Date().toISOString() + Math.random().toString(),
+        date: new Date(),
     };
     await updateDoc(workerRef, {
-        transactions: arrayUnion(newTransaction)
+        transactions: arrayUnion({
+            ...newTransaction,
+            date: Timestamp.fromDate(newTransaction.date)
+        })
     });
 }
 
@@ -152,7 +155,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
             toast({ title: t('workerDeleted') });
         } catch(e) {
             console.error("Error deleting worker: ", e);
-             toast({ variant: "destructive", title: t('error'), description: t('workerDeleted') });
+             toast({ variant: "destructive", title: t('error'), description: "Failed to delete worker" });
         }
     }
   
@@ -240,7 +243,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-green-600">{totalSalariesThisYear.toFixed(2)} {t('dinar')}</div>
-                    <p className="text-xs text-muted-foreground">{t('totalSalariesPaidThisYearDesc')} {currentYear}</p>
+                    <p className="text-xs text-muted-foreground">{`${t('totalSalariesPaidThisYearDesc')} ${currentYear}`}</p>
                 </CardContent>
             </Card>
              <Card>
@@ -250,7 +253,7 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-destructive">{totalUnpaidSalariesThisMonth.toFixed(2)} {t('dinar')}</div>
-                    <p className="text-xs text-muted-foreground">{t('unpaidSalariesThisMonthDesc')} {months.find(m => m.value === currentMonth)?.label}</p>
+                    <p className="text-xs text-muted-foreground">{`${t('unpaidSalariesThisMonthDesc')} ${months.find(m => m.value === currentMonth)?.label || ''}`}</p>
                 </CardContent>
             </Card>
         </div>
@@ -319,5 +322,3 @@ export function WorkersContent({ departmentId }: WorkersContentProps) {
       </div>
     );
 }
-
-    

@@ -57,6 +57,8 @@ async function archiveSale(sale: SalesItem): Promise<void> {
         archivedAt: Timestamp.now(),
         ownerId: sale.ownerId,
     };
+    delete (archivedSaleData as Partial<SalesItem & {id?: string}>).id;
+
     batch.set(archiveSaleRef, archivedSaleData);
 
     await batch.commit();
@@ -99,7 +101,7 @@ export function BudgetContent({ departmentId }: BudgetContentProps) {
     const price = Number(formData.get('price'));
     const weightPerUnit = formData.has('weightPerUnit') ? Number(formData.get('weightPerUnit')) : undefined;
 
-    if (!product || quantity <= 0 || price <= 0) {
+    if (!product || !quantity || quantity <= 0 || !price || price <= 0) {
         toast({ variant: "destructive", title: t('error'), description: "Please fill all fields correctly."});
         return;
     }

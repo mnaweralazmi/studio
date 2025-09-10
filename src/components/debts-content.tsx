@@ -47,6 +47,7 @@ async function archiveDebt(debt: DebtItem): Promise<void> {
         archivedAt: Timestamp.now(),
         ownerId: debt.ownerId
     };
+    delete archivedData.id;
     
     batch.set(archiveDebtRef, archivedData);
 
@@ -289,5 +290,3 @@ export function DebtsContent({ departmentId }: DebtsContentProps) {
         </div>
     );
 }
-
-    

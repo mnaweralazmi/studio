@@ -58,6 +58,8 @@ async function archiveExpense(expense: ExpenseItem): Promise<void> {
         archivedAt: Timestamp.now(),
         ownerId: expense.ownerId,
     };
+    delete (archivedExpenseData as Partial<ExpenseItem & {id?: string}>).id;
+
     batch.set(archiveExpenseRef, archivedExpenseData);
 
     await batch.commit();
@@ -304,5 +306,3 @@ export function ExpensesContent({ departmentId }: ExpensesContentProps) {
         </div>
     );
 }
-
-    
