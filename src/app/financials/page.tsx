@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import LoadingScreen from "@/components/loading-screen";
 
-export default function Home() {
+export default function FinancialsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -23,9 +23,9 @@ export default function Home() {
   return (
     <AppLayout>
       <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold">الصفحة الرئيسية</h1>
+        <h1 className="text-2xl font-bold">الإدارة المالية</h1>
         <p className="text-muted-foreground mt-2">
-          مرحباً بك في لوحة التحكم الخاصة بك.
+          هنا يمكنك تتبع المبيعات والمصروفات والديون.
         </p>
       </div>
     </AppLayout>

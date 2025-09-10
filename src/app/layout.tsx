@@ -1,10 +1,14 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
+import type { Metadata } from "next";
+import { Cairo } from "next/font/google";
+import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
+import { Providers } from "@/components/providers";
+
+const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
 export const metadata: Metadata = {
-  title: 'Kuwaiti Farmer',
-  description: 'Your gateway to the world of farming.',
+  title: "Kuwaiti Farmer",
+  description: "Your gateway to the world of farming.",
 };
 
 export default function RootLayout({
@@ -14,9 +18,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body>
-        {children}
-        <Toaster />
+      <body className={cairo.className}>
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );
