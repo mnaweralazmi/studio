@@ -55,7 +55,7 @@ async function archiveSale(sale: SalesItem): Promise<void> {
     const archivedSaleData = {
         ...sale,
         archivedAt: Timestamp.now(),
-        ownerId: sale.ownerId,
+        ownerId: sale.ownerId, // Ensure ownerId is carried over
     };
     delete (archivedSaleData as Partial<SalesItem & {id?: string}>).id;
 

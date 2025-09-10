@@ -15,6 +15,7 @@ import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User }
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAppContext } from '@/context/app-context';
+import { useLanguage } from '@/context/language-context';
 
 
 const GoogleIcon = () => (
@@ -51,6 +52,7 @@ const createNewUserDocument = async (user: User) => {
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
@@ -65,13 +67,12 @@ export default function LoginPage() {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
-      toast({ title: "تم تسجيل الدخول بنجاح!" });
-      router.push('/');
+      toast({ title: t('loginSuccess' as any) });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "فشل تسجيل الدخول",
-        description: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+        title: t('loginFailed' as any),
+        description: t('loginFailedDesc' as any),
       });
     } finally {
       setIsLoading(false);
@@ -84,8 +85,7 @@ export default function LoginPage() {
     try {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
-        toast({ title: "تم تسجيل الدخول بنجاح!" });
-        router.push('/');
+        toast({ title: t('loginSuccess' as any) });
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
         let description = "Could not sign you in with Google.";
@@ -94,20 +94,20 @@ export default function LoginPage() {
         }
         toast({
             variant: "destructive",
-            title: "Login Failed",
+            title: t('loginFailed' as any),
             description: description,
         });
     } finally {
         setIsGoogleLoading(false);
     }
   }
-
+  
   if (loading) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
              <div className="flex flex-col items-center gap-4 animate-pulse">
                 <Leaf className="h-20 w-20 text-primary" />
-                <p className="text-lg text-muted-foreground">جاري التحميل...</p>
+                <p className="text-lg text-muted-foreground">{t('loading')}</p>
             </div>
         </div>
     );
@@ -118,26 +118,26 @@ export default function LoginPage() {
        <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full mb-6">
             <Leaf className="h-6 w-6 text-primary" />
-            <span className="font-headline text-lg font-semibold text-primary-foreground">مزارع كويتي</span>
+            <span className="font-headline text-lg font-semibold text-primary">{t('kuwaitiFarmer')}</span>
         </div>
         <Card className="w-full">
             <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2">
                     <LogIn />
-                    تسجيل الدخول
+                    {t('login' as any)}
                 </CardTitle>
                 <CardDescription>
-                    أدخل بياناتك للوصول إلى حسابك.
+                    {t('loginDesc' as any)}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={onSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">البريد الإلكتروني</Label>
+                    <div className="space-y-2 text-left">
+                        <Label htmlFor="email">{t('email')}</Label>
                         <Input id="email" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="password">كلمة المرور</Label>
+                     <div className="space-y-2 text-left">
+                        <Label htmlFor="password">{t('password' as any)}</Label>
                         <div className="relative">
                             <Input 
                                 id="password"
@@ -156,20 +156,20 @@ export default function LoginPage() {
                         </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? "جاري التحقق..." : "تسجيل الدخول"}
+                        {isLoading ? t('loggingIn' as any) : t('login' as any)}
                     </Button>
                 </form>
-                 <Separator className="my-6">أو</Separator>
+                 <Separator className="my-6">{t('or' as any)}</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? "جاري..." : <><GoogleIcon/> <span className="mx-2">تسجيل الدخول باستخدام Google</span></> }
+                    {isGoogleLoading ? t('loading' as any) : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any)}</span></> }
                  </Button>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
                 <Separator />
                 <p className="text-sm text-muted-foreground">
-                    ليس لديك حساب؟{' '}
+                    {t('noAccount' as any)}{' '}
                     <NextLink href="/register" className="font-semibold text-primary hover:underline">
-                        إنشاء حساب جديد
+                        {t('createAccount' as any)}
                     </NextLink>
                 </p>
             </CardFooter>

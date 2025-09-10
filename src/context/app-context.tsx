@@ -147,23 +147,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+        clearDataListeners();
+        resetAllData();
+        
         if (firebaseUser) {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const unsubUser = onSnapshot(userDocRef, (userDocSnap) => {
                 const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
-                setUser({ ...firebaseUser, ...userProfile });
+                const fullUser: User = { ...firebaseUser, ...userProfile };
+                setUser(fullUser);
                 setLoading(false);
             }, (error) => {
                 console.error("Error listening to user document:", error);
                 setUser(firebaseUser as User); 
                 setLoading(false);
             });
-            return () => unsubUser();
+            dataUnsubscribersRef.current.push(unsubUser);
         } else {
             setUser(null);
             setLoading(false);
-            clearDataListeners();
-            resetAllData();
         }
     });
 
@@ -191,11 +193,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTopics(mapSnapshot<AgriculturalSection>(snapshot));
     }, error => console.error("Error listening to public 'data' collection:", error));
     
-    return () => {
-      unsubAuth();
-      unsubTopics();
-      clearDataListeners();
-    };
+    const cleanup = () => {
+        unsubAuth();
+        unsubTopics();
+        clearDataListeners();
+    }
+    
+    return cleanup;
   }, [clearDataListeners, resetAllData]);
 
   // Effect for fetching user-specific data, runs ONLY when user object is available
@@ -233,7 +237,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     // Cleanup listeners when the user object changes (e.g., on logout)
     return () => {
-      clearDataListeners();
+      if (user) { 
+        clearDataListeners();
+      }
     };
   }, [user, resetAllData, clearDataListeners]);
 
@@ -276,3 +282,4 @@ export const useAppContext = () => {
   }
   return ctx;
 };
+

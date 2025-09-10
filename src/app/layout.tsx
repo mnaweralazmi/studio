@@ -51,35 +51,31 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   }, [user, loading, isAuthPage, router]);
 
-  if (loading) {
+  if (loading || (!user && !isAuthPage) || (user && isAuthPage)) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
              <div className="flex flex-col items-center gap-4 animate-pulse">
                 <Leaf className="h-20 w-20 text-primary" />
-                <p className="text-lg text-muted-foreground">جاري التحميل...</p>
+                <p className="text-lg text-muted-foreground">{t('loading')}</p>
             </div>
         </div>
     );
   }
   
   if (isAuthPage) {
-      return user ? null : <>{children}<Toaster /></>;
+      return <>{children}<Toaster /></>;
   }
 
-  if (!isAuthPage) {
-    return user ? (
-        <AppLayout>
-            {children}
-            <Toaster />
-        </AppLayout>
-    ) : null;
-  }
-  
-  return null;
+  return (
+    <AppLayout>
+        {children}
+        <Toaster />
+    </AppLayout>
+  );
 }
 
 function AppHtml({ children }: { children: React.ReactNode }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   
   useIsomorphicLayoutEffect(() => {
       document.documentElement.lang = language;
@@ -91,7 +87,7 @@ function AppHtml({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>مزارع كويتي</title>
+        <title>{t('kuwaitiFarmer')}</title>
       </head>
       <body>
           <AppProvider>
@@ -107,9 +103,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { t } = useLanguage();
   return (
      <LanguageProvider>
         <AppHtml>{children}</AppHtml>
     </LanguageProvider>
   );
 }
+
