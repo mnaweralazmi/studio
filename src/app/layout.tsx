@@ -1,13 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Cairo } from 'next/font/google';
 import { Providers } from '@/components/providers';
-
-const cairo = Cairo({
-  subsets: ['arabic', 'latin'],
-  weight: ['400', '700'],
-  display: 'swap',
-});
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'Kuwaiti Farmer',
@@ -20,9 +14,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl">
-      <body className={cairo.className}>
+    <html lang="en">
+      <body>
         <Providers>{children}</Providers>
+        <Toaster />
       </body>
     </html>
   );

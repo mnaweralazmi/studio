@@ -8,13 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
-import { Leaf, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Leaf, LogIn } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { useLanguage } from '@/context/language-context';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { useAppContext } from '@/context/app-context';
+
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -25,35 +24,12 @@ const GoogleIcon = () => (
     </svg>
 )
 
-const createNewUserDocument = async (user: User) => {
-    const userDocRef = doc(db, "users", user.uid);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (userDocSnap.exists()) {
-        return; 
-    }
-
-    await setDoc(userDocRef, {
-        uid: user.uid,
-        name: user.displayName || 'Anonymous User',
-        email: user.email,
-        role: 'user', 
-        createdAt: new Date(),
-        points: 0,
-        level: 1,
-        badges: [],
-        photoURL: user.photoURL || ''
-    });
-}
-
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { t } = useLanguage();
   const { user, loading } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [showPassword, setShowPassword] = React.useState(false);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
@@ -68,15 +44,14 @@ export default function LoginPage() {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      await createNewUserDocument(result.user);
-      toast({ title: t('loginSuccess' as any) });
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Login Successful!" });
       router.push('/');
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: t('loginFailed' as any),
-        description: t('loginFailedDesc' as any),
+        title: "Login Failed",
+        description: "Incorrect email or password.",
       });
     } finally {
       setIsSubmitting(false);
@@ -87,18 +62,17 @@ export default function LoginPage() {
     setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
-        const result = await signInWithPopup(auth, provider);
-        await createNewUserDocument(result.user);
-        toast({ title: t('loginSuccess' as any) });
+        await signInWithPopup(auth, provider);
+        toast({ title: "Login Successful!" });
         router.push('/');
     } catch (error: any) {
-        let description = t('googleLoginFailedDesc' as any);
+        let description = "Could not sign you in with Google.";
         if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-            description = t('popupClosedError' as any);
+            description = "The sign-in window was closed. Please try again.";
         }
         toast({
             variant: "destructive",
-            title: t('loginFailed' as any),
+            title: "Login Failed",
             description: description,
         });
     } finally {
@@ -115,58 +89,50 @@ export default function LoginPage() {
        <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-3 bg-primary/20 px-4 py-2 rounded-full mb-6">
             <Leaf className="h-6 w-6 text-primary" />
-            <span className="font-headline text-lg font-semibold text-primary">{t('kuwaitiFarmer')}</span>
+            <span className="font-headline text-lg font-semibold text-primary">Kuwaiti Farmer</span>
         </div>
         <Card className="w-full">
             <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2">
                     <LogIn />
-                    {t('login' as any, {})}
+                    Login
                 </CardTitle>
                 <CardDescription>
-                   {t('loginDesc' as any, {})}
+                   Enter your credentials to access your account.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={onSubmit} className="space-y-6">
                     <div className="space-y-2 text-left">
-                        <Label htmlFor="email">{t('email')}</Label>
+                        <Label htmlFor="email">Email</Label>
                         <Input id="email" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                      <div className="space-y-2 text-left">
-                        <Label htmlFor="password">{t('password' as any, {})}</Label>
-                        <div className="relative">
-                            <Input 
-                                id="password"
-                                type={showPassword ? "text" : "password"} 
-                                placeholder="" 
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="pr-10" 
-                                required
-                            />
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-muted-foreground">
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                </button>
-                            </div>
-                        </div>
+                        <Label htmlFor="password">Password</Label>
+                        <Input 
+                            id="password"
+                            type="password" 
+                            placeholder="" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
                     </div>
                     <Button type="submit" className="w-full" disabled={isSubmitting}>
-                        {isSubmitting ? t('loggingIn' as any, {}) : t('login' as any, {})}
+                        {isSubmitting ? "Logging in..." : "Login"}
                     </Button>
                 </form>
-                 <Separator className="my-6">{t('or' as any, {})}</Separator>
+                 <Separator className="my-6">OR</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting}>
-                    {isSubmitting ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any, {})}</span></> }
+                    {isSubmitting ? "Loading..." : <><GoogleIcon/> <span className="mx-2">Login with Google</span></> }
                  </Button>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
                 <Separator />
                 <p className="text-sm text-muted-foreground">
-                    {t('noAccount' as any, {})}{' '}
+                    Don't have an account?{' '}
                     <NextLink href="/register" className="font-semibold text-primary hover:underline">
-                        {t('createAccount' as any, {})}
+                        Create a new account
                     </NextLink>
                 </p>
             </CardFooter>

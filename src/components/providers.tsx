@@ -1,9 +1,7 @@
 "use client";
 
 import React from 'react';
-import { LanguageProvider } from '@/context/language-context';
 import { AppProvider } from '@/context/app-context';
-import { Toaster } from '@/components/ui/toaster';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // Effects to set theme and mode from localStorage
@@ -18,11 +16,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <LanguageProvider>
       <AppProvider>
         {children}
-        <Toaster />
       </AppProvider>
-    </LanguageProvider>
   );
 }
