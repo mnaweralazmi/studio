@@ -32,8 +32,10 @@ export default function Home() {
             {t('homeHeaderSubtitle')}
           </p>
            {user && (
-              <div className='pt-4'>
+              <div className='pt-4 space-y-4'>
                 <p className='text-lg'>{t('welcome')}, {user.name || user.displayName || user.email}!</p>
+                <p>The app is now on a stable foundation.</p>
+                <Button onClick={handleLogout}>{t('logout')}</Button>
               </div>
            )}
         </header>

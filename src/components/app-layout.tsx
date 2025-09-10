@@ -2,49 +2,14 @@
 "use client";
 
 import React from 'react';
-import NextLink from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, ClipboardPen, CalendarDays, Settings, BarChart, Archive } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
-import { cn } from '@/lib/utils';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const { t } = useLanguage();
-
-  const navItems = [
-    { href: '/', label: t('home'), icon: Home },
-    { href: '/calendar', label: t('calendarAndTasks'), icon: CalendarDays },
-    { href: '/financials', label: t('departmentalManagement'), icon: ClipboardPen },
-    { href: '/summary', label: t('financialSummary'), icon: BarChart },
-    { href: '/archive', label: t('archive'), icon: Archive },
-    { href: '/settings', label: t('settings'), icon: Settings },
-  ];
 
   return (
     <div className="flex h-screen w-full flex-col">
-      <main className="flex-1 overflow-y-auto pb-24">{children}</main>
-      
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t border-border/20 bg-background/80 backdrop-blur-md">
-        <div className="flex h-full w-full items-center justify-around font-medium">
-          {navItems.map(item => {
-            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-            return (
-              <NextLink
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "group inline-flex flex-col items-center justify-center p-2 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground rounded-md w-20 h-16 transition-colors",
-                  isActive && "text-primary"
-                )}
-              >
-                <item.icon className="mb-1 h-6 w-6" />
-                <span className="text-xs text-center">{item.label}</span>
-              </NextLink>
-            )
-          })}
-        </div>
-      </nav>
+      <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   );
 }
