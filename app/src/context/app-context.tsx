@@ -143,7 +143,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAllDebts([]);
     setArchivedDebts([]);
     setAllWorkers([]);
-    setTopics([]);
+    // Public data like 'topics' is not reset here intentionally
   }, []);
 
   const listenToCollection = useCallback(<T,>(
@@ -287,4 +287,3 @@ export const useAppContext = () => {
   }
   return ctx;
 };
-

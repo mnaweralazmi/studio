@@ -8,9 +8,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useLayoutEffect } from 'react';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { Cairo } from 'next/font/google';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AppProvider, useAppContext } from '@/context/app-context';
 import { Leaf } from 'lucide-react';
+import { AppProvider, useAppContext } from '@/context/app-context';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
