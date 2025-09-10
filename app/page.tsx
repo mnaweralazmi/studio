@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Droplets, BookOpen } from "lucide-react";
 
 export default function HomePage() {
@@ -17,23 +16,6 @@ export default function HomePage() {
           دليلك التعليمي لاستدامة مزرعتك ونموها.
         </p>
       </header>
-
-      <div className="relative h-52 w-full rounded-2xl overflow-hidden shadow-lg">
-        <Image
-          src="https://picsum.photos/seed/farm/800/400"
-          alt="صورة مزرعة"
-          fill
-          style={{ objectFit: 'cover' }}
-          data-ai-hint="farm landscape"
-          className="brightness-90"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex flex-col justify-end p-5">
-          <h2 className="text-white text-2xl font-bold drop-shadow-md">
-            أساسيات الزراعة الحديثة
-          </h2>
-          <p className="text-white/90 text-sm mt-1 drop-shadow-md">ابدأ رحلتك نحو زراعة ناجحة.</p>
-        </div>
-      </div>
 
       <div>
         <h3 className="text-2xl font-semibold mb-4 text-foreground">مواضيع شائعة</h3>
