@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Award, BookOpen, CalendarCheck, HandCoins } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import { useAppContext } from "@/context/app-context";
-import { Skeleton } from "../ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const badgeList = {
   explorer: { icon: BookOpen, titleKey: "badgeExplorer", descriptionKey: "badgeExplorerDesc" },

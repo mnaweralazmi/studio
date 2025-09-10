@@ -40,7 +40,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading) return; // Wait until loading is complete before doing anything
+    if (loading) return; 
 
     if (!user && !isAuthPage) {
       router.replace('/login');
@@ -51,10 +51,6 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, isAuthPage, router]);
 
-  // This is the crucial part. We show a loading screen...
-  // 1. If the auth state is still loading.
-  // 2. Or if we are on a protected page and there is no user yet (prevents flash of content).
-  // 3. Or if we are on an auth page and there is a user (we are about to redirect).
   if (loading || (!user && !isAuthPage) || (user && isAuthPage)) {
     return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
