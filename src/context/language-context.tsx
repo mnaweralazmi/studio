@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, useLayoutEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import ar from '@/locales/ar.json';
 import en from '@/locales/en.json';
 
@@ -19,24 +18,24 @@ const translations = { ar, en };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Use useLayoutEffect to prevent flash of untranslated content
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
-
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('ar');
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const savedLanguage = localStorage.getItem('language') as Language;
     if (savedLanguage && (savedLanguage === 'ar' || savedLanguage === 'en')) {
       setLanguage(savedLanguage);
     }
   }, []);
+  
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }, [language]);
 
   const setLanguageWrapper = (lang: Language) => {
       setLanguage(lang);
       localStorage.setItem('language', lang);
-      document.documentElement.lang = lang;
-      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   }
 
   const t = (key: keyof Translations, params?: Record<string, string>): string => {

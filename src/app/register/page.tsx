@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -61,13 +60,6 @@ export default function RegisterPage() {
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
 
-  React.useEffect(() => {
-    if (!loading && user) {
-      router.replace('/');
-    }
-  }, [user, loading, router]);
-
-
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     
@@ -120,7 +112,7 @@ export default function RegisterPage() {
         await createNewUserDocument(user, user.displayName);
         
         toast({ title: t('loginSuccess' as any, {}) });
-        // The redirect will be handled by the effect
+        // The redirect is handled by RootLayoutContent
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -133,14 +125,7 @@ export default function RegisterPage() {
   }
   
   if (loading || user) {
-     return (
-      <div className="flex h-screen w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <Leaf className="h-20 w-20 text-primary" />
-          <p className="text-lg text-muted-foreground">{t('loading')}</p>
-        </div>
-      </div>
-    );
+     return null;
   }
 
   return (

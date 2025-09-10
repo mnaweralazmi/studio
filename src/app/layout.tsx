@@ -1,10 +1,9 @@
-
 "use client";
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect, useLayoutEffect } from 'react';
+import React, { useEffect } from 'react';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { Cairo } from 'next/font/google';
 import { Leaf } from 'lucide-react';
@@ -16,9 +15,6 @@ const cairo = Cairo({
   weight: ['400', '700'],
   display: 'swap',
 });
-
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
-
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -38,18 +34,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     if (user && isAuthPage) {
       router.replace('/');
     }
-  }, [user, loading, isAuthPage, router]);
-
-  useIsomorphicLayoutEffect(() => {
-      const language = localStorage.getItem('language') || 'ar';
-      const theme = localStorage.getItem("theme") || "theme-green";
-      document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
-      document.body.classList.add(theme);
-
-      const mode = localStorage.getItem("mode") || "dark";
-      document.documentElement.classList.remove("light", "dark");
-      document.documentElement.classList.add(mode);
-  }, []);
+  }, [user, loading, isAuthPage, router, pathname]);
   
   const showLoadingSpinner = loading || (!user && !isAuthPage);
 
@@ -71,25 +56,24 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>
 }
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [language, setLanguage] = React.useState('ar');
 
-  useIsomorphicLayoutEffect(() => {
-      const savedLanguage = localStorage.getItem('language') as 'ar' | 'en';
-      if (savedLanguage) {
-          setLanguage(savedLanguage);
-      }
-      document.documentElement.lang = language;
-      document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-  }, [language]);
+  useEffect(() => {
+    const theme = localStorage.getItem("theme") || "theme-green";
+    document.body.classList.remove("theme-green", "theme-blue", "theme-orange");
+    document.body.classList.add(theme);
+
+    const mode = localStorage.getItem("mode") || "dark";
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(mode);
+  }, []);
 
   return (
-     <html lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+     <html lang="ar" dir="rtl">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

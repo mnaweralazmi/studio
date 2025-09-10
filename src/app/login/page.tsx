@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -16,7 +15,6 @@ import { auth, db } from '@/lib/firebase';
 import { useLanguage } from '@/context/language-context';
 import { useAppContext } from '@/context/app-context';
 import { useRouter } from 'next/navigation';
-
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -48,24 +46,15 @@ const createNewUserDocument = async (user: User) => {
     });
 }
 
-
 export default function LoginPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const router = useRouter();
   const { user, loading } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
-
-  React.useEffect(() => {
-    if (!loading && user) {
-      router.replace('/');
-    }
-  }, [user, loading, router]);
-
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -74,7 +63,7 @@ export default function LoginPage() {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
       toast({ title: t('loginSuccess' as any) });
-      // The redirect will be handled by the effect
+      // The redirect is handled by the RootLayoutContent
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -93,7 +82,7 @@ export default function LoginPage() {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
         toast({ title: t('loginSuccess' as any) });
-        // The redirect will be handled by the effect
+        // The redirect is handled by the RootLayoutContent
     } catch (error: any) {
         let description = t('googleLoginFailedDesc' as any);
         if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
@@ -108,16 +97,10 @@ export default function LoginPage() {
         setIsSubmitting(false);
     }
   }
-  
+
+  // This will be handled by the loading spinner in RootLayoutContent
   if (loading || user) {
-     return (
-      <div className="flex h-screen w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <Leaf className="h-20 w-20 text-primary" />
-          <p className="text-lg text-muted-foreground">{t('loading')}</p>
-        </div>
-      </div>
-    );
+     return null;
   }
 
   return (

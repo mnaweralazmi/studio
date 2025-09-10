@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useState, useContext, useEffect } from "react";
@@ -41,7 +40,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let userProfileUnsubscribe: Unsubscribe | undefined;
 
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      // Cleanup previous user's profile listener
       if (userProfileUnsubscribe) {
         userProfileUnsubscribe();
       }
@@ -51,7 +49,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         userProfileUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
           const userProfile = userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : {};
           
-          // Convert Timestamps to Dates
           const profileWithDates = Object.fromEntries(
             Object.entries(userProfile).map(([key, value]) =>
               value instanceof Timestamp ? [key, value.toDate()] : [key, value]
@@ -80,7 +77,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
-
 
   return (
     <AppContext.Provider value={{ user, loading }}>
