@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Eye, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/context/language-context';
 import type { Worker, TransactionFormValues } from '@/lib/types';
 import { Label } from '../ui/label';
@@ -16,9 +16,10 @@ import { Label } from '../ui/label';
 interface FinancialRecordDialogProps {
     worker: Worker;
     onAddTransaction: (workerId: string, transaction: TransactionFormValues) => void;
+    children: React.ReactNode;
 }
 
-function FinancialRecordDialogComponent({ worker, onAddTransaction }: FinancialRecordDialogProps) {
+function FinancialRecordDialogComponent({ worker, onAddTransaction, children }: FinancialRecordDialogProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const { language, t } = useLanguage();
     const formRef = React.useRef<HTMLFormElement>(null);
@@ -49,10 +50,7 @@ function FinancialRecordDialogComponent({ worker, onAddTransaction }: FinancialR
     return (
          <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
-                   <Eye className="h-4 w-4 mr-1" />
-                   {t('viewFinancialRecord')}
-                </Button>
+                {children}
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
