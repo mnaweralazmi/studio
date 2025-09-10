@@ -112,7 +112,6 @@ export default function RegisterPage() {
         await createNewUserDocument(user, user.displayName);
         
         toast({ title: "تم تسجيل الدخول بنجاح!" });
-        // The context listener and useEffect in layout will handle the redirect
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -124,8 +123,6 @@ export default function RegisterPage() {
     }
   }
 
-  // Show a loader while the initial auth state is being determined.
-  // The redirect logic is handled in the main RootLayout.
   if (loading || user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">

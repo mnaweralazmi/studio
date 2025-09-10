@@ -46,7 +46,7 @@ export interface User extends FirebaseUser, UserProfile {}
 
 interface AppContextType {
   user: User | null;
-  loading: boolean; // True while waiting for user auth AND profile data
+  loading: boolean;
   tasks: Task[];
   completedTasks: ArchivedTask[];
   allSales: SalesItem[];
@@ -169,7 +169,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     });
 
-    // --- Public data listener (can run independently) ---
     const initializePublicData = async () => {
         try {
             const dataColRef = collection(db, 'data');
@@ -201,7 +200,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [clearDataListeners, resetAllData]);
 
-  // Effect for fetching user-specific data, runs ONLY when user object is available
   useEffect(() => {
     if (user) {
         const listenToCollection = <T,>(
@@ -230,17 +228,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         listenToCollection<ArchivedDebt>('archive_debts', setArchivedDebts, user.uid);
         listenToCollection<Worker>('workers', setAllWorkers, user.uid);
     } else {
-      // Clear all user-specific data when user logs out
       resetAllData();
     }
-    
-    // Cleanup listeners when the user object changes (e.g., on logout)
-    return () => {
-      if (!user) { // Only clear user-specific listeners
-        dataUnsubscribersRef.current.forEach(unsub => unsub());
-        dataUnsubscribersRef.current = [];
-      }
-    };
+
   }, [user, resetAllData]);
 
 
