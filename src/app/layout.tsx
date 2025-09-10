@@ -57,39 +57,38 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   }, [user, loading, isAuthPage, router]);
 
   // --- Render logic based on auth state ---
+
+  // 1. Initial loading state for the entire app.
+  // This shows a loader until Firebase auth state is determined.
   if (loading) {
     return (
-      <div className="flex h-screen w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <Leaf className="h-20 w-20 text-primary" />
-          <p className="text-lg text-muted-foreground">جاري التحميل...</p>
+        <div className="flex h-screen w-full bg-background items-center justify-center">
+             <div className="flex flex-col items-center gap-4 animate-pulse">
+                <Leaf className="h-20 w-20 text-primary" />
+                <p className="text-lg text-muted-foreground">جاري التحميل...</p>
+            </div>
         </div>
-      </div>
-    );
-  }
-
-  // If we are on an auth page, render it (the effect above will redirect if needed)
-  if (isAuthPage) {
-    return (
-      <>
-        {children}
-        <Toaster />
-      </>
-    );
-  }
-
-  // If we have a user and are not on an auth page, render the main layout
-  if (user) {
-    return (
-      <AppLayout>
-        {children}
-        <Toaster />
-      </AppLayout>
     );
   }
   
-  // If loading is done, no user, and not on an auth page, this is the state before redirection.
-  // We can show a loader or a blank page. A loader is better for user experience.
+  // 2. If loading is done AND we are on an auth page, render it.
+  // (The redirection effect above will navigate away if user is already logged in)
+  if (isAuthPage) {
+    return <>{children}<Toaster /></>;
+  }
+  
+  // 3. If loading is done AND there is a user, show the main app layout.
+  if (user) {
+    return (
+        <AppLayout>
+            {children}
+            <Toaster />
+        </AppLayout>
+    );
+  }
+
+  // 4. Fallback: If loading is done, no user, and not on an auth page,
+  // show a message while the redirection effect kicks in.
   return (
     <div className="flex h-screen w-full bg-background items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -135,5 +134,3 @@ export default function RootLayout({
     </LanguageProvider>
   );
 }
-
-    

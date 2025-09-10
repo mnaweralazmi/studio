@@ -59,7 +59,6 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
-
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsLoading(true);
@@ -109,7 +108,7 @@ export default function LoginPage() {
 
   // Show a loader while the initial auth state is being determined.
   // The redirect logic is now handled in the main RootLayout.
-  if (loading) {
+  if (loading || user) {
      return (
         <div className="flex h-screen w-full bg-background items-center justify-center">
              <div className="flex flex-col items-center gap-4 animate-pulse">
@@ -186,5 +185,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
