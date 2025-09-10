@@ -56,7 +56,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
-  const { user, loading } = useAppContext();
   
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
