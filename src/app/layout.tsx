@@ -1,30 +1,21 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
+import { Inter } from "next/font/google";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "تطبيق المزرعة",
-  description: "إدارة المزارع بسهولة",
+export const metadata = {
+  title: "Farm App",
+  description: "Manage your farm with ease",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          inter.variable
-        )}
-      >
-        {children}
-      </body>
+    <html suppressHydrationWarning>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
