@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
   doc,
@@ -26,7 +27,10 @@ interface AppContextType {
   loading: boolean;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<AppContextType>({
+  user: null,
+  loading: true,
+});
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -36,6 +40,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let userProfileUnsubscribe: Unsubscribe | undefined;
 
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      setLoading(true);
       if (userProfileUnsubscribe) {
         userProfileUnsubscribe();
       }
@@ -72,9 +77,5 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useAppContext = () => {
-  const ctx = useContext(AppContext);
-  if (!ctx) {
-    throw new Error("useAppContext must be used within an AppProvider");
-  }
-  return ctx;
+  return useContext(AppContext);
 };

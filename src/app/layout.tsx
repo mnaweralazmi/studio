@@ -1,3 +1,4 @@
+
 "use client";
 
 import './globals.css';
@@ -8,6 +9,7 @@ import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { Cairo } from 'next/font/google';
 import { Leaf } from 'lucide-react';
 import { AppProvider, useAppContext } from '@/context/app-context';
+import { AppLayout } from '@/components/app-layout';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -37,7 +39,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, isAuthPage, router]);
 
-  if (loading) {
+  if (loading || (!user && !isAuthPage)) {
     return (
       <div className="flex h-screen w-full bg-background items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
@@ -48,11 +50,12 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // This covers two cases:
-  // 1. User is logged in, show the app with layout.
-  // 2. User is NOT logged in, but is on an auth page.
-  if ((user && !isAuthPage) || (!user && isAuthPage)) {
+  if (isAuthPage) {
      return <>{children}</>;
+  }
+  
+  if (user) {
+    return <AppLayout>{children}</AppLayout>
   }
 
   // Fallback for edge cases during redirection

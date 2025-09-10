@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -33,7 +34,6 @@ export default function Home() {
            {user && (
               <div className='pt-4'>
                 <p className='text-lg'>{t('welcome')}, {user.displayName || user.email}!</p>
-                <Button onClick={handleLogout} variant="destructive" className="mt-4">{t('logout')}</Button>
               </div>
            )}
         </header>
