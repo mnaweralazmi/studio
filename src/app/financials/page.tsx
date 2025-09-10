@@ -19,7 +19,7 @@ export default function FinancialsPage() {
   }, [user, loading, router]);
   
   if (loading || !user) {
-    return null; // The loading state is handled by the AppProvider
+    return null; // The loading state is handled by the Providers component
   }
 
   return (

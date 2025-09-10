@@ -3,7 +3,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Leaf } from "lucide-react";
 
 interface AppContextType {
   user: FirebaseUser | null;
@@ -27,19 +26,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full bg-background items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <Leaf className="h-20 w-20 text-primary" />
-          <p className="text-lg text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <AppContext.Provider value={{ user, loading: loading }}>
+    <AppContext.Provider value={{ user, loading }}>
       {children}
     </AppContext.Provider>
   );

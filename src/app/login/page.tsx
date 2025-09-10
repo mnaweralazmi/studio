@@ -47,9 +47,8 @@ export default function LoginPage() {
     }
   }
 
-  // Prevents flash of login page while user state is loading
   if (loading || (!loading && user)) {
-     return null;
+     return null; // Prevent flash of login page
   }
 
   return (

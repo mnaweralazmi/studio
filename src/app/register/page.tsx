@@ -83,9 +83,8 @@ export default function RegisterPage() {
     }
   }
 
-  // Prevents flash of register page while user state is loading
   if (loading || (!loading && user)) {
-     return null;
+     return null; // Prevent flash of register page
   }
 
   return (
