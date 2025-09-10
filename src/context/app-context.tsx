@@ -88,7 +88,10 @@ function normalizeDocData(docData: any): any {
     const v = docData[k];
     if (v && typeof v.toDate === "function") {
       out[k] = v.toDate();
-    } else {
+    } else if (Array.isArray(v)) {
+      out[k] = v.map(item => item && typeof item.toDate === 'function' ? item.toDate() : item);
+    }
+     else {
       out[k] = v;
     }
   }

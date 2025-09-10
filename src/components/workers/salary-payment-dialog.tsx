@@ -89,5 +89,3 @@ function SalaryPaymentDialogComponent({ worker, onConfirm }: SalaryPaymentDialog
 }
 
 export const SalaryPaymentDialog = React.memo(SalaryPaymentDialogComponent);
-
-    
