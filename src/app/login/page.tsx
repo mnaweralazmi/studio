@@ -67,12 +67,12 @@ export default function LoginPage() {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await createNewUserDocument(result.user);
-      toast({ title: t('loginSuccess' as any) });
+      toast({ title: "تم تسجيل الدخول بنجاح!" });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: t('loginFailed' as any),
-        description: t('loginFailedDesc' as any),
+        title: "فشل تسجيل الدخول",
+        description: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
       });
     } finally {
       setIsLoading(false);
@@ -85,7 +85,7 @@ export default function LoginPage() {
     try {
         const result = await signInWithPopup(auth, provider);
         await createNewUserDocument(result.user);
-        toast({ title: t('loginSuccess' as any) });
+        toast({ title: "تم تسجيل الدخول بنجاح!" });
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
         let description = "Could not sign you in with Google.";
@@ -94,7 +94,7 @@ export default function LoginPage() {
         }
         toast({
             variant: "destructive",
-            title: t('loginFailed' as any),
+            title: "Login Failed",
             description: description,
         });
     } finally {
@@ -124,10 +124,10 @@ export default function LoginPage() {
             <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2">
                     <LogIn />
-                    {t('login' as any)}
+                    {t('login' as any, {})}
                 </CardTitle>
                 <CardDescription>
-                    {t('loginDesc' as any)}
+                   {t('loginDesc' as any, {})}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -137,7 +137,7 @@ export default function LoginPage() {
                         <Input id="email" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                      <div className="space-y-2 text-left">
-                        <Label htmlFor="password">{t('password' as any)}</Label>
+                        <Label htmlFor="password">{t('password' as any, {})}</Label>
                         <div className="relative">
                             <Input 
                                 id="password"
@@ -156,20 +156,20 @@ export default function LoginPage() {
                         </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? t('loggingIn' as any) : t('login' as any)}
+                        {isLoading ? t('loggingIn' as any, {}) : t('login' as any, {})}
                     </Button>
                 </form>
-                 <Separator className="my-6">{t('or' as any)}</Separator>
+                 <Separator className="my-6">{t('or' as any, {})}</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? t('loading' as any) : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any)}</span></> }
+                    {isGoogleLoading ? t('loading' as any) : <><GoogleIcon/> <span className="mx-2">{t('loginWithGoogle' as any, {})}</span></> }
                  </Button>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
                 <Separator />
                 <p className="text-sm text-muted-foreground">
-                    {t('noAccount' as any)}{' '}
+                    {t('noAccount' as any, {})}{' '}
                     <NextLink href="/register" className="font-semibold text-primary hover:underline">
-                        {t('createAccount' as any)}
+                        {t('createAccount' as any, {})}
                     </NextLink>
                 </p>
             </CardFooter>
@@ -178,3 +178,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    

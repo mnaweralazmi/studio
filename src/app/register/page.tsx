@@ -65,11 +65,11 @@ export default function RegisterPage() {
     event.preventDefault();
     
     if (password !== confirmPassword) {
-        toast({ variant: "destructive", title: t("error"), description: t('passwordsDoNotMatch' as any) });
+        toast({ variant: "destructive", title: t("error"), description: t('passwordsDoNotMatch' as any, {}) });
         return;
     }
     if (password.length < 6) {
-        toast({ variant: "destructive", title: t("error"), description: t('passwordTooShort' as any) });
+        toast({ variant: "destructive", title: t("error"), description: t('passwordTooShort' as any, {}) });
         return;
     }
 
@@ -82,20 +82,20 @@ export default function RegisterPage() {
         await createNewUserDocument(user, name);
         
         toast({
-            title: t('accountCreatedSuccess' as any),
-            description: t('accountCreatedSuccessDesc' as any),
+            title: t('accountCreatedSuccess' as any, {}),
+            description: t('accountCreatedSuccessDesc' as any, {}),
         });
 
         router.push('/login');
 
     } catch (error: any) {
-        let description = t('genericRegisterError' as any);
+        let description = t('genericRegisterError' as any, {});
         if (error.code === 'auth/email-already-in-use') {
-            description = t('emailInUseError' as any);
+            description = t('emailInUseError' as any, {});
         }
         toast({
             variant: "destructive",
-            title: t('registerError' as any),
+            title: t('registerError' as any, {}),
             description: description,
         });
     } finally {
@@ -112,12 +112,12 @@ export default function RegisterPage() {
         
         await createNewUserDocument(user, user.displayName);
         
-        toast({ title: t('loginSuccess' as any) });
+        toast({ title: t('loginSuccess' as any, {}) });
     } catch (error: any) {
         toast({
             variant: "destructive",
-            title: t('loginFailed' as any),
-            description: t('googleLoginFailedDesc' as any),
+            title: t('loginFailed' as any, {}),
+            description: t('googleLoginFailedDesc' as any, {}),
         });
     } finally {
         setIsGoogleLoading(false);
@@ -146,10 +146,10 @@ export default function RegisterPage() {
             <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2">
                     <UserPlus />
-                    {t('createAccount' as any)}
+                    {t('createAccount' as any, {})}
                 </CardTitle>
                 <CardDescription>
-                    {t('createAccountDesc' as any)}
+                    {t('createAccountDesc' as any, {})}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -163,28 +163,28 @@ export default function RegisterPage() {
                         <Input id="email" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                      <div className="space-y-2 text-left">
-                        <Label htmlFor="password">{t('password' as any)}</Label>
-                        <Input id="password" type="password" placeholder={t('chooseStrongPassword' as any)} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        <Label htmlFor="password">{t('password' as any, {})}</Label>
+                        <Input id="password" type="password" placeholder={t('chooseStrongPassword' as any, {})} value={password} onChange={(e) => setPassword(e.target.value)} required />
                     </div>
                      <div className="space-y-2 text-left">
                         <Label htmlFor="confirmPassword">{t('confirmNewPassword')}</Label>
-                        <Input id="confirmPassword" type="password" placeholder={t('confirmPasswordPlaceholder' as any)} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                        <Input id="confirmPassword" type="password" placeholder={t('confirmPasswordPlaceholder' as any, {})} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                        {isLoading ? t('creatingAccount' as any) : t('createAccount' as any)}
+                        {isLoading ? t('creatingAccount' as any, {}) : t('createAccount' as any, {})}
                     </Button>
                 </form>
-                <Separator className="my-6">{t('or' as any)}</Separator>
+                <Separator className="my-6">{t('or' as any, {})}</Separator>
                  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('createWithGoogle' as any)}</span></> }
+                    {isGoogleLoading ? t('loading') : <><GoogleIcon/> <span className="mx-2">{t('createWithGoogle' as any, {})}</span></> }
                  </Button>
             </CardContent>
              <CardFooter className="flex flex-col gap-4">
                 <Separator />
                 <p className="text-sm text-muted-foreground">
-                    {t('haveAccount' as any)}{' '}
+                    {t('haveAccount' as any, {})}{' '}
                     <NextLink href="/login" className="font-semibold text-primary hover:underline">
-                        {t('login' as any)}
+                        {t('login' as any, {})}
                     </NextLink>
                 </p>
             </CardFooter>
@@ -193,3 +193,5 @@ export default function RegisterPage() {
     </main>
   );
 }
+
+    
