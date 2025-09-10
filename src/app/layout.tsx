@@ -38,8 +38,10 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       router.replace('/');
     }
   }, [user, loading, isAuthPage, router]);
+  
+  const showLoadingSpinner = loading || (!user && !isAuthPage);
 
-  if (loading || (!user && !isAuthPage)) {
+  if (showLoadingSpinner) {
     return (
       <div className="flex h-screen w-full bg-background items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
@@ -58,15 +60,8 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     return <AppLayout>{children}</AppLayout>
   }
 
-  // Fallback for edge cases during redirection
-  return (
-      <div className="flex h-screen w-full bg-background items-center justify-center">
-           <div className="flex flex-col items-center gap-4 animate-pulse">
-              <Leaf className="h-20 w-20 text-primary" />
-              <p className="text-lg text-muted-foreground">{t('loading')}</p>
-          </div>
-      </div>
-  );
+  // Fallback for edge cases, should ideally not be reached
+  return null;
 }
 
 

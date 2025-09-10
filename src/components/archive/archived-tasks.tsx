@@ -8,7 +8,6 @@ import { useLanguage } from '@/context/language-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { ArchivedTask } from '@/lib/types';
 import { useAppContext } from '@/context/app-context';
 
 

@@ -33,7 +33,7 @@ export default function Home() {
           </p>
            {user && (
               <div className='pt-4'>
-                <p className='text-lg'>{t('welcome')}, {user.displayName || user.email}!</p>
+                <p className='text-lg'>{t('welcome')}, {user.name || user.displayName || user.email}!</p>
               </div>
            )}
         </header>
