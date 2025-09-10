@@ -102,17 +102,6 @@ export default function LoginPage() {
     }
   }
 
-  if (loading || user) {
-     return (
-        <div className="flex h-screen w-full bg-background items-center justify-center">
-             <div className="flex flex-col items-center gap-4 animate-pulse">
-                <Leaf className="h-20 w-20 text-primary" />
-                <p className="text-lg text-muted-foreground">{t('loading')}</p>
-            </div>
-        </div>
-    );
-  }
-
   return (
     <main className="flex flex-1 flex-col items-center justify-center min-h-screen p-4 bg-background">
        <div className="w-full max-w-sm mx-auto flex flex-col items-center text-center">
