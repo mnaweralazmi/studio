@@ -16,6 +16,7 @@ import {
   Users2,
   GitCommit,
   Tractor,
+  Briefcase,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -133,7 +134,7 @@ function DataView<T extends { id: string }>({
 
 // --- Generic Sub-page Components ---
 
-function ExpensesView({ user, collectionName }) {
+function ExpensesView({ user, collectionName, title }) {
   const collectionRef = user ? collection(db, 'users', user.uid, collectionName) : null;
   const [snapshot, loading] = useCollection(collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null);
   const expenses = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)) || [];
@@ -164,7 +165,7 @@ function ExpensesView({ user, collectionName }) {
 
   return (
     <div className="space-y-6">
-       <h1 className="text-3xl font-bold text-foreground sr-only">المصاريف</h1>
+       <h1 className="text-3xl font-bold text-foreground sr-only">{title}</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة مصروف جديد</CardTitle>
@@ -618,28 +619,43 @@ function WorkersView({ user }) {
   );
 }
 
-function AgricultureView({ user }) {
+function FarmManagementView({ user }) {
   const [activeTab, setActiveTab] = useState('expenses');
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="expenses"><DollarSign className="h-4 w-4 ml-2" />المصاريف</TabsTrigger>
-        <TabsTrigger value="sales"><ShoppingCart className="h-4 w-4 ml-2" />المبيعات</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="expenses"><DollarSign className="h-4 w-4 ml-2" />المصاريف العامة</TabsTrigger>
         <TabsTrigger value="debts"><HandCoins className="h-4 w-4 ml-2" />الديون</TabsTrigger>
         <TabsTrigger value="workers"><User className="h-4 w-4 ml-2" />العمال</TabsTrigger>
       </TabsList>
       <TabsContent value="expenses" className="mt-6">
-        <ExpensesView user={user} collectionName="expenses" />
-      </TabsContent>
-      <TabsContent value="sales" className="mt-6">
-        <AgriSalesView user={user} />
+        <ExpensesView user={user} collectionName="expenses" title="المصاريف العامة" />
       </TabsContent>
       <TabsContent value="debts" className="mt-6">
         <DebtsView user={user} />
       </TabsContent>
        <TabsContent value="workers" className="mt-6">
         <WorkersView user={user} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function AgricultureView({ user }) {
+  const [activeTab, setActiveTab] = useState('expenses');
+
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="expenses"><DollarSign className="h-4 w-4 ml-2" />المصاريف الزراعية</TabsTrigger>
+        <TabsTrigger value="sales"><ShoppingCart className="h-4 w-4 ml-2" />المبيعات</TabsTrigger>
+      </TabsList>
+      <TabsContent value="expenses" className="mt-6">
+        <ExpensesView user={user} collectionName="agriExpenses" title="المصاريف الزراعية" />
+      </TabsContent>
+      <TabsContent value="sales" className="mt-6">
+        <AgriSalesView user={user} />
       </TabsContent>
     </Tabs>
   );
@@ -884,7 +900,7 @@ function PoultryView({ user }) {
         <TabsTrigger value="flocks"><Users2 className="h-4 w-4 ml-2" />القطعان</TabsTrigger>
       </TabsList>
        <TabsContent value="expenses" className="mt-6">
-          <ExpensesView user={user} collectionName="poultryExpenses" />
+          <ExpensesView user={user} collectionName="poultryExpenses" title="مصاريف الدواجن"/>
        </TabsContent>
         <TabsContent value="eggSales" className="mt-6">
           <EggSalesView user={user} />
@@ -1060,7 +1076,7 @@ function LivestockView({ user }) {
         <TabsTrigger value="herds"><GitCommit className="h-4 w-4 ml-2 rotate-90" />القطيع</TabsTrigger>
       </TabsList>
        <TabsContent value="expenses" className="mt-6">
-          <ExpensesView user={user} collectionName="livestockExpenses" />
+          <ExpensesView user={user} collectionName="livestockExpenses" title="مصاريف المواشي"/>
        </TabsContent>
         <TabsContent value="sales" className="mt-6">
           <LivestockSalesView user={user} />
@@ -1075,7 +1091,7 @@ function LivestockView({ user }) {
 // --- Main Management View ---
 
 export default function ManagementView() {
-  const [selectedSection, setSelectedSection] = useState('agriculture');
+  const [selectedSection, setSelectedSection] = useState('farmManagement');
   const [user] = useAuthState(auth);
 
   const renderContent = () => {
@@ -1088,6 +1104,8 @@ export default function ManagementView() {
     }
     
     switch (selectedSection) {
+      case 'farmManagement':
+        return <FarmManagementView user={user} />;
       case 'agriculture':
         return <AgricultureView user={user} />;
       case 'poultry':
@@ -1113,6 +1131,12 @@ export default function ManagementView() {
             <SelectValue placeholder="اختر قسمًا" />
           </SelectTrigger>
           <SelectContent>
+             <SelectItem value="farmManagement">
+                <div className='flex items-center'>
+                    <Briefcase className="h-4 w-4 ml-2" />
+                    إدارة المزرعة (العامة)
+                </div>
+            </SelectItem>
             <SelectItem value="agriculture">
                 <div className='flex items-center'>
                     <Tractor className="h-4 w-4 ml-2" />
