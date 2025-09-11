@@ -1,19 +1,20 @@
+'use client';
+
 import {
   Bell,
   Languages,
   UserCircle,
   Shield,
   ChevronLeft,
-  Palette,
 } from 'lucide-react';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 export default function SettingsPage() {
   const settingsItems = [
-    { title: 'ملف المزرعة', icon: UserCircle },
-    { title: 'الإشعارات', icon: Bell },
-    { title: 'اللغة', icon: Languages },
-    { title: 'الألوان', icon: Palette },
-    { title: 'الأمان', icon: Shield },
+    { title: 'ملف المزرعة', icon: UserCircle, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
+    { title: 'الإشعارات', icon: Bell, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
+    { title: 'اللغة', icon: Languages, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
+    { title: 'الأمان', icon: Shield, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
   ];
 
   return (
@@ -25,6 +26,7 @@ export default function SettingsPage() {
         </p>
       </header>
       <div className="space-y-3">
+        <ThemeSwitcher />
         {settingsItems.map((item) => (
           <div
             key={item.title}
@@ -34,7 +36,7 @@ export default function SettingsPage() {
             <span className="text-lg font-medium text-card-foreground flex-1">
               {item.title}
             </span>
-            <ChevronLeft className="h-6 w-6 text-muted-foreground" />
+            {item.component}
           </div>
         ))}
       </div>

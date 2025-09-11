@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Home, ListChecks, Tractor, Settings, Wallet } from "lucide-react";
+import { Home, ListChecks, Tractor, Settings } from "lucide-react";
 import Link from "next/link";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,23 +25,30 @@ export default function RootLayout({
   ];
 
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body className={`${inter.className} bg-background`}>
-        <main className="pb-24 pt-4 px-4">{children}</main>
-        <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong">
-          <nav className="flex justify-around items-center h-20">
-            {navItems.map((item) => (
-              <Link
-                href={item.href}
-                key={item.href}
-                className="flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors w-full h-full"
-              >
-                <item.icon className="h-7 w-7" />
-                <span className="text-xs mt-1 font-medium">{item.label}</span>
-              </Link>
-            ))}
-          </nav>
-        </footer>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <main className="pb-24 pt-4 px-4">{children}</main>
+          <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong">
+            <nav className="flex justify-around items-center h-20">
+              {navItems.map((item) => (
+                <Link
+                  href={item.href}
+                  key={item.href}
+                  className="flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors w-full h-full"
+                >
+                  <item.icon className="h-7 w-7" />
+                  <span className="text-xs mt-1 font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+          </footer>
+        </ThemeProvider>
       </body>
     </html>
   );
