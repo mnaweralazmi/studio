@@ -633,18 +633,10 @@ function WorkersView({ user }) {
   );
 }
 
-export default function ManagementView() {
+function AgricultureView({ user }) {
   const [activeTab, setActiveTab] = useState('expenses');
-  const [user] = useAuthState(auth);
-
+  
   const renderView = () => {
-    if (!user) {
-      return (
-         <div className="flex justify-center items-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
-    }
     switch(activeTab) {
       case 'expenses': return <ExpensesView user={user} />;
       case 'sales': return <SalesView user={user}/>;
@@ -655,25 +647,81 @@ export default function ManagementView() {
   }
 
   return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="expenses"><DollarSign className="h-4 w-4 ml-2" />المصاريف</TabsTrigger>
+        <TabsTrigger value="sales"><ShoppingCart className="h-4 w-4 ml-2" />المبيعات</TabsTrigger>
+        <TabsTrigger value="debts"><HandCoins className="h-4 w-4 ml-2" />الديون</TabsTrigger>
+        <TabsTrigger value="workers"><User className="h-4 w-4 ml-2" />العمال</TabsTrigger>
+      </TabsList>
+      <TabsContent value={activeTab} className="mt-6">
+        {renderView()}
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function PlaceholderView({ title }: { title: string }) {
+  return (
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <div className="text-center text-muted-foreground">
+          <h2 className="text-lg font-semibold">قسم {title}</h2>
+          <p>هذا القسم قيد التطوير حاليًا.</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
+export default function ManagementView() {
+  const [selectedSection, setSelectedSection] = useState('agriculture');
+  const [user] = useAuthState(auth);
+
+  const renderContent = () => {
+    if (!user) {
+      return (
+         <div className="flex justify-center items-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+    
+    switch (selectedSection) {
+      case 'agriculture':
+        return <AgricultureView user={user} />;
+      case 'poultry':
+        return <PlaceholderView title="الدواجن" />;
+      case 'livestock':
+        return <PlaceholderView title="المواشي" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold text-foreground">إدارة المزرعة</h1>
-        <p className="mt-1 text-muted-foreground">
-          نظرة شاملة على عمليات مزرعتك.
-        </p>
+      <header className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">إدارة المزرعة</h1>
+          <p className="mt-1 text-muted-foreground">
+            اختر قسمًا لإدارة عملياته وبياناته.
+          </p>
+        </div>
+        <Select value={selectedSection} onValueChange={setSelectedSection}>
+          <SelectTrigger className="w-full md:w-[280px]">
+            <SelectValue placeholder="اختر قسمًا" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="agriculture">الزراعة</SelectItem>
+            <SelectItem value="poultry">الدواجن</SelectItem>
+            <SelectItem value="livestock">المواشي</SelectItem>
+          </SelectContent>
+        </Select>
       </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="expenses"><DollarSign className="h-4 w-4 ml-2" />المصاريف</TabsTrigger>
-          <TabsTrigger value="sales"><ShoppingCart className="h-4 w-4 ml-2" />المبيعات</TabsTrigger>
-          <TabsTrigger value="debts"><HandCoins className="h-4 w-4 ml-2" />الديون</TabsTrigger>
-          <TabsTrigger value="workers"><User className="h-4 w-4 ml-2" />العمال</TabsTrigger>
-        </TabsList>
-        <TabsContent value={activeTab} className="mt-6">
-          {renderView()}
-        </TabsContent>
-      </Tabs>
+      <div>{renderContent()}</div>
     </div>
   );
 }
