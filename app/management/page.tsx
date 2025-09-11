@@ -32,23 +32,25 @@ export default function ManagementPage() {
           نظرة شاملة على عمليات مزرعتك.
         </p>
       </header>
-      <div className="grid grid-cols-2 gap-4">
-        {managementItems.map((item) => (
-          <Link href={item.href} key={item.title}>
-            <div
-              className="bg-card p-6 rounded-xl shadow-md flex flex-col items-center justify-center space-y-3 transition-all cursor-pointer hover:shadow-xl hover:scale-105 hover:-translate-y-2 duration-300 h-full"
-            >
-              <div className="p-4 rounded-lg border bg-secondary/30">
-                <item.icon
-                  className={`h-12 w-12 ${item.color} drop-shadow-sm`}
-                />
+      <div className="bg-card p-4 rounded-xl shadow-sm">
+        <div className="flex justify-around items-center">
+          {managementItems.map((item) => (
+            <Link href={item.href} key={item.title} className="flex-1">
+              <div
+                className="flex flex-col items-center justify-center space-y-2 transition-all cursor-pointer hover:bg-secondary/50 rounded-lg py-3 hover:scale-105 duration-300"
+              >
+                <div className="p-3 rounded-full border bg-background">
+                  <item.icon
+                    className={`h-8 w-8 ${item.color} drop-shadow-sm`}
+                  />
+                </div>
+                <h2 className="text-sm font-semibold text-card-foreground">
+                  {item.title}
+                </h2>
               </div>
-              <h2 className="text-lg font-semibold text-card-foreground">
-                {item.title}
-              </h2>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
