@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ListTodo,
   History,
-  Bell,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
@@ -173,7 +172,7 @@ function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'compl
   );
 }
 
-function UpcomingTasksView({ tasks }: { tasks: Task[] }) {
+function UpcomingTasksView({ tasks, onToggleTask }: { tasks: Task[], onToggleTask: (id: string) => void }) {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground sr-only">المهام القادمة</h1>
@@ -185,7 +184,7 @@ function UpcomingTasksView({ tasks }: { tasks: Task[] }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TaskList tasks={tasks} />
+          <TaskList tasks={tasks} onToggleTask={onToggleTask} />
         </CardContent>
       </Card>
     </div>
@@ -224,14 +223,22 @@ export default function TasksPage() {
       id: `task-${Date.now()}`,
       completed: false,
     };
-    setUpcomingTasks([newTask, ...upcomingTasks]);
+    setUpcomingTasks([newTask, ...upcomingTasks].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()));
     setActiveView('upcoming'); // Switch to upcoming tasks view after adding
   };
   
+  const handleToggleTask = (taskId: string) => {
+    const taskToMove = upcomingTasks.find((task) => task.id === taskId);
+    if (taskToMove) {
+      setUpcomingTasks(upcomingTasks.filter((task) => task.id !== taskId));
+      setPastTasks([{ ...taskToMove, completed: true }, ...pastTasks]);
+    }
+  };
+
   const views: { id: TaskViewId; component: ReactNode }[] = [
     { id: 'calendar', component: <CalendarView tasks={[...upcomingTasks, ...pastTasks]} /> },
     { id: 'add', component: <AddTaskView onAddTask={handleAddTask} /> },
-    { id: 'upcoming', component: <UpcomingTasksView tasks={upcomingTasks} /> },
+    { id: 'upcoming', component: <UpcomingTasksView tasks={upcomingTasks} onToggleTask={handleToggleTask} /> },
     { id: 'past', component: <PastTasksView tasks={pastTasks} /> },
   ];
 

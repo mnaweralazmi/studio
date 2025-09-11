@@ -11,7 +11,7 @@ export type Task = {
   reminder?: string;
 };
 
-export function TaskList({ tasks }: { tasks: Task[] }) {
+export function TaskList({ tasks, onToggleTask }: { tasks: Task[], onToggleTask?: (id: string) => void }) {
   if (tasks.length === 0) {
     return (
       <p className="text-muted-foreground text-center pt-4">
@@ -25,10 +25,11 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
       {tasks.map((task) => (
         <div
           key={task.id}
-          className={`flex items-center p-3 rounded-lg transition-all cursor-pointer ${
+          onClick={() => onToggleTask && !task.completed && onToggleTask(task.id)}
+          className={`flex items-center p-3 rounded-lg transition-all ${
             task.completed
               ? 'bg-muted/50 hover:bg-muted'
-              : 'bg-card hover:bg-secondary/50'
+              : 'bg-card hover:bg-secondary/50 cursor-pointer'
           }`}
         >
           <div className="p-1 border rounded-full ml-3">
