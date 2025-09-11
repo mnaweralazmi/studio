@@ -112,6 +112,7 @@ function ProfileView() {
             <div>
               <h2 className="text-xl font-bold">{user?.displayName || 'مستخدم جديد'}</h2>
               <p className="text-muted-foreground">{user?.email}</p>
+              <p className="text-xs text-muted-foreground mt-1">UID: {user?.uid}</p>
             </div>
           </div>
           
