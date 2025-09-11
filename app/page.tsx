@@ -1,4 +1,6 @@
-import { Droplets, BookOpen } from "lucide-react";
+import { Droplets, BookOpen, LogIn } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   const topics = [
@@ -7,18 +9,30 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 flex flex-col items-center h-full pt-16">
       <header className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold text-primary">
-          مزارع كويتي
-        </h1>
+        <h1 className="text-4xl font-bold text-primary">مزارع كويتي</h1>
         <p className="text-muted-foreground">
           دليلك التعليمي لاستدامة مزرعتك ونموها.
         </p>
       </header>
 
-      <div>
-        <h3 className="text-2xl font-semibold mb-4 text-foreground">مواضيع شائعة</h3>
+      <div className="w-full max-w-sm space-y-4">
+        <Button asChild className="w-full" size="lg">
+          <Link href="/login">
+            <LogIn className="ml-2 h-5 w-5" />
+            تسجيل الدخول
+          </Link>
+        </Button>
+        <Button asChild className="w-full" size="lg" variant="outline">
+          <Link href="/register">إنشاء حساب جديد</Link>
+        </Button>
+      </div>
+
+      <div className="pt-8 w-full max-w-md">
+        <h3 className="text-2xl font-semibold mb-4 text-foreground text-center">
+          مواضيع شائعة
+        </h3>
         <div className="grid grid-cols-1 gap-4">
           {topics.map((topic, index) => (
             <div
