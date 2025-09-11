@@ -8,11 +8,15 @@ import {
   ToggleLeft,
   ToggleRight,
   LogOut,
+  Loader2,
+  CheckCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,29 +30,110 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import Image from 'next/image';
+import { Textarea } from '@/components/ui/textarea';
 
 // --- Sub-page Components ---
 
 function ProfileView() {
+  const [user, loading] = useAuthState(auth);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [farmName, setFarmName] = useState('');
+  const [publicInfo, setPublicInfo] = useState('');
+  const [privateInfo, setPrivateInfo] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const docRef = doc(db, 'users', user.uid, 'profile', 'data');
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setFarmName(data.farmName || '');
+        setPublicInfo(data.publicInfo || '');
+        setPrivateInfo(data.privateInfo || '');
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleSaveChanges = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    setIsSuccess(false);
+    const docRef = doc(db, 'users', user.uid, 'profile', 'data');
+    try {
+      await setDoc(docRef, {
+        farmName,
+        publicInfo,
+        privateInfo,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL
+      }, { merge: true });
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 3000);
+    } catch (error) {
+      console.error("Error saving profile: ", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground sr-only">ملف المزرعة</h1>
       <Card>
         <CardHeader>
-          <CardTitle>تعديل معلومات المزرعة</CardTitle>
+          <CardTitle>معلومات الملف الشخصي</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="w-24 h-24 rounded-full bg-secondary flex items-center justify-center">
-              <UserCircle className="w-16 h-16 text-muted-foreground" />
+        <CardContent className="space-y-6">
+          <div className="flex items-center space-x-4 rtl:space-x-reverse">
+             {user?.photoURL ? (
+                <Image src={user.photoURL} alt={user.displayName || 'صورة المستخدم'} width={80} height={80} className="rounded-full" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
+                  <UserCircle className="w-12 h-12 text-muted-foreground" />
+                </div>
+              )}
+            <div>
+              <h2 className="text-xl font-bold">{user?.displayName || 'مستخدم جديد'}</h2>
+              <p className="text-muted-foreground">{user?.email}</p>
             </div>
-            <Button variant="outline">تغيير الشعار</Button>
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="farm-name">اسم المزرعة</Label>
-            <Input id="farm-name" defaultValue="مزرعة الأمل" />
+            <Label htmlFor="farm-name">اسم المزرعة (عام)</Label>
+            <Input id="farm-name" value={farmName} onChange={e => setFarmName(e.target.value)} placeholder="مثال: مزرعة الأمل" />
           </div>
-          <Button className="w-full">حفظ التغييرات</Button>
+          
+          <div className="space-y-2">
+            <Label htmlFor="public-info">معلومات عامة (تظهر للجميع)</Label>
+            <Textarea id="public-info" value={publicInfo} onChange={e => setPublicInfo(e.target.value)} placeholder="وصف قصير عن المزرعة أو المنتجات..." />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="private-info">معلومات خاصة (تظهر لك فقط)</Label>
+            <Textarea id="private-info" value={privateInfo} onChange={e => setPrivateInfo(e.target.value)} placeholder="ملاحظات، أرقام هواتف، أو أي معلومات خاصة..." />
+          </div>
+
+          <Button className="w-full" onClick={handleSaveChanges} disabled={isSaving || isSuccess}>
+            {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : isSuccess ? <CheckCircle className="h-5 w-5" /> : null}
+            <span className="mx-2">
+              {isSaving ? 'جاري الحفظ...' : isSuccess ? 'تم الحفظ بنجاح!' : 'حفظ التغييرات'}
+            </span>
+          </Button>
         </CardContent>
       </Card>
     </div>
