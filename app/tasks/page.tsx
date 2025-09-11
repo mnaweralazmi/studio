@@ -39,12 +39,12 @@ import { ar } from 'date-fns/locale';
 
 // --- Initial Data ---
 const initialUpcomingTasks: Task[] = [
-  { id: 'task-1', time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false, reminder: 'قبل 15 دقيقة', date: '2024/07/28' },
-  { id: 'task-2', time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false, date: '2024/07/29' },
+  { id: 'task-1', title: 'تسميد أشجار الليمون', completed: false, reminder: 'قبل يوم', date: '2024/07/28' },
+  { id: 'task-2', title: 'فحص الفخاخ الحشرية', completed: false, date: '2024/07/29' },
 ];
 
 const initialPastTasks: Task[] = [
-  { id: 'task-3', time: '٠٨:٠٠ ص', title: 'ري قسم البطاطس', completed: true, date: '2024/07/20' },
+  { id: 'task-3', title: 'ري قسم البطاطس', completed: true, date: '2024/07/20' },
 ];
 
 // --- Sub-page Components ---
@@ -87,15 +87,13 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
 function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState<Date | undefined>();
-  const [time, setTime] = useState('');
   const [reminder, setReminder] = useState('');
 
   const handleAddTask = () => {
-    if (!title || !date || !time) return; // Basic validation
-    onAddTask({ title, time, date: format(date, 'yyyy/MM/dd'), reminder });
+    if (!title || !date) return; // Basic validation
+    onAddTask({ title, date: format(date, 'yyyy/MM/dd'), reminder });
     setTitle('');
     setDate(undefined);
-    setTime('');
     setReminder('');
   };
   
@@ -111,42 +109,36 @@ function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'compl
             <Label htmlFor="task-title">عنوان المهمة</Label>
             <Input id="task-title" placeholder="مثال: ري قسم البطاطس" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-time">وقت المهمة</Label>
-              <Input id="task-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} dir="ltr" />
+          <div className="space-y-2">
+              <Label>تاريخ المهمة</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={'outline'}
+                    className={cn(
+                      'w-full justify-start text-right font-normal',
+                      !date && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    {date ? (
+                      format(date, 'PPP', { locale: ar })
+                    ) : (
+                      <span>اختر تاريخًا</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                    dir="rtl"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-            <div className="space-y-2">
-                <Label>تاريخ المهمة</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={'outline'}
-                      className={cn(
-                        'w-full justify-start text-right font-normal',
-                        !date && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="ml-2 h-4 w-4" />
-                      {date ? (
-                        format(date, 'PPP', { locale: ar })
-                      ) : (
-                        <span>اختر تاريخًا</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      dir="rtl"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-          </div>
            <div className="space-y-2">
               <Label htmlFor="task-reminder">تذكير قبل المهمة</Label>
               <Select value={reminder} onValueChange={setReminder}>
@@ -154,11 +146,9 @@ function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'compl
                   <SelectValue placeholder="اختر وقت التذكير" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="قبل 5 دقائق">قبل 5 دقائق</SelectItem>
-                  <SelectItem value="قبل 15 دقيقة">قبل 15 دقيقة</SelectItem>
-                  <SelectItem value="قبل 30 دقيقة">قبل 30 دقيقة</SelectItem>
-                  <SelectItem value="قبل ساعة">قبل ساعة</SelectItem>
                   <SelectItem value="قبل يوم">قبل يوم</SelectItem>
+                  <SelectItem value="قبل يومين">قبل يومين</SelectItem>
+                  <SelectItem value="قبل 3 أيام">قبل 3 أيام</SelectItem>
                 </SelectContent>
               </Select>
             </div>
