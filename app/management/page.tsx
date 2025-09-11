@@ -9,10 +9,9 @@ import {
   Trash2,
   CreditCard,
   CheckCircle,
-  ArrowLeft,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -46,8 +45,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Types
 type Expense = {
@@ -779,81 +777,56 @@ function WorkersView() {
   );
 }
 
-type ManagementViewId = 'expenses' | 'sales' | 'debts' | 'workers';
-
 export default function ManagementPage() {
-  const [activeView, setActiveView] = useState<ManagementViewId>('expenses');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeTab = searchParams.get('tab') || 'expenses';
 
-  const views: { id: ManagementViewId; component: ReactNode }[] = [
-    { id: 'expenses', component: <ExpensesView /> },
-    { id: 'sales', component: <SalesView /> },
-    { id: 'debts', component: <DebtsView /> },
-    { id: 'workers', component: <WorkersView /> },
-  ];
-
-  const navItems: {
-    id: ManagementViewId | 'back';
-    label: string;
-    icon: React.ElementType;
-    href?: string;
-  }[] = [
-    { id: 'expenses', label: 'المصاريف', icon: DollarSign },
-    { id: 'sales', label: 'المبيعات', icon: ShoppingCart },
-    { id: 'debts', label: 'الديون', icon: HandCoins },
-    { id: 'workers', label: 'العمال', icon: User },
-    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/tasks' },
-  ];
-
-  const activeComponent = views.find((v) => v.id === activeView)?.component;
-
-  const NavLink = ({ item }: { item: (typeof navItems)[0] }) => {
-    const isActive = activeView === item.id;
-    const content = (
-      <div
-        className={cn(
-          'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
-          isActive && 'text-primary'
-        )}
-        onClick={() =>
-          item.id !== 'back' && setActiveView(item.id as ManagementViewId)
-        }
-      >
-        <item.icon className="h-7 w-7" />
-        <span className="text-xs mt-1 font-medium">{item.label}</span>
-      </div>
-    );
-
-    if (item.href) {
-      return (
-        <Link href={item.href} className="w-full h-full">
-          {content}
-        </Link>
-      );
-    }
-
-    return <div className="w-full h-full cursor-pointer">{content}</div>;
+  const handleTabChange = (value: string) => {
+    router.push(`/management?tab=${value}`);
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-foreground sr-only">
-          إدارة المزرعة
-        </h1>
-        <p className="mt-1 text-muted-foreground sr-only">
+        <h1 className="text-3xl font-bold text-foreground">إدارة المزرعة</h1>
+        <p className="mt-1 text-muted-foreground">
           نظرة شاملة على عمليات مزرعتك.
         </p>
       </header>
 
-      <div className="mt-6">{activeComponent}</div>
-
-      <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
-        <nav className="flex justify-around items-center h-20">
-          {navItems.map((item) => (
-            <NavLink key={item.id} item={item} />
-          ))}
-        </nav>
-      </footer>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="expenses">
+            <DollarSign className="h-4 w-4 ml-2" />
+            المصاريف
+          </TabsTrigger>
+          <TabsTrigger value="sales">
+            <ShoppingCart className="h-4 w-4 ml-2" />
+            المبيعات
+          </TabsTrigger>
+          <TabsTrigger value="debts">
+            <HandCoins className="h-4 w-4 ml-2" />
+            الديون
+          </TabsTrigger>
+          <TabsTrigger value="workers">
+            <User className="h-4 w-4 ml-2" />
+            العمال
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="expenses" className="mt-6">
+          <ExpensesView />
+        </TabsContent>
+        <TabsContent value="sales" className="mt-6">
+          <SalesView />
+        </TabsContent>
+        <TabsContent value="debts" className="mt-6">
+          <DebtsView />
+        </TabsContent>
+        <TabsContent value="workers" className="mt-6">
+          <WorkersView />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

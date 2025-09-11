@@ -3,12 +3,10 @@
 import {
   CalendarIcon,
   Plus,
-  ArrowLeft,
   ListTodo,
   History,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +34,8 @@ import {
 } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 // --- Initial Data ---
 const initialUpcomingTasks: Task[] = [
@@ -199,13 +199,10 @@ function PastTasksView({ tasks }: { tasks: Task[] }) {
 }
 
 // --- Main Page Component ---
-
-type TaskViewId = 'calendar' | 'add' | 'upcoming' | 'past';
-
 export default function TasksPage() {
-  const [activeView, setActiveView] = useState<TaskViewId>('upcoming');
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>(initialUpcomingTasks);
   const [pastTasks, setPastTasks] = useState<Task[]>(initialPastTasks);
+  const [activeTab, setActiveTab] = useState('upcoming');
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     const newTask: Task = {
@@ -214,7 +211,7 @@ export default function TasksPage() {
       completed: false,
     };
     setUpcomingTasks([newTask, ...upcomingTasks].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()));
-    setActiveView('upcoming'); // Switch to upcoming tasks view after adding
+    setActiveTab('upcoming'); // Switch to upcoming tasks view after adding
   };
   
   const handleToggleTask = (taskId: string) => {
@@ -225,72 +222,35 @@ export default function TasksPage() {
     }
   };
 
-  const views: { id: TaskViewId; component: ReactNode }[] = [
-    { id: 'calendar', component: <CalendarView tasks={[...upcomingTasks, ...pastTasks]} /> },
-    { id: 'add', component: <AddTaskView onAddTask={handleAddTask} /> },
-    { id: 'upcoming', component: <UpcomingTasksView tasks={upcomingTasks} onToggleTask={handleToggleTask} /> },
-    { id: 'past', component: <PastTasksView tasks={pastTasks} /> },
-  ];
-
-  const navItems: {
-    id: TaskViewId | 'back';
-    label: string;
-    icon: React.ElementType;
-    href?: string;
-  }[] = [
-    { id: 'calendar', label: 'التقويم', icon: CalendarIcon },
-    { id: 'add', label: 'إضافة', icon: Plus },
-    { id: 'upcoming', label: 'قادمة', icon: ListTodo },
-    { id: 'past', label: 'سابقة', icon: History },
-    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/tasks' },
-  ];
-
-  const activeComponent = views.find((v) => v.id === activeView)?.component;
-
-  const NavLink = ({
-    item,
-  }: {
-    item: (typeof navItems)[0];
-  }) => {
-    const isActive = activeView === item.id;
-    const content = (
-       <div
-        className={cn(
-          'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
-          isActive && 'text-primary'
-        )}
-        onClick={() => item.id !== 'back' && setActiveView(item.id as TaskViewId)}
-      >
-        <item.icon className="h-7 w-7" />
-        <span className="text-xs mt-1 font-medium">{item.label}</span>
-      </div>
-    );
-    
-    if (item.href) {
-        return <Link href={item.href} className="w-full h-full">{content}</Link>
-    }
-    
-    return <div className="w-full h-full cursor-pointer">{content}</div>;
-  };
-
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-foreground sr-only">التقويم والمهام</h1>
-        <p className="mt-1 text-muted-foreground sr-only">
+        <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
+        <p className="mt-1 text-muted-foreground">
           جدول مهامك اليومية والأسبوعية.
         </p>
       </header>
 
-      <div className="mt-6">{activeComponent}</div>
-      
-      <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
-        <nav className="flex justify-around items-center h-20">
-          {navItems.map((item) => (
-            <NavLink key={item.id} item={item} />
-          ))}
-        </nav>
-      </footer>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="upcoming"><ListTodo className="h-4 w-4 ml-2" />قادمة</TabsTrigger>
+          <TabsTrigger value="past"><History className="h-4 w-4 ml-2" />سابقة</TabsTrigger>
+          <TabsTrigger value="add"><Plus className="h-4 w-4 ml-2" />إضافة</TabsTrigger>
+          <TabsTrigger value="calendar"><CalendarIcon className="h-4 w-4 ml-2" />التقويم</TabsTrigger>
+        </TabsList>
+        <TabsContent value="upcoming" className="mt-6">
+          <UpcomingTasksView tasks={upcomingTasks} onToggleTask={handleToggleTask} />
+        </TabsContent>
+        <TabsContent value="past" className="mt-6">
+          <PastTasksView tasks={pastTasks} />
+        </TabsContent>
+        <TabsContent value="add" className="mt-6">
+          <AddTaskView onAddTask={handleAddTask} />
+        </TabsContent>
+        <TabsContent value="calendar" className="mt-6">
+          <CalendarView tasks={[...upcomingTasks, ...pastTasks]} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

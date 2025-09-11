@@ -5,17 +5,14 @@ import {
   Languages,
   UserCircle,
   Shield,
-  ArrowLeft,
   Palette,
   ToggleLeft,
   ToggleRight,
-  ChevronDown,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,13 +23,14 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 // --- Sub-page Components ---
 
 function ProfileView() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">ملف المزرعة</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">ملف المزرعة</h1>
       <Card>
         <CardHeader>
           <CardTitle>تعديل معلومات المزرعة</CardTitle>
@@ -88,7 +86,7 @@ function NotificationsView() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">الإشعارات</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">الإشعارات</h1>
       <div className="space-y-4">
         <Toggle
           label="إشعارات المهام"
@@ -110,7 +108,7 @@ function AppearanceView() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">المظهر واللغة</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">المظهر واللغة</h1>
       <ThemeSwitcher />
       <Card>
         <CardHeader>
@@ -138,7 +136,7 @@ function AppearanceView() {
 function SecurityView() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">الأمان والخصوصية</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">الأمان والخصوصية</h1>
       <Card>
         <CardHeader>
           <CardTitle>تغيير كلمة المرور</CardTitle>
@@ -166,85 +164,55 @@ function SecurityView() {
 
 // --- Main Page Component ---
 
-type SettingsViewId =
-  | 'profile'
-  | 'appearance'
-  | 'notifications'
-  | 'security';
-
 export default function SettingsPage() {
-  const [activeView, setActiveView] = useState<SettingsViewId>('profile');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeTab = searchParams.get('tab') || 'profile';
 
-  const views: { id: SettingsViewId; component: ReactNode }[] = [
-    { id: 'profile', component: <ProfileView /> },
-    { id: 'appearance', component: <AppearanceView /> },
-    { id: 'notifications', component: <NotificationsView /> },
-    { id: 'security', component: <SecurityView /> },
-  ];
-
-  const navItems: {
-    id: SettingsViewId | 'back';
-    label: string;
-    icon: React.ElementType;
-    href?: string;
-  }[] = [
-    { id: 'profile', label: 'الملف', icon: UserCircle },
-    { id: 'appearance', label: 'المظهر', icon: Palette },
-    { id: 'notifications', label: 'الإشعارات', icon: Bell },
-    { id: 'security', label: 'الأمان', icon: Shield },
-    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/tasks' },
-  ];
-
-  const activeComponent = views.find((v) => v.id === activeView)?.component;
-
-  const NavLink = ({ item }: { item: (typeof navItems)[0] }) => {
-    const isActive = activeView === item.id;
-    const content = (
-      <div
-        className={cn(
-          'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
-          isActive && 'text-primary'
-        )}
-        onClick={() =>
-          item.id !== 'back' && setActiveView(item.id as SettingsViewId)
-        }
-      >
-        <item.icon className="h-7 w-7" />
-        <span className="text-xs mt-1 font-medium">{item.label}</span>
-      </div>
-    );
-
-    if (item.href) {
-      return (
-        <Link href={item.href} className="w-full h-full">
-          {content}
-        </Link>
-      );
-    }
-
-    return <div className="w-full h-full cursor-pointer">{content}</div>;
+  const handleTabChange = (value: string) => {
+    router.push(`/settings?tab=${value}`);
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-foreground sr-only">
-          الإعدادات
-        </h1>
-        <p className="mt-1 text-muted-foreground sr-only">
+        <h1 className="text-3xl font-bold text-foreground">الإعدادات</h1>
+        <p className="mt-1 text-muted-foreground">
           قم بتخصيص إعدادات التطبيق والمزرعة.
         </p>
       </header>
-
-      <div className="mt-6">{activeComponent}</div>
-
-      <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
-        <nav className="flex justify-around items-center h-20">
-          {navItems.map((item) => (
-            <NavLink key={item.id} item={item} />
-          ))}
-        </nav>
-      </footer>
+       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full" orientation="vertical">
+        <TabsList className="grid w-full grid-cols-1 h-auto">
+          <TabsTrigger value="profile" className="justify-start gap-2">
+            <UserCircle className="h-5 w-5" />
+            ملف المزرعة
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="justify-start gap-2">
+            <Palette className="h-5 w-5" />
+            المظهر
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="justify-start gap-2">
+            <Bell className="h-5 w-5" />
+            الإشعارات
+          </TabsTrigger>
+          <TabsTrigger value="security" className="justify-start gap-2">
+            <Shield className="h-5 w-5" />
+            الأمان والخصوصية
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="profile" className="mt-0">
+          <ProfileView />
+        </TabsContent>
+        <TabsContent value="appearance" className="mt-0">
+          <AppearanceView />
+        </TabsContent>
+        <TabsContent value="notifications" className="mt-0">
+          <NotificationsView />
+        </TabsContent>
+        <TabsContent value="security" className="mt-0">
+          <SecurityView />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

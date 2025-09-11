@@ -3,6 +3,8 @@ import { Tajawal } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import AppFooter from "@/components/AppFooter";
+import { auth } from "@/lib/firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 const tajawal = Tajawal({
   subsets: ["arabic"],
