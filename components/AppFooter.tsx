@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Tractor, Settings } from 'lucide-react';
+import { CalendarDays, Tractor, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React from 'react';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ export default function AppFooter({
   activeView: string;
 }) {
   const mainNavItems = [
-    { id: 'tasks', label: 'الرئيسية', icon: Home, href: '/tasks' },
+    { id: 'tasks', label: 'المهام', icon: CalendarDays, href: '/tasks' },
     { id: 'management', label: 'الإدارة', icon: Tractor, href: '/management' },
     { id: 'settings', label: 'الإعدادات', icon: Settings, href: '/settings' },
   ];
