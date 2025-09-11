@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -47,7 +47,11 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   
   const taskDates = tasks
-    .map(task => task.date ? new Date(task.date.replace(/\//g, '-')) : null)
+    .map(task => {
+        if (!task.date) return null;
+        if (task.date instanceof Timestamp) return task.date.toDate();
+        return new Date(task.date);
+    })
     .filter((d): d is Date => d !== null);
 
   const modifiers = {
@@ -79,14 +83,14 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
   );
 }
 
-function AddTaskView({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void; isAdding: boolean; }) {
+function AddTaskView({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void; isAdding: boolean; }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState<Date | undefined>();
   const [reminder, setReminder] = useState('');
 
   const handleAddTask = () => {
     if (!title || !date || isAdding) return;
-    onAddTask({ title, date: format(date, 'yyyy/MM/dd'), reminder });
+    onAddTask({ title, date, reminder });
     setTitle('');
     setDate(undefined);
     setReminder('');
@@ -197,14 +201,14 @@ export default function TasksView() {
   const upcomingTasks: Task[] = upcomingTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
   const pastTasks: Task[] = pastTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
 
-  const handleAddTask = async (taskData: Omit<Task, 'id' | 'completed'>) => {
+  const handleAddTask = async (taskData: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
     if (!tasksCollection) return;
     setIsAdding(true);
     try {
       await addDoc(tasksCollection, {
         ...taskData,
         completed: false,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
       });
       setActiveTab('upcoming');
     } catch (error) {

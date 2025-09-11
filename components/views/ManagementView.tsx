@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, doc, deleteDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, doc, deleteDoc, updateDoc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -52,10 +52,23 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+// Helper to convert Firestore Timestamp to a readable string
+const formatDate = (date: any) => {
+  if (!date) return 'N/A';
+  if (date instanceof Timestamp) {
+    return date.toDate().toLocaleDateString('ar-KW');
+  }
+  if(typeof date === 'string') {
+     return new Date(date).toLocaleDateString('ar-KW');
+  }
+  return new Date(date).toLocaleDateString('ar-KW');
+};
+
+
 // Types
 type Expense = {
   id: string;
-  date: string;
+  date: string | Timestamp;
   item: string;
   category: string;
   amount: number;
@@ -63,7 +76,7 @@ type Expense = {
 
 type Sale = {
   id: string;
-  date: string;
+  date: string | Timestamp;
   item: string;
   cartonCount: number;
   cartonWeight: string;
@@ -74,7 +87,7 @@ type Sale = {
 type Debt = {
   id: string;
   party: string;
-  dueDate: string;
+  dueDate: string | Timestamp;
   amount: number;
   type: 'دين لنا' | 'دين علينا';
 };
@@ -147,16 +160,10 @@ function ExpensesView({ user }) {
   const handleAddExpense = async () => {
     if (!newExpense.item || !newExpense.amount || !expensesCollection || isAdding) return;
     setIsAdding(true);
-    const today = new Date();
-    const newDate = new Intl.DateTimeFormat('ar-KW-u-nu-latn', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(today);
-
+    
     try {
       await addDoc(expensesCollection, {
-        date: newDate,
+        date: new Date(),
         item: newExpense.item,
         category: newExpense.category,
         amount: parseFloat(newExpense.amount),
@@ -209,7 +216,7 @@ function ExpensesView({ user }) {
           emptyMessage="لا توجد مصاريف لعرضها."
           renderRow={(expense) => (
              <TableRow key={expense.id}>
-                <TableCell>{expense.date}</TableCell>
+                <TableCell>{formatDate(expense.date)}</TableCell>
                 <TableCell className="font-medium">{expense.item}</TableCell>
                 <TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell>
                 <TableCell className="font-semibold text-destructive">{`${expense.amount.toFixed(3)} د.ك`}</TableCell>
@@ -237,13 +244,11 @@ function SalesView({ user }) {
     if (!item || !cartonCount || !cartonWeight || !cartonPrice || !salesCollection || isAdding) return;
     
     setIsAdding(true);
-    const today = new Date();
-    const newDate = new Intl.DateTimeFormat('ar-KW-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(today);
     const totalAmount = parseFloat(cartonCount) * parseFloat(cartonPrice);
 
     try {
       await addDoc(salesCollection, {
-        date: newDate,
+        date: new Date(),
         item,
         cartonCount: parseFloat(cartonCount),
         cartonWeight,
@@ -303,7 +308,7 @@ function SalesView({ user }) {
           emptyMessage="لا توجد مبيعات لعرضها."
           renderRow={(sale) => (
             <TableRow key={sale.id}>
-              <TableCell>{sale.date}</TableCell>
+              <TableCell>{formatDate(sale.date)}</TableCell>
               <TableCell className="font-medium">{sale.item}</TableCell>
               <TableCell>{sale.cartonCount}</TableCell>
               <TableCell>{sale.cartonWeight}</TableCell>
@@ -333,13 +338,11 @@ function DebtsView({ user }) {
     const { party, amount, type } = newDebt;
     if (!party || !amount || !debtsCollection || isAdding) return;
     setIsAdding(true);
-    const today = new Date();
-    const newDueDate = new Intl.DateTimeFormat('ar-KW-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(today);
-
+    
     try {
       await addDoc(debtsCollection, {
         party,
-        dueDate: newDueDate,
+        dueDate: new Date(),
         amount: parseFloat(amount),
         type,
       });
@@ -415,7 +418,7 @@ function DebtsView({ user }) {
             renderRow={(debt) => (
               <TableRow key={debt.id}>
                   <TableCell className="font-medium">{debt.party}</TableCell>
-                  <TableCell>{debt.dueDate}</TableCell>
+                  <TableCell>{formatDate(debt.dueDate)}</TableCell>
                   <TableCell><Badge variant={debt.type === 'دين لنا' ? 'default' : 'destructive'}>{debt.type}</Badge></TableCell>
                   <TableCell className={`font-semibold ${debt.type === 'دين لنا' ? 'text-green-600' : 'text-destructive'}`}>{`${debt.amount.toFixed(3)} د.ك`}</TableCell>
                   <TableCell className="text-left flex items-center justify-end gap-1">
