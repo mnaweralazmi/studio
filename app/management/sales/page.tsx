@@ -48,7 +48,7 @@ export default function SalesPage() {
         <Button asChild>
           <Link href="/management">
             <ArrowRight className="h-4 w-4 ml-2" />
-            العودة لإدارة المزرعة
+            العودة
           </Link>
         </Button>
       </header>
