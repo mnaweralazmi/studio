@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -85,6 +85,10 @@ export default function SalesPage() {
       ...sales,
     ]);
     setNewSale({ item: '', cartonCount: '', cartonWeight: '', amount: '' });
+  };
+  
+  const handleDeleteSale = (id: string) => {
+    setSales(sales.filter((sale) => sale.id !== id));
   };
 
   return (
@@ -182,7 +186,8 @@ export default function SalesPage() {
               <TableHead>المنتج</TableHead>
               <TableHead>عدد الكراتين</TableHead>
               <TableHead>وزن الكرتون</TableHead>
-              <TableHead className="text-left">المبلغ الإجمالي</TableHead>
+              <TableHead>المبلغ الإجمالي</TableHead>
+              <TableHead className="text-left">حذف</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -192,8 +197,17 @@ export default function SalesPage() {
                 <TableCell className="font-medium">{sale.item}</TableCell>
                 <TableCell>{sale.cartonCount}</TableCell>
                 <TableCell>{sale.cartonWeight}</TableCell>
-                <TableCell className="text-left font-semibold text-green-600">
+                <TableCell className="font-semibold text-green-600">
                   {sale.amount}
+                </TableCell>
+                <TableCell className="text-left">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteSale(sale.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
