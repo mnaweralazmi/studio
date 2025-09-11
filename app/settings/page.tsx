@@ -1,14 +1,14 @@
 'use client';
 
 import AppFooter from '@/components/AppFooter';
-import TasksView from '@/components/views/TasksView';
+import SettingsView from '@/components/views/SettingsView';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-export default function DashboardPage() {
+export default function SettingsPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
 
@@ -30,9 +30,9 @@ export default function DashboardPage() {
   return (
     <div className="pb-24">
       <main className="px-4 pt-4">
-        <TasksView />
+        <SettingsView />
       </main>
-      <AppFooter activeView="tasks" />
+      <AppFooter activeView="settings" />
     </div>
   );
 }

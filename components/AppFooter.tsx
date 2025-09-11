@@ -3,18 +3,17 @@
 import { Home, Tractor, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React from 'react';
+import Link from 'next/link';
 
 export default function AppFooter({
   activeView,
-  setActiveView,
 }: {
   activeView: string;
-  setActiveView: (view: string) => void;
 }) {
   const mainNavItems = [
-    { id: 'tasks', label: 'الرئيسية', icon: Home },
-    { id: 'management', label: 'الإدارة', icon: Tractor },
-    { id: 'settings', label: 'الإعدادات', icon: Settings },
+    { id: 'tasks', label: 'الرئيسية', icon: Home, href: '/tasks' },
+    { id: 'management', label: 'الإدارة', icon: Tractor, href: '/management' },
+    { id: 'settings', label: 'الإعدادات', icon: Settings, href: '/settings' },
   ];
 
   const NavLink = ({
@@ -22,19 +21,16 @@ export default function AppFooter({
     icon: Icon,
     label,
     isActive,
-    onClick,
+    href,
   }: {
     id: string;
     icon: React.ElementType;
     label: string;
     isActive: boolean;
-    onClick: (id: string) => void;
+    href: string;
   }) => {
     return (
-      <div
-        onClick={() => onClick(id)}
-        className="w-full h-full cursor-pointer"
-      >
+      <Link href={href} className="w-full h-full">
         <div
           className={cn(
             'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
@@ -44,7 +40,7 @@ export default function AppFooter({
           <Icon className="h-7 w-7" />
           <span className="text-xs mt-1 font-medium">{label}</span>
         </div>
-      </div>
+      </Link>
     );
   };
 
@@ -57,8 +53,8 @@ export default function AppFooter({
             id={item.id}
             icon={item.icon}
             label={item.label}
+            href={item.href}
             isActive={activeView === item.id}
-            onClick={setActiveView}
           />
         ))}
       </nav>
