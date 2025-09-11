@@ -22,7 +22,41 @@ type Article = {
   };
 };
 
-const articles: Article[] = [];
+const articles: Article[] = [
+  {
+    id: 1,
+    title: 'أفضل أوقات زراعة الطماطم في الكويت',
+    description: 'دليل شامل حول أفضل المواعيد والممارسات لزراعة الطماطم لتحقيق أقصى إنتاجية وجودة.',
+    image: {
+      src: 'https://picsum.photos/seed/tomato/600/400',
+      width: 600,
+      height: 400,
+      hint: 'tomatoes farm',
+    },
+  },
+  {
+    id: 2,
+    title: 'طرق مكافحة الآفات الزراعية طبيعياً',
+    description: 'تعرف على طرق صديقة للبيئة وفعالة لمكافحة الآفات التي تهدد محاصيلك دون استخدام كيماويات ضارة.',
+    image: {
+      src: 'https://picsum.photos/seed/pests/600/400',
+      width: 600,
+      height: 400,
+      hint: 'natural pest control',
+    },
+  },
+  {
+    id: 3,
+    title: 'أهمية الري بالتنقيط في الزراعة الحديثة',
+    description: 'اكتشف كيف يمكن لنظام الري بالتنقيط توفير المياه وزيادة كفاءة نمو النباتات في مزرعتك.',
+    image: {
+      src: 'https://picsum.photos/seed/irrigation/600/400',
+      width: 600,
+      height: 400,
+      hint: 'drip irrigation',
+    },
+  },
+];
 
 function HomeView() {
   return (
