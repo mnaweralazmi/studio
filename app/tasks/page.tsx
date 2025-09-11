@@ -2,7 +2,6 @@
 
 import {
   CalendarIcon,
-  ListChecks,
   Plus,
   ArrowLeft,
   ListTodo,
@@ -49,7 +48,7 @@ function CalendarView() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground">التقويم</h1>
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 flex justify-center">
           <Calendar
             mode="single"
             selected={date}
