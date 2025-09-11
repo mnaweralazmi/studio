@@ -2,10 +2,12 @@
 
 import { Circle, CircleCheck } from 'lucide-react';
 
-type Task = {
+export type Task = {
+  id: string;
   time: string;
   title: string;
   completed: boolean;
+  date?: string; 
 };
 
 export function TaskList({ tasks }: { tasks: Task[] }) {
@@ -19,9 +21,9 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="space-y-3 pt-4">
-      {tasks.map((task, index) => (
+      {tasks.map((task) => (
         <div
-          key={index}
+          key={task.id}
           className={`flex items-center p-3 rounded-lg transition-all cursor-pointer ${
             task.completed
               ? 'bg-muted/50 hover:bg-muted'

@@ -18,7 +18,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { TaskList } from '@/components/task-list';
+import { TaskList, type Task } from '@/components/task-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -37,14 +37,14 @@ import {
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-// --- Data ---
-const upcomingTasks = [
-  { time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false },
-  { time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false },
+// --- Initial Data ---
+const initialUpcomingTasks: Task[] = [
+  { id: 'task-1', time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false },
+  { id: 'task-2', time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false },
 ];
 
-const pastTasks = [
-  { time: '٠٨:٠٠ ص', title: 'ري قسم البطاطس', completed: true },
+const initialPastTasks: Task[] = [
+  { id: 'task-3', time: '٠٨:٠٠ ص', title: 'ري قسم البطاطس', completed: true },
 ];
 
 // --- Sub-page Components ---
@@ -69,8 +69,19 @@ function CalendarView() {
   );
 }
 
-function AddTaskView() {
+function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void }) {
+  const [title, setTitle] = useState('');
   const [date, setDate] = useState<Date | undefined>();
+  const [time, setTime] = useState('');
+
+  const handleAddTask = () => {
+    if (!title || !date || !time) return; // Basic validation
+    onAddTask({ title, time, date: format(date, 'yyyy/MM/dd') });
+    setTitle('');
+    setDate(undefined);
+    setTime('');
+  };
+  
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground sr-only">إضافة مهمة جديدة</h1>
@@ -81,20 +92,11 @@ function AddTaskView() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="task-title">عنوان المهمة</Label>
-            <Input id="task-title" placeholder="مثال: ري قسم البطاطس" />
+            <Input id="task-title" placeholder="مثال: ري قسم البطاطس" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="task-reminder">تذكير قبل</Label>
-            <Select>
-              <SelectTrigger id="task-reminder">
-                <SelectValue placeholder="اختر مدة التذكير" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1-day">يوم واحد</SelectItem>
-                <SelectItem value="2-days">يومان</SelectItem>
-                <SelectItem value="3-days">ثلاثة أيام</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="task-time">وقت المهمة</Label>
+            <Input id="task-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} dir="ltr" />
           </div>
           <div className="space-y-2">
             <Label>تاريخ المهمة</Label>
@@ -126,7 +128,7 @@ function AddTaskView() {
               </PopoverContent>
             </Popover>
           </div>
-          <Button className="w-full">
+          <Button className="w-full" onClick={handleAddTask}>
             <Plus className="h-4 w-4 ml-2" />
             إضافة المهمة
           </Button>
@@ -136,7 +138,7 @@ function AddTaskView() {
   );
 }
 
-function UpcomingTasksView() {
+function UpcomingTasksView({ tasks }: { tasks: Task[] }) {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground sr-only">المهام القادمة</h1>
@@ -148,14 +150,14 @@ function UpcomingTasksView() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TaskList tasks={upcomingTasks} />
+          <TaskList tasks={tasks} />
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function PastTasksView() {
+function PastTasksView({ tasks }: { tasks: Task[] }) {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground sr-only">المهام السابقة</h1>
@@ -165,7 +167,7 @@ function PastTasksView() {
           <CardDescription>مهامك التي تم إنجازها.</CardDescription>
         </CardHeader>
         <CardContent>
-          <TaskList tasks={pastTasks} />
+          <TaskList tasks={tasks} />
         </CardContent>
       </Card>
     </div>
@@ -178,12 +180,24 @@ type TaskViewId = 'calendar' | 'add' | 'upcoming' | 'past';
 
 export default function TasksPage() {
   const [activeView, setActiveView] = useState<TaskViewId>('calendar');
+  const [upcomingTasks, setUpcomingTasks] = useState<Task[]>(initialUpcomingTasks);
+  const [pastTasks, setPastTasks] = useState<Task[]>(initialPastTasks);
 
+  const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
+    const newTask: Task = {
+      ...taskData,
+      id: `task-${Date.now()}`,
+      completed: false,
+    };
+    setUpcomingTasks([newTask, ...upcomingTasks]);
+    setActiveView('upcoming'); // Switch to upcoming tasks view after adding
+  };
+  
   const views: { id: TaskViewId; component: ReactNode }[] = [
     { id: 'calendar', component: <CalendarView /> },
-    { id: 'add', component: <AddTaskView /> },
-    { id: 'upcoming', component: <UpcomingTasksView /> },
-    { id: 'past', component: <PastTasksView /> },
+    { id: 'add', component: <AddTaskView onAddTask={handleAddTask} /> },
+    { id: 'upcoming', component: <UpcomingTasksView tasks={upcomingTasks} /> },
+    { id: 'past', component: <PastTasksView tasks={pastTasks} /> },
   ];
 
   const navItems: {
