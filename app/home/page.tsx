@@ -35,11 +35,10 @@ const formatDate = (date: any) => {
   return new Date(date).toLocaleDateString('ar-KW');
 };
 
-function HomeView() {
+function HomeView({ isAdmin, adminLoading }: { isAdmin: boolean, adminLoading: boolean }) {
   const [articlesSnapshot, loading, error] = useCollection(
     query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
   );
-  const { isAdmin, loading: adminLoading } = useAdmin();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -274,6 +273,7 @@ function HomeView() {
 
 export default function HomePage() {
   const [user, loading] = useAuthState(auth);
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const router = useRouter();
 
   useEffect(() => {
@@ -294,7 +294,7 @@ export default function HomePage() {
   return (
     <div className="pb-24">
       <main className="px-4 pt-4">
-        <HomeView />
+        <HomeView isAdmin={isAdmin} adminLoading={adminLoading} />
       </main>
       <AppFooter activeView="home" />
     </div>
