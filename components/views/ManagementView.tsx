@@ -19,7 +19,7 @@ import {
   Briefcase,
   Building2,
   ClipboardList,
-  Newspaper
+  Newspaper,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -72,10 +72,11 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-  DialogDescription
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '../ui/textarea';
+import { cn } from '@/lib/utils';
 
 // Helper to convert Firestore Timestamp to a readable string
 const formatDate = (date: any) => {
@@ -2030,24 +2031,39 @@ export default function ManagementView() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
   
+  const [user, loadingUser] = useAuthState(auth);
+  const { isAdmin, loading: loadingAdmin } = useAdmin();
+
+  // Determine the available tabs
+  const availableTabs = [
+    { value: 'farmManagement', label: 'الإدارة', icon: Briefcase },
+    ...(isAdmin ? [{ value: 'content', label: 'المحتوى', icon: Newspaper }] : []),
+    { value: 'agriculture', label: 'الزراعة', icon: Tractor },
+    { value: 'poultry', label: 'الدواجن', icon: Egg },
+    { value: 'livestock', label: 'المواشي', icon: GitCommit, rotate: true },
+  ];
+
   const [selectedSection, setSelectedSection] = useState(tab || 'farmManagement');
-  const [user] = useAuthState(auth);
-  const { isAdmin } = useAdmin();
 
   useEffect(() => {
-    if (tab) {
+    if (tab && availableTabs.some(t => t.value === tab)) {
       setSelectedSection(tab);
+    } else if (!availableTabs.some(t => t.value === selectedSection)) {
+      // If the current section is no longer available (e.g. admin logs out)
+      setSelectedSection('farmManagement');
     }
-  }, [tab]);
+  }, [tab, isAdmin, selectedSection]);
+
 
   const renderContent = () => {
-    if (!user) {
+    if (loadingUser || loadingAdmin) {
       return (
         <div className="flex justify-center items-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       );
     }
+    if (!user) return null;
 
     switch (selectedSection) {
       case 'farmManagement':
@@ -2075,12 +2091,16 @@ export default function ManagementView() {
           </p>
         </div>
         <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-            <TabsList className="h-auto w-full flex-col sm:flex-row sm:grid sm:grid-cols-5">
-                <TabsTrigger value="farmManagement" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
-                {isAdmin && <TabsTrigger value="content" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Newspaper className="h-4 w-4" />المحتوى</TabsTrigger>}
-                <TabsTrigger value="agriculture" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
-                <TabsTrigger value="poultry" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
-                <TabsTrigger value="livestock" className="flex items-center justify-center gap-2 w-full sm:w-auto"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
+            <TabsList className={cn(
+              "h-auto w-full flex-col sm:flex-row sm:grid",
+              `sm:grid-cols-${availableTabs.length}`
+              )}>
+                {availableTabs.map((t) => (
+                   <TabsTrigger key={t.value} value={t.value} className="flex items-center justify-center gap-2 w-full sm:w-auto">
+                     <t.icon className={cn("h-4 w-4", t.rotate && 'rotate-90')} />
+                     {t.label}
+                   </TabsTrigger>
+                ))}
             </TabsList>
         </Tabs>
       </header>
