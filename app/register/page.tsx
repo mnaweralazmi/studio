@@ -59,7 +59,7 @@ export default function RegisterPage() {
     }
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      router.push('/tasks');
+      router.push('/home');
     } catch (error: any) {
       setError(error.message);
     }
@@ -70,7 +70,7 @@ export default function RegisterPage() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      router.push('/tasks');
+      router.push('/home');
     } catch (error: any) {
       setError(error.message);
     }

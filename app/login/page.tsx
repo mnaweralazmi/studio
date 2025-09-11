@@ -54,7 +54,7 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/tasks');
+      router.push('/home');
     } catch (error: any) {
       setError(error.message);
     }
@@ -65,7 +65,7 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      router.push('/tasks');
+      router.push('/home');
     } catch (error: any) {
       setError(error.message);
     }

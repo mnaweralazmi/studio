@@ -13,7 +13,7 @@ export default function AuthGuard() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.replace('/tasks');
+        router.replace('/home');
       } else {
         router.replace('/login');
       }

@@ -21,6 +21,7 @@ export default function AppFooter({
   }
 
   const mainNavItems = [
+    { id: 'home', label: 'الرئيسية', icon: Home, href: '/home' },
     { id: 'tasks', label: 'التقويم والمهام', icon: CalendarDays, href: '/tasks' },
     { id: 'management', label: 'الإدارة', icon: Tractor, href: '/management' },
     { id: 'settings', label: 'الإعدادات', icon: Settings, href: '/settings' },
