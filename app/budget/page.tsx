@@ -1,0 +1,38 @@
+'use client';
+
+import AppFooter from '@/components/AppFooter';
+import BudgetView from '@/components/views/BudgetView';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+
+export default function BudgetPage() {
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-24">
+      <main className="px-4 pt-4">
+        <BudgetView />
+      </main>
+      <AppFooter activeView="budget" />
+    </div>
+  );
+}
