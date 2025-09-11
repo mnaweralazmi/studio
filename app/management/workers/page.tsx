@@ -19,28 +19,24 @@ import {
 type Worker = {
   id: string;
   name: string;
-  role: string;
-  phone: string;
+  salary: string;
 };
 
 const initialWorkers: Worker[] = [
   {
     id: '1',
     name: 'أحمد عبدالله',
-    role: 'مشرف زراعي',
-    phone: '91234567',
+    salary: '٦٠٠٠ د.ك',
   },
   {
     id: '2',
     name: 'محمد حسين',
-    role: 'عامل ري',
-    phone: '98765432',
+    salary: '٤٨٠٠ د.ك',
   },
   {
     id: '3',
     name: 'علي كريم',
-    role: 'عامل حصاد',
-    phone: '99887766',
+    salary: '٤٥٠٠ د.ك',
   },
 ];
 
@@ -48,13 +44,12 @@ export default function WorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>(initialWorkers);
   const [newWorker, setNewWorker] = useState({
     name: '',
-    role: '',
-    phone: '',
+    salary: '',
   });
 
   const handleAddWorker = () => {
-    const { name, role, phone } = newWorker;
-    if (!name || !role || !phone) return;
+    const { name, salary } = newWorker;
+    if (!name || !salary) return;
 
     const newId = (workers.length + 1 + Math.random()).toString();
 
@@ -63,11 +58,10 @@ export default function WorkersPage() {
       {
         id: newId,
         name,
-        role,
-        phone,
+        salary: `${salary} د.ك`,
       },
     ]);
-    setNewWorker({ name: '', role: '', phone: '' });
+    setNewWorker({ name: '', salary: '' });
   };
 
   const handleDeleteWorker = (id: string) => {
@@ -96,7 +90,7 @@ export default function WorkersPage() {
           <CardTitle>إضافة عامل جديد</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">اسم العامل</Label>
               <Input
@@ -109,25 +103,14 @@ export default function WorkersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">الوظيفة</Label>
+              <Label htmlFor="salary">راتب العامل</Label>
               <Input
-                id="role"
-                placeholder="مثال: مشرف زراعي"
-                value={newWorker.role}
+                id="salary"
+                type="number"
+                placeholder="بالدينار الكويتي"
+                value={newWorker.salary}
                 onChange={(e) =>
-                  setNewWorker({ ...newWorker, role: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">رقم الهاتف</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="مثال: 91234567"
-                value={newWorker.phone}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, phone: e.target.value })
+                  setNewWorker({ ...newWorker, salary: e.target.value })
                 }
                 dir="ltr"
               />
@@ -146,8 +129,7 @@ export default function WorkersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>الاسم</TableHead>
-              <TableHead>الوظيفة</TableHead>
-              <TableHead>رقم الهاتف</TableHead>
+              <TableHead>راتب العامل</TableHead>
               <TableHead className="text-left">حذف</TableHead>
             </TableRow>
           </TableHeader>
@@ -160,8 +142,7 @@ export default function WorkersPage() {
                   </div>
                   {worker.name}
                 </TableCell>
-                <TableCell>{worker.role}</TableCell>
-                <TableCell dir="ltr">{worker.phone}</TableCell>
+                <TableCell>{worker.salary}</TableCell>
                 <TableCell className="text-left">
                   <Button
                     variant="ghost"
