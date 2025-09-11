@@ -106,10 +106,10 @@ function HomeView() {
         <div className="flex flex-col items-center justify-center text-center py-16 bg-card rounded-lg border-2 border-dashed">
           <Newspaper className="h-16 w-16 text-muted-foreground" />
           <h2 className="mt-4 text-xl font-semibold">
-            لا توجد أخبار حاليًا
+            لا توجد مواضيع لعرضها
           </h2>
-          <p className="mt-2 text-muted-foreground">
-            سيتم عرض آخر الأخبار والمواضيع الزراعية هنا.
+          <p className="mt-2 text-muted-foreground max-w-md">
+            سيتم عرض مربعات المواضيع مع الصور والفيديوهات والمحتوى هنا عند إضافتها من قسم إدارة المحتوى.
           </p>
            {isAdmin && (
             <Button onClick={() => router.push('/management?tab=content')} className="mt-6">
