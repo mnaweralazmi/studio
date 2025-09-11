@@ -83,7 +83,7 @@ export default function DebtsPage() {
     const { party, amount, type } = newDebt;
     if (!party || !amount) return;
 
-    const newId = (debts.length + 1 + Math.random()).toString();
+    const newId = `debt-${Date.now()}`;
     const today = new Date();
     const newDueDate = new Intl.DateTimeFormat('ar-KW-u-nu-latn', {
       year: 'numeric',

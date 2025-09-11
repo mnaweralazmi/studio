@@ -51,7 +51,7 @@ export default function WorkersPage() {
     const { name, salary } = newWorker;
     if (!name || !salary) return;
 
-    const newId = (workers.length + 1 + Math.random()).toString();
+    const newId = `worker-${Date.now()}`;
 
     setWorkers([
       ...workers,
