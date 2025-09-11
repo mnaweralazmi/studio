@@ -1,17 +1,27 @@
 'use client';
 
-import { CalendarDays, Tractor, Settings } from 'lucide-react';
+import { CalendarDays, Tractor, Settings, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase';
 
 export default function AppFooter({
   activeView,
 }: {
   activeView: string;
 }) {
+  const [user] = useAuthState(auth);
+  const pathname = usePathname();
+
+  if (!user || pathname === '/login' || pathname === '/register') {
+    return null;
+  }
+
   const mainNavItems = [
-    { id: 'tasks', label: 'المهام', icon: CalendarDays, href: '/tasks' },
+    { id: 'tasks', label: 'الرئيسية', icon: Home, href: '/tasks' },
     { id: 'management', label: 'الإدارة', icon: Tractor, href: '/management' },
     { id: 'settings', label: 'الإعدادات', icon: Settings, href: '/settings' },
   ];
