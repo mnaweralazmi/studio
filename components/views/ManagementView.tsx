@@ -10,8 +10,7 @@ import {
   CreditCard,
   CheckCircle,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -777,14 +776,8 @@ function WorkersView() {
   );
 }
 
-export default function ManagementPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const activeTab = searchParams.get('tab') || 'expenses';
-
-  const handleTabChange = (value: string) => {
-    router.push(`/management?tab=${value}`);
-  };
+export default function ManagementView() {
+  const [activeTab, setActiveTab] = useState('expenses');
 
   return (
     <div className="space-y-6">
@@ -795,7 +788,7 @@ export default function ManagementPage() {
         </p>
       </header>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="expenses">
             <DollarSign className="h-4 w-4 ml-2" />

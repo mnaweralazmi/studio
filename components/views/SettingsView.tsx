@@ -9,7 +9,6 @@ import {
   ToggleRight,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -163,14 +162,8 @@ function SecurityView() {
 
 // --- Main Page Component ---
 
-export default function SettingsPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const activeTab = searchParams.get('tab') || 'profile';
-
-  const handleTabChange = (value: string) => {
-    router.push(`/settings?tab=${value}`);
-  };
+export default function SettingsView() {
+  const [activeTab, setActiveTab] = useState('profile');
 
   return (
     <div className="space-y-6">
@@ -180,7 +173,7 @@ export default function SettingsPage() {
           قم بتخصيص إعدادات التطبيق والمزرعة.
         </p>
       </header>
-       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile">
             <UserCircle className="h-5 w-5 ml-2" />

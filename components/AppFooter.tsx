@@ -1,71 +1,51 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import {
-  Home,
-  Tractor,
-  Settings,
-} from 'lucide-react';
+import { Home, Tractor, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React from 'react';
-import { auth } from '@/lib/firebase';
-import { useAuthState } from 'react-firebase-hooks/auth';
 
-export default function AppFooter() {
-  const pathname = usePathname();
-  const [user] = useAuthState(auth);
-
-  // Hide footer on login/register pages
-  if (pathname === '/login' || pathname === '/register') {
-    return null;
-  }
-  
-  // Hide footer if user is not logged in (after initial check)
-  if (!user) {
-    return null;
-  }
-
+export default function AppFooter({
+  activeView,
+  setActiveView,
+}: {
+  activeView: string;
+  setActiveView: (view: string) => void;
+}) {
   const mainNavItems = [
-    { href: '/tasks', label: 'الرئيسية', icon: Home },
-    { href: '/management', label: 'الإدارة', icon: Tractor },
-    { href: '/settings', label: 'الإعدادات', icon: Settings },
+    { id: 'tasks', label: 'الرئيسية', icon: Home },
+    { id: 'management', label: 'الإدارة', icon: Tractor },
+    { id: 'settings', label: 'الإعدادات', icon: Settings },
   ];
 
   const NavLink = ({
-    href,
+    id,
     icon: Icon,
     label,
     isActive,
     onClick,
   }: {
-    href?: string;
+    id: string;
     icon: React.ElementType;
     label: string;
-    isActive?: boolean;
-    onClick?: () => void;
+    isActive: boolean;
+    onClick: (id: string) => void;
   }) => {
-    const content = (
+    return (
       <div
-        className={cn(
-          'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
-          isActive && 'text-primary'
-        )}
-        onClick={onClick}
+        onClick={() => onClick(id)}
+        className="w-full h-full cursor-pointer"
       >
-        <Icon className="h-7 w-7" />
-        <span className="text-xs mt-1 font-medium">{label}</span>
+        <div
+          className={cn(
+            'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
+            isActive && 'text-primary'
+          )}
+        >
+          <Icon className="h-7 w-7" />
+          <span className="text-xs mt-1 font-medium">{label}</span>
+        </div>
       </div>
     );
-
-    if (href) {
-      return (
-        <Link href={href} className="w-full h-full">
-          {content}
-        </Link>
-      );
-    }
-    return <div className="w-full h-full cursor-pointer">{content}</div>;
   };
 
   return (
@@ -73,11 +53,12 @@ export default function AppFooter() {
       <nav className="flex justify-around items-center h-20">
         {mainNavItems.map((item) => (
           <NavLink
-            key={item.href}
-            href={item.href}
+            key={item.id}
+            id={item.id}
             icon={item.icon}
             label={item.label}
-            isActive={pathname.startsWith(item.href)}
+            isActive={activeView === item.id}
+            onClick={setActiveView}
           />
         ))}
       </nav>

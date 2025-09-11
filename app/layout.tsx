@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Tajawal } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import AppFooter from "@/components/AppFooter";
 
 const tajawal = Tajawal({
   subsets: ["arabic"],
@@ -28,8 +27,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="pb-24 pt-4 px-4">{children}</main>
-          <AppFooter />
+          {children}
         </ThemeProvider>
       </body>
     </html>
