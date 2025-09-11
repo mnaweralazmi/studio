@@ -13,6 +13,7 @@ import {
   Wallet,
   Landmark,
   PiggyBank,
+  Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -76,6 +77,7 @@ export default function BudgetView() {
   const {
     totalIncome,
     totalExpenses,
+    totalWorkerSalaries,
     totalDebtsForUs,
     totalDebtsOnUs,
     netProfit,
@@ -87,29 +89,31 @@ export default function BudgetView() {
     const workers =
       workersSnapshot?.docs.map((doc) => doc.data() as Worker) || [];
 
-    const totalIncome = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+    const totalIncome = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
+    
     const totalOperationalExpenses = expenses.reduce(
-      (sum, expense) => sum + expense.amount,
+      (sum, expense) => sum + (expense.amount || 0),
       0
     );
     const totalWorkerSalaries = workers.reduce(
-      (sum, worker) => sum + worker.salary,
+      (sum, worker) => sum + (worker.salary || 0),
       0
     );
     const totalExpenses = totalOperationalExpenses + totalWorkerSalaries;
 
     const totalDebtsForUs = debts
       .filter((d) => d.type === 'دين لنا')
-      .reduce((sum, d) => sum + d.amount, 0);
+      .reduce((sum, d) => sum + (d.amount || 0), 0);
     const totalDebtsOnUs = debts
       .filter((d) => d.type === 'دين علينا')
-      .reduce((sum, d) => sum + d.amount, 0);
+      .reduce((sum, d) => sum + (d.amount || 0), 0);
 
     const netProfit = totalIncome - totalExpenses;
 
     return {
       totalIncome,
-      totalExpenses,
+      totalExpenses: totalOperationalExpenses, // Now only operational
+      totalWorkerSalaries,
       totalDebtsForUs,
       totalDebtsOnUs,
       netProfit,
@@ -135,6 +139,9 @@ export default function BudgetView() {
       </div>
     );
   }
+  
+  const grandTotalExpenses = totalExpenses + totalWorkerSalaries;
+
 
   return (
     <div className="space-y-6">
@@ -159,16 +166,16 @@ export default function BudgetView() {
           color="text-green-600"
         />
         <StatCard
-          title="إجمالي المصروفات"
+          title="إجمالي المصروفات (التشغيلية)"
           value={`${totalExpenses.toFixed(3)} د.ك`}
           icon={ArrowDownCircle}
           color="text-destructive"
         />
         <StatCard
-          title="ديون لنا (مستحقة)"
-          value={`${totalDebtsForUs.toFixed(3)} د.ك`}
-          icon={Wallet}
-          color="text-blue-500"
+          title="إجمالي رواتب العمال"
+          value={`${totalWorkerSalaries.toFixed(3)} د.ك`}
+          icon={Users}
+          color="text-orange-500"
         />
         <StatCard
           title="ديون علينا (واجبة السداد)"
@@ -182,6 +189,19 @@ export default function BudgetView() {
           icon={PiggyBank}
         />
       </div>
+       <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>ملخص المصروفات الكلي</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-destructive">
+            {`${grandTotalExpenses.toFixed(3)} د.ك`}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            (المصروفات التشغيلية + رواتب العمال)
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
