@@ -14,7 +14,6 @@ import {
   Egg,
   Drumstick,
   Users2,
-  Sheep,
   GitCommit,
   Tractor,
 } from 'lucide-react';
@@ -1128,7 +1127,7 @@ export default function ManagementView() {
             </SelectItem>
             <SelectItem value="livestock">
                 <div className='flex items-center'>
-                    <Sheep className="h-4 w-4 ml-2" />
+                    <GitCommit className="h-4 w-4 ml-2 rotate-90" />
                     المواشي
                 </div>
             </SelectItem>
