@@ -490,10 +490,12 @@ function WorkersView({ user }) {
   const handleSalaryPayment = async (worker: Worker) => {
     if (!expensesCollection || !worker || !worker.id) return;
     setPayingSalaryFor(worker.id);
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
     try {
        await addDoc(expensesCollection, {
         date: new Date(),
-        item: `راتب العامل: ${worker.name}`,
+        item: `راتب العامل: ${worker.name} (شهر ${currentMonth}/${currentYear})`,
         category: 'رواتب',
         amount: worker.salary || 0,
       });
