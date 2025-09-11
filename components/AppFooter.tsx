@@ -3,10 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ListChecks,
+  Home,
   Tractor,
   Settings,
-  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React from 'react';
@@ -22,7 +21,7 @@ export default function AppFooter() {
   }
 
   const mainNavItems = [
-    { href: '/tasks', label: 'المهام', icon: ListChecks },
+    { href: '/tasks', label: 'الرئيسية', icon: Home },
     { href: '/management', label: 'الإدارة', icon: Tractor },
     { href: '/settings', label: 'الإعدادات', icon: Settings },
   ];
@@ -75,12 +74,6 @@ export default function AppFooter() {
             isActive={pathname.startsWith(item.href)}
           />
         ))}
-         <NavLink
-            key="logout"
-            icon={LogOut}
-            label="خروج"
-            onClick={() => auth.signOut()}
-          />
       </nav>
     </footer>
   );
