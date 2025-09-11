@@ -16,7 +16,13 @@ export default function AppFooter() {
   const pathname = usePathname();
   const [user] = useAuthState(auth);
 
-  if (!user || pathname === '/login' || pathname === '/register') {
+  // Hide footer on login/register pages
+  if (pathname === '/login' || pathname === '/register') {
+    return null;
+  }
+  
+  // Hide footer if user is not logged in (after initial check)
+  if (!user) {
     return null;
   }
 
