@@ -12,16 +12,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type Sale = {
   id: string;
   date: string;
   item: string;
-  customer: string;
+  cartonCount: string;
+  cartonWeight: string;
   amount: string;
 };
 
@@ -29,36 +36,42 @@ const initialSales: Sale[] = [
   {
     id: '1',
     date: '٢٠٢٤/٠٧/٢١',
-    item: 'بيع محصول الخيار (صندوق)',
-    customer: 'سوق محلي',
+    item: 'خيار',
+    cartonCount: '50',
+    cartonWeight: '10 كيلو',
     amount: '٣٥٠ د.ك',
   },
   {
     id: '2',
     date: '٢٠٢٤/٠٧/٢٠',
-    item: 'بيع تمر سكري (كيلو)',
-    customer: 'عميل خاص',
-    amount: '٨٠ د.ك',
+    item: 'طماطم',
+    cartonCount: '30',
+    cartonWeight: '12 كيلو',
+    amount: '٢٨٠ د.ك',
   },
   {
     id: '3',
     date: '٢٠٢٤/٠٧/١٩',
-    item: 'بيع نعناع (حزمة)',
-    customer: 'مطعم',
-    amount: '٤٥ د.ك',
+    item: 'بطاطس',
+    cartonCount: '100',
+    cartonWeight: '15 كيلو',
+    amount: '٤٥٠ د.ك',
   },
 ];
+
+const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجان', 'فلفل', 'كوسا'];
 
 export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>(initialSales);
   const [newSale, setNewSale] = useState({
     item: '',
-    customer: '',
+    cartonCount: '',
+    cartonWeight: '',
     amount: '',
   });
 
   const handleAddSale = () => {
-    if (!newSale.item || !newSale.amount || !newSale.customer) return;
+    if (!newSale.item || !newSale.cartonCount || !newSale.cartonWeight || !newSale.amount) return;
     const newId = (sales.length + 1).toString();
     const today = new Date();
     const newDate = new Intl.DateTimeFormat('ar-KW-u-nu-latn', {
@@ -71,7 +84,7 @@ export default function SalesPage() {
       { id: newId, date: newDate, ...newSale, amount: `${newSale.amount} د.ك` },
       ...sales,
     ]);
-    setNewSale({ item: '', customer: '', amount: '' });
+    setNewSale({ item: '', cartonCount: '', cartonWeight: '', amount: '' });
   };
 
   return (
@@ -96,31 +109,51 @@ export default function SalesPage() {
           <CardTitle>إضافة بيع جديد</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="item">المنتج</Label>
-              <Input
-                id="item"
-                placeholder="مثال: خيار (صندوق)"
+              <Select
                 value={newSale.item}
-                onChange={(e) =>
-                  setNewSale({ ...newSale, item: e.target.value })
-                }
-              />
+                onValueChange={(value) => setNewSale({ ...newSale, item: value })}
+              >
+                <SelectTrigger id="item">
+                  <SelectValue placeholder="اختر نوع الخضار" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vegetableOptions.map((veg) => (
+                    <SelectItem key={veg} value={veg}>
+                      {veg}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="customer">العميل</Label>
+              <Label htmlFor="cartonCount">عدد الكراتين</Label>
               <Input
-                id="customer"
-                placeholder="مثال: سوق محلي"
-                value={newSale.customer}
+                id="cartonCount"
+                type="number"
+                placeholder="مثال: 50"
+                value={newSale.cartonCount}
                 onChange={(e) =>
-                  setNewSale({ ...newSale, customer: e.target.value })
+                  setNewSale({ ...newSale, cartonCount: e.target.value })
+                }
+                dir="ltr"
+              />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="cartonWeight">وزن الكرتون</Label>
+              <Input
+                id="cartonWeight"
+                placeholder="مثال: 10 كيلو"
+                value={newSale.cartonWeight}
+                onChange={(e) =>
+                  setNewSale({ ...newSale, cartonWeight: e.target.value })
                 }
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amount">المبلغ</Label>
+              <Label htmlFor="amount">المبلغ الإجمالي</Label>
               <Input
                 id="amount"
                 type="number"
@@ -147,8 +180,9 @@ export default function SalesPage() {
             <TableRow>
               <TableHead>التاريخ</TableHead>
               <TableHead>المنتج</TableHead>
-              <TableHead>العميل</TableHead>
-              <TableHead className="text-left">المبلغ</TableHead>
+              <TableHead>عدد الكراتين</TableHead>
+              <TableHead>وزن الكرتون</TableHead>
+              <TableHead className="text-left">المبلغ الإجمالي</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -156,9 +190,8 @@ export default function SalesPage() {
               <TableRow key={sale.id}>
                 <TableCell>{sale.date}</TableCell>
                 <TableCell className="font-medium">{sale.item}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{sale.customer}</Badge>
-                </TableCell>
+                <TableCell>{sale.cartonCount}</TableCell>
+                <TableCell>{sale.cartonWeight}</TableCell>
                 <TableCell className="text-left font-semibold text-green-600">
                   {sale.amount}
                 </TableCell>
