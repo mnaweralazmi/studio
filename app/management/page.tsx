@@ -22,8 +22,8 @@ export default function ManagementPage() {
             key={item.title}
             className="bg-card p-6 rounded-xl shadow-md flex flex-col items-center justify-center space-y-3 transition-all cursor-pointer hover:shadow-xl hover:scale-105 hover:-translate-y-2 duration-300"
           >
-            <div className="p-3 rounded-lg border bg-secondary/30">
-              <item.icon className={`h-10 w-10 ${item.color} drop-shadow-sm`} />
+            <div className="p-4 rounded-lg border bg-secondary/30">
+              <item.icon className={`h-12 w-12 ${item.color} drop-shadow-sm`} />
             </div>
             <h2 className="text-lg font-semibold text-card-foreground">
               {item.title}
