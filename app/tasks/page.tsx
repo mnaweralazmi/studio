@@ -1,29 +1,53 @@
 'use client';
 
-import { CalendarIcon, ListChecks, Plus } from 'lucide-react';
+import {
+  CalendarIcon,
+  ListChecks,
+  Plus,
+  ArrowLeft,
+  ListTodo,
+  History,
+} from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TaskList } from '@/components/task-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
-// Sub-page Components
+// --- Data ---
+const upcomingTasks = [
+  { time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false },
+  { time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false },
+];
+
+const pastTasks = [
+  { time: '٠٨:٠٠ ص', title: 'ري قسم البطاطس', completed: true },
+];
+
+// --- Sub-page Components ---
 
 function CalendarView() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   return (
     <div className="space-y-6">
-       <h1 className="text-3xl font-bold text-foreground">التقويم</h1>
+      <h1 className="text-3xl font-bold text-foreground">التقويم</h1>
       <Card>
         <CardContent className="p-0">
           <Calendar
@@ -33,45 +57,6 @@ function CalendarView() {
             className="w-full"
             dir="rtl"
           />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function TasksListView() {
-  const upcomingTasks = [
-    { time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false },
-    { time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false },
-  ];
-
-  const pastTasks = [
-    { time: '٠٨:٠٠ ص', title: 'ري قسم البطاطس', completed: true },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">قائمة المهام</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>المهام</CardTitle>
-          <CardDescription>
-            نظرة سريعة على مهامك القادمة والسابقة.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="upcoming">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="upcoming">قادمة</TabsTrigger>
-              <TabsTrigger value="past">سابقة</TabsTrigger>
-            </TabsList>
-            <TabsContent value="upcoming">
-              <TaskList tasks={upcomingTasks} />
-            </TabsContent>
-            <TabsContent value="past">
-              <TaskList tasks={pastTasks} />
-            </TabsContent>
-          </Tabs>
         </CardContent>
       </Card>
     </div>
@@ -92,17 +77,26 @@ function AddTaskView() {
             <Input id="task-title" placeholder="مثال: ري قسم البطاطس" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="task-time">وقت المهمة</Label>
-            <Input id="task-time" type="time" dir="ltr" />
+            <Label htmlFor="task-reminder">تذكير قبل</Label>
+            <Select>
+              <SelectTrigger id="task-reminder">
+                <SelectValue placeholder="اختر مدة التذكير" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1-day">يوم واحد</SelectItem>
+                <SelectItem value="2-days">يومان</SelectItem>
+                <SelectItem value="3-days">ثلاثة أيام</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-           <div className="space-y-2">
+          <div className="space-y-2">
             <Label>تاريخ المهمة</Label>
             <Calendar
-                mode="single"
-                selected={new Date()}
-                className="rounded-md border"
-                dir="rtl"
-              />
+              mode="single"
+              selected={new Date()}
+              className="rounded-md border"
+              dir="rtl"
+            />
           </div>
           <Button className="w-full">
             <Plus className="h-4 w-4 ml-2" />
@@ -114,42 +108,115 @@ function AddTaskView() {
   );
 }
 
-const tasksTabs: {
-  id: 'calendar' | 'list' | 'add';
-  title: string;
-  icon: React.ElementType;
-  component: ReactNode;
-}[] = [
-  {
-    id: 'calendar',
-    title: 'التقويم',
-    icon: CalendarIcon,
-    component: <CalendarView />,
-  },
-  {
-    id: 'list',
-    title: 'المهام',
-    icon: ListChecks,
-    component: <TasksListView />,
-  },
-  { id: 'add', title: 'إضافة مهمة', icon: Plus, component: <AddTaskView /> },
-];
-
-export default function TasksPage() {
-  const searchParams = useSearchParams();
-  const tab = searchParams.get('tab') || 'calendar';
-  const activeTab = tasksTabs.find((t) => t.id === tab) || tasksTabs[0];
-
+function UpcomingTasksView() {
   return (
     <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-foreground">المهام القادمة</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>قادمة</CardTitle>
+          <CardDescription>
+            مهامك التي لم يتم إنجازها بعد.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TaskList tasks={upcomingTasks} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PastTasksView() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-foreground">المهام السابقة</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>سابقة</CardTitle>
+          <CardDescription>مهامك التي تم إنجازها.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TaskList tasks={pastTasks} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// --- Main Page Component ---
+
+type TaskViewId = 'calendar' | 'add' | 'upcoming' | 'past';
+
+export default function TasksPage() {
+  const [activeView, setActiveView] = useState<TaskViewId>('calendar');
+
+  const views: { id: TaskViewId; component: ReactNode }[] = [
+    { id: 'calendar', component: <CalendarView /> },
+    { id: 'add', component: <AddTaskView /> },
+    { id: 'upcoming', component: <UpcomingTasksView /> },
+    { id: 'past', component: <PastTasksView /> },
+  ];
+
+  const navItems: {
+    id: TaskViewId | 'back';
+    label: string;
+    icon: React.ElementType;
+    href?: string;
+  }[] = [
+    { id: 'calendar', label: 'التقويم', icon: CalendarIcon },
+    { id: 'add', label: 'إضافة', icon: Plus },
+    { id: 'upcoming', label: 'قادمة', icon: ListTodo },
+    { id: 'past', label: 'سابقة', icon: History },
+    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/' },
+  ];
+
+  const activeComponent = views.find((v) => v.id === activeView)?.component;
+
+  const NavLink = ({
+    item,
+  }: {
+    item: (typeof navItems)[0];
+  }) => {
+    const isActive = activeView === item.id;
+    const content = (
+       <div
+        className={cn(
+          'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
+          isActive && 'text-primary'
+        )}
+        onClick={() => item.id !== 'back' && setActiveView(item.id as TaskViewId)}
+      >
+        <item.icon className="h-7 w-7" />
+        <span className="text-xs mt-1 font-medium">{item.label}</span>
+      </div>
+    );
+    
+    if (item.href) {
+        return <Link href={item.href} className="w-full h-full">{content}</Link>
+    }
+    
+    return <div className="w-full h-full cursor-pointer">{content}</div>;
+  };
+
+  return (
+    <div className="space-y-6 pb-24">
       <header>
-        <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="text-3xl font-bold text-foreground sr-only">التقويم والمهام</h1>
+        <p className="mt-1 text-muted-foreground sr-only">
           جدول مهامك اليومية والأسبوعية.
         </p>
       </header>
 
-      <div className="mt-6">{activeTab.component}</div>
+      <div className="mt-6">{activeComponent}</div>
+      
+      <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
+        <nav className="flex justify-around items-center h-20">
+          {navItems.map((item) => (
+            <NavLink key={item.id} item={item} />
+          ))}
+        </nav>
+      </footer>
     </div>
   );
 }

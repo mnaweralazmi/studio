@@ -16,6 +16,7 @@ import {
   Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import React from 'react';
 
 export default function AppFooter() {
   const pathname = usePathname();
@@ -24,7 +25,8 @@ export default function AppFooter() {
   const isManagementPage = pathname === '/management';
   const isTasksPage = pathname === '/tasks';
 
-  const activeSubTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = React.useState(isManagementPage ? 'expenses' : isTasksPage ? 'calendar' : '');
+
 
   const mainNavItems = [
     { href: '/', label: 'الرئيسية', icon: Home },
@@ -41,26 +43,27 @@ export default function AppFooter() {
     { href: '/', label: 'رجوع', icon: ArrowLeft },
   ];
   
-  const tasksNavItems = [
-    { href: '/tasks?tab=calendar', label: 'التقويم', icon: CalendarIcon },
-    { href: '/tasks?tab=list', label: 'المهام', icon: ListChecks },
-    { href: '/tasks?tab=add', label: 'إضافة', icon: Plus },
-    { href: '/', label: 'رجوع', icon: ArrowLeft },
-  ];
-
   const NavLink = ({
     href,
     icon: Icon,
     label,
     isActive,
+    onClick,
   }: {
     href: string;
     icon: React.ElementType;
     label: string;
     isActive?: boolean;
+    onClick?: () => void;
   }) => (
     <Link
       href={href}
+      onClick={(e) => {
+        if (onClick) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
         'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
         isActive && 'text-primary'
@@ -74,40 +77,48 @@ export default function AppFooter() {
   let navItems;
   if (isManagementPage) {
     navItems = managementNavItems;
-  } else if (isTasksPage) {
-    // For now, tasks page will use main navigation until a decision is made
-    navItems = mainNavItems;
   } else {
     navItems = mainNavItems;
   }
+  
+  if (isTasksPage) {
+    // Render nothing for tasks page, as it has its own footer
+    return null;
+  }
+
 
   const getIsActive = (item: { href: string; }) => {
     if (isManagementPage) {
       const itemTab = item.href.split('=')[1];
-      // Default to the first tab if no tab is selected
-      const currentTab = activeSubTab || 'expenses';
+      const currentTabParam = searchParams.get('tab');
+      const currentTab = currentTabParam || 'expenses';
       return itemTab === currentTab;
     }
-     if (isTasksPage) {
-      const itemTab = item.href.split('=')[1];
-      const currentTab = activeSubTab || 'calendar';
-      return itemTab === currentTab;
-    }
-    return pathname === item.href;
+    return pathname === item.href && !searchParams.get('tab');
+  };
+  
+  const handleNavClick = (tab: string) => {
+      const event = new CustomEvent('tab-change', { detail: { tab } });
+      window.dispatchEvent(event);
+      setActiveTab(tab);
   };
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
       <nav className="flex justify-around items-center h-20">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.href}
-            href={item.href}
-            icon={item.icon}
-            label={item.label}
-            isActive={getIsActive(item)}
-          />
-        ))}
+        {navItems.map((item) => {
+           const itemTab = item.href.split('=')[1];
+          return (
+            <NavLink
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+              isActive={getIsActive(item)}
+               onClick={isManagementPage && itemTab ? () => handleNavClick(itemTab) : undefined}
+            />
+          );
+        })}
       </nav>
     </footer>
   );
