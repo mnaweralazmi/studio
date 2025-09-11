@@ -457,11 +457,14 @@ function DebtsView({ user }) {
 
 function WorkersView({ user }) {
   const workersCollection = user ? collection(db, 'users', user.uid, 'workers') : null;
+  const expensesCollection = user ? collection(db, 'users', user.uid, 'expenses') : null;
+
   const [snapshot, loading] = useCollection(workersCollection ? query(workersCollection, orderBy('name', 'asc')) : null);
   const workers = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Worker)) || [];
 
   const [newWorker, setNewWorker] = useState({ name: '', salary: '' });
   const [isAdding, setIsAdding] = useState(false);
+  const [payingSalaryFor, setPayingSalaryFor] = useState<string | null>(null);
 
   const handleAddWorker = async () => {
     const { name, salary } = newWorker;
@@ -477,6 +480,25 @@ function WorkersView({ user }) {
   const handleDeleteWorker = async (id: string) => {
     if (!user) return;
     await deleteDoc(doc(db, 'users', user.uid, 'workers', id));
+  };
+  
+  const handleSalaryPayment = async (worker: Worker) => {
+    if (!expensesCollection || !worker || !worker.id) return;
+    setPayingSalaryFor(worker.id);
+    try {
+       await addDoc(expensesCollection, {
+        date: new Date(),
+        item: `راتب العامل: ${worker.name}`,
+        category: 'رواتب',
+        amount: worker.salary || 0,
+      });
+      // Optionally, show a success message
+    } catch(e) {
+      console.error(e)
+      // Optionally, show an error message
+    } finally {
+      setPayingSalaryFor(null);
+    }
   };
 
   return (
@@ -501,7 +523,7 @@ function WorkersView({ user }) {
         <DataView<Worker>
           loading={loading}
           data={workers}
-          columns={['الاسم', 'راتب العامل', 'حذف']}
+          columns={['الاسم', 'راتب العامل', 'الإجراءات']}
           emptyMessage="لا يوجد عمال لعرضهم."
           renderRow={(worker) => (
              <TableRow key={worker.id}>
@@ -510,7 +532,24 @@ function WorkersView({ user }) {
                   {worker.name}
                 </TableCell>
                 <TableCell>{`${(worker.salary || 0).toFixed(3)} د.ك`}</TableCell>
-                <TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDeleteWorker(worker.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                <TableCell className="text-left">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleSalaryPayment(worker)}
+                      disabled={payingSalaryFor === worker.id}
+                      className="flex items-center gap-1"
+                    >
+                      {payingSalaryFor === worker.id ? 
+                        <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        <CreditCard className="h-4 w-4" />
+                      }
+                      دفع الراتب
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteWorker(worker.id)} disabled={payingSalaryFor === worker.id}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </div>
+                </TableCell>
               </TableRow>
           )}
         />
