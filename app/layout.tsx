@@ -43,7 +43,7 @@ export default function RootLayout({
                 <Link
                   href={item.href}
                   key={item.href}
-                  className="flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors w-full h-full group"
+                  className="flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2"
                 >
                   <div className="p-2 rounded-full border border-transparent group-hover:border-primary transition-colors">
                     <item.icon className="h-7 w-7" />
