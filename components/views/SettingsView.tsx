@@ -10,6 +10,7 @@ import {
   LogOut,
   Loader2,
   CheckCircle,
+  Archive
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -32,6 +33,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
+import ArchiveView from './ArchiveView';
 
 // --- Sub-page Components ---
 
@@ -273,7 +275,7 @@ export default function SettingsView() {
         </p>
       </header>
        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile">
             <UserCircle className="h-5 w-5 ml-2" />
             الملف
@@ -290,6 +292,10 @@ export default function SettingsView() {
             <Shield className="h-5 w-5 ml-2" />
             الأمان
           </TabsTrigger>
+          <TabsTrigger value="archive">
+            <Archive className="h-5 w-5 ml-2" />
+            الأرشيف
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="mt-6">
           <ProfileView />
@@ -302,6 +308,9 @@ export default function SettingsView() {
         </TabsContent>
         <TabsContent value="security" className="mt-6">
           <SecurityView />
+        </TabsContent>
+        <TabsContent value="archive" className="mt-6">
+          <ArchiveView />
         </TabsContent>
       </Tabs>
 

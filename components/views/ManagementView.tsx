@@ -31,6 +31,7 @@ import {
   query,
   orderBy,
   Timestamp,
+  where,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -192,7 +193,7 @@ function ExpensesView({ user, collectionName, title }) {
     ? collection(db, 'users', user.uid, collectionName)
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
   );
   const expenses =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Expense)) ||
@@ -216,6 +217,7 @@ function ExpensesView({ user, collectionName, title }) {
         item: newExpense.item,
         category: newExpense.category,
         amount: parseFloat(newExpense.amount) || 0,
+        archived: false,
       });
       setNewExpense({ item: '', category: '', amount: '' });
     } catch (e) {
@@ -225,9 +227,9 @@ function ExpensesView({ user, collectionName, title }) {
     }
   };
 
-  const handleDeleteExpense = async (id: string) => {
+  const handleArchiveExpense = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, collectionName, id));
+    await updateDoc(doc(db, 'users', user.uid, collectionName, id), { archived: true });
   };
 
   return (
@@ -291,7 +293,7 @@ function ExpensesView({ user, collectionName, title }) {
         <DataView<Expense>
           loading={loading}
           data={expenses}
-          columns={['التاريخ', 'البند', 'الفئة', 'المبلغ', 'حذف']}
+          columns={['التاريخ', 'البند', 'الفئة', 'المبلغ', 'أرشفة']}
           emptyMessage="لا توجد مصاريف لعرضها."
           renderRow={(expense) => (
             <TableRow key={expense.id}>
@@ -307,7 +309,7 @@ function ExpensesView({ user, collectionName, title }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDeleteExpense(expense.id)}
+                  onClick={() => handleArchiveExpense(expense.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -324,7 +326,7 @@ function ExpensesView({ user, collectionName, title }) {
 function FacilitiesView({ user }) {
   const collectionRef = user ? collection(db, 'users', user.uid, 'facilities') : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
   );
   const facilities =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Facility)) ||
@@ -341,7 +343,7 @@ function FacilitiesView({ user }) {
     if (!name || !type || !collectionRef || isAdding) return;
     setIsAdding(true);
     try {
-      await addDoc(collectionRef, { name, type });
+      await addDoc(collectionRef, { name, type, archived: false });
       setNewFacility({ name: '', type: 'محمية' });
     } catch (e) {
       console.error(e);
@@ -350,9 +352,9 @@ function FacilitiesView({ user }) {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleArchive = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'facilities', id));
+    await updateDoc(doc(db, 'users', user.uid, 'facilities', id), { archived: true });
   };
 
   return (
@@ -418,7 +420,7 @@ function FacilitiesView({ user }) {
         <DataView<Facility>
           loading={loading}
           data={facilities}
-          columns={['الاسم', 'النوع', 'حذف']}
+          columns={['الاسم', 'النوع', 'أرشفة']}
           emptyMessage="لا توجد مرافق لعرضها."
           renderRow={(facility) => (
             <TableRow key={facility.id}>
@@ -428,7 +430,7 @@ function FacilitiesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(facility.id)}
+                  onClick={() => handleArchive(facility.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -447,7 +449,7 @@ function AgriSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'agriSales')
     : null;
   const [snapshot, loading] = useCollection(
-    salesCollection ? query(salesCollection, orderBy('date', 'desc')) : null
+    salesCollection ? query(salesCollection, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AgriSale)) ||
@@ -486,6 +488,7 @@ function AgriSalesView({ user }) {
         cartonWeight,
         cartonPrice: price,
         totalAmount,
+        archived: false,
       });
       setNewSale({
         item: '',
@@ -500,9 +503,9 @@ function AgriSalesView({ user }) {
     }
   };
 
-  const handleDeleteSale = async (id: string) => {
+  const handleArchiveSale = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'agriSales', id));
+    await updateDoc(doc(db, 'users', user.uid, 'agriSales', id), { archived: true });
   };
 
   return (
@@ -597,7 +600,7 @@ function AgriSalesView({ user }) {
             'وزن الكرتون',
             'سعر الكرتون',
             'المبلغ الإجمالي',
-            'حذف',
+            'أرشفة',
           ]}
           emptyMessage="لا توجد مبيعات لعرضها."
           renderRow={(sale) => (
@@ -616,7 +619,7 @@ function AgriSalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDeleteSale(sale.id)}
+                  onClick={() => handleArchiveSale(sale.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -634,7 +637,7 @@ function DebtsView({ user }) {
     ? collection(db, 'users', user.uid, 'debts')
     : null;
   const [snapshot, loading] = useCollection(
-    debtsCollection ? query(debtsCollection, orderBy('dueDate', 'desc')) : null
+    debtsCollection ? query(debtsCollection, where('archived', '!=', true), orderBy('archived'), orderBy('dueDate', 'desc')) : null
   );
   const debts =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Debt)) || [];
@@ -660,6 +663,7 @@ function DebtsView({ user }) {
         dueDate: new Date(),
         amount: parseFloat(amount) || 0,
         type,
+        archived: false,
       });
       setNewDebt({ party: '', amount: '', type: 'دين علينا' });
     } catch (e) {
@@ -669,9 +673,9 @@ function DebtsView({ user }) {
     }
   };
 
-  const handleDeleteDebt = async (id: string) => {
+  const handleArchiveDebt = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'debts', id));
+    await updateDoc(doc(db, 'users', user.uid, 'debts', id), { archived: true });
   };
 
   const handleOpenPaymentDialog = (debt: Debt) => {
@@ -692,7 +696,8 @@ function DebtsView({ user }) {
       if (newAmount > 0) {
         await updateDoc(debtRef, { amount: newAmount });
       } else {
-        await deleteDoc(debtRef);
+        // Instead of deleting, we archive it
+        await updateDoc(debtRef, { amount: 0, archived: true });
       }
     } catch (e) {
       console.error(e);
@@ -797,7 +802,7 @@ function DebtsView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDeleteDebt(debt.id)}
+                  onClick={() => handleArchiveDebt(debt.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -864,7 +869,7 @@ function WorkersView({ user }) {
     : null;
 
   const [snapshot, loading] = useCollection(
-    workersCollection ? query(workersCollection, orderBy('name', 'asc')) : null
+    workersCollection ? query(workersCollection, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
   );
   const workers =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Worker)) ||
@@ -883,7 +888,7 @@ function WorkersView({ user }) {
     if (!name || !salary || !workersCollection || isAdding) return;
     setIsAdding(true);
     try {
-      await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0 });
+      await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0, archived: false });
       setNewWorker({ name: '', salary: '' });
     } catch (e) {
       console.error(e);
@@ -892,9 +897,9 @@ function WorkersView({ user }) {
     }
   };
 
-  const handleDeleteWorker = async (id: string) => {
+  const handleArchiveWorker = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'workers', id));
+    await updateDoc(doc(db, 'users', user.uid, 'workers', id), { archived: true });
   };
 
   const handleSalaryPayment = async (worker: Worker) => {
@@ -908,6 +913,7 @@ function WorkersView({ user }) {
         item: `راتب العامل: ${worker.name} (شهر ${currentMonth}/${currentYear})`,
         category: 'رواتب',
         amount: worker.salary || 0,
+        archived: false,
       });
     } catch (e) {
       console.error(e);
@@ -1027,7 +1033,7 @@ function WorkersView({ user }) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteWorker(worker.id)}
+                    onClick={() => handleArchiveWorker(worker.id)}
                     disabled={payingSalaryFor === worker.id}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -1159,7 +1165,7 @@ function EggSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'poultryEggSales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as EggSale)) ||
@@ -1183,6 +1189,7 @@ function EggSalesView({ user }) {
         trayCount: count,
         trayPrice: price,
         totalAmount,
+        archived: false,
       });
       setNewSale({ trayCount: '', trayPrice: '' });
     } catch (e) {
@@ -1192,9 +1199,9 @@ function EggSalesView({ user }) {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleArchive = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'poultryEggSales', id));
+    await updateDoc(doc(db, 'users', user.uid, 'poultryEggSales', id), { archived: true });
   };
 
   return (
@@ -1248,7 +1255,7 @@ function EggSalesView({ user }) {
         <DataView<EggSale>
           loading={loading}
           data={sales}
-          columns={['التاريخ', 'عدد الأطباق', 'سعر الطبق', 'المبلغ الإجمالي', 'حذف']}
+          columns={['التاريخ', 'عدد الأطباق', 'سعر الطبق', 'المبلغ الإجمالي', 'أرشفة']}
           emptyMessage="لا توجد مبيعات بيض لعرضها."
           renderRow={(sale) => (
             <TableRow key={sale.id}>
@@ -1264,7 +1271,7 @@ function EggSalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(sale.id)}
+                  onClick={() => handleArchive(sale.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -1282,7 +1289,7 @@ function PoultrySalesView({ user }) {
     ? collection(db, 'users', user.uid, 'poultrySales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PoultrySale)) ||
@@ -1312,6 +1319,7 @@ function PoultrySalesView({ user }) {
         count: numCount,
         pricePerUnit: price,
         totalAmount,
+        archived: false,
       });
       setNewSale({ poultryType: 'دجاج حي', count: '', pricePerUnit: '' });
     } catch (e) {
@@ -1321,9 +1329,9 @@ function PoultrySalesView({ user }) {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleArchive = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'poultrySales', id));
+    await updateDoc(doc(db, 'users', user.uid, 'poultrySales', id), { archived: true });
   };
 
   return (
@@ -1394,7 +1402,7 @@ function PoultrySalesView({ user }) {
             'العدد',
             'سعر الوحدة',
             'المبلغ الإجمالي',
-            'حذف',
+            'أرشفة',
           ]}
           emptyMessage="لا توجد مبيعات دواجن لعرضها."
           renderRow={(sale) => (
@@ -1412,7 +1420,7 @@ function PoultrySalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(sale.id)}
+                  onClick={() => handleArchive(sale.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -1430,7 +1438,7 @@ function FlocksView({ user }) {
     ? collection(db, 'users', user.uid, 'poultryFlocks')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
   );
   const flocks =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Flock)) || [];
@@ -1446,6 +1454,7 @@ function FlocksView({ user }) {
       await addDoc(collectionRef, {
         name,
         birdCount: parseInt(birdCount) || 0,
+        archived: false,
       });
       setNewFlock({ name: '', birdCount: '' });
     } catch (e) {
@@ -1455,9 +1464,9 @@ function FlocksView({ user }) {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleArchive = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'poultryFlocks', id));
+    await updateDoc(doc(db, 'users', user.uid, 'poultryFlocks', id), { archived: true });
   };
 
   return (
@@ -1509,7 +1518,7 @@ function FlocksView({ user }) {
         <DataView<Flock>
           loading={loading}
           data={flocks}
-          columns={['الاسم/النوع', 'عدد الطيور', 'حذف']}
+          columns={['الاسم/النوع', 'عدد الطيور', 'أرشفة']}
           emptyMessage="لا يوجد قطعان لعرضها."
           renderRow={(flock) => (
             <TableRow key={flock.id}>
@@ -1519,7 +1528,7 @@ function FlocksView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(flock.id)}
+                  onClick={() => handleArchive(flock.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -1582,7 +1591,7 @@ function LivestockSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'livestockSales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map(
@@ -1613,6 +1622,7 @@ function LivestockSalesView({ user }) {
         count: numCount,
         pricePerUnit: price,
         totalAmount,
+        archived: false,
       });
       setNewSale({ animalType: 'خروف', count: '', pricePerUnit: '' });
     } catch (e) {
@@ -1622,9 +1632,9 @@ function LivestockSalesView({ user }) {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleArchive = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'livestockSales', id));
+    await updateDoc(doc(db, 'users', user.uid, 'livestockSales', id), { archived: true });
   };
 
   return (
@@ -1695,7 +1705,7 @@ function LivestockSalesView({ user }) {
             'العدد',
             'سعر الرأس',
             'المبلغ الإجمالي',
-            'حذف',
+            'أرشفة',
           ]}
           emptyMessage="لا توجد مبيعات مواشي لعرضها."
           renderRow={(sale) => (
@@ -1713,7 +1723,7 @@ function LivestockSalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(sale.id)}
+                  onClick={() => handleArchive(sale.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -1731,7 +1741,7 @@ function HerdsView({ user }) {
     ? collection(db, 'users', user.uid, 'livestockHerds')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
   );
   const herds =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Herd)) || [];
@@ -1747,6 +1757,7 @@ function HerdsView({ user }) {
       await addDoc(collectionRef, {
         name,
         animalCount: parseInt(animalCount) || 0,
+        archived: false,
       });
       setNewHerd({ name: '', animalCount: '' });
     } catch (e) {
@@ -1756,9 +1767,9 @@ function HerdsView({ user }) {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleArchive = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'livestockHerds', id));
+    await updateDoc(doc(db, 'users', user.uid, 'livestockHerds', id), { archived: true });
   };
 
   return (
@@ -1810,7 +1821,7 @@ function HerdsView({ user }) {
         <DataView<Herd>
           loading={loading}
           data={herds}
-          columns={['الاسم/النوع', 'عدد الرؤوس', 'حذف']}
+          columns={['الاسم/النوع', 'عدد الرؤوس', 'أرشفة']}
           emptyMessage="لا يوجد قطعان لعرضها."
           renderRow={(herd) => (
             <TableRow key={herd.id}>
@@ -1820,7 +1831,7 @@ function HerdsView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(herd.id)}
+                  onClick={() => handleArchive(herd.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
