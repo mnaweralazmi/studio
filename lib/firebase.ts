@@ -21,7 +21,7 @@ const db = getFirestore(app);
 // and managed via a secure backend or Firebase Functions.
 // For this prototype, we are hardcoding the admin UIDs.
 // Replace 'YOUR_ADMIN_UID_HERE' with your actual Firebase User ID.
-export const adminUids = ['YOUR_ADMIN_UID_HERE'];
+export const adminUids = ['18M3vFpBqNg0dKda2RxmjcizOjg2'];
 
 
 export { app, auth, db };
