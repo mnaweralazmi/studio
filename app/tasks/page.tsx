@@ -1,7 +1,8 @@
 'use client';
 
-import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { CalendarIcon, ListChecks, Plus } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,10 +14,32 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TaskList } from '@/components/task-list';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-export default function TasksPage() {
+// Sub-page Components
+
+function CalendarView() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  return (
+    <div className="space-y-6">
+       <h1 className="text-3xl font-bold text-foreground">التقويم</h1>
+      <Card>
+        <CardContent className="p-0">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={setDate}
+            className="w-full"
+            dir="rtl"
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
+function TasksListView() {
   const upcomingTasks = [
     { time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false },
     { time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false },
@@ -28,61 +51,105 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
-          <p className="mt-1 text-muted-foreground">
-            جدول مهامك اليومية والأسبوعية.
-          </p>
-        </div>
-        <Button>
-          <div className="p-1 rounded-md border bg-primary-foreground/20 mr-2">
-            <Plus className="h-4 w-4 text-primary-foreground" />
-          </div>
-          إضافة مهمة جديدة
-        </Button>
-      </header>
+      <h1 className="text-3xl font-bold text-foreground">قائمة المهام</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>المهام</CardTitle>
+          <CardDescription>
+            نظرة سريعة على مهامك القادمة والسابقة.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="upcoming">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upcoming">قادمة</TabsTrigger>
+              <TabsTrigger value="past">سابقة</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upcoming">
+              <TaskList tasks={upcomingTasks} />
+            </TabsContent>
+            <TabsContent value="past">
+              <TaskList tasks={pastTasks} />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardContent className="p-0">
-              <Calendar
+function AddTaskView() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-foreground">إضافة مهمة جديدة</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>تفاصيل المهمة</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="task-title">عنوان المهمة</Label>
+            <Input id="task-title" placeholder="مثال: ري قسم البطاطس" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="task-time">وقت المهمة</Label>
+            <Input id="task-time" type="time" dir="ltr" />
+          </div>
+           <div className="space-y-2">
+            <Label>تاريخ المهمة</Label>
+            <Calendar
                 mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="w-full"
+                selected={new Date()}
+                className="rounded-md border"
                 dir="rtl"
               />
-            </CardContent>
-          </Card>
-        </div>
+          </div>
+          <Button className="w-full">
+            <Plus className="h-4 w-4 ml-2" />
+            إضافة المهمة
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>المهام</CardTitle>
-              <CardDescription>
-                نظرة سريعة على مهامك القادمة والسابقة.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="upcoming">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="upcoming">قادمة</TabsTrigger>
-                  <TabsTrigger value="past">سابقة</TabsTrigger>
-                </TabsList>
-                <TabsContent value="upcoming">
-                  <TaskList tasks={upcomingTasks} />
-                </TabsContent>
-                <TabsContent value="past">
-                  <TaskList tasks={pastTasks} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+const tasksTabs: {
+  id: 'calendar' | 'list' | 'add';
+  title: string;
+  icon: React.ElementType;
+  component: ReactNode;
+}[] = [
+  {
+    id: 'calendar',
+    title: 'التقويم',
+    icon: CalendarIcon,
+    component: <CalendarView />,
+  },
+  {
+    id: 'list',
+    title: 'المهام',
+    icon: ListChecks,
+    component: <TasksListView />,
+  },
+  { id: 'add', title: 'إضافة مهمة', icon: Plus, component: <AddTaskView /> },
+];
+
+export default function TasksPage() {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') || 'calendar';
+  const activeTab = tasksTabs.find((t) => t.id === tab) || tasksTabs[0];
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
+        <p className="mt-1 text-muted-foreground">
+          جدول مهامك اليومية والأسبوعية.
+        </p>
+      </header>
+
+      <div className="mt-6">{activeTab.component}</div>
     </div>
   );
 }

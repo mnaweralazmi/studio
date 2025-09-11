@@ -12,6 +12,8 @@ import {
   ShoppingCart,
   HandCoins,
   User,
+  CalendarIcon,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,12 +22,14 @@ export default function AppFooter() {
   const searchParams = useSearchParams();
 
   const isManagementPage = pathname === '/management';
-  const activeManagementTab = searchParams.get('tab');
+  const isTasksPage = pathname === '/tasks';
+
+  const activeSubTab = searchParams.get('tab');
 
   const mainNavItems = [
     { href: '/', label: 'الرئيسية', icon: Home },
     { href: '/tasks', label: 'المهام', icon: ListChecks },
-    { href: '/management', label: 'إدارة المزرعة', icon: Tractor },
+    { href: '/management', label: 'الإدارة', icon: Tractor },
     { href: '/settings', label: 'الإعدادات', icon: Settings },
   ];
 
@@ -34,6 +38,13 @@ export default function AppFooter() {
     { href: '/management?tab=sales', label: 'المبيعات', icon: ShoppingCart },
     { href: '/management?tab=debts', label: 'الديون', icon: HandCoins },
     { href: '/management?tab=workers', label: 'العمال', icon: User },
+    { href: '/', label: 'رجوع', icon: ArrowLeft },
+  ];
+  
+  const tasksNavItems = [
+    { href: '/tasks?tab=calendar', label: 'التقويم', icon: CalendarIcon },
+    { href: '/tasks?tab=list', label: 'المهام', icon: ListChecks },
+    { href: '/tasks?tab=add', label: 'إضافة', icon: Plus },
     { href: '/', label: 'رجوع', icon: ArrowLeft },
   ];
 
@@ -60,7 +71,22 @@ export default function AppFooter() {
     </Link>
   );
 
-  const navItems = isManagementPage ? managementNavItems : mainNavItems;
+  let navItems;
+  if (isManagementPage) {
+    navItems = managementNavItems;
+  } else if (isTasksPage) {
+    navItems = tasksNavItems;
+  } else {
+    navItems = mainNavItems;
+  }
+
+  const getIsActive = (item: { href: string; }) => {
+    if (isManagementPage || isTasksPage) {
+      const itemTab = item.href.split('=')[1];
+      return activeSubTab ? activeSubTab === itemTab : itemTab === navItems[0].href.split('=')[1];
+    }
+    return pathname === item.href;
+  };
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
@@ -71,11 +97,7 @@ export default function AppFooter() {
             href={item.href}
             icon={item.icon}
             label={item.label}
-            isActive={
-              isManagementPage
-                ? activeManagementTab === item.href.split('=')[1]
-                : pathname === item.href
-            }
+            isActive={getIsActive(item)}
           />
         ))}
       </nav>
