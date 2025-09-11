@@ -19,7 +19,6 @@ import {
   Briefcase,
   Building2,
   ClipboardList,
-  Scaling,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -1093,16 +1092,16 @@ function FarmManagementView({ user }) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="expenses">
-          <DollarSign className="h-4 w-4 ml-2" />
+        <TabsTrigger value="expenses" className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
           المصاريف العامة
         </TabsTrigger>
-        <TabsTrigger value="debts">
-          <HandCoins className="h-4 w-4 ml-2" />
+        <TabsTrigger value="debts" className="flex items-center gap-2">
+          <HandCoins className="h-4 w-4" />
           الديون
         </TabsTrigger>
-        <TabsTrigger value="workers">
-          <User className="h-4 w-4 ml-2" />
+        <TabsTrigger value="workers" className="flex items-center gap-2">
+          <User className="h-4 w-4" />
           العمال
         </TabsTrigger>
       </TabsList>
@@ -1129,16 +1128,16 @@ function AgricultureView({ user }) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="expenses">
-          <DollarSign className="h-4 w-4 ml-2" />
+        <TabsTrigger value="expenses" className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
           المصاريف الزراعية
         </TabsTrigger>
-        <TabsTrigger value="sales">
-          <ShoppingCart className="h-4 w-4 ml-2" />
+        <TabsTrigger value="sales" className="flex items-center gap-2">
+          <ShoppingCart className="h-4 w-4" />
           المبيعات
         </TabsTrigger>
-        <TabsTrigger value="facilities">
-          <Building2 className="h-4 w-4 ml-2" />
+        <TabsTrigger value="facilities" className="flex items-center gap-2">
+          <Building2 className="h-4 w-4" />
           المرافق
         </TabsTrigger>
       </TabsList>
@@ -1548,20 +1547,20 @@ function PoultryView({ user }) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="expenses">
-          <DollarSign className="h-4 w-4 ml-2" />
+        <TabsTrigger value="expenses" className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
           المصاريف
         </TabsTrigger>
-        <TabsTrigger value="eggSales">
-          <Egg className="h-4 w-4 ml-2" />
+        <TabsTrigger value="eggSales" className="flex items-center gap-2">
+          <Egg className="h-4 w-4" />
           مبيعات البيض
         </TabsTrigger>
-        <TabsTrigger value="poultrySales">
-          <Drumstick className="h-4 w-4 ml-2" />
+        <TabsTrigger value="poultrySales" className="flex items-center gap-2">
+          <Drumstick className="h-4 w-4" />
           مبيعات الدواجن
         </TabsTrigger>
-        <TabsTrigger value="flocks">
-          <Users2 className="h-4 w-4 ml-2" />
+        <TabsTrigger value="flocks" className="flex items-center gap-2">
+          <Users2 className="h-4 w-4" />
           القطعان
         </TabsTrigger>
       </TabsList>
@@ -1851,16 +1850,16 @@ function LivestockView({ user }) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="expenses">
-          <DollarSign className="h-4 w-4 ml-2" />
+        <TabsTrigger value="expenses" className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
           المصاريف
         </TabsTrigger>
-        <TabsTrigger value="sales">
-          <ShoppingCart className="h-4 w-4 ml-2" />
+        <TabsTrigger value="sales" className="flex items-center gap-2">
+          <ShoppingCart className="h-4 w-4" />
           المبيعات
         </TabsTrigger>
-        <TabsTrigger value="herds">
-          <GitCommit className="h-4 w-4 ml-2 rotate-90" />
+        <TabsTrigger value="herds" className="flex items-center gap-2">
+          <GitCommit className="h-4 w-4 rotate-90" />
           القطيع
         </TabsTrigger>
       </TabsList>
