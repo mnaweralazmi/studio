@@ -19,6 +19,7 @@ import {
   Briefcase,
   Building2,
   ClipboardList,
+  Scaling,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -1918,40 +1919,17 @@ export default function ManagementView() {
             اختر قسمًا لإدارة عملياته وبياناته.
           </p>
         </div>
-        <Select value={selectedSection} onValueChange={setSelectedSection}>
-          <SelectTrigger className="w-full md:w-[280px]">
-            <SelectValue placeholder="اختر قسمًا" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="farmManagement">
-              <div className="flex items-center">
-                <Briefcase className="h-4 w-4 ml-2" />
-                إدارة المزرعة (العامة)
-              </div>
-            </SelectItem>
-            <SelectItem value="agriculture">
-              <div className="flex items-center">
-                <Tractor className="h-4 w-4 ml-2" />
-                الزراعة
-              </div>
-            </SelectItem>
-            <SelectItem value="poultry">
-              <div className="flex items-center">
-                <Egg className="h-4 w-4 ml-2" />
-                الدواجن
-              </div>
-            </SelectItem>
-            <SelectItem value="livestock">
-              <div className="flex items-center">
-                <GitCommit className="h-4 w-4 ml-2 rotate-90" />
-                المواشي
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsTrigger value="farmManagement" className="flex items-center gap-2"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
+                <TabsTrigger value="agriculture" className="flex items-center gap-2"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
+                <TabsTrigger value="poultry" className="flex items-center gap-2"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
+                <TabsTrigger value="livestock" className="flex items-center gap-2"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
+            </TabsList>
+        </Tabs>
       </header>
 
-      <div>{renderContent()}</div>
+      <div className='pt-4'>{renderContent()}</div>
     </div>
   );
 }
