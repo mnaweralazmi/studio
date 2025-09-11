@@ -39,8 +39,7 @@ function HomeView() {
   const [articlesSnapshot, loading, error] = useCollection(
     query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
   );
-  const router = useRouter();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, loading: adminLoading } = useAdmin();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,13 +91,12 @@ function HomeView() {
     }
   };
 
-
-  if (loading) {
+  if (loading || adminLoading) {
      return (
       <div className="flex flex-col items-center justify-center text-center py-16">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
         <h2 className="mt-4 text-xl font-semibold">
-          جاري تحميل الأخبار...
+          جاري تحميل البيانات...
         </h2>
       </div>
     );
