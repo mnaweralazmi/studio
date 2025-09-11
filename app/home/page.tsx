@@ -2,63 +2,59 @@
 
 import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2, Newspaper } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 type Article = {
-  id: number;
+  id: string;
   title: string;
   description: string;
-  image: {
-    src: string;
-    width: number;
-    height: number;
-    hint: string;
-  };
+  imageUrl: string;
+  imageHint: string;
 };
 
-const articles: Article[] = [
-  {
-    id: 1,
-    title: 'أفضل أوقات زراعة الطماطم في الكويت',
-    description: 'دليل شامل حول أفضل المواعيد والممارسات لزراعة الطماطم لتحقيق أقصى إنتاجية وجودة.',
-    image: {
-      src: 'https://picsum.photos/seed/tomato/600/400',
-      width: 600,
-      height: 400,
-      hint: 'tomatoes farm',
-    },
-  },
-  {
-    id: 2,
-    title: 'طرق مكافحة الآفات الزراعية طبيعياً',
-    description: 'تعرف على طرق صديقة للبيئة وفعالة لمكافحة الآفات التي تهدد محاصيلك دون استخدام كيماويات ضارة.',
-    image: {
-      src: 'https://picsum.photos/seed/pests/600/400',
-      width: 600,
-      height: 400,
-      hint: 'natural pest control',
-    },
-  },
-  {
-    id: 3,
-    title: 'أهمية الري بالتنقيط في الزراعة الحديثة',
-    description: 'اكتشف كيف يمكن لنظام الري بالتنقيط توفير المياه وزيادة كفاءة نمو النباتات في مزرعتك.',
-    image: {
-      src: 'https://picsum.photos/seed/irrigation/600/400',
-      width: 600,
-      height: 400,
-      hint: 'drip irrigation',
-    },
-  },
-];
-
 function HomeView() {
+  const [articlesSnapshot, loading, error] = useCollection(
+    query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
+  );
+
+  const articles =
+    articlesSnapshot?.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() } as Article)
+    ) || [];
+
+  if (loading) {
+     return (
+      <div className="flex flex-col items-center justify-center text-center py-16">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <h2 className="mt-4 text-xl font-semibold">
+          جاري تحميل الأخبار...
+        </h2>
+      </div>
+    );
+  }
+  
+  if (error) {
+     return (
+      <div className="flex flex-col items-center justify-center text-center py-16">
+        <Newspaper className="h-16 w-16 text-destructive" />
+        <h2 className="mt-4 text-xl font-semibold text-destructive">
+            حدث خطأ أثناء تحميل الأخبار
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          الرجاء المحاولة مرة أخرى لاحقًا.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <header>
@@ -74,12 +70,12 @@ function HomeView() {
           {articles.map((article) => (
             <Card key={article.id} className="overflow-hidden shadow-lg">
               <Image
-                src={article.image.src}
+                src={article.imageUrl || 'https://picsum.photos/seed/placeholder/600/400'}
                 alt={article.title}
-                width={article.image.width}
-                height={article.image.height}
+                width={600}
+                height={400}
                 className="w-full h-48 object-cover"
-                data-ai-hint={article.image.hint}
+                data-ai-hint={article.imageHint}
               />
               <CardHeader>
                 <CardTitle>{article.title}</CardTitle>

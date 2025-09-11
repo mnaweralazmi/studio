@@ -19,6 +19,7 @@ import {
   Briefcase,
   Building2,
   ClipboardList,
+  Newspaper
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -32,6 +33,7 @@ import {
   orderBy,
   Timestamp,
   where,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -68,8 +70,10 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '../ui/textarea';
 
 // Helper to convert Firestore Timestamp to a readable string
 const formatDate = (date: any) => {
@@ -84,6 +88,15 @@ const formatDate = (date: any) => {
 };
 
 // Generic Types
+type Article = {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  imageHint: string;
+  createdAt: Timestamp;
+};
+
 type Expense = {
   id: string;
   date: string | Timestamp;
@@ -184,6 +197,135 @@ function DataView<T extends { id: string }>({
       <TableBody>{data.map(renderRow)}</TableBody>
     </Table>
   );
+}
+
+// --- Content Management Component ---
+function ContentManagementView() {
+  const [snapshot, loading] = useCollection(
+    query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
+  );
+  const articles = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article)) || [];
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentArticle, setCurrentArticle] = useState<Partial<Article> | null>(null);
+
+  const openDialog = (article: Partial<Article> | null = null) => {
+    setCurrentArticle(article ? { ...article } : {});
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveArticle = async () => {
+    if (!currentArticle || !currentArticle.title || !currentArticle.description) return;
+    setIsSaving(true);
+    
+    try {
+      if (currentArticle.id) {
+        // Update existing article
+        const articleRef = doc(db, 'articles', currentArticle.id);
+        await updateDoc(articleRef, {
+            title: currentArticle.title,
+            description: currentArticle.description,
+            imageUrl: currentArticle.imageUrl,
+            imageHint: currentArticle.imageHint,
+        });
+      } else {
+        // Add new article
+        await addDoc(collection(db, 'articles'), {
+          ...currentArticle,
+          createdAt: serverTimestamp()
+        });
+      }
+      setIsDialogOpen(false);
+      setCurrentArticle(null);
+    } catch(e) {
+        console.error("Error saving article:", e);
+    } finally {
+        setIsSaving(false);
+    }
+  };
+  
+  const handleDeleteArticle = async (id: string) => {
+    if (window.confirm('هل أنت متأكد من رغبتك في حذف هذا المقال بشكل نهائي؟')) {
+        await deleteDoc(doc(db, 'articles', id));
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className='flex-row items-center justify-between'>
+          <CardTitle>إدارة المقالات والأخبار</CardTitle>
+          <Button onClick={() => openDialog()}>
+            <Plus className="h-4 w-4 ml-2" />
+            إضافة مقال جديد
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <DataView<Article>
+            loading={loading}
+            data={articles}
+            columns={['العنوان', 'الوصف', 'تاريخ النشر', 'الإجراءات']}
+            emptyMessage="لا توجد مقالات لعرضها. أضف مقالًا جديدًا."
+            renderRow={(article) => (
+              <TableRow key={article.id}>
+                <TableCell className="font-medium max-w-xs truncate">{article.title}</TableCell>
+                <TableCell className="max-w-sm truncate text-muted-foreground">{article.description}</TableCell>
+                <TableCell>{formatDate(article.createdAt)}</TableCell>
+                <TableCell className="text-left">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="outline" size="icon" onClick={() => openDialog(article)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="destructive" size="icon" onClick={() => handleDeleteArticle(article.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          />
+        </CardContent>
+      </Card>
+      
+      {/* Add/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{currentArticle?.id ? 'تعديل المقال' : 'إضافة مقال جديد'}</DialogTitle>
+                <DialogDescription>
+                    املأ التفاصيل أدناه. سيظهر هذا المقال في الصفحة الرئيسية.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="title">العنوان</Label>
+                    <Input id="title" value={currentArticle?.title || ''} onChange={(e) => setCurrentArticle({...currentArticle, title: e.target.value})} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="description">الوصف</Label>
+                    <Textarea id="description" value={currentArticle?.description || ''} onChange={(e) => setCurrentArticle({...currentArticle, description: e.target.value})} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="imageUrl">رابط الصورة</Label>
+                    <Input id="imageUrl" placeholder="https://picsum.photos/seed/..." value={currentArticle?.imageUrl || ''} onChange={(e) => setCurrentArticle({...currentArticle, imageUrl: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="imageHint">كلمات دلالية للصورة (للبحث المستقبلي)</Label>
+                    <Input id="imageHint" placeholder="مثال: farm tomato" value={currentArticle?.imageHint || ''} onChange={(e) => setCurrentArticle({...currentArticle, imageHint: e.target.value})} />
+                </div>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline">إلغاء</Button></DialogClose>
+                <Button onClick={handleSaveArticle} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <CheckCircle className="h-4 w-4 ml-2" />}
+                    {isSaving ? 'جاري الحفظ...' : 'حفظ'}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }
 
 // --- Generic Sub-page Components ---
@@ -1898,6 +2040,8 @@ export default function ManagementView() {
     switch (selectedSection) {
       case 'farmManagement':
         return <FarmManagementView user={user} />;
+      case 'content':
+        return <ContentManagementView />;
       case 'agriculture':
         return <AgricultureView user={user} />;
       case 'poultry':
@@ -1919,8 +2063,9 @@ export default function ManagementView() {
           </p>
         </div>
         <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
                 <TabsTrigger value="farmManagement" className="flex items-center gap-2"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
+                <TabsTrigger value="content" className="flex items-center gap-2"><Newspaper className="h-4 w-4" />المحتوى</TabsTrigger>
                 <TabsTrigger value="agriculture" className="flex items-center gap-2"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
                 <TabsTrigger value="poultry" className="flex items-center gap-2"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
                 <TabsTrigger value="livestock" className="flex items-center gap-2"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
