@@ -91,7 +91,7 @@ export default function RegisterPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>خطأ</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
-              </Aler>
+              </Alert>
             )}
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">

@@ -1,7 +1,7 @@
 'use client';
 
 import { Circle, CircleCheck, Bell, CalendarDays } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 export type Task = {
