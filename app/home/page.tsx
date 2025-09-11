@@ -79,7 +79,7 @@ function HomeView() {
       {articles.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {articles.map((article) => (
-            <Card key={article.id} className="overflow-hidden shadow-lg">
+            <Card key={article.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
               <Image
                 src={article.imageUrl || 'https://picsum.photos/seed/placeholder/600/400'}
                 alt={article.title}
@@ -92,7 +92,7 @@ function HomeView() {
                 <CardTitle>{article.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground text-sm mb-4">
+                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
                   {article.description}
                 </p>
                 <Button variant="outline" className="w-full">
@@ -103,7 +103,7 @@ function HomeView() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center text-center py-16">
+        <div className="flex flex-col items-center justify-center text-center py-16 bg-card rounded-lg border-2 border-dashed">
           <Newspaper className="h-16 w-16 text-muted-foreground" />
           <h2 className="mt-4 text-xl font-semibold">
             لا توجد أخبار حاليًا
@@ -111,6 +111,12 @@ function HomeView() {
           <p className="mt-2 text-muted-foreground">
             سيتم عرض آخر الأخبار والمواضيع الزراعية هنا.
           </p>
+           {isAdmin && (
+            <Button onClick={() => router.push('/management?tab=content')} className="mt-6">
+                <Plus className="h-4 w-4 ml-2" />
+                أضف أول موضوع
+            </Button>
+        )}
         </div>
       )}
     </div>
