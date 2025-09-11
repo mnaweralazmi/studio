@@ -1,13 +1,14 @@
 'use client';
 
-import { Circle, CircleCheck } from 'lucide-react';
+import { Circle, CircleCheck, Bell } from 'lucide-react';
 
 export type Task = {
   id: string;
   time: string;
   title: string;
   completed: boolean;
-  date?: string; 
+  date?: string;
+  reminder?: string;
 };
 
 export function TaskList({ tasks }: { tasks: Task[] }) {
@@ -31,13 +32,13 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
           }`}
         >
           <div className="p-1 border rounded-full ml-3">
-          {task.completed ? (
-            <CircleCheck className="h-5 w-5 text-green-500" />
-          ) : (
-            <Circle className="h-5 w-5 text-muted-foreground" />
-          )}
+            {task.completed ? (
+              <CircleCheck className="h-5 w-5 text-green-500" />
+            ) : (
+              <Circle className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
-          <div className="flex flex-col">
+          <div className="flex-1">
             <p
               className={`font-medium text-sm ${
                 task.completed
@@ -47,13 +48,21 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
             >
               {task.title}
             </p>
-            <span
-              className={`text-xs ${
-                task.completed ? 'text-muted-foreground' : 'text-primary'
-              }`}
-            >
-              {task.time}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-xs ${
+                  task.completed ? 'text-muted-foreground' : 'text-primary'
+                }`}
+              >
+                {task.time}
+              </span>
+              {task.reminder && !task.completed && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Bell className="h-3 w-3" />
+                  <span>{task.reminder}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ))}
