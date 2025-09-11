@@ -80,73 +80,13 @@ type Worker = {
 };
 
 // Initial Data
-const initialExpenses: Expense[] = [
-  {
-    id: '1',
-    date: '٢٠٢٤/٠٧/٢٠',
-    item: 'شراء بذور طماطم',
-    category: 'مستلزمات زراعية',
-    amount: '١٥٠ د.ك',
-  },
-  {
-    id: '2',
-    date: '٢٠٢٤/٠٧/١٩',
-    item: 'وقود للمضخة',
-    category: 'تشغيل',
-    amount: '٣٠ د.ك',
-  },
-];
+const initialExpenses: Expense[] = [];
 
-const initialSales: Sale[] = [
-  {
-    id: '1',
-    date: '٢٠٢٤/٠٧/٢١',
-    item: 'خيار',
-    cartonCount: '50',
-    cartonWeight: '10 كيلو',
-    cartonPrice: '7 د.ك',
-    totalAmount: '٣٥٠ د.ك',
-  },
-  {
-    id: '2',
-    date: '٢٠٢٤/٠٧/٢٠',
-    item: 'طماطم',
-    cartonCount: '30',
-    cartonWeight: '12 كيلو',
-    cartonPrice: '9.33 د.ك',
-    totalAmount: '٢٨٠ د.ك',
-  },
-];
+const initialSales: Sale[] = [];
 
-const initialDebts: Debt[] = [
-  {
-    id: '1',
-    party: "مورد الأسمدة 'نمو'",
-    dueDate: '٢٠٢٤/٠٨/٠١',
-    amount: 400,
-    type: 'دين علينا',
-  },
-  {
-    id: '2',
-    party: "مطعم 'حصاد اليوم'",
-    dueDate: '٢٠٢٤/٠٧/٢٥',
-    amount: 120,
-    type: 'دين لنا',
-  },
-];
+const initialDebts: Debt[] = [];
 
-const initialWorkers: Worker[] = [
-  {
-    id: '1',
-    name: 'أحمد عبدالله',
-    salary: '٦٠٠٠ د.ك',
-  },
-  {
-    id: '2',
-    name: 'محمد حسين',
-    salary: '٤٨٠٠ د.ك',
-  },
-];
+const initialWorkers: Worker[] = [];
 
 const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجان', 'فلفل', 'كوسا'];
 
@@ -239,40 +179,46 @@ function ExpensesView() {
 
       <div className="bg-card p-6 rounded-xl shadow-sm">
         <h2 className="text-xl font-bold mb-4">قائمة المصاريف</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>البند</TableHead>
-              <TableHead>الفئة</TableHead>
-              <TableHead>المبلغ</TableHead>
-              <TableHead className="text-left">حذف</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {expenses.map((expense) => (
-              <TableRow key={expense.id}>
-                <TableCell>{expense.date}</TableCell>
-                <TableCell className="font-medium">{expense.item}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{expense.category}</Badge>
-                </TableCell>
-                <TableCell className="font-semibold text-destructive">
-                  {expense.amount}
-                </TableCell>
-                <TableCell className="text-left">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteExpense(expense.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
+        {expenses.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>التاريخ</TableHead>
+                <TableHead>البند</TableHead>
+                <TableHead>الفئة</TableHead>
+                <TableHead>المبلغ</TableHead>
+                <TableHead className="text-left">حذف</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {expenses.map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell>{expense.date}</TableCell>
+                  <TableCell className="font-medium">{expense.item}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{expense.category}</Badge>
+                  </TableCell>
+                  <TableCell className="font-semibold text-destructive">
+                    {expense.amount}
+                  </TableCell>
+                  <TableCell className="text-left">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteExpense(expense.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">
+            لا توجد مصاريف لعرضها.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -394,42 +340,48 @@ function SalesView() {
 
       <div className="bg-card p-6 rounded-xl shadow-sm">
         <h2 className="text-xl font-bold mb-4">قائمة المبيعات</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>المنتج</TableHead>
-              <TableHead>عدد الكراتين</TableHead>
-              <TableHead>وزن الكرتون</TableHead>
-              <TableHead>سعر الكرتون</TableHead>
-              <TableHead>المبلغ الإجمالي</TableHead>
-              <TableHead className="text-left">حذف</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sales.map((sale) => (
-              <TableRow key={sale.id}>
-                <TableCell>{sale.date}</TableCell>
-                <TableCell className="font-medium">{sale.item}</TableCell>
-                <TableCell>{sale.cartonCount}</TableCell>
-                <TableCell>{sale.cartonWeight}</TableCell>
-                <TableCell>{sale.cartonPrice}</TableCell>
-                <TableCell className="font-semibold text-green-600">
-                  {sale.totalAmount}
-                </TableCell>
-                <TableCell className="text-left">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteSale(sale.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
+        {sales.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>التاريخ</TableHead>
+                <TableHead>المنتج</TableHead>
+                <TableHead>عدد الكراتين</TableHead>
+                <TableHead>وزن الكرتون</TableHead>
+                <TableHead>سعر الكرتون</TableHead>
+                <TableHead>المبلغ الإجمالي</TableHead>
+                <TableHead className="text-left">حذف</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {sales.map((sale) => (
+                <TableRow key={sale.id}>
+                  <TableCell>{sale.date}</TableCell>
+                  <TableCell className="font-medium">{sale.item}</TableCell>
+                  <TableCell>{sale.cartonCount}</TableCell>
+                  <TableCell>{sale.cartonWeight}</TableCell>
+                  <TableCell>{sale.cartonPrice}</TableCell>
+                  <TableCell className="font-semibold text-green-600">
+                    {sale.totalAmount}
+                  </TableCell>
+                  <TableCell className="text-left">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteSale(sale.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">
+            لا توجد مبيعات لعرضها.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -563,61 +515,67 @@ function DebtsView() {
 
       <div className="bg-card p-6 rounded-xl shadow-sm">
         <h2 className="text-xl font-bold mb-4">قائمة الديون</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>الجهة</TableHead>
-              <TableHead>تاريخ الاستحقاق</TableHead>
-              <TableHead>نوع الدين</TableHead>
-              <TableHead>المبلغ</TableHead>
-              <TableHead className="text-left">الإجراءات</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {debts.map((debt) => (
-              <TableRow key={debt.id}>
-                <TableCell className="font-medium">{debt.party}</TableCell>
-                <TableCell>{debt.dueDate}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      debt.type === 'دين لنا' ? 'default' : 'destructive'
-                    }
-                  >
-                    {debt.type}
-                  </Badge>
-                </TableCell>
-                <TableCell
-                  className={`font-semibold ${
-                    debt.type === 'دين لنا'
-                      ? 'text-green-600'
-                      : 'text-destructive'
-                  }`}
-                >
-                  {`${debt.amount.toFixed(2)} د.ك`}
-                </TableCell>
-                <TableCell className="text-left flex items-center justify-end gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenPaymentDialog(debt)}
-                    className="flex items-center gap-1"
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    سداد
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteDebt(debt.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
+        {debts.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>الجهة</TableHead>
+                <TableHead>تاريخ الاستحقاق</TableHead>
+                <TableHead>نوع الدين</TableHead>
+                <TableHead>المبلغ</TableHead>
+                <TableHead className="text-left">الإجراءات</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {debts.map((debt) => (
+                <TableRow key={debt.id}>
+                  <TableCell className="font-medium">{debt.party}</TableCell>
+                  <TableCell>{debt.dueDate}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        debt.type === 'دين لنا' ? 'default' : 'destructive'
+                      }
+                    >
+                      {debt.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell
+                    className={`font-semibold ${
+                      debt.type === 'دين لنا'
+                        ? 'text-green-600'
+                        : 'text-destructive'
+                    }`}
+                  >
+                    {`${debt.amount.toFixed(2)} د.ك`}
+                  </TableCell>
+                  <TableCell className="text-left flex items-center justify-end gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenPaymentDialog(debt)}
+                      className="flex items-center gap-1"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      سداد
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteDebt(debt.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">
+            لا توجد ديون لعرضها.
+          </p>
+        )}
       </div>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
@@ -740,37 +698,43 @@ function WorkersView() {
 
       <div className="bg-card p-6 rounded-xl shadow-sm">
         <h2 className="text-xl font-bold mb-4">قائمة العمال</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>الاسم</TableHead>
-              <TableHead>راتب العامل</TableHead>
-              <TableHead className="text-left">حذف</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {workers.map((worker) => (
-              <TableRow key={worker.id}>
-                <TableCell className="font-medium flex items-center">
-                  <div className="p-2 rounded-lg border bg-secondary/30 mr-3 rtl:mr-0 rtl:ml-3">
-                    <User className="h-6 w-6 text-primary" />
-                  </div>
-                  {worker.name}
-                </TableCell>
-                <TableCell>{worker.salary}</TableCell>
-                <TableCell className="text-left">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteWorker(worker.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
+        {workers.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>الاسم</TableHead>
+                <TableHead>راتب العامل</TableHead>
+                <TableHead className="text-left">حذف</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {workers.map((worker) => (
+                <TableRow key={worker.id}>
+                  <TableCell className="font-medium flex items-center">
+                    <div className="p-2 rounded-lg border bg-secondary/30 mr-3 rtl:mr-0 rtl:ml-3">
+                      <User className="h-6 w-6 text-primary" />
+                    </div>
+                    {worker.name}
+                  </TableCell>
+                  <TableCell>{worker.salary}</TableCell>
+                  <TableCell className="text-left">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteWorker(worker.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">
+            لا يوجد عمال لعرضهم.
+          </p>
+        )}
       </div>
     </div>
   );

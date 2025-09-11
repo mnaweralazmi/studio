@@ -22,56 +22,7 @@ type Article = {
   };
 };
 
-const articles: Article[] = [
-  {
-    id: 1,
-    title: 'أحدث تقنيات الري الموفرة للمياه',
-    description:
-      'اكتشف كيف يمكن للتقنيات الحديثة أن تقلل من استهلاك المياه في مزرعتك مع زيادة كفاءة المحاصيل.',
-    image: {
-      src: 'https://picsum.photos/seed/farm-tech/600/400',
-      width: 600,
-      height: 400,
-      hint: 'irrigation system',
-    },
-  },
-  {
-    id: 2,
-    title: 'مكافحة الآفات الزراعية بطرق عضوية',
-    description:
-      'تعرف على أفضل الممارسات والحلول الطبيعية لحماية محاصيلك من الآفات دون استخدام المواد الكيميائية.',
-    image: {
-      src: 'https://picsum.photos/seed/ladybug-leaf/600/400',
-      width: 600,
-      height: 400,
-      hint: 'organic pest',
-    },
-  },
-  {
-    id: 3,
-    title: 'تحليل التربة وأهميته لزيادة الإنتاج',
-    description:
-      'دليل شامل حول كيفية إجراء تحليل للتربة وفهم نتائجه لتحسين جودة محاصيلك وزيادة الإنتاجية.',
-    image: {
-      src: 'https://picsum.photos/seed/soil-hands/600/400',
-      width: 600,
-      height: 400,
-      hint: 'soil analysis',
-    },
-  },
-  {
-    id: 4,
-    title: 'نصائح لزراعة الطماطم في المناخ الحار',
-    description:
-      'تعلم الأساليب المثلى لزراعة ورعاية الطماطم في البيئات ذات درجات الحرارة المرتفعة لضمان حصاد وفير.',
-    image: {
-      src: 'https://picsum.photos/seed/tomatoes-plant/600/400',
-      width: 600,
-      height: 400,
-      hint: 'tomato plant',
-    },
-  },
-];
+const articles: Article[] = [];
 
 function HomeView() {
   return (
@@ -84,31 +35,43 @@ function HomeView() {
           ابق على اطلاع بآخر الأخبار والنصائح في عالم الزراعة.
         </p>
       </header>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {articles.map((article) => (
-          <Card key={article.id} className="overflow-hidden shadow-lg">
-            <Image
-              src={article.image.src}
-              alt={article.title}
-              width={article.image.width}
-              height={article.image.height}
-              className="w-full h-48 object-cover"
-              data-ai-hint={article.image.hint}
-            />
-            <CardHeader>
-              <CardTitle>{article.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm mb-4">
-                {article.description}
-              </p>
-              <Button variant="outline" className="w-full">
-                اقرأ المزيد
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {articles.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {articles.map((article) => (
+            <Card key={article.id} className="overflow-hidden shadow-lg">
+              <Image
+                src={article.image.src}
+                alt={article.title}
+                width={article.image.width}
+                height={article.image.height}
+                className="w-full h-48 object-cover"
+                data-ai-hint={article.image.hint}
+              />
+              <CardHeader>
+                <CardTitle>{article.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm mb-4">
+                  {article.description}
+                </p>
+                <Button variant="outline" className="w-full">
+                  اقرأ المزيد
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center text-center py-16">
+          <Newspaper className="h-16 w-16 text-muted-foreground" />
+          <h2 className="mt-4 text-xl font-semibold">
+            لا توجد أخبار حاليًا
+          </h2>
+          <p className="mt-2 text-muted-foreground">
+            سيتم عرض آخر الأخبار والمواضيع الزراعية هنا.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

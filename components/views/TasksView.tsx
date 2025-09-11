@@ -38,14 +38,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 // --- Initial Data ---
-const initialUpcomingTasks: Task[] = [
-  { id: 'task-1', title: 'تسميد أشجار الليمون', completed: false, reminder: 'قبل يوم', date: '2024/07/28' },
-  { id: 'task-2', title: 'فحص الفخاخ الحشرية', completed: false, date: '2024/07/29' },
-];
+const initialUpcomingTasks: Task[] = [];
 
-const initialPastTasks: Task[] = [
-  { id: 'task-3', title: 'ري قسم البطاطس', completed: true, date: '2024/07/20' },
-];
+const initialPastTasks: Task[] = [];
 
 // --- Sub-page Components ---
 
