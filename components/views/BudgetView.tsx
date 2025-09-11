@@ -230,12 +230,12 @@ export default function BudgetView() {
       </header>
         
         <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
-                <TabsTrigger value="total" className="flex items-center gap-2"><Scaling className="h-4 w-4" />الإجمالية</TabsTrigger>
-                <TabsTrigger value="farmManagement" className="flex items-center gap-2"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
-                <TabsTrigger value="agriculture" className="flex items-center gap-2"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
-                <TabsTrigger value="poultry" className="flex items-center gap-2"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
-                <TabsTrigger value="livestock" className="flex items-center gap-2"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
+            <TabsList className="h-auto w-full flex-col sm:flex-row sm:grid sm:grid-cols-5">
+                <TabsTrigger value="total" className="flex items-center gap-2 w-full sm:w-auto justify-center"><Scaling className="h-4 w-4" />الإجمالية</TabsTrigger>
+                <TabsTrigger value="farmManagement" className="flex items-center gap-2 w-full sm:w-auto justify-center"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
+                <TabsTrigger value="agriculture" className="flex items-center gap-2 w-full sm:w-auto justify-center"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
+                <TabsTrigger value="poultry" className="flex items-center gap-2 w-full sm:w-auto justify-center"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
+                <TabsTrigger value="livestock" className="flex items-center gap-2 w-full sm:w-auto justify-center"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
             </TabsList>
         </Tabs>
 

@@ -2055,8 +2055,6 @@ export default function ManagementView() {
     }
   };
   
-  const tabsGridClass = isAdmin ? "grid w-full grid-cols-2 sm:grid-cols-5 h-auto" : "grid w-full grid-cols-2 sm:grid-cols-4 h-auto";
-
   return (
     <div className="space-y-6">
       <header className="space-y-4">
@@ -2067,12 +2065,12 @@ export default function ManagementView() {
           </p>
         </div>
         <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-            <TabsList className={tabsGridClass}>
-                <TabsTrigger value="farmManagement" className="flex items-center gap-2"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
-                {isAdmin && <TabsTrigger value="content" className="flex items-center gap-2"><Newspaper className="h-4 w-4" />المحتوى</TabsTrigger>}
-                <TabsTrigger value="agriculture" className="flex items-center gap-2"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
-                <TabsTrigger value="poultry" className="flex items-center gap-2"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
-                <TabsTrigger value="livestock" className="flex items-center gap-2"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
+            <TabsList className="h-auto w-full flex-col sm:flex-row sm:grid sm:grid-cols-5">
+                <TabsTrigger value="farmManagement" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
+                {isAdmin && <TabsTrigger value="content" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Newspaper className="h-4 w-4" />المحتوى</TabsTrigger>}
+                <TabsTrigger value="agriculture" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
+                <TabsTrigger value="poultry" className="flex items-center justify-center gap-2 w-full sm:w-auto"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
+                <TabsTrigger value="livestock" className="flex items-center justify-center gap-2 w-full sm:w-auto"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
             </TabsList>
         </Tabs>
       </header>
