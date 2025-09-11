@@ -32,7 +32,7 @@ export default function SettingsPage() {
             key={item.title}
             className="bg-card p-4 rounded-xl shadow-sm flex items-center space-x-4 rtl:space-x-reverse hover:bg-secondary transition-all cursor-pointer"
           >
-            <item.icon className="h-7 w-7 text-primary" />
+            <item.icon className="h-7 w-7 text-primary drop-shadow-sm" />
             <span className="text-lg font-medium text-card-foreground flex-1">
               {item.title}
             </span>

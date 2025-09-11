@@ -26,7 +26,7 @@ export default function HomePage() {
               className="bg-card p-4 rounded-xl shadow-sm flex items-center space-x-4 rtl:space-x-reverse transition-all hover:shadow-lg hover:scale-105 hover:-translate-y-1 cursor-pointer duration-300"
             >
               <div className="bg-primary/10 p-3 rounded-full">
-                <topic.icon className="h-6 w-6 text-primary" />
+                <topic.icon className="h-6 w-6 text-primary drop-shadow-sm" />
               </div>
               <p className="text-card-foreground font-medium text-base flex-1">
                 {topic.title}
