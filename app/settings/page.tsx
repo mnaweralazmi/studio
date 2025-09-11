@@ -192,7 +192,7 @@ export default function SettingsPage() {
     { id: 'appearance', label: 'المظهر', icon: Palette },
     { id: 'notifications', label: 'الإشعارات', icon: Bell },
     { id: 'security', label: 'الأمان', icon: Shield },
-    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/' },
+    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/tasks' },
   ];
 
   const activeComponent = views.find((v) => v.id === activeView)?.component;

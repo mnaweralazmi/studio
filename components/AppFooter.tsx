@@ -15,12 +15,12 @@ export default function AppFooter() {
   const pathname = usePathname();
 
   // Hide the main footer on pages that have their own custom footer
-  if (pathname === '/tasks' || pathname === '/management' || pathname === '/settings') {
+  if (pathname === '/tasks' || pathname === '/management' || pathname === '/settings' || pathname === '/login' || pathname === '/register') {
     return null;
   }
 
   const mainNavItems = [
-    { href: '/', label: 'الرئيسية', icon: Home },
+    { href: '/tasks', label: 'الرئيسية', icon: Home },
     { href: '/tasks', label: 'المهام', icon: ListChecks },
     { href: '/management', label: 'الإدارة', icon: Tractor },
     { href: '/settings', label: 'الإعدادات', icon: Settings },

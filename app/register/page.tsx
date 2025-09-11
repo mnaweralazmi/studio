@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -79,13 +79,6 @@ export default function RegisterPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
       <div className="w-full max-w-md">
-         <div className="absolute top-4 left-4">
-          <Button asChild variant="ghost" size="icon">
-            <Link href="/">
-              <ArrowLeft />
-            </Link>
-          </Button>
-        </div>
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-3xl text-center font-bold text-primary">

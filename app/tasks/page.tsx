@@ -242,7 +242,7 @@ export default function TasksPage() {
     { id: 'add', label: 'إضافة', icon: Plus },
     { id: 'upcoming', label: 'قادمة', icon: ListTodo },
     { id: 'past', label: 'سابقة', icon: History },
-    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/' },
+    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/tasks' },
   ];
 
   const activeComponent = views.find((v) => v.id === activeView)?.component;

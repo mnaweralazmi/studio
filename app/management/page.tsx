@@ -801,7 +801,7 @@ export default function ManagementPage() {
     { id: 'sales', label: 'المبيعات', icon: ShoppingCart },
     { id: 'debts', label: 'الديون', icon: HandCoins },
     { id: 'workers', label: 'العمال', icon: User },
-    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/' },
+    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/tasks' },
   ];
 
   const activeComponent = views.find((v) => v.id === activeView)?.component;
@@ -857,5 +857,3 @@ export default function ManagementPage() {
     </div>
   );
 }
-
-    
