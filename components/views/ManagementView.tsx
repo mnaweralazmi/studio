@@ -37,6 +37,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { useAdmin } from '@/lib/hooks/useAdmin';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -2027,6 +2028,7 @@ function LivestockView({ user }) {
 export default function ManagementView() {
   const [selectedSection, setSelectedSection] = useState('farmManagement');
   const [user] = useAuthState(auth);
+  const { isAdmin } = useAdmin();
 
   const renderContent = () => {
     if (!user) {
@@ -2041,7 +2043,7 @@ export default function ManagementView() {
       case 'farmManagement':
         return <FarmManagementView user={user} />;
       case 'content':
-        return <ContentManagementView />;
+        return isAdmin ? <ContentManagementView /> : null;
       case 'agriculture':
         return <AgricultureView user={user} />;
       case 'poultry':
@@ -2052,6 +2054,8 @@ export default function ManagementView() {
         return null;
     }
   };
+  
+  const tabsGridClass = isAdmin ? "grid w-full grid-cols-2 sm:grid-cols-5 h-auto" : "grid w-full grid-cols-2 sm:grid-cols-4 h-auto";
 
   return (
     <div className="space-y-6">
@@ -2063,9 +2067,9 @@ export default function ManagementView() {
           </p>
         </div>
         <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
+            <TabsList className={tabsGridClass}>
                 <TabsTrigger value="farmManagement" className="flex items-center gap-2"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
-                <TabsTrigger value="content" className="flex items-center gap-2"><Newspaper className="h-4 w-4" />المحتوى</TabsTrigger>
+                {isAdmin && <TabsTrigger value="content" className="flex items-center gap-2"><Newspaper className="h-4 w-4" />المحتوى</TabsTrigger>}
                 <TabsTrigger value="agriculture" className="flex items-center gap-2"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
                 <TabsTrigger value="poultry" className="flex items-center gap-2"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
                 <TabsTrigger value="livestock" className="flex items-center gap-2"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>

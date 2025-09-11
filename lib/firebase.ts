@@ -17,4 +17,11 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// NOTE: In a real-world application, this should be stored securely in Firestore
+// and managed via a secure backend or Firebase Functions.
+// For this prototype, we are hardcoding the admin UIDs.
+// Replace 'YOUR_ADMIN_UID_HERE' with your actual Firebase User ID.
+export const adminUids = ['YOUR_ADMIN_UID_HERE'];
+
+
 export { app, auth, db };
