@@ -3,26 +3,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow users to read their own user document and update it.
-    // They cannot create or delete their user document through the client.
-    // This rule is CRITICAL for the app to fetch user-specific data.
-    match /users/{userId} {
-      allow get, update: if request.auth != null && request.auth.uid == userId;
+    // Helper function to check if the user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Public data (agricultural topics) can be read by anyone.
-    // Writing should be restricted to admin/specific roles in a real app.
-    match /data/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null; // Or check for admin role
-    }
-
-    // Generic rule for user-specific data collections (sales, expenses, etc.)
-    // Users can only access documents where they are the owner.
-    match /{collection}/{docId}
-      where collection in ['sales', 'expenses', 'debts', 'workers', 'tasks', 'completed_tasks', 'archive_sales', 'archive_expenses', 'archive_debts', 'archive_workers'] {
-      allow read, write, delete: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+    // Match any document in the 'users' collection
+    match /users/{userId}/{documents=**} {
+      // Allow read and write access only if the requesting user's UID
+      // matches the userId in the path. This ensures users can only
+      // access their own data.
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
   }
 }

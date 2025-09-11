@@ -5,8 +5,14 @@ import {
   Plus,
   ListTodo,
   History,
+  Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, addDoc, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,13 +43,6 @@ import { ar } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-// --- Initial Data ---
-const initialUpcomingTasks: Task[] = [];
-
-const initialPastTasks: Task[] = [];
-
-// --- Sub-page Components ---
-
 function CalendarView({ tasks }: { tasks: Task[] }) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   
@@ -70,6 +69,7 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
             onSelect={setDate}
             className="inline-block"
             dir="rtl"
+            locale={ar}
             modifiers={modifiers}
             modifiersClassNames={modifiersClassNames}
           />
@@ -79,13 +79,13 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
   );
 }
 
-function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void }) {
+function AddTaskView({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void; isAdding: boolean; }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState<Date | undefined>();
   const [reminder, setReminder] = useState('');
 
   const handleAddTask = () => {
-    if (!title || !date) return; // Basic validation
+    if (!title || !date || isAdding) return;
     onAddTask({ title, date: format(date, 'yyyy/MM/dd'), reminder });
     setTitle('');
     setDate(undefined);
@@ -130,6 +130,7 @@ function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'compl
                     onSelect={setDate}
                     initialFocus
                     dir="rtl"
+                    locale={ar}
                   />
                 </PopoverContent>
               </Popover>
@@ -147,9 +148,9 @@ function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'compl
                 </SelectContent>
               </Select>
             </div>
-          <Button className="w-full" onClick={handleAddTask}>
-            <Plus className="h-4 w-4 ml-2" />
-            إضافة المهمة
+          <Button className="w-full" onClick={handleAddTask} disabled={isAdding}>
+            {isAdding ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isAdding ? 'جاري الإضافة...' : 'إضافة المهمة'}
           </Button>
         </CardContent>
       </Card>
@@ -157,63 +158,70 @@ function AddTaskView({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'compl
   );
 }
 
-function UpcomingTasksView({ tasks, onToggleTask }: { tasks: Task[], onToggleTask: (id: string) => void }) {
+function TasksListContent({ tasks, onToggleTask, loading, title, description }: { tasks: Task[], onToggleTask?: (id: string) => void, loading: boolean, title: string, description: string }) {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">المهام القادمة</h1>
-      <Card>
+     <Card>
         <CardHeader>
-          <CardTitle>قادمة</CardTitle>
-          <CardDescription>
-            مهامك التي لم يتم إنجازها بعد.
-          </CardDescription>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <TaskList tasks={tasks} onToggleTask={onToggleTask} />
+          {loading ? (
+             <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <TaskList tasks={tasks} onToggleTask={onToggleTask} />
+          )}
         </CardContent>
       </Card>
-    </div>
-  );
+  )
 }
 
-function PastTasksView({ tasks }: { tasks: Task[] }) {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">المهام السابقة</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>سابقة</CardTitle>
-          <CardDescription>مهامك التي تم إنجازها.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TaskList tasks={tasks} />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
-// --- Main Page Component ---
 export default function TasksView() {
-  const [upcomingTasks, setUpcomingTasks] = useState<Task[]>(initialUpcomingTasks);
-  const [pastTasks, setPastTasks] = useState<Task[]>(initialPastTasks);
+  const [user] = useAuthState(auth);
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [isAdding, setIsAdding] = useState(false);
 
-  const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
-    const newTask: Task = {
-      ...taskData,
-      id: `task-${Date.now()}`,
-      completed: false,
-    };
-    setUpcomingTasks([newTask, ...upcomingTasks].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()));
-    setActiveTab('upcoming'); // Switch to upcoming tasks view after adding
+  const tasksCollection = user ? collection(db, 'users', user.uid, 'tasks') : null;
+  
+  const [upcomingTasksSnapshot, upcomingLoading] = useCollection(
+    tasksCollection ? query(tasksCollection, where('completed', '==', false), orderBy('date', 'asc')) : null
+  );
+  
+  const [pastTasksSnapshot, pastLoading] = useCollection(
+    tasksCollection ? query(tasksCollection, where('completed', '==', true), orderBy('date', 'desc')) : null
+  );
+
+  const upcomingTasks: Task[] = upcomingTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
+  const pastTasks: Task[] = pastTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
+
+  const handleAddTask = async (taskData: Omit<Task, 'id' | 'completed'>) => {
+    if (!tasksCollection) return;
+    setIsAdding(true);
+    try {
+      await addDoc(tasksCollection, {
+        ...taskData,
+        completed: false,
+        createdAt: new Date().toISOString(),
+      });
+      setActiveTab('upcoming');
+    } catch (error) {
+      console.error("Error adding task: ", error);
+      // Here you could show an error toast to the user
+    } finally {
+      setIsAdding(false);
+    }
   };
   
-  const handleToggleTask = (taskId: string) => {
-    const taskToMove = upcomingTasks.find((task) => task.id === taskId);
-    if (taskToMove) {
-      setUpcomingTasks(upcomingTasks.filter((task) => task.id !== taskId));
-      setPastTasks([{ ...taskToMove, completed: true }, ...pastTasks]);
+  const handleToggleTask = async (taskId: string) => {
+    if (!user) return;
+    const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
+    try {
+      await updateDoc(taskRef, { completed: true });
+    } catch (error) {
+      console.error("Error updating task: ", error);
     }
   };
 
@@ -234,13 +242,24 @@ export default function TasksView() {
           <TabsTrigger value="calendar"><CalendarIcon className="h-4 w-4 ml-2" />التقويم</TabsTrigger>
         </TabsList>
         <TabsContent value="upcoming" className="mt-6">
-          <UpcomingTasksView tasks={upcomingTasks} onToggleTask={handleToggleTask} />
+          <TasksListContent 
+            tasks={upcomingTasks} 
+            onToggleTask={handleToggleTask}
+            loading={upcomingLoading}
+            title="قادمة"
+            description="مهامك التي لم يتم إنجازها بعد."
+          />
         </TabsContent>
         <TabsContent value="past" className="mt-6">
-          <PastTasksView tasks={pastTasks} />
+          <TasksListContent 
+            tasks={pastTasks} 
+            loading={pastLoading}
+            title="سابقة"
+            description="مهامك التي تم إنجازها."
+          />
         </TabsContent>
         <TabsContent value="add" className="mt-6">
-          <AddTaskView onAddTask={handleAddTask} />
+          <AddTaskView onAddTask={handleAddTask} isAdding={isAdding} />
         </TabsContent>
         <TabsContent value="calendar" className="mt-6">
           <CalendarView tasks={[...upcomingTasks, ...pastTasks]} />
