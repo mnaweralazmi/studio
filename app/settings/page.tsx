@@ -1,11 +1,19 @@
-import { Bell, Languages, UserCircle, Shield, ChevronLeft } from "lucide-react";
+import {
+  Bell,
+  Languages,
+  UserCircle,
+  Shield,
+  ChevronLeft,
+  Palette,
+} from 'lucide-react';
 
 export default function SettingsPage() {
   const settingsItems = [
-    { title: "ملف المزرعة", icon: UserCircle },
-    { title: "الإشعارات", icon: Bell },
-    { title: "اللغة", icon: Languages },
-    { title: "الأمان", icon: Shield },
+    { title: 'ملف المزرعة', icon: UserCircle },
+    { title: 'الإشعارات', icon: Bell },
+    { title: 'اللغة', icon: Languages },
+    { title: 'الألوان', icon: Palette },
+    { title: 'الأمان', icon: Shield },
   ];
 
   return (
