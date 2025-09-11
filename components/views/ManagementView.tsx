@@ -166,7 +166,7 @@ function ExpensesView({ user }) {
         date: new Date(),
         item: newExpense.item,
         category: newExpense.category,
-        amount: parseFloat(newExpense.amount),
+        amount: parseFloat(newExpense.amount) || 0,
       });
       setNewExpense({ item: '', category: '', amount: '' });
     } catch (e) { console.error(e); } 
@@ -219,7 +219,7 @@ function ExpensesView({ user }) {
                 <TableCell>{formatDate(expense.date)}</TableCell>
                 <TableCell className="font-medium">{expense.item}</TableCell>
                 <TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell>
-                <TableCell className="font-semibold text-destructive">{`${expense.amount.toFixed(3)} د.ك`}</TableCell>
+                <TableCell className="font-semibold text-destructive">{`${(expense.amount || 0).toFixed(3)} د.ك`}</TableCell>
                 <TableCell className="text-left">
                   <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(expense.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </TableCell>
@@ -244,15 +244,17 @@ function SalesView({ user }) {
     if (!item || !cartonCount || !cartonWeight || !cartonPrice || !salesCollection || isAdding) return;
     
     setIsAdding(true);
-    const totalAmount = parseFloat(cartonCount) * parseFloat(cartonPrice);
+    const count = parseFloat(cartonCount) || 0;
+    const price = parseFloat(cartonPrice) || 0;
+    const totalAmount = count * price;
 
     try {
       await addDoc(salesCollection, {
         date: new Date(),
         item,
-        cartonCount: parseFloat(cartonCount),
+        cartonCount: count,
         cartonWeight,
-        cartonPrice: parseFloat(cartonPrice),
+        cartonPrice: price,
         totalAmount,
       });
       setNewSale({ item: '', cartonCount: '', cartonWeight: '', cartonPrice: '' });
@@ -310,10 +312,10 @@ function SalesView({ user }) {
             <TableRow key={sale.id}>
               <TableCell>{formatDate(sale.date)}</TableCell>
               <TableCell className="font-medium">{sale.item}</TableCell>
-              <TableCell>{sale.cartonCount}</TableCell>
+              <TableCell>{sale.cartonCount || 0}</TableCell>
               <TableCell>{sale.cartonWeight}</TableCell>
-              <TableCell>{`${sale.cartonPrice.toFixed(3)} د.ك`}</TableCell>
-              <TableCell className="font-semibold text-green-600">{`${sale.totalAmount.toFixed(3)} د.ك`}</TableCell>
+              <TableCell>{`${(sale.cartonPrice || 0).toFixed(3)} د.ك`}</TableCell>
+              <TableCell className="font-semibold text-green-600">{`${(sale.totalAmount || 0).toFixed(3)} د.ك`}</TableCell>
               <TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDeleteSale(sale.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
             </TableRow>
           )}
@@ -343,7 +345,7 @@ function DebtsView({ user }) {
       await addDoc(debtsCollection, {
         party,
         dueDate: new Date(),
-        amount: parseFloat(amount),
+        amount: parseFloat(amount) || 0,
         type,
       });
       setNewDebt({ party: '', amount: '', type: 'دين علينا' });
@@ -358,17 +360,17 @@ function DebtsView({ user }) {
 
   const handleOpenPaymentDialog = (debt: Debt) => {
     setSelectedDebt(debt);
-    setPaymentAmount(debt.amount.toString());
+    setPaymentAmount((debt.amount || 0).toString());
     setPaymentDialogOpen(true);
   };
 
   const handleProcessPayment = async () => {
     if (!selectedDebt || !paymentAmount || !user) return;
-    const paymentValue = parseFloat(paymentAmount);
-    if (isNaN(paymentValue) || paymentValue <= 0) return;
+    const paymentValue = parseFloat(paymentAmount) || 0;
+    if (paymentValue <= 0) return;
 
     const debtRef = doc(db, 'users', user.uid, 'debts', selectedDebt.id);
-    const newAmount = selectedDebt.amount - paymentValue;
+    const newAmount = (selectedDebt.amount || 0) - paymentValue;
 
     try {
       if (newAmount > 0) {
@@ -420,7 +422,7 @@ function DebtsView({ user }) {
                   <TableCell className="font-medium">{debt.party}</TableCell>
                   <TableCell>{formatDate(debt.dueDate)}</TableCell>
                   <TableCell><Badge variant={debt.type === 'دين لنا' ? 'default' : 'destructive'}>{debt.type}</Badge></TableCell>
-                  <TableCell className={`font-semibold ${debt.type === 'دين لنا' ? 'text-green-600' : 'text-destructive'}`}>{`${debt.amount.toFixed(3)} د.ك`}</TableCell>
+                  <TableCell className={`font-semibold ${debt.type === 'دين لنا' ? 'text-green-600' : 'text-destructive'}`}>{`${(debt.amount || 0).toFixed(3)} د.ك`}</TableCell>
                   <TableCell className="text-left flex items-center justify-end gap-1">
                     <Button variant="outline" size="sm" onClick={() => handleOpenPaymentDialog(debt)} className="flex items-center gap-1"><CreditCard className="h-4 w-4" />سداد</Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteDebt(debt.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
@@ -436,7 +438,7 @@ function DebtsView({ user }) {
           {selectedDebt && (
             <div className="grid gap-4 py-4">
               <p>أنت على وشك سداد دين لـ<span className="font-bold"> {selectedDebt.party}</span>.</p>
-              <p>المبلغ المتبقي:<span className="font-bold text-destructive"> {selectedDebt.amount.toFixed(3)} د.ك</span></p>
+              <p>المبلغ المتبقي:<span className="font-bold text-destructive"> {(selectedDebt.amount || 0).toFixed(3)} د.ك</span></p>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="payment-amount" className="text-right">مبلغ السداد</Label>
                 <Input id="payment-amount" type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="col-span-3" dir="ltr" />
@@ -466,7 +468,7 @@ function WorkersView({ user }) {
     if (!name || !salary || !workersCollection || isAdding) return;
     setIsAdding(true);
     try {
-      await addDoc(workersCollection, { name, salary: parseFloat(salary) });
+      await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0 });
       setNewWorker({ name: '', salary: '' });
     } catch (e) { console.error(e) }
     finally { setIsAdding(false); }
@@ -507,7 +509,7 @@ function WorkersView({ user }) {
                   <div className="p-2 rounded-lg border bg-secondary/30 mr-3 rtl:mr-0 rtl:ml-3"><User className="h-6 w-6 text-primary" /></div>
                   {worker.name}
                 </TableCell>
-                <TableCell>{`${worker.salary.toFixed(3)} د.ك`}</TableCell>
+                <TableCell>{`${(worker.salary || 0).toFixed(3)} د.ك`}</TableCell>
                 <TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDeleteWorker(worker.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
               </TableRow>
           )}
