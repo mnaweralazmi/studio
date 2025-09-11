@@ -817,30 +817,7 @@ export default function ManagementPage() {
           نظرة شاملة على عمليات مزرعتك.
         </p>
       </header>
-      <div className="bg-card p-4 rounded-xl shadow-sm sticky top-4 z-10">
-        <div className="flex justify-around items-center">
-          {managementTabs.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={cn(
-                'flex flex-col items-center justify-center space-y-2 transition-all cursor-pointer rounded-lg py-3 px-6 hover:bg-secondary/50 hover:scale-105 duration-300 w-full',
-                activeTab === item.id ? 'bg-secondary/80 scale-105' : ''
-              )}
-            >
-              <div className="p-3 rounded-full border bg-background">
-                <item.icon
-                  className={`h-8 w-8 text-primary drop-shadow-sm`}
-                />
-              </div>
-              <h2 className="text-sm font-semibold text-card-foreground">
-                {item.title}
-              </h2>
-            </div>
-          ))}
-        </div>
-      </div>
-
+      
       <div className="mt-6">
         {managementTabs.find((tab) => tab.id === activeTab)?.component}
       </div>
