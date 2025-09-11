@@ -1085,7 +1085,7 @@ function FarmManagementView({ user }) {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="expenses">
           <DollarSign className="h-4 w-4 ml-2" />
           المصاريف العامة
@@ -1097,10 +1097,6 @@ function FarmManagementView({ user }) {
         <TabsTrigger value="workers">
           <User className="h-4 w-4 ml-2" />
           العمال
-        </TabsTrigger>
-        <TabsTrigger value="facilities">
-          <Building2 className="h-4 w-4 ml-2" />
-          المرافق
         </TabsTrigger>
       </TabsList>
       <TabsContent value="expenses" className="mt-6">
@@ -1116,9 +1112,6 @@ function FarmManagementView({ user }) {
       <TabsContent value="workers" className="mt-6">
         <WorkersView user={user} />
       </TabsContent>
-      <TabsContent value="facilities" className="mt-6">
-        <FacilitiesView user={user} />
-      </TabsContent>
     </Tabs>
   );
 }
@@ -1128,7 +1121,7 @@ function AgricultureView({ user }) {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="expenses">
           <DollarSign className="h-4 w-4 ml-2" />
           المصاريف الزراعية
@@ -1136,6 +1129,10 @@ function AgricultureView({ user }) {
         <TabsTrigger value="sales">
           <ShoppingCart className="h-4 w-4 ml-2" />
           المبيعات
+        </TabsTrigger>
+        <TabsTrigger value="facilities">
+          <Building2 className="h-4 w-4 ml-2" />
+          المرافق
         </TabsTrigger>
       </TabsList>
       <TabsContent value="expenses" className="mt-6">
@@ -1147,6 +1144,9 @@ function AgricultureView({ user }) {
       </TabsContent>
       <TabsContent value="sales" className="mt-6">
         <AgriSalesView user={user} />
+      </TabsContent>
+      <TabsContent value="facilities" className="mt-6">
+        <FacilitiesView user={user} />
       </TabsContent>
     </Tabs>
   );
