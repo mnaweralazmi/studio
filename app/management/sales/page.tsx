@@ -29,7 +29,8 @@ type Sale = {
   item: string;
   cartonCount: string;
   cartonWeight: string;
-  amount: string;
+  cartonPrice: string;
+  totalAmount: string;
 };
 
 const initialSales: Sale[] = [
@@ -39,7 +40,8 @@ const initialSales: Sale[] = [
     item: 'خيار',
     cartonCount: '50',
     cartonWeight: '10 كيلو',
-    amount: '٣٥٠ د.ك',
+    cartonPrice: '7 د.ك',
+    totalAmount: '٣٥٠ د.ك',
   },
   {
     id: '2',
@@ -47,7 +49,8 @@ const initialSales: Sale[] = [
     item: 'طماطم',
     cartonCount: '30',
     cartonWeight: '12 كيلو',
-    amount: '٢٨٠ د.ك',
+    cartonPrice: '9.33 د.ك',
+    totalAmount: '٢٨٠ د.ك',
   },
   {
     id: '3',
@@ -55,7 +58,8 @@ const initialSales: Sale[] = [
     item: 'بطاطس',
     cartonCount: '100',
     cartonWeight: '15 كيلو',
-    amount: '٤٥٠ د.ك',
+    cartonPrice: '4.5 د.ك',
+    totalAmount: '٤٥٠ د.ك',
   },
 ];
 
@@ -67,11 +71,13 @@ export default function SalesPage() {
     item: '',
     cartonCount: '',
     cartonWeight: '',
-    amount: '',
+    cartonPrice: '',
   });
 
   const handleAddSale = () => {
-    if (!newSale.item || !newSale.cartonCount || !newSale.cartonWeight || !newSale.amount) return;
+    const { item, cartonCount, cartonWeight, cartonPrice } = newSale;
+    if (!item || !cartonCount || !cartonWeight || !cartonPrice) return;
+    
     const newId = (sales.length + 1).toString();
     const today = new Date();
     const newDate = new Intl.DateTimeFormat('ar-KW-u-nu-latn', {
@@ -80,13 +86,23 @@ export default function SalesPage() {
       day: '2-digit',
     }).format(today);
 
+    const totalAmountValue = parseFloat(cartonCount) * parseFloat(cartonPrice);
+
     setSales([
-      { id: newId, date: newDate, ...newSale, amount: `${newSale.amount} د.ك` },
+      {
+        id: newId,
+        date: newDate,
+        item,
+        cartonCount,
+        cartonWeight,
+        cartonPrice: `${cartonPrice} د.ك`,
+        totalAmount: `${totalAmountValue.toFixed(2)} د.ك`,
+      },
       ...sales,
     ]);
-    setNewSale({ item: '', cartonCount: '', cartonWeight: '', amount: '' });
+    setNewSale({ item: '', cartonCount: '', cartonWeight: '', cartonPrice: '' });
   };
-  
+
   const handleDeleteSale = (id: string) => {
     setSales(sales.filter((sale) => sale.id !== id));
   };
@@ -145,7 +161,7 @@ export default function SalesPage() {
                 dir="ltr"
               />
             </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="cartonWeight">وزن الكرتون</Label>
               <Input
                 id="cartonWeight"
@@ -157,14 +173,14 @@ export default function SalesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amount">المبلغ الإجمالي</Label>
+              <Label htmlFor="cartonPrice">سعر الكرتون</Label>
               <Input
-                id="amount"
+                id="cartonPrice"
                 type="number"
                 placeholder="بالدينار الكويتي"
-                value={newSale.amount}
+                value={newSale.cartonPrice}
                 onChange={(e) =>
-                  setNewSale({ ...newSale, amount: e.target.value })
+                  setNewSale({ ...newSale, cartonPrice: e.target.value })
                 }
                 dir="ltr"
               />
@@ -186,6 +202,7 @@ export default function SalesPage() {
               <TableHead>المنتج</TableHead>
               <TableHead>عدد الكراتين</TableHead>
               <TableHead>وزن الكرتون</TableHead>
+              <TableHead>سعر الكرتون</TableHead>
               <TableHead>المبلغ الإجمالي</TableHead>
               <TableHead className="text-left">حذف</TableHead>
             </TableRow>
@@ -197,8 +214,9 @@ export default function SalesPage() {
                 <TableCell className="font-medium">{sale.item}</TableCell>
                 <TableCell>{sale.cartonCount}</TableCell>
                 <TableCell>{sale.cartonWeight}</TableCell>
+                <TableCell>{sale.cartonPrice}</TableCell>
                 <TableCell className="font-semibold text-green-600">
-                  {sale.amount}
+                  {sale.totalAmount}
                 </TableCell>
                 <TableCell className="text-left">
                   <Button
