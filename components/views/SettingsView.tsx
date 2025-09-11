@@ -7,8 +7,12 @@ import {
   Palette,
   ToggleLeft,
   ToggleRight,
+  LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -164,6 +168,16 @@ function SecurityView() {
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState('profile');
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.replace('/login');
+    } catch (error) {
+      console.error('Error signing out: ', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -205,6 +219,15 @@ export default function SettingsView() {
           <SecurityView />
         </TabsContent>
       </Tabs>
+
+      <Card>
+        <CardContent className="p-4">
+          <Button variant="destructive" className="w-full" onClick={handleSignOut}>
+            <LogOut className="h-5 w-5 ml-2" />
+            تسجيل الخروج
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
