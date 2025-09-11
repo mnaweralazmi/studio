@@ -16,6 +16,7 @@ import {
   Users2,
   Sheep,
   GitCommit,
+  Tractor,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
