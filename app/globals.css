@@ -73,4 +73,28 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  .has-task {
+    position: relative;
+  }
+  
+  .has-task::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: hsl(var(--primary) / 0.8);
+  }
+  
+  .dark .has-task::after {
+     background-color: hsl(var(--primary));
+  }
+  
+   .day-selected.has-task::after {
+     background-color: hsl(var(--primary-foreground) / 0.9);
+  }
 }

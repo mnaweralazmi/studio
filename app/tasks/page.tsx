@@ -40,18 +40,31 @@ import { ar } from 'date-fns/locale';
 
 // --- Initial Data ---
 const initialUpcomingTasks: Task[] = [
-  { id: 'task-1', time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false, reminder: 'قبل 15 دقيقة' },
-  { id: 'task-2', time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false },
+  { id: 'task-1', time: '١١:٠٠ ص', title: 'تسميد أشجار الليمون', completed: false, reminder: 'قبل 15 دقيقة', date: '2024/07/28' },
+  { id: 'task-2', time: '٠٢:٠٠ م', title: 'فحص الفخاخ الحشرية', completed: false, date: '2024/07/29' },
 ];
 
 const initialPastTasks: Task[] = [
-  { id: 'task-3', time: '٠٨:٠٠ ص', title: 'ري قسم البطاطس', completed: true },
+  { id: 'task-3', time: '٠٨:٠٠ ص', title: 'ري قسم البطاطس', completed: true, date: '2024/07/20' },
 ];
 
 // --- Sub-page Components ---
 
-function CalendarView() {
+function CalendarView({ tasks }: { tasks: Task[] }) {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  
+  const taskDates = tasks
+    .map(task => task.date ? new Date(task.date.replace(/\//g, '-')) : null)
+    .filter((d): d is Date => d !== null);
+
+  const modifiers = {
+    hasTask: taskDates,
+  };
+
+  const modifiersClassNames = {
+    hasTask: 'has-task',
+  };
+  
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground sr-only">التقويم</h1>
@@ -63,6 +76,8 @@ function CalendarView() {
             onSelect={setDate}
             className="inline-block"
             dir="rtl"
+            modifiers={modifiers}
+            modifiersClassNames={modifiersClassNames}
           />
         </CardContent>
       </Card>
@@ -214,7 +229,7 @@ export default function TasksPage() {
   };
   
   const views: { id: TaskViewId; component: ReactNode }[] = [
-    { id: 'calendar', component: <CalendarView /> },
+    { id: 'calendar', component: <CalendarView tasks={[...upcomingTasks, ...pastTasks]} /> },
     { id: 'add', component: <AddTaskView onAddTask={handleAddTask} /> },
     { id: 'upcoming', component: <UpcomingTasksView tasks={upcomingTasks} /> },
     { id: 'past', component: <PastTasksView tasks={pastTasks} /> },
