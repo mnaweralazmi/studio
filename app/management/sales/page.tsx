@@ -13,17 +13,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type Sale = {
   id: string;
@@ -64,7 +56,6 @@ export default function SalesPage() {
     customer: '',
     amount: '',
   });
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleAddSale = () => {
     if (!newSale.item || !newSale.amount || !newSale.customer) return;
@@ -77,11 +68,10 @@ export default function SalesPage() {
     }).format(today);
 
     setSales([
-      ...sales,
       { id: newId, date: newDate, ...newSale, amount: `${newSale.amount} د.ك` },
+      ...sales,
     ]);
     setNewSale({ item: '', customer: '', amount: '' });
-    setIsDialogOpen(false);
   };
 
   return (
@@ -93,78 +83,65 @@ export default function SalesPage() {
             سجل إيرادات المزرعة من المحاصيل.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 ml-2" />
-                إضافة بيع جديد
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>إضافة بيع جديد</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="item" className="text-right">
-                    المنتج
-                  </Label>
-                  <Input
-                    id="item"
-                    value={newSale.item}
-                    onChange={(e) =>
-                      setNewSale({ ...newSale, item: e.target.value })
-                    }
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="customer" className="text-right">
-                    العميل
-                  </Label>
-                  <Input
-                    id="customer"
-                    value={newSale.customer}
-                    onChange={(e) =>
-                      setNewSale({ ...newSale, customer: e.target.value })
-                    }
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="amount" className="text-right">
-                    المبلغ
-                  </Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={newSale.amount}
-                    onChange={(e) =>
-                      setNewSale({ ...newSale, amount: e.target.value })
-                    }
-                    className="col-span-3"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">إلغاء</Button>
-                </DialogClose>
-                <Button onClick={handleAddSale}>حفظ</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button asChild variant="outline">
-            <Link href="/management">
-              <ArrowRight className="h-4 w-4 ml-2" />
-              العودة
-            </Link>
-          </Button>
-        </div>
+        <Button asChild variant="outline">
+          <Link href="/management">
+            <ArrowRight className="h-4 w-4 ml-2" />
+            العودة
+          </Link>
+        </Button>
       </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>إضافة بيع جديد</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="item">المنتج</Label>
+              <Input
+                id="item"
+                placeholder="مثال: خيار (صندوق)"
+                value={newSale.item}
+                onChange={(e) =>
+                  setNewSale({ ...newSale, item: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer">العميل</Label>
+              <Input
+                id="customer"
+                placeholder="مثال: سوق محلي"
+                value={newSale.customer}
+                onChange={(e) =>
+                  setNewSale({ ...newSale, customer: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount">المبلغ</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="بالدينار الكويتي"
+                value={newSale.amount}
+                onChange={(e) =>
+                  setNewSale({ ...newSale, amount: e.target.value })
+                }
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <Button onClick={handleAddSale} className="mt-4">
+            <Plus className="h-4 w-4 ml-2" />
+            إضافة البيع
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="bg-card p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4">قائمة المبيعات</h2>
         <Table>
           <TableHeader>
             <TableRow>
