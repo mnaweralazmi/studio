@@ -20,7 +20,7 @@ export default function RootLayout({
   const navItems = [
     { href: "/", label: "الرئيسية", icon: Home },
     { href: "/tasks", label: "المهام", icon: ListChecks },
-    { href: "/management", label: "الإدارة", icon: Tractor },
+    { href: "/management", label: "إدارة المزرعة", icon: Tractor },
     { href: "/settings", label: "الإعدادات", icon: Settings },
   ];
 
