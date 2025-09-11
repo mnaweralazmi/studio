@@ -11,6 +11,11 @@ import {
   CheckCircle,
   Loader2,
   Pencil,
+  Egg,
+  Drumstick,
+  Users2,
+  Sheep,
+  GitCommit,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -66,40 +71,24 @@ const formatDate = (date: any) => {
 };
 
 
-// Types
-type Expense = {
-  id: string;
-  date: string | Timestamp;
-  item: string;
-  category: string;
-  amount: number;
-};
+// Generic Types
+type Expense = { id: string; date: string | Timestamp; item: string; category: string; amount: number; };
+type Debt = { id: string; party: string; dueDate: string | Timestamp; amount: number; type: 'دين لنا' | 'دين علينا'; };
+type Worker = { id: string; name: string; salary: number; };
 
-type Sale = {
-  id: string;
-  date: string | Timestamp;
-  item: string;
-  cartonCount: number;
-  cartonWeight: string;
-  cartonPrice: number;
-  totalAmount: number;
-};
-
-type Debt = {
-  id: string;
-  party: string;
-  dueDate: string | Timestamp;
-  amount: number;
-  type: 'دين لنا' | 'دين علينا';
-};
-
-type Worker = {
-  id: string;
-  name: string;
-  salary: number;
-};
-
+// Agriculture Types
+type AgriSale = { id: string; date: string | Timestamp; item: string; cartonCount: number; cartonWeight: string; cartonPrice: number; totalAmount: number; };
 const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجان', 'فلفل', 'كوسا'];
+
+// Poultry Types
+type EggSale = { id: string; date: string | Timestamp; trayCount: number; trayPrice: number; totalAmount: number; };
+type PoultrySale = { id: string; date: string | Timestamp; poultryType: string; count: number; pricePerUnit: number; totalAmount: number; };
+type Flock = { id: string; name: string; birdCount: number; };
+
+// Livestock Types
+type LivestockSale = { id: string; date: string | Timestamp; animalType: string; count: number; pricePerUnit: number; totalAmount: number; };
+type Herd = { id: string; name: string; animalCount: number; };
+
 
 // Generic Loading/Empty state component
 function DataView<T extends { id: string }>({ 
@@ -107,15 +96,13 @@ function DataView<T extends { id: string }>({
   data, 
   columns, 
   renderRow, 
-  emptyMessage,
-  onDelete
+  emptyMessage
 }: { 
   loading: boolean; 
   data: T[]; 
   columns: string[]; 
   renderRow: (item: T) => React.ReactNode;
   emptyMessage: string;
-  onDelete?: (id: string) => Promise<void>;
 }) {
   if (loading) {
     return (
@@ -144,26 +131,22 @@ function DataView<T extends { id: string }>({
 }
 
 
-// --- Sub-page Components ---
+// --- Generic Sub-page Components ---
 
-function ExpensesView({ user }) {
-  const expensesCollection = user ? collection(db, 'users', user.uid, 'expenses') : null;
-  const [snapshot, loading] = useCollection(expensesCollection ? query(expensesCollection, orderBy('date', 'desc')) : null);
+function ExpensesView({ user, collectionName }) {
+  const collectionRef = user ? collection(db, 'users', user.uid, collectionName) : null;
+  const [snapshot, loading] = useCollection(collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null);
   const expenses = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)) || [];
 
-  const [newExpense, setNewExpense] = useState({
-    item: '',
-    category: '',
-    amount: '',
-  });
+  const [newExpense, setNewExpense] = useState({ item: '', category: '', amount: '' });
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddExpense = async () => {
-    if (!newExpense.item || !newExpense.amount || !expensesCollection || isAdding) return;
+    if (!newExpense.item || !newExpense.amount || !collectionRef || isAdding) return;
     setIsAdding(true);
     
     try {
-      await addDoc(expensesCollection, {
+      await addDoc(collectionRef, {
         date: new Date(),
         item: newExpense.item,
         category: newExpense.category,
@@ -176,7 +159,7 @@ function ExpensesView({ user }) {
 
   const handleDeleteExpense = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'expenses', id));
+    await deleteDoc(doc(db, 'users', user.uid, collectionName, id));
   };
 
   return (
@@ -194,7 +177,7 @@ function ExpensesView({ user }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">الفئة</Label>
-              <Input id="category" value={newExpense.category} onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })} placeholder="مثال: مستلزمات زراعية" />
+              <Input id="category" value={newExpense.category} onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })} placeholder="مثال: مستلزمات" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="amount">المبلغ</Label>
@@ -232,10 +215,12 @@ function ExpensesView({ user }) {
   );
 }
 
-function SalesView({ user }) {
-  const salesCollection = user ? collection(db, 'users', user.uid, 'sales') : null;
+
+// --- Agriculture Components ---
+function AgriSalesView({ user }) {
+  const salesCollection = user ? collection(db, 'users', user.uid, 'agriSales') : null;
   const [snapshot, loading] = useCollection(salesCollection ? query(salesCollection, orderBy('date', 'desc')) : null);
-  const sales = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sale)) || [];
+  const sales = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as AgriSale)) || [];
 
   const [newSale, setNewSale] = useState({ item: '', cartonCount: '', cartonWeight: '', cartonPrice: '' });
   const [isAdding, setIsAdding] = useState(false);
@@ -265,14 +250,14 @@ function SalesView({ user }) {
 
   const handleDeleteSale = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'sales', id));
+    await deleteDoc(doc(db, 'users', user.uid, 'agriSales', id));
   };
 
   return (
     <div className="space-y-6">
-       <h1 className="text-3xl font-bold text-foreground sr-only">المبيعات</h1>
+       <h1 className="text-3xl font-bold text-foreground sr-only">مبيعات الزراعة</h1>
       <Card>
-        <CardHeader><CardTitle>إضافة بيع جديد</CardTitle></CardHeader>
+        <CardHeader><CardTitle>إضافة بيع جديد (زراعي)</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
@@ -303,8 +288,8 @@ function SalesView({ user }) {
       </Card>
 
       <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة المبيعات</h2>
-        <DataView<Sale>
+        <h2 className="text-xl font-bold mb-4">قائمة المبيعات الزراعية</h2>
+        <DataView<AgriSale>
           loading={loading}
           data={sales}
           columns={['التاريخ', 'المنتج', 'عدد الكراتين', 'وزن الكرتون', 'سعر الكرتون', 'المبلغ الإجمالي', 'حذف']}
@@ -635,16 +620,6 @@ function WorkersView({ user }) {
 
 function AgricultureView({ user }) {
   const [activeTab, setActiveTab] = useState('expenses');
-  
-  const renderView = () => {
-    switch(activeTab) {
-      case 'expenses': return <ExpensesView user={user} />;
-      case 'sales': return <SalesView user={user}/>;
-      case 'debts': return <DebtsView user={user} />;
-      case 'workers': return <WorkersView user={user} />;
-      default: return null;
-    }
-  }
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -654,26 +629,450 @@ function AgricultureView({ user }) {
         <TabsTrigger value="debts"><HandCoins className="h-4 w-4 ml-2" />الديون</TabsTrigger>
         <TabsTrigger value="workers"><User className="h-4 w-4 ml-2" />العمال</TabsTrigger>
       </TabsList>
-      <TabsContent value={activeTab} className="mt-6">
-        {renderView()}
+      <TabsContent value="expenses" className="mt-6">
+        <ExpensesView user={user} collectionName="expenses" />
+      </TabsContent>
+      <TabsContent value="sales" className="mt-6">
+        <AgriSalesView user={user} />
+      </TabsContent>
+      <TabsContent value="debts" className="mt-6">
+        <DebtsView user={user} />
+      </TabsContent>
+       <TabsContent value="workers" className="mt-6">
+        <WorkersView user={user} />
       </TabsContent>
     </Tabs>
   );
 }
 
-function PlaceholderView({ title }: { title: string }) {
+// --- Poultry Components ---
+
+function EggSalesView({ user }) {
+  const collectionRef = user ? collection(db, 'users', user.uid, 'poultryEggSales') : null;
+  const [snapshot, loading] = useCollection(collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null);
+  const sales = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as EggSale)) || [];
+
+  const [newSale, setNewSale] = useState({ trayCount: '', trayPrice: '' });
+  const [isAdding, setIsAdding] = useState(false);
+
+   const handleAddSale = async () => {
+    const { trayCount, trayPrice } = newSale;
+    if (!trayCount || !trayPrice || !collectionRef || isAdding) return;
+    
+    setIsAdding(true);
+    const count = parseFloat(trayCount) || 0;
+    const price = parseFloat(trayPrice) || 0;
+    const totalAmount = count * price;
+
+    try {
+      await addDoc(collectionRef, {
+        date: new Date(),
+        trayCount: count,
+        trayPrice: price,
+        totalAmount,
+      });
+      setNewSale({ trayCount: '', trayPrice: '' });
+    } catch(e) { console.error(e); }
+    finally { setIsAdding(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'poultryEggSales', id));
+  };
+
   return (
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <div className="text-center text-muted-foreground">
-          <h2 className="text-lg font-semibold">قسم {title}</h2>
-          <p>هذا القسم قيد التطوير حاليًا.</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>إضافة بيع بيض جديد</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="trayCount">عدد الأطباق</Label>
+              <Input id="trayCount" type="number" placeholder="مثال: 100" value={newSale.trayCount} onChange={(e) => setNewSale({ ...newSale, trayCount: e.target.value })} dir="ltr" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trayPrice">سعر الطبق</Label>
+              <Input id="trayPrice" type="number" placeholder="بالدينار الكويتي" value={newSale.trayPrice} onChange={(e) => setNewSale({ ...newSale, trayPrice: e.target.value })} dir="ltr" />
+            </div>
+          </div>
+          <Button onClick={handleAddSale} className="mt-4" disabled={isAdding}>
+            {isAdding ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isAdding ? 'جاري الإضافة...' : 'إضافة البيع'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="bg-card p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4">قائمة مبيعات البيض</h2>
+        <DataView<EggSale>
+          loading={loading}
+          data={sales}
+          columns={['التاريخ', 'عدد الأطباق', 'سعر الطبق', 'المبلغ الإجمالي', 'حذف']}
+          emptyMessage="لا توجد مبيعات بيض لعرضها."
+          renderRow={(sale) => (
+            <TableRow key={sale.id}>
+              <TableCell>{formatDate(sale.date)}</TableCell>
+              <TableCell>{sale.trayCount || 0}</TableCell>
+              <TableCell>{`${(sale.trayPrice || 0).toFixed(3)} د.ك`}</TableCell>
+              <TableCell className="font-semibold text-green-600">{`${(sale.totalAmount || 0).toFixed(3)} د.ك`}</TableCell>
+              <TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+            </TableRow>
+          )}
+        />
+      </div>
+    </div>
   );
 }
 
+function PoultrySalesView({ user }) {
+  const collectionRef = user ? collection(db, 'users', user.uid, 'poultrySales') : null;
+  const [snapshot, loading] = useCollection(collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null);
+  const sales = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as PoultrySale)) || [];
+
+  const [newSale, setNewSale] = useState({ poultryType: 'دجاج حي', count: '', pricePerUnit: '' });
+  const [isAdding, setIsAdding] = useState(false);
+
+   const handleAddSale = async () => {
+    const { poultryType, count, pricePerUnit } = newSale;
+    if (!poultryType || !count || !pricePerUnit || !collectionRef || isAdding) return;
+    
+    setIsAdding(true);
+    const numCount = parseFloat(count) || 0;
+    const price = parseFloat(pricePerUnit) || 0;
+    const totalAmount = numCount * price;
+
+    try {
+      await addDoc(collectionRef, {
+        date: new Date(),
+        poultryType,
+        count: numCount,
+        pricePerUnit: price,
+        totalAmount,
+      });
+      setNewSale({ poultryType: 'دجاج حي', count: '', pricePerUnit: '' });
+    } catch(e) { console.error(e); }
+    finally { setIsAdding(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'poultrySales', id));
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>إضافة بيع دواجن جديد</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="space-y-2">
+              <Label htmlFor="poultryType">النوع</Label>
+               <Input id="poultryType" placeholder="مثال: دجاج حي" value={newSale.poultryType} onChange={(e) => setNewSale({ ...newSale, poultryType: e.target.value })}/>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="count">العدد</Label>
+              <Input id="count" type="number" placeholder="مثال: 20" value={newSale.count} onChange={(e) => setNewSale({ ...newSale, count: e.target.value })} dir="ltr" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pricePerUnit">سعر الوحدة</Label>
+              <Input id="pricePerUnit" type="number" placeholder="بالدينار الكويتي" value={newSale.pricePerUnit} onChange={(e) => setNewSale({ ...newSale, pricePerUnit: e.target.value })} dir="ltr" />
+            </div>
+          </div>
+          <Button onClick={handleAddSale} className="mt-4" disabled={isAdding}>
+            {isAdding ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isAdding ? 'جاري الإضافة...' : 'إضافة البيع'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="bg-card p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4">قائمة مبيعات الدواجن</h2>
+        <DataView<PoultrySale>
+          loading={loading}
+          data={sales}
+          columns={['التاريخ', 'النوع', 'العدد', 'سعر الوحدة', 'المبلغ الإجمالي', 'حذف']}
+          emptyMessage="لا توجد مبيعات دواجن لعرضها."
+          renderRow={(sale) => (
+            <TableRow key={sale.id}>
+              <TableCell>{formatDate(sale.date)}</TableCell>
+               <TableCell>{sale.poultryType}</TableCell>
+              <TableCell>{sale.count || 0}</TableCell>
+              <TableCell>{`${(sale.pricePerUnit || 0).toFixed(3)} د.ك`}</TableCell>
+              <TableCell className="font-semibold text-green-600">{`${(sale.totalAmount || 0).toFixed(3)} د.ك`}</TableCell>
+              <TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+            </TableRow>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FlocksView({ user }) {
+  const collectionRef = user ? collection(db, 'users', user.uid, 'poultryFlocks') : null;
+  const [snapshot, loading] = useCollection(collectionRef ? query(collectionRef, orderBy('name', 'asc')) : null);
+  const flocks = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flock)) || [];
+
+  const [newFlock, setNewFlock] = useState({ name: '', birdCount: '' });
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAdd = async () => {
+    const { name, birdCount } = newFlock;
+    if (!name || !birdCount || !collectionRef || isAdding) return;
+    setIsAdding(true);
+    try {
+      await addDoc(collectionRef, { name, birdCount: parseInt(birdCount) || 0 });
+      setNewFlock({ name: '', birdCount: '' });
+    } catch (e) { console.error(e) }
+    finally { setIsAdding(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'poultryFlocks', id));
+  };
+  
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>إضافة قطيع دواجن جديد</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2"><Label htmlFor="flock-name">اسم/نوع القطيع</Label><Input id="flock-name" placeholder="مثال: قطيع بياض #1" value={newFlock.name} onChange={(e) => setNewFlock({ ...newFlock, name: e.target.value })}/></div>
+            <div className="space-y-2"><Label htmlFor="flock-count">عدد الطيور</Label><Input id="flock-count" type="number" placeholder="مثال: 500" value={newFlock.birdCount} onChange={(e) => setNewFlock({ ...newFlock, birdCount: e.target.value })} dir="ltr" /></div>
+          </div>
+          <Button onClick={handleAdd} className="mt-4" disabled={isAdding}>
+            {isAdding ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isAdding ? 'جاري الإضافة...' : 'إضافة القطيع'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="bg-card p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4">قائمة قطعان الدواجن</h2>
+        <DataView<Flock>
+          loading={loading}
+          data={flocks}
+          columns={['الاسم/النوع', 'عدد الطيور', 'حذف']}
+          emptyMessage="لا يوجد قطعان لعرضها."
+          renderRow={(flock) => (
+             <TableRow key={flock.id}>
+                <TableCell className="font-medium">{flock.name}</TableCell>
+                <TableCell>{flock.birdCount || 0}</TableCell>
+                <TableCell className="text-left">
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(flock.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </TableCell>
+              </TableRow>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+
+function PoultryView({ user }) {
+  const [activeTab, setActiveTab] = useState('expenses');
+  
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="expenses"><DollarSign className="h-4 w-4 ml-2" />المصاريف</TabsTrigger>
+        <TabsTrigger value="eggSales"><Egg className="h-4 w-4 ml-2" />مبيعات البيض</TabsTrigger>
+        <TabsTrigger value="poultrySales"><Drumstick className="h-4 w-4 ml-2" />مبيعات الدواجن</TabsTrigger>
+        <TabsTrigger value="flocks"><Users2 className="h-4 w-4 ml-2" />القطعان</TabsTrigger>
+      </TabsList>
+       <TabsContent value="expenses" className="mt-6">
+          <ExpensesView user={user} collectionName="poultryExpenses" />
+       </TabsContent>
+        <TabsContent value="eggSales" className="mt-6">
+          <EggSalesView user={user} />
+        </TabsContent>
+         <TabsContent value="poultrySales" className="mt-6">
+          <PoultrySalesView user={user} />
+        </TabsContent>
+         <TabsContent value="flocks" className="mt-6">
+          <FlocksView user={user} />
+        </TabsContent>
+    </Tabs>
+  );
+}
+
+// --- Livestock Components ---
+
+function LivestockSalesView({ user }) {
+  const collectionRef = user ? collection(db, 'users', user.uid, 'livestockSales') : null;
+  const [snapshot, loading] = useCollection(collectionRef ? query(collectionRef, orderBy('date', 'desc')) : null);
+  const sales = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as LivestockSale)) || [];
+
+  const [newSale, setNewSale] = useState({ animalType: 'خروف', count: '', pricePerUnit: '' });
+  const [isAdding, setIsAdding] = useState(false);
+
+   const handleAddSale = async () => {
+    const { animalType, count, pricePerUnit } = newSale;
+    if (!animalType || !count || !pricePerUnit || !collectionRef || isAdding) return;
+    
+    setIsAdding(true);
+    const numCount = parseFloat(count) || 0;
+    const price = parseFloat(pricePerUnit) || 0;
+    const totalAmount = numCount * price;
+
+    try {
+      await addDoc(collectionRef, {
+        date: new Date(),
+        animalType,
+        count: numCount,
+        pricePerUnit: price,
+        totalAmount,
+      });
+      setNewSale({ animalType: 'خروف', count: '', pricePerUnit: '' });
+    } catch(e) { console.error(e); }
+    finally { setIsAdding(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'livestockSales', id));
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>إضافة بيع مواشي جديد</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="space-y-2">
+              <Label htmlFor="animalType">نوع الحيوان</Label>
+               <Input id="animalType" placeholder="مثال: خروف نعيمي" value={newSale.animalType} onChange={(e) => setNewSale({ ...newSale, animalType: e.target.value })}/>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="count">العدد</Label>
+              <Input id="count" type="number" placeholder="مثال: 5" value={newSale.count} onChange={(e) => setNewSale({ ...newSale, count: e.target.value })} dir="ltr" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pricePerUnit">سعر الرأس</Label>
+              <Input id="pricePerUnit" type="number" placeholder="بالدينار الكويتي" value={newSale.pricePerUnit} onChange={(e) => setNewSale({ ...newSale, pricePerUnit: e.target.value })} dir="ltr" />
+            </div>
+          </div>
+          <Button onClick={handleAddSale} className="mt-4" disabled={isAdding}>
+            {isAdding ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isAdding ? 'جاري الإضافة...' : 'إضافة البيع'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="bg-card p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4">قائمة مبيعات المواشي</h2>
+        <DataView<LivestockSale>
+          loading={loading}
+          data={sales}
+          columns={['التاريخ', 'النوع', 'العدد', 'سعر الرأس', 'المبلغ الإجمالي', 'حذف']}
+          emptyMessage="لا توجد مبيعات مواشي لعرضها."
+          renderRow={(sale) => (
+            <TableRow key={sale.id}>
+              <TableCell>{formatDate(sale.date)}</TableCell>
+               <TableCell>{sale.animalType}</TableCell>
+              <TableCell>{sale.count || 0}</TableCell>
+              <TableCell>{`${(sale.pricePerUnit || 0).toFixed(3)} د.ك`}</TableCell>
+              <TableCell className="font-semibold text-green-600">{`${(sale.totalAmount || 0).toFixed(3)} د.ك`}</TableCell>
+              <TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+            </TableRow>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+
+function HerdsView({ user }) {
+  const collectionRef = user ? collection(db, 'users', user.uid, 'livestockHerds') : null;
+  const [snapshot, loading] = useCollection(collectionRef ? query(collectionRef, orderBy('name', 'asc')) : null);
+  const herds = snapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Herd)) || [];
+
+  const [newHerd, setNewHerd] = useState({ name: '', animalCount: '' });
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAdd = async () => {
+    const { name, animalCount } = newHerd;
+    if (!name || !animalCount || !collectionRef || isAdding) return;
+    setIsAdding(true);
+    try {
+      await addDoc(collectionRef, { name, animalCount: parseInt(animalCount) || 0 });
+      setNewHerd({ name: '', animalCount: '' });
+    } catch (e) { console.error(e) }
+    finally { setIsAdding(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'livestockHerds', id));
+  };
+  
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>إضافة قطيع مواشي جديد</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2"><Label htmlFor="herd-name">اسم/نوع القطيع</Label><Input id="herd-name" placeholder="مثال: قطيع أغنام" value={newHerd.name} onChange={(e) => setNewHerd({ ...newHerd, name: e.target.value })}/></div>
+            <div className="space-y-2"><Label htmlFor="herd-count">عدد الرؤوس</Label><Input id="herd-count" type="number" placeholder="مثال: 100" value={newHerd.animalCount} onChange={(e) => setNewHerd({ ...newHerd, animalCount: e.target.value })} dir="ltr" /></div>
+          </div>
+          <Button onClick={handleAdd} className="mt-4" disabled={isAdding}>
+            {isAdding ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isAdding ? 'جاري الإضافة...' : 'إضافة القطيع'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="bg-card p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4">قائمة قطعان المواشي</h2>
+        <DataView<Herd>
+          loading={loading}
+          data={herds}
+          columns={['الاسم/النوع', 'عدد الرؤوس', 'حذف']}
+          emptyMessage="لا يوجد قطعان لعرضها."
+          renderRow={(herd) => (
+             <TableRow key={herd.id}>
+                <TableCell className="font-medium">{herd.name}</TableCell>
+                <TableCell>{herd.animalCount || 0}</TableCell>
+                <TableCell className="text-left">
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(herd.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </TableCell>
+              </TableRow>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+
+function LivestockView({ user }) {
+  const [activeTab, setActiveTab] = useState('expenses');
+  
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="expenses"><DollarSign className="h-4 w-4 ml-2" />المصاريف</TabsTrigger>
+        <TabsTrigger value="sales"><ShoppingCart className="h-4 w-4 ml-2" />المبيعات</TabsTrigger>
+        <TabsTrigger value="herds"><GitCommit className="h-4 w-4 ml-2 rotate-90" />القطيع</TabsTrigger>
+      </TabsList>
+       <TabsContent value="expenses" className="mt-6">
+          <ExpensesView user={user} collectionName="livestockExpenses" />
+       </TabsContent>
+        <TabsContent value="sales" className="mt-6">
+          <LivestockSalesView user={user} />
+        </TabsContent>
+         <TabsContent value="herds" className="mt-6">
+          <HerdsView user={user} />
+        </TabsContent>
+    </Tabs>
+  );
+}
+
+// --- Main Management View ---
 
 export default function ManagementView() {
   const [selectedSection, setSelectedSection] = useState('agriculture');
@@ -692,9 +1091,9 @@ export default function ManagementView() {
       case 'agriculture':
         return <AgricultureView user={user} />;
       case 'poultry':
-        return <PlaceholderView title="الدواجن" />;
+        return <PoultryView user={user} />;
       case 'livestock':
-        return <PlaceholderView title="المواشي" />;
+        return <LivestockView user={user} />;
       default:
         return null;
     }
@@ -714,9 +1113,24 @@ export default function ManagementView() {
             <SelectValue placeholder="اختر قسمًا" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="agriculture">الزراعة</SelectItem>
-            <SelectItem value="poultry">الدواجن</SelectItem>
-            <SelectItem value="livestock">المواشي</SelectItem>
+            <SelectItem value="agriculture">
+                <div className='flex items-center'>
+                    <Tractor className="h-4 w-4 ml-2" />
+                    الزراعة
+                </div>
+            </SelectItem>
+            <SelectItem value="poultry">
+                 <div className='flex items-center'>
+                    <Egg className="h-4 w-4 ml-2" />
+                    الدواجن
+                </div>
+            </SelectItem>
+            <SelectItem value="livestock">
+                <div className='flex items-center'>
+                    <Sheep className="h-4 w-4 ml-2" />
+                    المواشي
+                </div>
+            </SelectItem>
           </SelectContent>
         </Select>
       </header>
