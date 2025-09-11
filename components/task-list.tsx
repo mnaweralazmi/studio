@@ -28,11 +28,13 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
               : 'bg-card hover:bg-secondary/50'
           }`}
         >
+          <div className="p-1 border rounded-full ml-3">
           {task.completed ? (
-            <CircleCheck className="h-5 w-5 text-green-500 ml-3" />
+            <CircleCheck className="h-5 w-5 text-green-500" />
           ) : (
-            <Circle className="h-5 w-5 text-muted-foreground ml-3" />
+            <Circle className="h-5 w-5 text-muted-foreground" />
           )}
+          </div>
           <div className="flex flex-col">
             <p
               className={`font-medium text-sm ${

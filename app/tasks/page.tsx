@@ -36,7 +36,9 @@ export default function TasksPage() {
           </p>
         </div>
         <Button>
-          <Plus className="ml-2 h-4 w-4" />
+          <div className="p-1 rounded-md border bg-primary-foreground/20 mr-2">
+            <Plus className="h-4 w-4 text-primary-foreground" />
+          </div>
           إضافة مهمة جديدة
         </Button>
       </header>
