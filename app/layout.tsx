@@ -45,9 +45,7 @@ export default function RootLayout({
                   key={item.href}
                   className="flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2"
                 >
-                  <div className="p-2 rounded-full border border-transparent group-hover:border-primary transition-colors">
-                    <item.icon className="h-7 w-7" />
-                  </div>
+                  <item.icon className="h-7 w-7" />
                   <span className="text-xs mt-1 font-medium">{item.label}</span>
                 </Link>
               ))}
