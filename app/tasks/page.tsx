@@ -53,7 +53,7 @@ function CalendarView() {
             mode="single"
             selected={date}
             onSelect={setDate}
-            className="w-full"
+            className=""
             dir="rtl"
           />
         </CardContent>
