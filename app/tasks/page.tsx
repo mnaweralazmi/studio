@@ -29,6 +29,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 // --- Data ---
 const upcomingTasks = [
@@ -46,14 +53,14 @@ function CalendarView() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">التقويم</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">التقويم</h1>
       <Card>
         <CardContent className="p-0 flex justify-center">
           <Calendar
             mode="single"
             selected={date}
             onSelect={setDate}
-            className=""
+            className="inline-block"
             dir="rtl"
           />
         </CardContent>
@@ -63,9 +70,10 @@ function CalendarView() {
 }
 
 function AddTaskView() {
+  const [date, setDate] = useState<Date | undefined>();
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">إضافة مهمة جديدة</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">إضافة مهمة جديدة</h1>
       <Card>
         <CardHeader>
           <CardTitle>تفاصيل المهمة</CardTitle>
@@ -90,12 +98,33 @@ function AddTaskView() {
           </div>
           <div className="space-y-2">
             <Label>تاريخ المهمة</Label>
-            <Calendar
-              mode="single"
-              selected={new Date()}
-              className="rounded-md border"
-              dir="rtl"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={'outline'}
+                  className={cn(
+                    'w-full justify-start text-right font-normal',
+                    !date && 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="ml-2 h-4 w-4" />
+                  {date ? (
+                    format(date, 'PPP', { locale: ar })
+                  ) : (
+                    <span>اختر تاريخًا</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  initialFocus
+                  dir="rtl"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <Button className="w-full">
             <Plus className="h-4 w-4 ml-2" />
@@ -110,7 +139,7 @@ function AddTaskView() {
 function UpcomingTasksView() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">المهام القادمة</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">المهام القادمة</h1>
       <Card>
         <CardHeader>
           <CardTitle>قادمة</CardTitle>
@@ -129,7 +158,7 @@ function UpcomingTasksView() {
 function PastTasksView() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">المهام السابقة</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">المهام السابقة</h1>
       <Card>
         <CardHeader>
           <CardTitle>سابقة</CardTitle>
