@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -14,8 +14,20 @@ import {
   Landmark,
   PiggyBank,
   Users,
+  Tractor,
+  Egg,
+  GitCommit,
+  Briefcase,
+  Scaling,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Generic Types
 type Expense = { amount: number };
@@ -45,11 +57,68 @@ const StatCard = ({
   </Card>
 );
 
+const SectionBudgetDisplay = ({ data }) => {
+    const netProfit = data.totalIncome - data.totalExpenses;
+    
+    return (
+        <div className="space-y-4">
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                 <StatCard
+                    title="الربح الصافي للقسم"
+                    value={`${netProfit.toFixed(3)} د.ك`}
+                    icon={Landmark}
+                    color={netProfit >= 0 ? 'text-green-600' : 'text-destructive'}
+                />
+                <StatCard
+                    title="إجمالي دخل القسم"
+                    value={`${data.totalIncome.toFixed(3)} د.ك`}
+                    icon={ArrowUpCircle}
+                    color="text-green-600"
+                />
+                <StatCard
+                    title="إجمالي مصروفات القسم"
+                    value={`${data.totalExpenses.toFixed(3)} د.ك`}
+                    icon={ArrowDownCircle}
+                    color="text-destructive"
+                />
+                {Object.keys(data.extraStats || {}).map(key => {
+                    const stat = data.extraStats[key];
+                    return (
+                        <StatCard
+                            key={key}
+                            title={stat.title}
+                            value={stat.value}
+                            icon={stat.icon}
+                            color={stat.color}
+                        />
+                    )
+                })}
+            </div>
+             {data.summaryCard && (
+                <Card>
+                    <CardHeader className="pb-4">
+                    <CardTitle>{data.summaryCard.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                    <div className={`text-3xl font-bold ${data.summaryCard.color || 'text-foreground'}`}>
+                        {data.summaryCard.value}
+                    </div>
+                    {data.summaryCard.subtitle && <p className="text-xs text-muted-foreground mt-1">{data.summaryCard.subtitle}</p>}
+                    </CardContent>
+              </Card>
+            )}
+        </div>
+    );
+};
+
+
 export default function BudgetView() {
   const [user, loadingUser] = useAuthState(auth);
+  const [selectedSection, setSelectedSection] = useState('total');
 
   // --- Collection Refs ---
   const expensesCollection = user ? collection(db, 'users', user.uid, 'expenses') : null;
+  const agriExpensesCollection = user ? collection(db, 'users', user.uid, 'agriExpenses') : null;
   const poultryExpensesCollection = user ? collection(db, 'users', user.uid, 'poultryExpenses') : null;
   const livestockExpensesCollection = user ? collection(db, 'users', user.uid, 'livestockExpenses') : null;
   
@@ -62,75 +131,89 @@ export default function BudgetView() {
   const workersCollection = user ? collection(db, 'users', user.uid, 'workers') : null;
 
   // --- Hooks ---
-  const [expensesSnapshot, loadingExpenses] = useCollection(expensesCollection ? query(expensesCollection) : null);
-  const [poultryExpensesSnapshot, loadingPoultryExpenses] = useCollection(poultryExpensesCollection ? query(poultryExpensesCollection) : null);
-  const [livestockExpensesSnapshot, loadingLivestockExpenses] = useCollection(livestockExpensesCollection ? query(livestockExpensesCollection) : null);
+  const [expensesSnapshot, loadingExpenses] = useCollection(expensesCollection ? query(expensesCollection, where('archived', '!=', true)) : null);
+  const [agriExpensesSnapshot, loadingAgriExpenses] = useCollection(agriExpensesCollection ? query(agriExpensesCollection, where('archived', '!=', true)) : null);
+  const [poultryExpensesSnapshot, loadingPoultryExpenses] = useCollection(poultryExpensesCollection ? query(poultryExpensesCollection, where('archived', '!=', true)) : null);
+  const [livestockExpensesSnapshot, loadingLivestockExpenses] = useCollection(livestockExpensesCollection ? query(livestockExpensesCollection, where('archived', '!=', true)) : null);
 
-  const [agriSalesSnapshot, loadingAgriSales] = useCollection(agriSalesCollection ? query(agriSalesCollection) : null);
-  const [poultryEggSalesSnapshot, loadingPoultryEggSales] = useCollection(poultryEggSalesCollection ? query(poultryEggSalesCollection) : null);
-  const [poultrySalesSnapshot, loadingPoultrySales] = useCollection(poultrySalesCollection ? query(poultrySalesCollection) : null);
-  const [livestockSalesSnapshot, loadingLivestockSales] = useCollection(livestockSalesCollection ? query(livestockSalesCollection) : null);
+  const [agriSalesSnapshot, loadingAgriSales] = useCollection(agriSalesCollection ? query(agriSalesCollection, where('archived', '!=', true)) : null);
+  const [poultryEggSalesSnapshot, loadingPoultryEggSales] = useCollection(poultryEggSalesCollection ? query(poultryEggSalesCollection, where('archived', '!=', true)) : null);
+  const [poultrySalesSnapshot, loadingPoultrySales] = useCollection(poultrySalesCollection ? query(poultrySalesCollection, where('archived', '!=', true)) : null);
+  const [livestockSalesSnapshot, loadingLivestockSales] = useCollection(livestockSalesCollection ? query(livestockSalesCollection, where('archived', '!=', true)) : null);
 
-  const [debtsSnapshot, loadingDebts] = useCollection(debtsCollection ? query(debtsCollection) : null);
-  const [workersSnapshot, loadingWorkers] = useCollection(workersCollection ? query(workersCollection) : null);
+  const [debtsSnapshot, loadingDebts] = useCollection(debtsCollection ? query(debtsCollection, where('archived', '!=', true)) : null);
+  const [workersSnapshot, loadingWorkers] = useCollection(workersCollection ? query(workersCollection, where('archived', '!=', true)) : null);
 
-  const {
-    totalIncome,
-    totalExpenses,
-    totalWorkerSalaries,
-    totalDebtsForUs,
-    totalDebtsOnUs,
-    netProfit,
-  } = useMemo(() => {
-    // --- Sales ---
-    const agriSales = agriSalesSnapshot?.docs.map((doc) => doc.data() as Sale) || [];
-    const poultryEggSales = poultryEggSalesSnapshot?.docs.map((doc) => doc.data() as Sale) || [];
-    const poultrySales = poultrySalesSnapshot?.docs.map((doc) => doc.data() as Sale) || [];
-    const livestockSales = livestockSalesSnapshot?.docs.map((doc) => doc.data() as Sale) || [];
+  const budgetData = useMemo(() => {
+    const calculateTotal = (snapshot) => snapshot?.docs.reduce((sum, doc) => sum + (doc.data().amount || doc.data().totalAmount || 0), 0) || 0;
+    const calculateSalaryTotal = (snapshot) => snapshot?.docs.reduce((sum, doc) => sum + (doc.data().salary || 0), 0) || 0;
 
-    const totalIncome = [
-        ...agriSales, ...poultryEggSales, ...poultrySales, ...livestockSales
-    ].reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
+    // --- All Sales ---
+    const totalAgriSales = calculateTotal(agriSalesSnapshot);
+    const totalPoultryEggSales = calculateTotal(poultryEggSalesSnapshot);
+    const totalPoultrySales = calculateTotal(poultrySalesSnapshot);
+    const totalLivestockSales = calculateTotal(livestockSalesSnapshot);
+    const totalIncome = totalAgriSales + totalPoultryEggSales + totalPoultrySales + totalLivestockSales;
 
-    // --- Expenses ---
-    const expenses = expensesSnapshot?.docs.map((doc) => doc.data() as Expense) || [];
-    const poultryExpenses = poultryExpensesSnapshot?.docs.map((doc) => doc.data() as Expense) || [];
-    const livestockExpenses = livestockExpensesSnapshot?.docs.map((doc) => doc.data() as Expense) || [];
-    const workers = workersSnapshot?.docs.map((doc) => doc.data() as Worker) || [];
-
-    const totalOperationalExpenses = [...expenses, ...poultryExpenses, ...livestockExpenses].reduce(
-      (sum, expense) => sum + (expense.amount || 0), 0
-    );
-    const totalWorkerSalaries = workers.reduce(
-      (sum, worker) => sum + (worker.salary || 0), 0
-    );
+    // --- All Expenses ---
+    const totalGeneralExpenses = calculateTotal(expensesSnapshot);
+    const totalAgriExpenses = calculateTotal(agriExpensesSnapshot);
+    const totalPoultryExpenses = calculateTotal(poultryExpensesSnapshot);
+    const totalLivestockExpenses = calculateTotal(livestockExpensesSnapshot);
+    const totalWorkerSalaries = calculateSalaryTotal(workersSnapshot);
+    const totalOperationalExpenses = totalGeneralExpenses + totalAgriExpenses + totalPoultryExpenses + totalLivestockExpenses;
+    const grandTotalExpenses = totalOperationalExpenses + totalWorkerSalaries;
     
     // --- Debts ---
     const debts = debtsSnapshot?.docs.map((doc) => doc.data() as Debt) || [];
     const totalDebtsForUs = debts.filter((d) => d.type === 'دين لنا').reduce((sum, d) => sum + (d.amount || 0), 0);
     const totalDebtsOnUs = debts.filter((d) => d.type === 'دين علينا').reduce((sum, d) => sum + (d.amount || 0), 0);
-
-    // --- Calculations ---
-    const totalExpenses = totalOperationalExpenses + totalWorkerSalaries;
-    const netProfit = totalIncome - totalExpenses;
+    
+    const netProfit = totalIncome - grandTotalExpenses;
 
     return {
-      totalIncome,
-      totalExpenses: totalOperationalExpenses,
-      totalWorkerSalaries,
-      totalDebtsForUs,
-      totalDebtsOnUs,
-      netProfit,
+      total: {
+        totalIncome,
+        totalExpenses: grandTotalExpenses,
+        extraStats: {
+            totalOperationalExpenses: { title: 'إجمالي المصروفات التشغيلية', value: `${totalOperationalExpenses.toFixed(3)} د.ك`, icon: ArrowDownCircle, color: 'text-destructive'},
+            totalWorkerSalaries: { title: 'إجمالي رواتب العمال', value: `${totalWorkerSalaries.toFixed(3)} د.ك`, icon: Users, color: 'text-orange-500'},
+            totalDebtsOnUs: { title: 'ديون علينا (واجبة السداد)', value: `${totalDebtsOnUs.toFixed(3)} د.ك`, icon: HandCoins, color: 'text-amber-600' },
+            totalAssets: { title: 'إجمالي الأصول (تقريبي)', value: `${(netProfit + totalDebtsForUs - totalDebtsOnUs).toFixed(3)} د.ك`, icon: PiggyBank },
+        },
+        summaryCard: { title: 'ملخص المصروفات الكلي', value: `${grandTotalExpenses.toFixed(3)} د.ك`, subtitle: '(المصروفات التشغيلية + رواتب العمال)', color: 'text-destructive' }
+      },
+      agriculture: {
+        totalIncome: totalAgriSales,
+        totalExpenses: totalAgriExpenses,
+      },
+      poultry: {
+        totalIncome: totalPoultryEggSales + totalPoultrySales,
+        totalExpenses: totalPoultryExpenses,
+      },
+      livestock: {
+        totalIncome: totalLivestockSales,
+        totalExpenses: totalLivestockExpenses,
+      },
+      farmManagement: {
+        totalIncome: 0,
+        totalExpenses: totalGeneralExpenses + totalWorkerSalaries,
+        extraStats: {
+            totalDebtsOnUs: { title: 'ديون علينا (واجبة السداد)', value: `${totalDebtsOnUs.toFixed(3)} د.ك`, icon: HandCoins, color: 'text-amber-600' },
+            totalDebtsForUs: { title: 'ديون لنا (مستحقة)', value: `${totalDebtsForUs.toFixed(3)} د.ك`, icon: HandCoins, color: 'text-green-600' },
+        },
+        summaryCard: { title: 'المصروفات الإدارية والعمالة', value: `${(totalGeneralExpenses + totalWorkerSalaries).toFixed(3)} د.ك`, color: 'text-destructive' }
+      }
     };
   }, [
     agriSalesSnapshot, poultryEggSalesSnapshot, poultrySalesSnapshot, livestockSalesSnapshot,
-    expensesSnapshot, poultryExpensesSnapshot, livestockExpensesSnapshot, 
+    expensesSnapshot, agriExpensesSnapshot, poultryExpensesSnapshot, livestockExpensesSnapshot, 
     workersSnapshot, debtsSnapshot
   ]);
 
   const loading =
     loadingUser ||
-    loadingExpenses || loadingPoultryExpenses || loadingLivestockExpenses ||
+    loadingExpenses || loadingAgriExpenses || loadingPoultryExpenses || loadingLivestockExpenses ||
     loadingAgriSales || loadingPoultryEggSales || loadingPoultrySales || loadingLivestockSales ||
     loadingDebts || loadingWorkers;
 
@@ -142,68 +225,55 @@ export default function BudgetView() {
     );
   }
   
-  const grandTotalExpenses = totalExpenses + totalWorkerSalaries;
-
-
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold text-foreground">الميزانية</h1>
         <p className="mt-1 text-muted-foreground">
-          ملخص شامل لوضعك المالي في المزرعة.
+          اختر قسمًا لعرض ملخصه المالي المفصل.
         </p>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="الربح الصافي"
-          value={`${netProfit.toFixed(3)} د.ك`}
-          icon={Landmark}
-          color={netProfit >= 0 ? 'text-green-600' : 'text-destructive'}
-        />
-        <StatCard
-          title="إجمالي الدخل (المبيعات)"
-          value={`${totalIncome.toFixed(3)} د.ك`}
-          icon={ArrowUpCircle}
-          color="text-green-600"
-        />
-        <StatCard
-          title="إجمالي المصروفات (التشغيلية)"
-          value={`${totalExpenses.toFixed(3)} د.ك`}
-          icon={ArrowDownCircle}
-          color="text-destructive"
-        />
-        <StatCard
-          title="إجمالي رواتب العمال"
-          value={`${totalWorkerSalaries.toFixed(3)} د.ك`}
-          icon={Users}
-          color="text-orange-500"
-        />
-        <StatCard
-          title="ديون علينا (واجبة السداد)"
-          value={`${totalDebtsOnUs.toFixed(3)} د.ك`}
-          icon={HandCoins}
-          color="text-amber-600"
-        />
-         <StatCard
-          title="إجمالي الأصول (تقريبي)"
-          value={`${(netProfit + totalDebtsForUs - totalDebtsOnUs).toFixed(3)} د.ك`}
-          icon={PiggyBank}
-        />
-      </div>
-       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle>ملخص المصروفات الكلي</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-destructive">
-            {`${grandTotalExpenses.toFixed(3)} د.ك`}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            (المصروفات التشغيلية + رواتب العمال)
-          </p>
-        </CardContent>
-      </Card>
+       <Select value={selectedSection} onValueChange={setSelectedSection}>
+          <SelectTrigger className="w-full md:w-[280px]">
+            <SelectValue placeholder="اختر قسمًا" />
+          </SelectTrigger>
+          <SelectContent>
+             <SelectItem value="total">
+              <div className="flex items-center">
+                <Scaling className="h-4 w-4 ml-2" />
+                الميزانية الإجمالية
+              </div>
+            </SelectItem>
+            <SelectItem value="farmManagement">
+              <div className="flex items-center">
+                <Briefcase className="h-4 w-4 ml-2" />
+                ميزانية إدارة المزرعة
+              </div>
+            </SelectItem>
+            <SelectItem value="agriculture">
+              <div className="flex items-center">
+                <Tractor className="h-4 w-4 ml-2" />
+                ميزانية الزراعة
+              </div>
+            </SelectItem>
+            <SelectItem value="poultry">
+              <div className="flex items-center">
+                <Egg className="h-4 w-4 ml-2" />
+                ميزانية الدواجن
+              </div>
+            </SelectItem>
+            <SelectItem value="livestock">
+              <div className="flex items-center">
+                <GitCommit className="h-4 w-4 ml-2 rotate-90" />
+                ميزانية المواشي
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <SectionBudgetDisplay data={budgetData[selectedSection]} />
+
     </div>
   );
 }
