@@ -2,7 +2,6 @@
 
 import {
   Bell,
-  Languages,
   UserCircle,
   Shield,
   Palette,
@@ -108,7 +107,7 @@ function AppearanceView() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">المظهر واللغة</h1>
+      <h1 className="text-3xl font-bold text-foreground sr-only">المظهر</h1>
       <ThemeSwitcher />
       <Card>
         <CardHeader>
@@ -181,35 +180,35 @@ export default function SettingsPage() {
           قم بتخصيص إعدادات التطبيق والمزرعة.
         </p>
       </header>
-       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full" orientation="vertical">
-        <TabsList className="grid w-full grid-cols-1 h-auto">
-          <TabsTrigger value="profile" className="justify-start gap-2">
-            <UserCircle className="h-5 w-5" />
-            ملف المزرعة
+       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="profile">
+            <UserCircle className="h-5 w-5 ml-2" />
+            الملف
           </TabsTrigger>
-          <TabsTrigger value="appearance" className="justify-start gap-2">
-            <Palette className="h-5 w-5" />
+          <TabsTrigger value="appearance">
+            <Palette className="h-5 w-5 ml-2" />
             المظهر
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="justify-start gap-2">
-            <Bell className="h-5 w-5" />
+          <TabsTrigger value="notifications">
+            <Bell className="h-5 w-5 ml-2" />
             الإشعارات
           </TabsTrigger>
-          <TabsTrigger value="security" className="justify-start gap-2">
-            <Shield className="h-5 w-5" />
-            الأمان والخصوصية
+          <TabsTrigger value="security">
+            <Shield className="h-5 w-5 ml-2" />
+            الأمان
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="profile" className="mt-0">
+        <TabsContent value="profile" className="mt-6">
           <ProfileView />
         </TabsContent>
-        <TabsContent value="appearance" className="mt-0">
+        <TabsContent value="appearance" className="mt-6">
           <AppearanceView />
         </TabsContent>
-        <TabsContent value="notifications" className="mt-0">
+        <TabsContent value="notifications" className="mt-6">
           <NotificationsView />
         </TabsContent>
-        <TabsContent value="security" className="mt-0">
+        <TabsContent value="security" className="mt-6">
           <SecurityView />
         </TabsContent>
       </Tabs>
