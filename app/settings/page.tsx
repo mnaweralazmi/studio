@@ -5,43 +5,118 @@ import {
   Languages,
   UserCircle,
   Shield,
-  ChevronLeft,
+  ArrowLeft,
+  Palette,
 } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { ThemeSwitcher } from '@/components/theme-switcher';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
-export default function SettingsPage() {
-  const settingsItems = [
-    { title: 'ملف المزرعة', icon: UserCircle, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
-    { title: 'الإشعارات', icon: Bell, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
-    { title: 'اللغة', icon: Languages, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
-    { title: 'الأمان', icon: Shield, component: <ChevronLeft className="h-6 w-6 text-muted-foreground" /> },
-  ];
+// --- Sub-page Components ---
 
+function ThemeView() {
   return (
     <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-foreground">الألوان</h1>
+      <ThemeSwitcher />
+    </div>
+  );
+}
+
+function PlaceholderView({ title }: { title: string }) {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-foreground">{title}</h1>
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-muted-foreground">
+            سيتم إضافة محتوى هذا القسم قريبًا.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// --- Main Page Component ---
+
+type SettingsViewId = 'theme' | 'profile' | 'notifications' | 'language' | 'security';
+
+export default function SettingsPage() {
+  const [activeView, setActiveView] = useState<SettingsViewId>('theme');
+
+  const views: { id: SettingsViewId; component: ReactNode }[] = [
+    { id: 'theme', component: <ThemeView /> },
+    { id: 'profile', component: <PlaceholderView title="ملف المزرعة" /> },
+    { id: 'notifications', component: <PlaceholderView title="الإشعارات" /> },
+    { id: 'language', component: <PlaceholderView title="اللغة" /> },
+    { id: 'security', component: <PlaceholderView title="الأمان" /> },
+  ];
+
+  const navItems: {
+    id: SettingsViewId | 'back';
+    label: string;
+    icon: React.ElementType;
+    href?: string;
+  }[] = [
+    { id: 'theme', label: 'الألوان', icon: Palette },
+    { id: 'profile', label: 'الملف', icon: UserCircle },
+    { id: 'notifications', label: 'الإشعارات', icon: Bell },
+    { id: 'language', label: 'اللغة', icon: Languages },
+    { id: 'security', label: 'الأمان', icon: Shield },
+    { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/' },
+  ];
+
+  const activeComponent = views.find((v) => v.id === activeView)?.component;
+
+  const NavLink = ({ item }: { item: (typeof navItems)[0] }) => {
+    const isActive = activeView === item.id;
+    const content = (
+      <div
+        className={cn(
+          'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
+          isActive && 'text-primary'
+        )}
+        onClick={() => item.id !== 'back' && setActiveView(item.id as SettingsViewId)}
+      >
+        <item.icon className="h-7 w-7" />
+        <span className="text-xs mt-1 font-medium">{item.label}</span>
+      </div>
+    );
+
+    if (item.href) {
+      return (
+        <Link href={item.href} className="w-full h-full">
+          {content}
+        </Link>
+      );
+    }
+
+    return <div className="w-full h-full cursor-pointer">{content}</div>;
+  };
+
+  return (
+    <div className="space-y-6 pb-24">
       <header>
-        <h1 className="text-3xl font-bold text-foreground">الإعدادات</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="text-3xl font-bold text-foreground sr-only">
+          الإعدادات
+        </h1>
+        <p className="mt-1 text-muted-foreground sr-only">
           قم بتخصيص إعدادات التطبيق والمزرعة.
         </p>
       </header>
-      <div className="space-y-3">
-        <ThemeSwitcher />
-        {settingsItems.map((item) => (
-          <div
-            key={item.title}
-            className="bg-card p-4 rounded-xl shadow-sm flex items-center space-x-4 rtl:space-x-reverse hover:bg-secondary transition-all cursor-pointer"
-          >
-            <div className="p-2 rounded-lg border bg-secondary/30">
-              <item.icon className="h-7 w-7 text-primary drop-shadow-sm" />
-            </div>
-            <span className="text-lg font-medium text-card-foreground flex-1">
-              {item.title}
-            </span>
-            {item.component}
-          </div>
-        ))}
-      </div>
+
+      <div className="mt-6">{activeComponent}</div>
+
+      <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
+        <nav className="flex justify-around items-center h-20">
+          {navItems.map((item) => (
+            <NavLink key={item.id} item={item} />
+          ))}
+        </nav>
+      </footer>
     </div>
   );
 }
