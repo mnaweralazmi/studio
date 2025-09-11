@@ -105,14 +105,18 @@ function NotificationsView() {
   );
 }
 
-function LanguageView() {
+function AppearanceView() {
   const [language, setLanguage] = useState('ar');
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">اللغة</h1>
+      <h1 className="text-3xl font-bold text-foreground">المظهر واللغة</h1>
+      <ThemeSwitcher />
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+          <CardTitle>اللغة</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-2">
             <Label htmlFor="language-select">اختر لغة التطبيق</Label>
             <Select value={language} onValueChange={setLanguage}>
@@ -159,22 +163,13 @@ function SecurityView() {
   );
 }
 
-function ThemeView() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">الألوان</h1>
-      <ThemeSwitcher />
-    </div>
-  );
-}
 
 // --- Main Page Component ---
 
 type SettingsViewId =
   | 'profile'
-  | 'theme'
+  | 'appearance'
   | 'notifications'
-  | 'language'
   | 'security';
 
 export default function SettingsPage() {
@@ -182,9 +177,8 @@ export default function SettingsPage() {
 
   const views: { id: SettingsViewId; component: ReactNode }[] = [
     { id: 'profile', component: <ProfileView /> },
-    { id: 'theme', component: <ThemeView /> },
+    { id: 'appearance', component: <AppearanceView /> },
     { id: 'notifications', component: <NotificationsView /> },
-    { id: 'language', component: <LanguageView /> },
     { id: 'security', component: <SecurityView /> },
   ];
 
@@ -195,9 +189,8 @@ export default function SettingsPage() {
     href?: string;
   }[] = [
     { id: 'profile', label: 'الملف', icon: UserCircle },
-    { id: 'theme', label: 'الألوان', icon: Palette },
+    { id: 'appearance', label: 'المظهر', icon: Palette },
     { id: 'notifications', label: 'الإشعارات', icon: Bell },
-    { id: 'language', label: 'اللغة', icon: Languages },
     { id: 'security', label: 'الأمان', icon: Shield },
     { id: 'back', label: 'رجوع', icon: ArrowLeft, href: '/' },
   ];
