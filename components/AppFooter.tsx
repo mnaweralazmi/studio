@@ -75,15 +75,23 @@ export default function AppFooter() {
   if (isManagementPage) {
     navItems = managementNavItems;
   } else if (isTasksPage) {
-    navItems = tasksNavItems;
+    // For now, tasks page will use main navigation until a decision is made
+    navItems = mainNavItems;
   } else {
     navItems = mainNavItems;
   }
 
   const getIsActive = (item: { href: string; }) => {
-    if (isManagementPage || isTasksPage) {
+    if (isManagementPage) {
       const itemTab = item.href.split('=')[1];
-      return activeSubTab ? activeSubTab === itemTab : itemTab === navItems[0].href.split('=')[1];
+      // Default to the first tab if no tab is selected
+      const currentTab = activeSubTab || 'expenses';
+      return itemTab === currentTab;
+    }
+     if (isTasksPage) {
+      const itemTab = item.href.split('=')[1];
+      const currentTab = activeSubTab || 'calendar';
+      return itemTab === currentTab;
     }
     return pathname === item.href;
   };

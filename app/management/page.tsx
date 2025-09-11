@@ -11,7 +11,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -806,8 +806,11 @@ const managementTabs: {
 ];
 
 export default function ManagementPage() {
-  const [activeTab, setActiveTab] =
-    useState<'expenses' | 'sales' | 'debts' | 'workers'>('expenses');
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') || 'expenses';
+
+  const activeComponent =
+    managementTabs.find((t) => t.id === tab)?.component || <ExpensesView />;
 
   return (
     <div className="space-y-6">
@@ -818,27 +821,8 @@ export default function ManagementPage() {
         </p>
       </header>
       
-      <div className="grid grid-cols-4 gap-2 rounded-xl bg-muted p-1">
-        {managementTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'flex flex-col items-center justify-center space-y-1 rounded-lg py-2 text-sm font-medium transition-all',
-              'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              activeTab === tab.id
-                ? 'bg-background text-foreground shadow'
-                : 'text-muted-foreground hover:bg-muted/50'
-            )}
-          >
-            <tab.icon className="h-6 w-6" />
-            <span>{tab.title}</span>
-          </button>
-        ))}
-      </div>
-
       <div className="mt-6">
-        {managementTabs.find((tab) => tab.id === activeTab)?.component}
+        {activeComponent}
       </div>
     </div>
   );
