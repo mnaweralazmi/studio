@@ -21,13 +21,8 @@ import {
   Scaling,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 // Generic Types
 type Expense = { amount: number };
@@ -233,46 +228,20 @@ export default function BudgetView() {
           اختر قسمًا لعرض ملخصه المالي المفصل.
         </p>
       </header>
+        
+        <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
+                <TabsTrigger value="total" className="flex items-center gap-2"><Scaling className="h-4 w-4" />الإجمالية</TabsTrigger>
+                <TabsTrigger value="farmManagement" className="flex items-center gap-2"><Briefcase className="h-4 w-4" />الإدارة</TabsTrigger>
+                <TabsTrigger value="agriculture" className="flex items-center gap-2"><Tractor className="h-4 w-4" />الزراعة</TabsTrigger>
+                <TabsTrigger value="poultry" className="flex items-center gap-2"><Egg className="h-4 w-4" />الدواجن</TabsTrigger>
+                <TabsTrigger value="livestock" className="flex items-center gap-2"><GitCommit className="h-4 w-4 rotate-90" />المواشي</TabsTrigger>
+            </TabsList>
+        </Tabs>
 
-       <Select value={selectedSection} onValueChange={setSelectedSection}>
-          <SelectTrigger className="w-full md:w-[280px]">
-            <SelectValue placeholder="اختر قسمًا" />
-          </SelectTrigger>
-          <SelectContent>
-             <SelectItem value="total">
-              <div className="flex items-center">
-                <Scaling className="h-4 w-4 ml-2" />
-                الميزانية الإجمالية
-              </div>
-            </SelectItem>
-            <SelectItem value="farmManagement">
-              <div className="flex items-center">
-                <Briefcase className="h-4 w-4 ml-2" />
-                ميزانية إدارة المزرعة
-              </div>
-            </SelectItem>
-            <SelectItem value="agriculture">
-              <div className="flex items-center">
-                <Tractor className="h-4 w-4 ml-2" />
-                ميزانية الزراعة
-              </div>
-            </SelectItem>
-            <SelectItem value="poultry">
-              <div className="flex items-center">
-                <Egg className="h-4 w-4 ml-2" />
-                ميزانية الدواجن
-              </div>
-            </SelectItem>
-            <SelectItem value="livestock">
-              <div className="flex items-center">
-                <GitCommit className="h-4 w-4 ml-2 rotate-90" />
-                ميزانية المواشي
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <SectionBudgetDisplay data={budgetData[selectedSection]} />
+        <div className="pt-4">
+            <SectionBudgetDisplay data={budgetData[selectedSection]} />
+        </div>
 
     </div>
   );
