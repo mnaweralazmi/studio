@@ -10,6 +10,7 @@ import {
   CreditCard,
   CheckCircle,
   Loader2,
+  Pencil,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -465,6 +466,10 @@ function WorkersView({ user }) {
   const [newWorker, setNewWorker] = useState({ name: '', salary: '' });
   const [isAdding, setIsAdding] = useState(false);
   const [payingSalaryFor, setPayingSalaryFor] = useState<string | null>(null);
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
+  const [newSalary, setNewSalary] = useState('');
 
   const handleAddWorker = async () => {
     const { name, salary } = newWorker;
@@ -492,14 +497,36 @@ function WorkersView({ user }) {
         category: 'رواتب',
         amount: worker.salary || 0,
       });
-      // Optionally, show a success message
     } catch(e) {
       console.error(e)
-      // Optionally, show an error message
     } finally {
       setPayingSalaryFor(null);
     }
   };
+
+  const handleOpenEditDialog = (worker: Worker) => {
+    setEditingWorker(worker);
+    setNewSalary((worker.salary || 0).toString());
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateSalary = async () => {
+    if (!editingWorker || !newSalary || !user) return;
+    
+    const workerRef = doc(db, 'users', user.uid, 'workers', editingWorker.id);
+    const salaryValue = parseFloat(newSalary) || 0;
+
+    try {
+      await updateDoc(workerRef, { salary: salaryValue });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsEditDialogOpen(false);
+      setEditingWorker(null);
+      setNewSalary('');
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -547,6 +574,14 @@ function WorkersView({ user }) {
                       }
                       دفع الراتب
                     </Button>
+                     <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => handleOpenEditDialog(worker)}
+                      disabled={payingSalaryFor === worker.id}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteWorker(worker.id)} disabled={payingSalaryFor === worker.id}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 </TableCell>
@@ -554,6 +589,44 @@ function WorkersView({ user }) {
           )}
         />
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>تعديل راتب العامل</DialogTitle>
+          </DialogHeader>
+          {editingWorker && (
+            <div className="grid gap-4 py-4">
+              <p>
+                أنت تعدل راتب العامل:
+                <span className="font-bold"> {editingWorker.name}</span>
+              </p>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-salary" className="text-right">
+                  الراتب الجديد
+                </Label>
+                <Input
+                  id="new-salary"
+                  type="number"
+                  value={newSalary}
+                  onChange={(e) => setNewSalary(e.target.value)}
+                  className="col-span-3"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">إلغاء</Button>
+            </DialogClose>
+            <Button onClick={handleUpdateSalary}>
+              <CheckCircle className="h-4 w-4 ml-2" />
+              حفظ التغييرات
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
