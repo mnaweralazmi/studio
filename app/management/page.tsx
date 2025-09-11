@@ -189,7 +189,7 @@ function ExpensesView() {
   };
   return (
     <div className="space-y-6">
-       <h1 className="text-3xl font-bold text-foreground">المصاريف</h1>
+       <h1 className="text-3xl font-bold text-foreground sr-only">المصاريف</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة مصروف جديد</CardTitle>
@@ -324,7 +324,7 @@ function SalesView() {
 
   return (
     <div className="space-y-6">
-       <h1 className="text-3xl font-bold text-foreground">المبيعات</h1>
+       <h1 className="text-3xl font-bold text-foreground sr-only">المبيعات</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة بيع جديد</CardTitle>
@@ -507,7 +507,7 @@ function DebtsView() {
 
   return (
     <div className="space-y-6">
-       <h1 className="text-3xl font-bold text-foreground">الديون</h1>
+       <h1 className="text-3xl font-bold text-foreground sr-only">الديون</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة دين جديد</CardTitle>
@@ -701,7 +701,7 @@ function WorkersView() {
 
   return (
     <div className="space-y-6">
-       <h1 className="text-3xl font-bold text-foreground">العمال</h1>
+       <h1 className="text-3xl font-bold text-foreground sr-only">العمال</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة عامل جديد</CardTitle>
@@ -818,6 +818,25 @@ export default function ManagementPage() {
         </p>
       </header>
       
+      <div className="grid grid-cols-4 gap-2 rounded-xl bg-muted p-1">
+        {managementTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex flex-col items-center justify-center space-y-1 rounded-lg py-2 text-sm font-medium transition-all',
+              'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              activeTab === tab.id
+                ? 'bg-background text-foreground shadow'
+                : 'text-muted-foreground hover:bg-muted/50'
+            )}
+          >
+            <tab.icon className="h-6 w-6" />
+            <span>{tab.title}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="mt-6">
         {managementTabs.find((tab) => tab.id === activeTab)?.component}
       </div>
