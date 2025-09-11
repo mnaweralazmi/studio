@@ -101,7 +101,7 @@ type Worker = {
 const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجان', 'فلفل', 'كوسا'];
 
 // Generic Loading/Empty state component
-function DataView<T>({ 
+function DataView<T extends { id: string }>({ 
   loading, 
   data, 
   columns, 
