@@ -21,7 +21,7 @@ import {
   ClipboardList,
   Newspaper
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import {
   collection,
@@ -38,6 +38,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useAdmin } from '@/lib/hooks/useAdmin';
+import { useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -2026,9 +2027,18 @@ function LivestockView({ user }) {
 // --- Main Management View ---
 
 export default function ManagementView() {
-  const [selectedSection, setSelectedSection] = useState('farmManagement');
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab');
+  
+  const [selectedSection, setSelectedSection] = useState(tab || 'farmManagement');
   const [user] = useAuthState(auth);
   const { isAdmin } = useAdmin();
+
+  useEffect(() => {
+    if (tab) {
+      setSelectedSection(tab);
+    }
+  }, [tab]);
 
   const renderContent = () => {
     if (!user) {

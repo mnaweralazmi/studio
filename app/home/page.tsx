@@ -5,12 +5,13 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, Newspaper } from 'lucide-react';
+import { Loader2, Newspaper, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, orderBy } from 'firebase/firestore';
+import { useAdmin } from '@/lib/hooks/useAdmin';
 
 type Article = {
   id: string;
@@ -24,6 +25,8 @@ function HomeView() {
   const [articlesSnapshot, loading, error] = useCollection(
     query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
   );
+  const router = useRouter();
+  const { isAdmin } = useAdmin();
 
   const articles =
     articlesSnapshot?.docs.map(
@@ -57,13 +60,21 @@ function HomeView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold text-foreground">
-          أخبار ومواضيع زراعية
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          ابق على اطلاع بآخر الأخبار والنصائح في عالم الزراعة.
-        </p>
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            أخبار ومواضيع زراعية
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            ابق على اطلاع بآخر الأخبار والنصائح في عالم الزراعة.
+          </p>
+        </div>
+        {isAdmin && (
+          <Button onClick={() => router.push('/management?tab=content')}>
+            <Plus className="h-4 w-4 ml-2" />
+            إضافة موضوع
+          </Button>
+        )}
       </header>
       {articles.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
