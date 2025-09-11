@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,17 +13,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 type Expense = {
   id: string;
@@ -71,11 +68,10 @@ export default function ExpensesPage() {
     category: '',
     amount: '',
   });
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleAddExpense = () => {
     if (!newExpense.item || !newExpense.amount) return;
-    const newId = (expenses.length + 1).toString();
+    const newId = `expense-${Date.now()}`;
     const today = new Date();
     const newDate = new Intl.DateTimeFormat('ar-KW-u-nu-latn', {
       year: 'numeric',
@@ -84,11 +80,19 @@ export default function ExpensesPage() {
     }).format(today);
 
     setExpenses([
+      {
+        id: newId,
+        date: newDate,
+        ...newExpense,
+        amount: `${newExpense.amount} د.ك`,
+      },
       ...expenses,
-      { id: newId, date: newDate, ...newExpense, amount: `${newExpense.amount} د.ك` },
     ]);
     setNewExpense({ item: '', category: '', amount: '' });
-    setIsDialogOpen(false);
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    setExpenses(expenses.filter((expense) => expense.id !== id));
   };
 
   return (
@@ -100,85 +104,73 @@ export default function ExpensesPage() {
             تتبع جميع نفقات المزرعة.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 ml-2" />
-                إضافة مصروف جديد
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>إضافة مصروف جديد</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="item" className="text-right">
-                    البند
-                  </Label>
-                  <Input
-                    id="item"
-                    value={newExpense.item}
-                    onChange={(e) =>
-                      setNewExpense({ ...newExpense, item: e.target.value })
-                    }
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="category" className="text-right">
-                    الفئة
-                  </Label>
-                  <Input
-                    id="category"
-                    value={newExpense.category}
-                    onChange={(e) =>
-                      setNewExpense({ ...newExpense, category: e.target.value })
-                    }
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="amount" className="text-right">
-                    المبلغ
-                  </Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={newExpense.amount}
-                    onChange={(e) =>
-                      setNewExpense({ ...newExpense, amount: e.target.value })
-                    }
-                    className="col-span-3"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">إلغاء</Button>
-                </DialogClose>
-                <Button onClick={handleAddExpense}>حفظ</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button asChild variant="outline">
-            <Link href="/management">
-              <ArrowRight className="h-4 w-4 ml-2" />
-              العودة
-            </Link>
-          </Button>
-        </div>
+        <Button asChild variant="outline">
+          <Link href="/management">
+            <ArrowRight className="h-4 w-4 ml-2" />
+            العودة
+          </Link>
+        </Button>
       </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>إضافة مصروف جديد</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="item">البند</Label>
+              <Input
+                id="item"
+                value={newExpense.item}
+                onChange={(e) =>
+                  setNewExpense({ ...newExpense, item: e.target.value })
+                }
+                placeholder="مثال: شراء بذور"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">الفئة</Label>
+              <Input
+                id="category"
+                value={newExpense.category}
+                onChange={(e) =>
+                  setNewExpense({ ...newExpense, category: e.target.value })
+                }
+                placeholder="مثال: مستلزمات زراعية"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount">المبلغ</Label>
+              <Input
+                id="amount"
+                type="number"
+                value={newExpense.amount}
+                onChange={(e) =>
+                  setNewExpense({ ...newExpense, amount: e.target.value })
+                }
+                placeholder="بالدينار الكويتي"
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <Button onClick={handleAddExpense} className="mt-4">
+            <Plus className="h-4 w-4 ml-2" />
+            إضافة المصروف
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="bg-card p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4">قائمة المصاريف</h2>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>التاريخ</TableHead>
               <TableHead>البند</TableHead>
               <TableHead>الفئة</TableHead>
-              <TableHead className="text-left">المبلغ</TableHead>
+              <TableHead>المبلغ</TableHead>
+              <TableHead className="text-left">حذف</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -189,8 +181,17 @@ export default function ExpensesPage() {
                 <TableCell>
                   <Badge variant="secondary">{expense.category}</Badge>
                 </TableCell>
-                <TableCell className="text-left font-semibold text-destructive">
+                <TableCell className="font-semibold text-destructive">
                   {expense.amount}
+                </TableCell>
+                <TableCell className="text-left">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteExpense(expense.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
