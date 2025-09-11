@@ -20,7 +20,7 @@ export default function ManagementPage() {
         {managementItems.map((item) => (
           <div
             key={item.title}
-            className="bg-card p-6 rounded-xl shadow-md flex flex-col items-center justify-center space-y-3 hover:bg-secondary transition-all cursor-pointer"
+            className="bg-card p-6 rounded-xl shadow-md flex flex-col items-center justify-center space-y-3 transition-all cursor-pointer hover:shadow-xl hover:scale-105 hover:-translate-y-2 duration-300"
           >
             <item.icon className={`h-10 w-10 ${item.color}`} />
             <h2 className="text-lg font-semibold text-card-foreground">
