@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Tajawal } from "next/font/google";
 import "./globals.css";
 import { Home, ListChecks, Tractor, Settings } from "lucide-react";
 import Link from "next/link";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const tajawal = Tajawal({
+  subsets: ["arabic"],
+  weight: ["400", "500", "700"],
+});
 
 export const metadata: Metadata = {
   title: "مزارع كويتي",
@@ -26,7 +29,7 @@ export default function RootLayout({
 
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background`}>
+      <body className={`${tajawal.className} bg-background`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
