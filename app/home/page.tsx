@@ -179,7 +179,6 @@ function HomeView({
       return;
     }
     setIsSavingIdea(true);
-    let fileUrl = '';
     
     const articleData: any = {
         title: ideaTitle,
@@ -197,14 +196,13 @@ function HomeView({
           `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
         );
         const uploadResult = await uploadBytes(storageRef, ideaFile);
-        fileUrl = await getDownloadURL(uploadResult.ref);
+        const fileUrl = await getDownloadURL(uploadResult.ref);
         articleData.imageUrl = fileUrl;
       }
 
       await addDoc(collection(db, 'articles'), articleData);
 
       setIsIdeaDialogOpen(false);
-      resetIdeaForm();
 
       toast({
         title: 'تم النشر بنجاح!',
@@ -445,7 +443,13 @@ function HomeView({
       </Dialog>
       
       {/* Share Idea Dialog (User) */}
-      <Dialog open={isIdeaDialogOpen} onOpenChange={(isOpen) => { setIsIdeaDialogOpen(isOpen); if (!isOpen) resetIdeaForm(); }}>
+      <Dialog open={isIdeaDialogOpen} onOpenChange={(isOpen) => { 
+          setIsIdeaDialogOpen(isOpen); 
+          if (!isOpen) {
+            // Delay reset to allow state to be used in saving
+            setTimeout(resetIdeaForm, 500);
+          }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>شارك بموضوع جديد</DialogTitle>
