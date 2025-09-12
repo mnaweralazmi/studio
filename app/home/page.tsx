@@ -477,7 +477,7 @@ function HomeView({
                 <Label>إرفاق ملف (صورة أو فيديو)</Label>
                 {ideaFilePreview ? (
                 <div className="relative group">
-                    {ideaFile?.type.startsWith('image') ? (
+                    {ideaFile?.type.startsWith('image/') ? (
                     <Image src={ideaFilePreview} alt="Preview" width={400} height={200} className="rounded-md object-cover w-full h-40" />
                     ) : (
                     <video src={ideaFilePreview} controls className="rounded-md w-full h-40" />
