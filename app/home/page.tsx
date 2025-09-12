@@ -180,42 +180,58 @@ function HomeView({
       });
       return;
     }
+    
+    if (!user || !user.uid) {
+         toast({
+            title: 'خطأ',
+            description: 'يجب أن تكون مسجلاً للدخول لنشر موضوع.',
+            variant: 'destructive',
+        });
+        return;
+    }
+
     setIsSavingIdea(true);
 
     try {
-      const articleData: any = {
-        title: ideaTitle,
-        description: ideaDescription || '',
-        imageHint: 'user generated',
-        createdAt: serverTimestamp(),
-        authorId: user.uid,
-        authorName: user.displayName || user.email,
-      };
-
+      let imageUrl;
       if (ideaFile) {
         const storageRef = ref(
           storage,
           `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
         );
         const uploadResult = await uploadBytes(storageRef, ideaFile);
-        articleData.imageUrl = await getDownloadURL(uploadResult.ref);
+        imageUrl = await getDownloadURL(uploadResult.ref);
+      }
+
+      const articleData: any = {
+        title: ideaTitle,
+        description: ideaDescription || '',
+        createdAt: serverTimestamp(),
+        authorId: user.uid,
+        authorName: user.displayName || user.email,
+        imageHint: 'user generated',
+      };
+      
+      if (imageUrl) {
+        articleData.imageUrl = imageUrl;
       }
 
       await addDoc(collection(db, 'articles'), articleData);
-
-      setIsIdeaDialogOpen(false);
-      resetIdeaForm();
 
       toast({
         title: 'تم النشر بنجاح!',
         description: 'شكرًا لمشاركتك. لقد تم نشر موضوعك في الصفحة الرئيسية.',
         className: 'bg-green-600 text-white',
       });
-    } catch (e) {
+      
+      setIsIdeaDialogOpen(false);
+      resetIdeaForm();
+
+    } catch (e: any) {
       console.error('Error saving article:', e);
       toast({
-        title: 'حدث خطأ',
-        description: 'لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.',
+        title: 'حدث خطأ أثناء النشر',
+        description: e.message || 'لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.',
         variant: 'destructive',
       });
     } finally {
