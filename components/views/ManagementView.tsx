@@ -76,13 +76,8 @@ import { cn } from '@/lib/utils';
 // Helper to convert Firestore Timestamp to a readable string
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
-  if (date instanceof Timestamp) {
-    return date.toDate().toLocaleDateString('ar-KW');
-  }
-  if (typeof date === 'string') {
-    return new Date(date).toLocaleDateString('ar-KW');
-  }
-  return new Date(date).toLocaleDateString('ar-KW');
+  const d = date instanceof Timestamp ? date.toDate() : new Date(date);
+  return d.toLocaleDateString('ar-KW');
 };
 
 // Generic Types
@@ -196,7 +191,7 @@ function ExpensesView({ user, collectionName, title }) {
     ? collection(db, 'users', user.uid, collectionName)
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
   );
   const expenses =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Expense)) ||
@@ -332,7 +327,7 @@ function ExpensesView({ user, collectionName, title }) {
 function FacilitiesView({ user }) {
   const collectionRef = user ? collection(db, 'users', user.uid, 'facilities') : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('name', 'asc')) : null
   );
   const facilities =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Facility)) ||
@@ -455,7 +450,7 @@ function AgriSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'agriSales')
     : null;
   const [snapshot, loading] = useCollection(
-    salesCollection ? query(salesCollection, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
+    salesCollection ? query(salesCollection, where('archived', '==', false), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AgriSale)) ||
@@ -640,7 +635,7 @@ function DebtsView({ user }) {
     ? collection(db, 'users', user.uid, 'debts')
     : null;
   const [snapshot, loading] = useCollection(
-    debtsCollection ? query(debtsCollection, where('archived', '!=', true), orderBy('archived'), orderBy('dueDate', 'desc')) : null
+    debtsCollection ? query(debtsCollection, where('archived', '==', false), orderBy('dueDate', 'desc')) : null
   );
   const debts =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Debt)) || [];
@@ -871,7 +866,7 @@ function WorkersView({ user }) {
     : null;
 
   const [snapshot, loading] = useCollection(
-    workersCollection ? query(workersCollection, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
+    workersCollection ? query(workersCollection, where('archived', '==', false), orderBy('name', 'asc')) : null
   );
   const workers =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Worker)) ||
@@ -1162,7 +1157,7 @@ function EggSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'poultryEggSales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as EggSale)) ||
@@ -1286,7 +1281,7 @@ function PoultrySalesView({ user }) {
     ? collection(db, 'users', user.uid, 'poultrySales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PoultrySale)) ||
@@ -1435,7 +1430,7 @@ function FlocksView({ user }) {
     ? collection(db, 'users', user.uid, 'poultryFlocks')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('name', 'asc')) : null
   );
   const flocks =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Flock)) || [];
@@ -1586,7 +1581,7 @@ function LivestockSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'livestockSales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map(
@@ -1736,7 +1731,7 @@ function HerdsView({ user }) {
     ? collection(db, 'users', user.uid, 'livestockHerds')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('archived'), orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('name', 'asc')) : null
   );
   const herds =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Herd)) || [];
