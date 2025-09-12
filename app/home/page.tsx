@@ -172,9 +172,9 @@ function HomeView({
   const handleSaveIdea = async () => {
     if (!ideaTitle.trim()) {
       toast({
-        title: "خطأ",
-        description: "الرجاء كتابة عنوان للموضوع قبل الإرسال.",
-        variant: "destructive",
+        title: 'خطأ',
+        description: 'الرجاء كتابة عنوان للموضوع قبل الإرسال.',
+        variant: 'destructive',
       });
       return;
     }
@@ -182,37 +182,40 @@ function HomeView({
     let fileUrl = '';
 
     try {
-       // Upload file if it exists
+      // Upload file if it exists
       if (ideaFile) {
-        const storageRef = ref(storage, `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`);
+        const storageRef = ref(
+          storage,
+          `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
+        );
         const uploadResult = await uploadBytes(storageRef, ideaFile);
         fileUrl = await getDownloadURL(uploadResult.ref);
       }
-      
+
       await addDoc(collection(db, 'articles'), {
         title: ideaTitle,
-        description: ideaDescription,
+        description: ideaDescription || '',
         imageUrl: fileUrl,
         imageHint: 'user generated',
         createdAt: serverTimestamp(),
         authorId: user.uid,
         authorName: user.displayName || user.email,
       });
-      
+
       setIsIdeaDialogOpen(false);
       resetIdeaForm();
-      
+
       toast({
-        title: "تم النشر بنجاح!",
-        description: "شكرًا لمشاركتك. لقد تم نشر موضوعك في الصفحة الرئيسية.",
-        className: "bg-green-600 text-white",
+        title: 'تم النشر بنجاح!',
+        description: 'شكرًا لمشاركتك. لقد تم نشر موضوعك في الصفحة الرئيسية.',
+        className: 'bg-green-600 text-white',
       });
     } catch (e) {
       console.error('Error saving article:', e);
-       toast({
-        title: "حدث خطأ",
-        description: "لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.",
-        variant: "destructive",
+      toast({
+        title: 'حدث خطأ',
+        description: 'لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.',
+        variant: 'destructive',
       });
     } finally {
       setIsSavingIdea(false);
