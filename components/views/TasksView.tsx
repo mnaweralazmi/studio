@@ -3,13 +3,11 @@
 import {
   CalendarIcon,
   Plus,
-  ListTodo,
-  History,
   Loader2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, doc, updateDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -25,181 +23,122 @@ import {
 import { TaskList, type Task } from '@/components/task-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { format } from 'date-fns';
+import { isSameDay, format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 
-function CalendarView({ tasks }: { tasks: Task[] }) {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  
-  const taskDates = tasks
-    .map(task => {
-        if (!task.date) return null;
-        if (task.date instanceof Timestamp) return task.date.toDate();
-        return new Date(task.date);
-    })
-    .filter((d): d is Date => d !== null);
-
-  const modifiers = {
-    hasTask: taskDates,
-  };
-
-  const modifiersClassNames = {
-    hasTask: 'has-task',
-  };
-  
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">التقويم</h1>
-      <Card>
-        <CardContent className="p-0 flex justify-center">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-            className="inline-block"
-            dir="rtl"
-            locale={ar}
-            modifiers={modifiers}
-            modifiersClassNames={modifiersClassNames}
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function AddTaskView({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void; isAdding: boolean; }) {
+function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void; isAdding: boolean; }) {
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState<Date | undefined>();
-  const [reminder, setReminder] = useState('');
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [reminder, setReminder] = useState('12:00');
+  const [open, setOpen] = useState(false);
 
   const handleAddTask = () => {
     if (!title || !date || isAdding) return;
     onAddTask({ title, date, reminder });
     setTitle('');
-    setDate(undefined);
-    setReminder('');
+    setDate(new Date());
+    setReminder('12:00');
+    setOpen(false);
   };
   
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">إضافة مهمة جديدة</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>تفاصيل المهمة</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">عنوان المهمة</Label>
-            <Input id="task-title" placeholder="مثال: ري قسم البطاطس" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-              <Label>تاريخ المهمة</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={'outline'}
-                    className={cn(
-                      'w-full justify-start text-right font-normal',
-                      !date && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="ml-2 h-4 w-4" />
-                    {date ? (
-                      format(date, 'PPP', { locale: ar })
-                    ) : (
-                      <span>اختر تاريخًا</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    initialFocus
-                    dir="rtl"
-                    locale={ar}
-                  />
-                </PopoverContent>
-              </Popover>
+    <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+            <Button className="bg-green-600 hover:bg-green-700 text-white">
+                <Plus className="h-4 w-4 ml-2" />
+                إضافة مهمة
+            </Button>
+        </DialogTrigger>
+        <DialogContent>
+             <DialogHeader>
+                <DialogTitle>إضافة مهمة جديدة</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="task-title">عنوان المهمة</Label>
+                    <Input id="task-title" placeholder="مثال: ري قسم البطاطس" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="task-date">تاريخ المهمة</Label>
+                    <Input type="date" id="task-date" value={date ? format(date, 'yyyy-MM-dd') : ''} onChange={(e) => setDate(e.target.value ? new Date(e.target.value) : undefined)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="task-time">وقت التذكير</Label>
+                    <Input type="time" id="task-time" value={reminder} onChange={(e) => setReminder(e.target.value)} />
+                </div>
             </div>
-           <div className="space-y-2">
-              <Label htmlFor="task-reminder">تذكير قبل المهمة</Label>
-              <Select value={reminder} onValueChange={setReminder}>
-                <SelectTrigger id="task-reminder">
-                  <SelectValue placeholder="اختر وقت التذكير" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="قبل يوم">قبل يوم</SelectItem>
-                  <SelectItem value="قبل يومين">قبل يومين</SelectItem>
-                  <SelectItem value="قبل 3 أيام">قبل 3 أيام</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          <Button className="w-full" onClick={handleAddTask} disabled={isAdding}>
-            {isAdding ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
-            {isAdding ? 'جاري الإضافة...' : 'إضافة المهمة'}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+             <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline">إلغاء</Button>
+                </DialogClose>
+                <Button onClick={handleAddTask} disabled={isAdding}>
+                    {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    <span className="mr-2">{isAdding ? 'جاري الإضافة...' : 'إضافة'}</span>
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
   );
-}
-
-function TasksListContent({ tasks, onToggleTask, loading, title, description }: { tasks: Task[], onToggleTask?: (id: string) => void, loading: boolean, title: string, description: string }) {
-  return (
-     <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <TaskList tasks={tasks} onToggleTask={onToggleTask} />
-          )}
-        </CardContent>
-      </Card>
-  )
 }
 
 
 export default function TasksView() {
-  const [user] = useAuthState(auth);
-  const [activeTab, setActiveTab] = useState('upcoming');
+  const [user, loadingUser] = useAuthState(auth);
   const [isAdding, setIsAdding] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const tasksCollection = user ? collection(db, 'users', user.uid, 'tasks') : null;
   
-  const [upcomingTasksSnapshot, upcomingLoading] = useCollection(
-    tasksCollection ? query(tasksCollection, where('completed', '==', false), orderBy('date', 'asc')) : null
-  );
-  
-  const [pastTasksSnapshot, pastLoading] = useCollection(
-    tasksCollection ? query(tasksCollection, where('completed', '==', true), orderBy('date', 'desc')) : null
+  const [allTasksSnapshot, loadingTasks] = useCollection(
+    tasksCollection ? query(tasksCollection, orderBy('date', 'asc')) : null
   );
 
-  const upcomingTasks: Task[] = upcomingTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
-  const pastTasks: Task[] = pastTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
+  const allTasks: Task[] = allTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
+
+  const { todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
+    const today = new Date();
+    const todayTasks: Task[] = [];
+    const selectedDayTasks: Task[] = [];
+    const completedTasks: Task[] = [];
+     const taskDates: Date[] = [];
+
+    allTasks.forEach(task => {
+      const taskDate = task.date ? (task.date instanceof Timestamp ? task.date.toDate() : new Date(task.date)) : null;
+
+      if (taskDate) {
+        taskDates.push(taskDate);
+        if (task.completed) {
+          completedTasks.push(task);
+        } else {
+           if (isSameDay(taskDate, today)) {
+             todayTasks.push(task);
+           }
+           if (selectedDate && isSameDay(taskDate, selectedDate)) {
+             selectedDayTasks.push(task);
+           }
+        }
+      } else if (task.completed) {
+         completedTasks.push(task);
+      }
+    });
+
+    return { todayTasks, selectedDayTasks, completedTasks: completedTasks.reverse(), taskDates };
+  }, [allTasks, selectedDate]);
+  
+  const modifiers = { hasTask: taskDates };
+  const modifiersClassNames = { hasTask: 'has-task' };
 
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
     if (!tasksCollection) return;
@@ -210,65 +149,108 @@ export default function TasksView() {
         completed: false,
         createdAt: new Date(),
       });
-      setActiveTab('upcoming');
     } catch (error) {
       console.error("Error adding task: ", error);
-      // Here you could show an error toast to the user
     } finally {
       setIsAdding(false);
     }
   };
   
-  const handleToggleTask = async (taskId: string) => {
+  const handleToggleTask = async (taskId: string, currentStatus: boolean) => {
     if (!user) return;
     const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
     try {
-      await updateDoc(taskRef, { completed: true });
+      await updateDoc(taskRef, { completed: currentStatus });
     } catch (error) {
       console.error("Error updating task: ", error);
     }
   };
+  
+  const handleDeleteTask = async (taskId: string) => {
+    if (!user) return;
+     const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
+     try {
+      await deleteDoc(taskRef);
+    } catch (error) {
+      console.error("Error deleting task: ", error);
+    }
+  }
+  
+  const loading = loadingUser || loadingTasks;
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
-        <p className="mt-1 text-muted-foreground">
-          جدول مهامك اليومية والأسبوعية.
-        </p>
+      <header className="flex justify-between items-center">
+        <div>
+            <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
+            <p className="mt-1 text-muted-foreground">
+                عرض وإدارة المهام المجدولة لهذا اليوم.
+            </p>
+        </div>
+        <AddTaskDialog onAddTask={handleAddTask} isAdding={isAdding} />
       </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="upcoming"><ListTodo className="h-4 w-4 ml-2" />قادمة</TabsTrigger>
-          <TabsTrigger value="past"><History className="h-4 w-4 ml-2" />سابقة</TabsTrigger>
-          <TabsTrigger value="add"><Plus className="h-4 w-4 ml-2" />إضافة</TabsTrigger>
-          <TabsTrigger value="calendar"><CalendarIcon className="h-4 w-4 ml-2" />التقويم</TabsTrigger>
-        </TabsList>
-        <TabsContent value="upcoming" className="mt-6">
-          <TasksListContent 
-            tasks={upcomingTasks} 
-            onToggleTask={handleToggleTask}
-            loading={upcomingLoading}
-            title="قادمة"
-            description="مهامك التي لم يتم إنجازها بعد."
-          />
-        </TabsContent>
-        <TabsContent value="past" className="mt-6">
-          <TasksListContent 
-            tasks={pastTasks} 
-            loading={pastLoading}
-            title="سابقة"
-            description="مهامك التي تم إنجازها."
-          />
-        </TabsContent>
-        <TabsContent value="add" className="mt-6">
-          <AddTaskView onAddTask={handleAddTask} isAdding={isAdding} />
-        </TabsContent>
-        <TabsContent value="calendar" className="mt-6">
-          <CalendarView tasks={[...upcomingTasks, ...pastTasks]} />
-        </TabsContent>
-      </Tabs>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      ) : (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div className="lg:col-span-2 space-y-6">
+            {/* Calendar */}
+             <Card>
+                <CardContent className="p-0 flex justify-center">
+                <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="inline-block"
+                    locale={ar}
+                    modifiers={modifiers}
+                    modifiersClassNames={modifiersClassNames}
+                />
+                </CardContent>
+            </Card>
+
+             {/* Completed Tasks */}
+            <Card>
+                <CardHeader>
+                <CardTitle>سجل المهام المنجزة ({completedTasks.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                </CardContent>
+            </Card>
+        </div>
+        
+        <div className="lg:col-span-1 space-y-6">
+             {/* Upcoming Tasks for Today */}
+            <Card>
+                <CardHeader>
+                <CardTitle>المهام القادمة لهذا اليوم ({todayTasks.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                </CardContent>
+            </Card>
+            
+            {/* Tasks for Selected Day */}
+            <Card>
+                <CardHeader>
+                <CardTitle>مهام لليوم المحدد ({selectedDayTasks.length})</CardTitle>
+                 <CardDescription>
+                    {selectedDate ? format(selectedDate, 'eeee, d MMMM', {locale: ar}) : ''}
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={selectedDayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                </CardContent>
+            </Card>
+        </div>
+
+      </div>
+      )}
     </div>
   );
 }

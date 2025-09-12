@@ -1,10 +1,12 @@
 'use client';
 
-import { Circle, CircleCheck, Bell, CalendarDays } from 'lucide-react';
-import { format } from 'date-fns';
+import { Circle, CircleCheck, Bell, CalendarDays, Trash2 } from 'lucide-react';
+import { format, isToday } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Timestamp } from 'firebase/firestore';
-
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { useAdmin } from '@/lib/hooks/useAdmin';
 
 export type Task = {
   id: string;
@@ -18,38 +20,55 @@ export type Task = {
 // Helper to convert Firestore Timestamp or Date string to a readable format
 const formatDate = (date: any) => {
   if (!date) return null;
-  if (date instanceof Timestamp) {
-    return format(date.toDate(), 'd MMMM', { locale: ar });
-  }
-  // Handle ISO strings or Date objects
-  return format(new Date(date), 'd MMMM', { locale: ar });
+  const d = date instanceof Timestamp ? date.toDate() : new Date(date);
+  return format(d, 'd MMMM, yyyy', { locale: ar });
 };
 
+const formatTime = (date: any) => {
+    if (!date) return null;
+    const d = date instanceof Timestamp ? date.toDate() : new Date(date);
+    return format(d, 'p', { locale: ar });
+}
 
-export function TaskList({ tasks, onToggleTask }: { tasks: Task[], onToggleTask?: (id: string) => void }) {
+export function TaskList({
+  tasks,
+  onToggleTask,
+  onDeleteTask,
+  showDate = false
+}: {
+  tasks: Task[];
+  onToggleTask?: (id: string, completed: boolean) => void;
+  onDeleteTask?: (id: string) => void;
+  showDate?: boolean;
+}) {
+  const { isAdmin } = useAdmin();
+
   if (tasks.length === 0) {
     return (
-      <p className="text-muted-foreground text-center pt-4">
+      <p className="text-muted-foreground text-center py-8">
         لا توجد مهام لعرضها.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3 pt-4">
+    <div className="space-y-3">
       {tasks.map((task) => {
-        const formattedDate = formatDate(task.date);
+        const taskDate = task.date ? (task.date instanceof Timestamp ? task.date.toDate() : new Date(task.date)) : null;
+        const formattedDate = taskDate ? formatDate(taskDate) : null;
+        const formattedTime = task.reminder ? format(new Date().setHours(parseInt(task.reminder.split(':')[0]), parseInt(task.reminder.split(':')[1])), 'h:mm a') : null;
+
         return (
           <div
             key={task.id}
-            onClick={() => onToggleTask && !task.completed && onToggleTask(task.id)}
-            className={`flex items-start p-3 rounded-lg transition-all ${
+            onClick={() => onToggleTask && onToggleTask(task.id, !task.completed)}
+            className={`flex items-start p-3 rounded-lg transition-all group ${
               task.completed
-                ? 'bg-muted/50 hover:bg-muted'
-                : 'bg-card hover:bg-secondary/50 cursor-pointer'
+                ? 'bg-muted/30 hover:bg-muted/50'
+                : 'bg-card/70 hover:bg-secondary/50 cursor-pointer'
             }`}
           >
-            <div className="p-1 border rounded-full ml-3 mt-1">
+            <div className="pl-3 mt-1">
               {task.completed ? (
                 <CircleCheck className="h-5 w-5 text-green-500" />
               ) : (
@@ -58,7 +77,7 @@ export function TaskList({ tasks, onToggleTask }: { tasks: Task[], onToggleTask?
             </div>
             <div className="flex-1">
               <p
-                className={`font-medium text-sm ${
+                className={`font-medium ${
                   task.completed
                     ? 'text-muted-foreground line-through'
                     : 'text-card-foreground'
@@ -66,23 +85,28 @@ export function TaskList({ tasks, onToggleTask }: { tasks: Task[], onToggleTask?
               >
                 {task.title}
               </p>
-              <div className="flex items-center gap-4 mt-1">
-                 {formattedDate && (
-                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                 {showDate && formattedDate && (
+                   <div className="flex items-center gap-1">
                      <CalendarDays className="h-3 w-3" />
                      <span>
                         {formattedDate}
                      </span>
                    </div>
                   )}
-                {task.reminder && !task.completed && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                {task.reminder && (
+                  <div className="flex items-center gap-1">
                     <Bell className="h-3 w-3" />
-                    <span>{task.reminder}</span>
+                    <span>{formattedTime}</span>
                   </div>
                 )}
               </div>
             </div>
+             {isAdmin && onDeleteTask && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+            )}
           </div>
         );
       })}

@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-export default function DashboardPage() {
+export default function TasksPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
 
@@ -29,7 +29,7 @@ export default function DashboardPage() {
 
   return (
     <div className="pb-24">
-      <main className="px-4 pt-4">
+      <main className="px-4 pt-4 container mx-auto">
         <TasksView />
       </main>
       <AppFooter activeView="tasks" />
