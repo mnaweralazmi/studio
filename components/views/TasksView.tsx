@@ -246,7 +246,7 @@ export default function TasksView() {
                             </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <TaskList tasks={selectedDayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                                <TaskList tasks={selectedDayTasks} onToggleTask={handleToggleTask} onDeleteTask={onDeleteTask} />
                             </CardContent>
                         </Card>
                     </div>
@@ -259,7 +259,7 @@ export default function TasksView() {
                     <CardTitle>المهام القادمة لهذا اليوم</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={onDeleteTask} />
                 </CardContent>
                 </Card>
             </TabsContent>
@@ -270,7 +270,7 @@ export default function TasksView() {
                     <CardTitle>كل المهام القادمة</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <TaskList tasks={upcomingTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                    <TaskList tasks={upcomingTasks} onToggleTask={handleToggleTask} onDeleteTask={onDeleteTask} showDate={true} />
                 </CardContent>
                 </Card>
             </TabsContent>
@@ -281,7 +281,7 @@ export default function TasksView() {
                     <CardTitle>سجل المهام المنجزة</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={onDeleteTask} showDate={true} />
                 </CardContent>
                 </Card>
             </TabsContent>
