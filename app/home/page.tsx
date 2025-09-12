@@ -151,21 +151,64 @@ function HomeView({
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setIdeaFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setIdeaFilePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Check file size for images
+    if (file.type.startsWith('image/')) {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast({
+                title: 'خطأ في حجم الصورة',
+                description: 'حجم الصورة كبير جدًا. الرجاء اختيار صورة أصغر من 5 ميجابايت.',
+                variant: 'destructive',
+            });
+            return;
+        }
     }
-  };
+
+    // Check video duration
+    if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = function() {
+            window.URL.revokeObjectURL(video.src);
+            if (video.duration > 180) { // 3 minutes limit
+                toast({
+                    title: 'خطأ في مدة الفيديو',
+                    description: 'مدة الفيديو طويلة جدًا. الرجاء اختيار فيديو أقصر من 3 دقائق.',
+                    variant: 'destructive',
+                });
+                // Reset the input
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            } else {
+                 setFile(file);
+            }
+        }
+        video.src = URL.createObjectURL(file);
+    } else {
+         setFile(file);
+    }
+};
+
+const setFile = (file: File) => {
+    setIdeaFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        setIdeaFilePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+}
+
 
   const resetIdeaForm = () => {
     setIdeaTitle('');
     setIdeaDescription('');
     setIdeaFile(null);
     setIdeaFilePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
   
  const handleSaveIdea = async () => {
@@ -190,8 +233,6 @@ function HomeView({
     setIsSavingIdea(true);
 
     try {
-      let imageUrl;
-      
       const articleData: any = {
         title: ideaTitle,
         description: ideaDescription || '',
@@ -207,7 +248,7 @@ function HomeView({
           `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
         );
         const uploadResult = await uploadBytes(storageRef, ideaFile);
-        imageUrl = await getDownloadURL(uploadResult.ref);
+        const imageUrl = await getDownloadURL(uploadResult.ref);
         articleData.imageUrl = imageUrl;
       }
 
@@ -496,23 +537,17 @@ function HomeView({
              <div className="space-y-2">
                 <Label>إرفاق صورة أو فيديو (اختياري)</Label>
                 {ideaFilePreview ? (
-                <div className="relative group">
+                <div className="relative group w-full h-40 bg-secondary rounded-md overflow-hidden">
                     {ideaFile?.type.startsWith('image/') ? (
-                    <Image src={ideaFilePreview} alt="Preview" width={400} height={200} className="rounded-md object-cover w-full h-40" />
+                      <Image src={ideaFilePreview} alt="Preview" layout="fill" className="object-cover" />
                     ) : (
-                    <video src={ideaFilePreview} controls className="rounded-md w-full h-40" />
+                      <video src={ideaFilePreview} controls className="w-full h-full object-cover" />
                     )}
                     <Button
                         variant="destructive"
                         size="icon"
-                        className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => {
-                            setIdeaFile(null);
-                            setIdeaFilePreview(null);
-                             if(fileInputRef.current) {
-                                fileInputRef.current.value = '';
-                            }
-                        }}
+                        className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        onClick={resetIdeaForm}
                     >
                     <X className="h-4 w-4" />
                     </Button>
@@ -520,7 +555,7 @@ function HomeView({
                 ) : (
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
                     <FileImage className="h-4 w-4 ml-2" />
-                    اختر صورة أو فيديو
+                    اختر صورة (بحد أقصى 5MB) أو فيديو (بحد أقصى 3 دقائق)
                 </Button>
                 )}
                 <Input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
