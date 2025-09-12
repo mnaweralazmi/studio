@@ -1,13 +1,12 @@
 'use client';
 
 import {
-  CalendarIcon,
   Plus,
   Loader2,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -46,7 +45,7 @@ function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, '
 
   const handleAddTask = () => {
     if (!title || !date || isAdding) return;
-    onAddTask({ title, date, reminder });
+    onAddTask({ title, date: date.toISOString(), reminder });
     setTitle('');
     setDate(new Date());
     setReminder('12:00');
@@ -118,7 +117,10 @@ export default function TasksView() {
       const taskDate = task.date ? (task.date instanceof Timestamp ? task.date.toDate() : new Date(task.date)) : null;
 
       if (taskDate) {
-        taskDates.push(taskDate);
+        if (!task.completed) {
+            taskDates.push(taskDate);
+        }
+
         if (task.completed) {
           completedTasks.push(task);
         } else {
@@ -197,8 +199,30 @@ export default function TasksView() {
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        <div className="lg:col-span-1 space-y-6">
+             {/* Today's Tasks */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>المهام القادمة لهذا اليوم ({todayTasks.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                </CardContent>
+            </Card>
+
+             {/* Completed Tasks */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>سجل المهام المنجزة ({completedTasks.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                </CardContent>
+            </Card>
+        </div>
+        
         <div className="lg:col-span-2 space-y-6">
-            {/* Calendar */}
+             {/* Calendar */}
              <Card>
                 <CardContent className="p-0 flex justify-center">
                 <Calendar
@@ -213,34 +237,12 @@ export default function TasksView() {
                 </CardContent>
             </Card>
 
-             {/* Completed Tasks */}
-            <Card>
-                <CardHeader>
-                <CardTitle>سجل المهام المنجزة ({completedTasks.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
-                </CardContent>
-            </Card>
-        </div>
-        
-        <div className="lg:col-span-1 space-y-6">
-             {/* Upcoming Tasks for Today */}
-            <Card>
-                <CardHeader>
-                <CardTitle>المهام القادمة لهذا اليوم ({todayTasks.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
-                </CardContent>
-            </Card>
-            
             {/* Tasks for Selected Day */}
             <Card>
                 <CardHeader>
-                <CardTitle>مهام لليوم المحدد ({selectedDayTasks.length})</CardTitle>
+                 <CardTitle>مهام لليوم المحدد ({selectedDayTasks.length})</CardTitle>
                  <CardDescription>
-                    {selectedDate ? format(selectedDate, 'eeee, d MMMM', {locale: ar}) : ''}
+                    {selectedDate ? format(selectedDate, 'eeee, d MMMM', {locale: ar}) : 'الرجاء تحديد يوم لعرض مهامه.'}
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
