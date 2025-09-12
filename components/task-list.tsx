@@ -65,57 +65,59 @@ export function TaskList({
         return (
           <div
             key={task.id}
-            className={`flex items-center p-3 rounded-lg transition-all group ${
+            className={`flex items-start p-3 rounded-lg transition-all group ${
               task.completed
                 ? 'bg-muted/30'
                 : 'bg-card/70 hover:bg-secondary/50'
             }`}
           >
-             {/* Left side: Checkbox */}
-            <div
-              className="pr-3 cursor-pointer"
-              onClick={() => onToggleTask && onToggleTask(task.id, !task.completed)}
-            >
-                {task.completed ? (
-                  <CircleCheck className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground" />
-                )}
-            </div>
-
-            {/* Middle: Title, Description, Delete Button */}
-            <div className="flex-1">
-                 <div className="flex items-center">
-                    <p
-                    className={`font-medium ${
-                        task.completed
-                        ? 'text-muted-foreground line-through'
-                        : 'text-card-foreground'
-                    }`}
+             <div className="flex-1 flex items-start gap-4">
+                {/* Right side: Checkbox */}
+                <div
+                    className="pt-1 cursor-pointer"
+                    onClick={() => onToggleTask && onToggleTask(task.id, !task.completed)}
                     >
-                    {task.title}
-                    </p>
-                    {isAdmin && onDeleteTask && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 mr-auto opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                    {task.completed ? (
+                        <CircleCheck className="h-5 w-5 text-green-500" />
+                    ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
                     )}
-                 </div>
-                 {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
+                </div>
+
+                {/* Middle: Title, Description */}
+                <div className="flex-1">
+                    <div className="flex items-center">
+                        <p
+                            className={`font-medium ${
+                            task.completed
+                                ? 'text-muted-foreground line-through'
+                                : 'text-card-foreground'
+                            }`}
+                        >
+                            {task.title}
+                        </p>
+                        {isAdmin && onDeleteTask && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 mr-auto opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        )}
+                    </div>
+                    {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
+                </div>
             </div>
 
-            {/* Right side: Date and Time */}
-             <div className="flex flex-col items-end text-xs text-muted-foreground gap-1 pl-3">
+            {/* Left side: Date and Time */}
+             <div className="flex flex-col items-end text-xs text-muted-foreground gap-1 pl-1 pt-1">
                 {formattedTime && (
                     <div className="flex items-center gap-1">
-                      <span>{formattedTime}</span>
                       <Bell className="h-3 w-3" />
+                      <span>{formattedTime}</span>
                     </div>
                   )}
                {(showDate || task.date) && formattedDate && (
                  <div className="flex items-center gap-1">
-                   <span>{formattedDate}</span>
                    <CalendarDays className="h-3 w-3" />
+                   <span>{formattedDate}</span>
                  </div>
                 )}
             </div>

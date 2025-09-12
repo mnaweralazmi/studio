@@ -204,33 +204,10 @@ export default function TasksView() {
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Left Column */}
-        <div className="lg:col-span-1 space-y-6">
-             {/* Today's Tasks */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>المهام القادمة لهذا اليوم ({todayTasks.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
-                </CardContent>
-            </Card>
-
-             {/* Completed Tasks */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>سجل المهام المنجزة ({completedTasks.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
-                </CardContent>
-            </Card>
-        </div>
-        
-        {/* Right Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
              {/* Calendar */}
              <Card>
                 <CardContent className="p-0 flex justify-center">
@@ -256,6 +233,29 @@ export default function TasksView() {
                 </CardHeader>
                 <CardContent>
                     <TaskList tasks={selectedDayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                </CardContent>
+            </Card>
+        </div>
+        
+        {/* Right Column */}
+        <div className="space-y-6">
+             {/* Today's Tasks */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>المهام القادمة لهذا اليوم ({todayTasks.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                </CardContent>
+            </Card>
+
+             {/* Completed Tasks */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>سجل المهام المنجزة ({completedTasks.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
                 </CardContent>
             </Card>
         </div>
