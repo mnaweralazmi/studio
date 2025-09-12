@@ -153,7 +153,12 @@ function HomeView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size for images
+    const resetInput = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }
+
     if (file.type.startsWith('image/')) {
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
             toast({
@@ -161,12 +166,11 @@ function HomeView({
                 description: 'حجم الصورة كبير جدًا. الرجاء اختيار صورة أصغر من 5 ميجابايت.',
                 variant: 'destructive',
             });
+            resetInput();
             return;
         }
-    }
-
-    // Check video duration
-    if (file.type.startsWith('video/')) {
+        setFile(file);
+    } else if (file.type.startsWith('video/')) {
         const video = document.createElement('video');
         video.preload = 'metadata';
         video.onloadedmetadata = function() {
@@ -177,17 +181,14 @@ function HomeView({
                     description: 'مدة الفيديو طويلة جدًا. الرجاء اختيار فيديو أقصر من 3 دقائق.',
                     variant: 'destructive',
                 });
-                // Reset the input
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
+                resetInput();
             } else {
                  setFile(file);
             }
         }
         video.src = URL.createObjectURL(file);
     } else {
-         setFile(file);
+        setFile(file);
     }
 };
 
@@ -537,7 +538,7 @@ const setFile = (file: File) => {
              <div className="space-y-2">
                 <Label>إرفاق صورة أو فيديو (اختياري)</Label>
                 {ideaFilePreview ? (
-                <div className="relative group w-full h-40 bg-secondary rounded-md overflow-hidden">
+                <div className="relative group w-full aspect-video bg-secondary rounded-md overflow-hidden">
                     {ideaFile?.type.startsWith('image/') ? (
                       <Image src={ideaFilePreview} alt="Preview" layout="fill" className="object-cover" />
                     ) : (
