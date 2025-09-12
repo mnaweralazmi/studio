@@ -3,6 +3,7 @@
 import {
   Plus,
   Loader2,
+  CalendarIcon
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -128,7 +129,9 @@ export default function TasksView() {
         completed.push(task);
       } else if (taskDate) {
         dates.push(taskDate);
-        upcoming.push(task);
+        if (!isToday(taskDate) && taskDate > new Date()) {
+          upcoming.push(task);
+        }
         if (isToday(taskDate)) {
           today.push(task);
         }
@@ -138,8 +141,11 @@ export default function TasksView() {
       }
     });
 
+    const allUpcoming = [...today, ...upcoming];
+    allUpcoming.sort((a,b) => new Date(a.date as string).getTime() - new Date(b.date as string).getTime());
+
     return { 
-        upcomingTasks: upcoming, 
+        upcomingTasks: allUpcoming, 
         todayTasks: today, 
         selectedDayTasks: selected, 
         completedTasks: completed.reverse(), 
@@ -205,80 +211,81 @@ export default function TasksView() {
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Right Column (Tasks) */}
-        <div className="lg:col-span-2 space-y-6">
-            <Tabs defaultValue="today" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="all">الكل ({upcomingTasks.length})</TabsTrigger>
-                <TabsTrigger value="today">مهام اليوم ({todayTasks.length})</TabsTrigger>
-                <TabsTrigger value="completed">المهام المنجزة ({completedTasks.length})</TabsTrigger>
-              </TabsList>
-              <TabsContent value="all" className="mt-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>كل المهام القادمة</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <TaskList tasks={upcomingTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
-                    </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="today" className="mt-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>المهام القادمة لهذا اليوم</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
-                    </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="completed" className="mt-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>سجل المهام المنجزة</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
-                    </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-        </div>
-        
-        {/* Left Column (Calendar) */}
-        <div className="space-y-6">
-             {/* Calendar */}
-             <Card>
-                <CardContent className="p-0 flex justify-center">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="inline-block"
-                    locale={ar}
-                    modifiers={modifiers}
-                    modifiersClassNames={modifiersClassNames}
-                />
-                </CardContent>
-            </Card>
+      <div>
+        <Tabs defaultValue="today" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="calendar" className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />التقويم</TabsTrigger>
+            <TabsTrigger value="today">مهام اليوم ({todayTasks.length})</TabsTrigger>
+            <TabsTrigger value="all">كل المهام ({upcomingTasks.length})</TabsTrigger>
+            <TabsTrigger value="completed">المهام المنجزة ({completedTasks.length})</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="calendar" className="mt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                        <Card>
+                            <CardContent className="p-0 flex justify-center">
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                className="inline-block"
+                                locale={ar}
+                                modifiers={modifiers}
+                                modifiersClassNames={modifiersClassNames}
+                            />
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div>
+                        <Card>
+                            <CardHeader>
+                            <CardTitle>مهام لليوم المحدد ({selectedDayTasks.length})</CardTitle>
+                            <CardDescription>
+                                {selectedDate ? format(selectedDate, 'eeee, d MMMM', {locale: ar}) : 'الرجاء تحديد يوم لعرض مهامه.'}
+                            </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <TaskList tasks={selectedDayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </TabsContent>
 
-            {/* Tasks for Selected Day */}
-            <Card>
+            <TabsContent value="today" className="mt-6">
+                <Card>
                 <CardHeader>
-                 <CardTitle>مهام لليوم المحدد ({selectedDayTasks.length})</CardTitle>
-                 <CardDescription>
-                    {selectedDate ? format(selectedDate, 'eeee, d MMMM', {locale: ar}) : 'الرجاء تحديد يوم لعرض مهامه.'}
-                </CardDescription>
+                    <CardTitle>المهام القادمة لهذا اليوم</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <TaskList tasks={selectedDayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
                 </CardContent>
-            </Card>
-        </div>
+                </Card>
+            </TabsContent>
 
+            <TabsContent value="all" className="mt-6">
+                <Card>
+                <CardHeader>
+                    <CardTitle>كل المهام القادمة</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={upcomingTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="completed" className="mt-6">
+                <Card>
+                <CardHeader>
+                    <CardTitle>سجل المهام المنجزة</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
       </div>
       )}
     </div>
