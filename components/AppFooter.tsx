@@ -47,19 +47,19 @@ export default function AppFooter({ activeView }: { activeView: string }) {
       <Link href={href} className="w-full h-full">
         <div
           className={cn(
-            'flex flex-col items-center justify-center text-muted-foreground hover:text-primary w-full h-full group transition-all duration-300 hover:-translate-y-2',
-            isActive && 'text-primary'
+            'flex flex-col items-center justify-center text-muted-foreground/80 hover:text-primary w-full h-full relative',
           )}
         >
-          <Icon className="h-7 w-7" />
-          <span className="text-xs mt-1 font-medium">{label}</span>
+           {isActive && <div className="absolute top-0 h-1 w-12 rounded-b-full bg-primary" />}
+          <Icon className={cn("h-6 w-6 transition-all", isActive && "text-primary scale-110")} />
+          <span className={cn("text-xs mt-1 font-medium transition-all", isActive && "text-primary")}>{label}</span>
         </div>
       </Link>
     );
   };
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-t-strong z-50">
+    <footer className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-lg border-t border-white/10 shadow-t-strong z-50">
       <nav className="flex justify-around items-center h-20">
         {mainNavItems.map((item) => (
           <NavLink
