@@ -2,9 +2,9 @@
 
 import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Loader2,
   Newspaper,
@@ -14,6 +14,9 @@ import {
   CheckCircle,
   Leaf,
   Lightbulb,
+  FileImage,
+  Video,
+  X,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -30,6 +33,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import {
   Dialog,
@@ -68,6 +72,8 @@ function HomeView({
   const [articlesSnapshot, loading, error] = useCollection(
     query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
   );
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Admin Dialog State
   const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
@@ -82,6 +88,8 @@ function HomeView({
   const [isIdeaDialogOpen, setIsIdeaDialogOpen] = useState(false);
   const [isSavingIdea, setIsSavingIdea] = useState(false);
   const [userIdea, setUserIdea] = useState('');
+  const [ideaFile, setIdeaFile] = useState<File | null>(null);
+  const [ideaFilePreview, setIdeaFilePreview] = useState<string | null>(null);
 
 
   const articles =
@@ -137,6 +145,28 @@ function HomeView({
   };
   
   // --- User Idea Functions ---
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIdeaFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdeaFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetIdeaForm = () => {
+    setUserIdea('');
+    setIdeaFile(null);
+    setIdeaFilePreview(null);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+  
   const handleSaveIdea = async () => {
     if (!userIdea.trim()) {
       toast({
@@ -147,15 +177,30 @@ function HomeView({
       return;
     }
     setIsSavingIdea(true);
+    let fileUrl = '';
+    let fileType = '';
+
     try {
+       // Upload file if it exists
+      if (ideaFile) {
+        fileType = ideaFile.type.startsWith('image') ? 'image' : 'video';
+        const storageRef = ref(storage, `userIdeas/${user.uid}/${Date.now()}_${ideaFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, ideaFile);
+        fileUrl = await getDownloadURL(uploadResult.ref);
+      }
+      
       await addDoc(collection(db, 'userIdeas'), {
         idea: userIdea,
+        fileUrl: fileUrl,
+        fileType: fileType,
         userId: user.uid,
         userName: user.displayName || user.email,
         createdAt: serverTimestamp(),
       });
+      
       setIsIdeaDialogOpen(false);
-      setUserIdea('');
+      resetIdeaForm();
+      
       toast({
         title: "تم الإرسال بنجاح!",
         description: "شكرًا لمشاركتك فكرتك. سيتم مراجعتها من قبل المسؤول.",
@@ -395,12 +440,12 @@ function HomeView({
       </Dialog>
       
       {/* Share Idea Dialog (User) */}
-      <Dialog open={isIdeaDialogOpen} onOpenChange={setIsIdeaDialogOpen}>
+      <Dialog open={isIdeaDialogOpen} onOpenChange={(isOpen) => { setIsIdeaDialogOpen(isOpen); if (!isOpen) resetIdeaForm(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>شارك بفكرتك</DialogTitle>
             <DialogDescription>
-              اكتب فكرتك أو اقتراحك ليتم مراجعته من قبل المسؤول. نقدر مساهمتك!
+              اكتب فكرتك أو اقتراحك وأرفق صورة أو فيديو إن أردت. نقدر مساهمتك!
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -414,6 +459,39 @@ function HomeView({
                 rows={5}
               />
             </div>
+            
+             <div className="space-y-2">
+                <Label>إرفاق ملف (صورة أو فيديو)</Label>
+                {ideaFilePreview ? (
+                <div className="relative group">
+                    {ideaFile?.type.startsWith('image') ? (
+                    <Image src={ideaFilePreview} alt="Preview" width={400} height={200} className="rounded-md object-cover w-full h-40" />
+                    ) : (
+                    <video src={ideaFilePreview} controls className="rounded-md w-full h-40" />
+                    )}
+                    <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                            setIdeaFile(null);
+                            setIdeaFilePreview(null);
+                             if(fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                            }
+                        }}
+                    >
+                    <X className="h-4 w-4" />
+                    </Button>
+                </div>
+                ) : (
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+                    <FileImage className="h-4 w-4 ml-2" />
+                    اختر صورة أو فيديو
+                </Button>
+                )}
+                <Input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
+             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
