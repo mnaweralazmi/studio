@@ -87,7 +87,8 @@ function HomeView({
   // User Idea Dialog State
   const [isIdeaDialogOpen, setIsIdeaDialogOpen] = useState(false);
   const [isSavingIdea, setIsSavingIdea] = useState(false);
-  const [userIdea, setUserIdea] = useState('');
+  const [ideaTitle, setIdeaTitle] = useState('');
+  const [ideaDescription, setIdeaDescription] = useState('');
   const [ideaFile, setIdeaFile] = useState<File | null>(null);
   const [ideaFilePreview, setIdeaFilePreview] = useState<string | null>(null);
 
@@ -159,7 +160,8 @@ function HomeView({
   };
 
   const resetIdeaForm = () => {
-    setUserIdea('');
+    setIdeaTitle('');
+    setIdeaDescription('');
     setIdeaFile(null);
     setIdeaFilePreview(null);
     if(fileInputRef.current) {
@@ -168,49 +170,48 @@ function HomeView({
   };
   
   const handleSaveIdea = async () => {
-    if (!userIdea.trim()) {
+    if (!ideaTitle.trim()) {
       toast({
         title: "خطأ",
-        description: "الرجاء كتابة فكرتك قبل الإرسال.",
+        description: "الرجاء كتابة عنوان للموضوع قبل الإرسال.",
         variant: "destructive",
       });
       return;
     }
     setIsSavingIdea(true);
-    let fileUrl = '';
-    let fileType = '';
+    let imageUrl = '';
 
     try {
        // Upload file if it exists
       if (ideaFile) {
-        fileType = ideaFile.type.startsWith('image') ? 'image' : 'video';
-        const storageRef = ref(storage, `userIdeas/${user.uid}/${Date.now()}_${ideaFile.name}`);
+        const storageRef = ref(storage, `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`);
         const uploadResult = await uploadBytes(storageRef, ideaFile);
-        fileUrl = await getDownloadURL(uploadResult.ref);
+        imageUrl = await getDownloadURL(uploadResult.ref);
       }
       
-      await addDoc(collection(db, 'userIdeas'), {
-        idea: userIdea,
-        fileUrl: fileUrl,
-        fileType: fileType,
-        userId: user.uid,
-        userName: user.displayName || user.email,
+      await addDoc(collection(db, 'articles'), {
+        title: ideaTitle,
+        description: ideaDescription,
+        imageUrl: imageUrl,
+        imageHint: 'user generated',
         createdAt: serverTimestamp(),
+        authorId: user.uid,
+        authorName: user.displayName || user.email,
       });
       
       setIsIdeaDialogOpen(false);
       resetIdeaForm();
       
       toast({
-        title: "تم الإرسال بنجاح!",
-        description: "شكرًا لمشاركتك فكرتك. سيتم مراجعتها من قبل المسؤول.",
+        title: "تم النشر بنجاح!",
+        description: "شكرًا لمشاركتك. لقد تم نشر موضوعك في الصفحة الرئيسية.",
         className: "bg-green-600 text-white",
       });
     } catch (e) {
-      console.error('Error saving idea:', e);
+      console.error('Error saving article:', e);
        toast({
         title: "حدث خطأ",
-        description: "لم نتمكن من حفظ فكرتك. الرجاء المحاولة مرة أخرى.",
+        description: "لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.",
         variant: "destructive",
       });
     } finally {
@@ -443,20 +444,29 @@ function HomeView({
       <Dialog open={isIdeaDialogOpen} onOpenChange={(isOpen) => { setIsIdeaDialogOpen(isOpen); if (!isOpen) resetIdeaForm(); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>شارك بفكرتك</DialogTitle>
+            <DialogTitle>شارك بموضوع جديد</DialogTitle>
             <DialogDescription>
-              اكتب فكرتك أو اقتراحك وأرفق صورة أو فيديو إن أردت. نقدر مساهمتك!
+              اكتب تفاصيل موضوعك وأرفق صورة أو فيديو إن أردت. سيتم نشره في الصفحة الرئيسية.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="idea">فكرتك</Label>
+              <Label htmlFor="idea-title">عنوان الموضوع</Label>
+              <Input
+                id="idea-title"
+                placeholder="مثال: أفضل طريقة لزراعة الطماطم"
+                value={ideaTitle}
+                onChange={(e) => setIdeaTitle(e.target.value)}
+              />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="idea-description">وصف الموضوع</Label>
               <Textarea
-                id="idea"
-                placeholder="اكتب هنا فكرتك عن موضوع جديد، اقتراح لتحسين التطبيق، أو أي شيء آخر..."
-                value={userIdea}
-                onChange={(e) => setUserIdea(e.target.value)}
-                rows={5}
+                id="idea-description"
+                placeholder="اكتب هنا شرحًا مبسطًا عن موضوعك..."
+                value={ideaDescription}
+                onChange={(e) => setIdeaDescription(e.target.value)}
+                rows={4}
               />
             </div>
             
@@ -503,7 +513,7 @@ function HomeView({
               ) : (
                 <CheckCircle className="h-4 w-4 ml-2" />
               )}
-              {isSavingIdea ? 'جاري الإرسال...' : 'إرسال الفكرة'}
+              {isSavingIdea ? 'جاري النشر...' : 'نشر الموضوع'}
             </Button>
           </DialogFooter>
         </DialogContent>
