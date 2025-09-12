@@ -13,6 +13,7 @@ import {
   Trash2,
   CheckCircle,
   Leaf,
+  Lightbulb,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -43,6 +44,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 type Article = {
   id: string;
@@ -53,32 +56,32 @@ type Article = {
   createdAt: Timestamp;
 };
 
-const formatDate = (date: any) => {
-  if (!date) return 'N/A';
-  if (date instanceof Timestamp) {
-    return date.toDate().toLocaleDateString('ar-KW');
-  }
-  return new Date(date).toLocaleDateString('ar-KW');
-};
-
 function HomeView({
   isAdmin,
   adminLoading,
+  user,
 }: {
   isAdmin: boolean;
   adminLoading: boolean;
+  user: any;
 }) {
   const [articlesSnapshot, loading, error] = useCollection(
     query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
   );
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  // Admin Dialog State
+  const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
+  const [isSavingArticle, setIsSavingArticle] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<Partial<Article> | null>(
     null
   );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
+
+  // User Idea Dialog State
+  const [isIdeaDialogOpen, setIsIdeaDialogOpen] = useState(false);
+  const [isSavingIdea, setIsSavingIdea] = useState(false);
+  const [userIdea, setUserIdea] = useState('');
 
 
   const articles =
@@ -86,9 +89,10 @@ function HomeView({
       (doc) => ({ id: doc.id, ...doc.data() } as Article)
     ) || [];
 
-  const openDialog = (article: Partial<Article> | null = null) => {
+  // --- Admin Functions ---
+  const openAdminDialog = (article: Partial<Article> | null = null) => {
     setCurrentArticle(article ? { ...article } : {});
-    setIsDialogOpen(true);
+    setIsArticleDialogOpen(true);
   };
   
   const openDeleteConfirmation = (id: string) => {
@@ -99,11 +103,10 @@ function HomeView({
   const handleSaveArticle = async () => {
     if (!currentArticle || !currentArticle.title || !currentArticle.description)
       return;
-    setIsSaving(true);
+    setIsSavingArticle(true);
 
     try {
       if (currentArticle.id) {
-        // Update existing article
         const articleRef = doc(db, 'articles', currentArticle.id);
         await updateDoc(articleRef, {
           title: currentArticle.title,
@@ -112,18 +115,17 @@ function HomeView({
           imageHint: currentArticle.imageHint,
         });
       } else {
-        // Add new article
         await addDoc(collection(db, 'articles'), {
           ...currentArticle,
           createdAt: serverTimestamp(),
         });
       }
-      setIsDialogOpen(false);
+      setIsArticleDialogOpen(false);
       setCurrentArticle(null);
     } catch (e) {
       console.error('Error saving article:', e);
     } finally {
-      setIsSaving(false);
+      setIsSavingArticle(false);
     }
   };
 
@@ -133,6 +135,44 @@ function HomeView({
     setShowDeleteConfirm(false);
     setArticleToDelete(null);
   };
+  
+  // --- User Idea Functions ---
+  const handleSaveIdea = async () => {
+    if (!userIdea.trim()) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء كتابة فكرتك قبل الإرسال.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSavingIdea(true);
+    try {
+      await addDoc(collection(db, 'userIdeas'), {
+        idea: userIdea,
+        userId: user.uid,
+        userName: user.displayName || user.email,
+        createdAt: serverTimestamp(),
+      });
+      setIsIdeaDialogOpen(false);
+      setUserIdea('');
+      toast({
+        title: "تم الإرسال بنجاح!",
+        description: "شكرًا لمشاركتك فكرتك. سيتم مراجعتها من قبل المسؤول.",
+        className: "bg-green-600 text-white",
+      });
+    } catch (e) {
+      console.error('Error saving idea:', e);
+       toast({
+        title: "حدث خطأ",
+        description: "لم نتمكن من حفظ فكرتك. الرجاء المحاولة مرة أخرى.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingIdea(false);
+    }
+  };
+
 
   if (loading || adminLoading) {
     return (
@@ -180,12 +220,18 @@ function HomeView({
       <section>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
-          {isAdmin && (
-            <Button onClick={() => openDialog()} className="bg-green-600 hover:bg-green-700 text-white">
-              <Plus className="h-4 w-4 ml-2" />
-              إضافة موضوع
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsIdeaDialogOpen(true)}>
+                <Lightbulb className="h-4 w-4 ml-2" />
+                شارك بفكرتك
             </Button>
-          )}
+            {isAdmin && (
+              <Button onClick={() => openAdminDialog()} className="bg-green-600 hover:bg-green-700 text-white">
+                <Plus className="h-4 w-4 ml-2" />
+                إضافة موضوع
+              </Button>
+            )}
+          </div>
         </div>
 
         {articles.length > 0 ? (
@@ -197,7 +243,7 @@ function HomeView({
               >
                 {isAdmin && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8 bg-card/70 backdrop-blur-sm" onClick={() => openDialog(article)}>
+                    <Button variant="outline" size="icon" className="h-8 w-8 bg-card/70 backdrop-blur-sm" onClick={() => openAdminDialog(article)}>
                       <Pencil className="h-4 w-4"/>
                     </Button>
                     <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => openDeleteConfirmation(article.id)}>
@@ -237,7 +283,7 @@ function HomeView({
                 سيتم عرض مربعات المواضيع مع الصور والفيديوهات والمحتوى هنا عند إضافتها.
             </p>
             {isAdmin && (
-                <Button onClick={() => openDialog()} className="mt-6 bg-green-600 hover:bg-green-700 text-white">
+                <Button onClick={() => openAdminDialog()} className="mt-6 bg-green-600 hover:bg-green-700 text-white">
                     <Plus className="h-4 w-4 ml-2" />
                     أضف أول موضوع
                 </Button>
@@ -246,8 +292,8 @@ function HomeView({
         )}
       </section>
 
-      {/* Add/Edit Article Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Add/Edit Article Dialog (Admin) */}
+      <Dialog open={isArticleDialogOpen} onOpenChange={setIsArticleDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -316,19 +362,19 @@ function HomeView({
             <DialogClose asChild>
               <Button variant="outline">إلغاء</Button>
             </DialogClose>
-            <Button onClick={handleSaveArticle} disabled={isSaving}>
-              {isSaving ? (
+            <Button onClick={handleSaveArticle} disabled={isSavingArticle}>
+              {isSavingArticle ? (
                 <Loader2 className="h-4 w-4 animate-spin ml-2" />
               ) : (
                 <CheckCircle className="h-4 w-4 ml-2" />
               )}
-              {isSaving ? 'جاري الحفظ...' : 'حفظ'}
+              {isSavingArticle ? 'جاري الحفظ...' : 'حفظ'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog (Admin) */}
        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent>
           <DialogHeader>
@@ -347,6 +393,44 @@ function HomeView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Share Idea Dialog (User) */}
+      <Dialog open={isIdeaDialogOpen} onOpenChange={setIsIdeaDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>شارك بفكرتك</DialogTitle>
+            <DialogDescription>
+              اكتب فكرتك أو اقتراحك ليتم مراجعته من قبل المسؤول. نقدر مساهمتك!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="idea">فكرتك</Label>
+              <Textarea
+                id="idea"
+                placeholder="اكتب هنا فكرتك عن موضوع جديد، اقتراح لتحسين التطبيق، أو أي شيء آخر..."
+                value={userIdea}
+                onChange={(e) => setUserIdea(e.target.value)}
+                rows={5}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">إلغاء</Button>
+            </DialogClose>
+            <Button onClick={handleSaveIdea} disabled={isSavingIdea} className="bg-green-600 hover:bg-green-700">
+              {isSavingIdea ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : (
+                <CheckCircle className="h-4 w-4 ml-2" />
+              )}
+              {isSavingIdea ? 'جاري الإرسال...' : 'إرسال الفكرة'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
     </div>
   );
 }
@@ -373,8 +457,9 @@ export default function HomePage() {
 
   return (
     <div className="pb-24">
+      <Toaster />
       <main className="px-4 pt-4 container mx-auto">
-        <HomeView isAdmin={isAdmin} adminLoading={adminLoading} />
+        <HomeView isAdmin={isAdmin} adminLoading={adminLoading} user={user} />
       </main>
       <AppFooter activeView="home" />
     </div>
