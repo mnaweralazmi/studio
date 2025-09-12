@@ -180,9 +180,17 @@ function HomeView({
     }
     setIsSavingIdea(true);
     let fileUrl = '';
+    
+    const articleData: any = {
+        title: ideaTitle,
+        description: ideaDescription || '',
+        imageHint: 'user generated',
+        createdAt: serverTimestamp(),
+        authorId: user.uid,
+        authorName: user.displayName || user.email,
+      };
 
     try {
-      // Upload file if it exists
       if (ideaFile) {
         const storageRef = ref(
           storage,
@@ -190,17 +198,10 @@ function HomeView({
         );
         const uploadResult = await uploadBytes(storageRef, ideaFile);
         fileUrl = await getDownloadURL(uploadResult.ref);
+        articleData.imageUrl = fileUrl;
       }
 
-      await addDoc(collection(db, 'articles'), {
-        title: ideaTitle,
-        description: ideaDescription || '',
-        imageUrl: fileUrl,
-        imageHint: 'user generated',
-        createdAt: serverTimestamp(),
-        authorId: user.uid,
-        authorName: user.displayName || user.email,
-      });
+      await addDoc(collection(db, 'articles'), articleData);
 
       setIsIdeaDialogOpen(false);
       resetIdeaForm();
