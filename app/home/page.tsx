@@ -169,7 +169,7 @@ function HomeView({
     }
   };
   
-  const handleSaveIdea = async () => {
+ const handleSaveIdea = async () => {
     if (!ideaTitle.trim()) {
       toast({
         title: 'خطأ',
@@ -179,8 +179,9 @@ function HomeView({
       return;
     }
     setIsSavingIdea(true);
-    
-    const articleData: any = {
+
+    try {
+      const articleData: any = {
         title: ideaTitle,
         description: ideaDescription || '',
         imageHint: 'user generated',
@@ -189,20 +190,19 @@ function HomeView({
         authorName: user.displayName || user.email,
       };
 
-    try {
       if (ideaFile) {
         const storageRef = ref(
           storage,
           `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
         );
         const uploadResult = await uploadBytes(storageRef, ideaFile);
-        const fileUrl = await getDownloadURL(uploadResult.ref);
-        articleData.imageUrl = fileUrl;
+        articleData.imageUrl = await getDownloadURL(uploadResult.ref);
       }
 
       await addDoc(collection(db, 'articles'), articleData);
 
       setIsIdeaDialogOpen(false);
+      resetIdeaForm();
 
       toast({
         title: 'تم النشر بنجاح!',
@@ -299,17 +299,18 @@ function HomeView({
                     </Button>
                   </div>
                 )}
-                <Image
-                  src={
-                    article.imageUrl ||
-                    'https://picsum.photos/seed/placeholder/400/200'
-                  }
-                  alt={article.title}
-                  width={400}
-                  height={200}
-                  className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-                  data-ai-hint={article.imageHint}
-                />
+                {article.imageUrl && (
+                  <Image
+                    src={
+                      article.imageUrl
+                    }
+                    alt={article.title}
+                    width={400}
+                    height={200}
+                    className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                    data-ai-hint={article.imageHint}
+                  />
+                )}
                 <CardHeader>
                   <CardTitle className="text-lg">{article.title}</CardTitle>
                 </CardHeader>
@@ -443,13 +444,7 @@ function HomeView({
       </Dialog>
       
       {/* Share Idea Dialog (User) */}
-      <Dialog open={isIdeaDialogOpen} onOpenChange={(isOpen) => { 
-          setIsIdeaDialogOpen(isOpen); 
-          if (!isOpen) {
-            // Delay reset to allow state to be used in saving
-            setTimeout(resetIdeaForm, 500);
-          }
-      }}>
+      <Dialog open={isIdeaDialogOpen} onOpenChange={setIsIdeaDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>شارك بموضوع جديد</DialogTitle>
