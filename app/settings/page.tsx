@@ -1,12 +1,12 @@
 'use client';
 
-import AppFooter from '@/components/AppFooter';
 import SettingsView from '@/components/views/SettingsView';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import AppFooter from '@/components/AppFooter';
 
 export default function SettingsPage() {
   const [user, loading] = useAuthState(auth);
@@ -29,7 +29,7 @@ export default function SettingsPage() {
 
   return (
     <div className="pb-24">
-      <main className="px-4 pt-4">
+      <main className="px-4 pt-4 container mx-auto">
         <SettingsView />
       </main>
       <AppFooter activeView="settings" />
