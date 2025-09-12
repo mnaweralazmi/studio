@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { isSameDay, format } from 'date-fns';
+import { isSameDay, format, isToday } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 import {
@@ -36,6 +36,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void; isAdding: boolean; }) {
@@ -113,37 +114,37 @@ export default function TasksView() {
 
   const allTasks: Task[] = allTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
 
-  const { todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
-    const today = new Date();
-    const todayTasks: Task[] = [];
-    const selectedDayTasks: Task[] = [];
-    const completedTasks: Task[] = [];
-     const taskDates: Date[] = [];
+  const { upcomingTasks, todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
+    const upcoming: Task[] = [];
+    const today: Task[] = [];
+    const selected: Task[] = [];
+    const completed: Task[] = [];
+    const dates: Date[] = [];
 
     allTasks.forEach(task => {
       const taskDate = task.date ? (task.date instanceof Timestamp ? task.date.toDate() : new Date(task.date)) : null;
 
-      if (taskDate) {
-        if (!task.completed) {
-            taskDates.push(taskDate);
+      if (task.completed) {
+        completed.push(task);
+      } else if (taskDate) {
+        dates.push(taskDate);
+        upcoming.push(task);
+        if (isToday(taskDate)) {
+          today.push(task);
         }
-
-        if (task.completed) {
-          completedTasks.push(task);
-        } else {
-           if (isSameDay(taskDate, today)) {
-             todayTasks.push(task);
-           }
-           if (selectedDate && isSameDay(taskDate, selectedDate)) {
-             selectedDayTasks.push(task);
-           }
+        if (selectedDate && isSameDay(taskDate, selectedDate)) {
+          selected.push(task);
         }
-      } else if (task.completed) {
-         completedTasks.push(task);
       }
     });
 
-    return { todayTasks, selectedDayTasks, completedTasks: completedTasks.reverse(), taskDates };
+    return { 
+        upcomingTasks: upcoming, 
+        todayTasks: today, 
+        selectedDayTasks: selected, 
+        completedTasks: completed.reverse(), 
+        taskDates: dates 
+    };
   }, [allTasks, selectedDate]);
   
   const modifiers = { hasTask: taskDates };
@@ -204,9 +205,50 @@ export default function TasksView() {
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Column */}
+        {/* Right Column (Tasks) */}
+        <div className="lg:col-span-2 space-y-6">
+            <Tabs defaultValue="today" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="all">الكل ({upcomingTasks.length})</TabsTrigger>
+                <TabsTrigger value="today">مهام اليوم ({todayTasks.length})</TabsTrigger>
+                <TabsTrigger value="completed">المهام المنجزة ({completedTasks.length})</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all" className="mt-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>كل المهام القادمة</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <TaskList tasks={upcomingTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                    </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="today" className="mt-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>المهام القادمة لهذا اليوم</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+                    </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="completed" className="mt-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>سجل المهام المنجزة</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                    </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+        </div>
+        
+        {/* Left Column (Calendar) */}
         <div className="space-y-6">
              {/* Calendar */}
              <Card>
@@ -233,29 +275,6 @@ export default function TasksView() {
                 </CardHeader>
                 <CardContent>
                     <TaskList tasks={selectedDayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
-                </CardContent>
-            </Card>
-        </div>
-        
-        {/* Right Column */}
-        <div className="space-y-6">
-             {/* Today's Tasks */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>المهام القادمة لهذا اليوم ({todayTasks.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <TaskList tasks={todayTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
-                </CardContent>
-            </Card>
-
-             {/* Completed Tasks */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>سجل المهام المنجزة ({completedTasks.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <TaskList tasks={completedTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
                 </CardContent>
             </Card>
         </div>
