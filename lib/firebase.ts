@@ -19,10 +19,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// NOTE: In a real-world application, this should be stored securely in Firestore
-// and managed via a secure backend or Firebase Functions.
-// For this prototype, we are hardcoding the admin UIDs.
-// Replace 'YOUR_ADMIN_UID_HERE' with your actual Firebase User ID.
+// NOTE: To get admin privileges, add your Firebase User ID (UID) to this array.
+// You can find your UID in the "Settings" page of the app after logging in.
+// Example: export const adminUids = ['YOUR_UID_HERE', 'ANOTHER_ADMIN_UID_HERE'];
 export const adminUids = ['l8M3vFpBqNgOKda2RxmjcizOjg2'];
 
 

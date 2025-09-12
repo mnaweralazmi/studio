@@ -1,6 +1,5 @@
 'use client';
 
-import { useCollection } from 'react-firebase-hooks/firestore';
 import {
   collectionGroup,
   query,
@@ -11,8 +10,7 @@ import {
   deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { db } from '@/lib/firebase';
 import { Loader2, AlertCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -32,7 +30,8 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import type { User } from 'firebase/auth';
 
 const COLLECTION_CONFIG = {
   expenses: { name: 'المصاريف العامة', fields: ['item', 'category', 'amount'] },
@@ -68,8 +67,7 @@ const formatValue = (key: string, value: any) => {
     return value.toString();
 }
 
-export default function ArchiveView() {
-  const [user] = useAuthState(auth);
+export default function ArchiveView({ user }: { user: User | null | undefined }) {
   const [archivedData, setArchivedData] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,14 +84,21 @@ export default function ArchiveView() {
     setError(null);
     try {
       const allArchivedData: Record<string, any[]> = {};
-      for (const collectionId of Object.keys(COLLECTION_CONFIG)) {
+      const collectionKeys = Object.keys(COLLECTION_CONFIG);
+      const promises = collectionKeys.map(collectionId => {
         const q = query(
           collectionGroup(db, collectionId),
           where('__name__', '>=', `users/${user.uid}`),
           where('__name__', '<', `users/${user.uid}~`),
           where('archived', '==', true)
         );
-        const snapshot = await getDocs(q);
+        return getDocs(q);
+      });
+
+      const snapshots = await Promise.all(promises);
+
+      snapshots.forEach((snapshot, index) => {
+        const collectionId = collectionKeys[index];
         if (!snapshot.empty) {
           allArchivedData[collectionId] = snapshot.docs.map(d => ({
             id: d.id,
@@ -101,7 +106,8 @@ export default function ArchiveView() {
             ...d.data(),
           }));
         }
-      }
+      });
+      
       setArchivedData(allArchivedData);
     } catch (e: any) {
       console.error(e);
@@ -111,9 +117,9 @@ export default function ArchiveView() {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchArchivedData();
-  });
+  }, [user]);
 
   const handleRestore = async (path: string) => {
     try {
@@ -168,7 +174,7 @@ export default function ArchiveView() {
         <CardHeader>
           <CardTitle>الأرشيف</CardTitle>
           <p className="text-muted-foreground">
-            عرض واستعادة البيانات التي تمت أرشفتها من التطبيق.
+            عرض واستعادة وحذف البيانات التي تمت أرشفتها من التطبيق بشكل نهائي.
           </p>
         </CardHeader>
         <CardContent>
@@ -180,6 +186,7 @@ export default function ArchiveView() {
             <Accordion type="multiple" className="w-full">
               {Object.entries(archivedData).map(([collectionId, items]) => {
                 const config = COLLECTION_CONFIG[collectionId];
+                if (!config) return null;
                 return (
                   <AccordionItem value={collectionId} key={collectionId}>
                     <AccordionTrigger>
@@ -209,6 +216,7 @@ export default function ArchiveView() {
                                     <RotateCcw className="h-4 w-4 ml-2" />
                                     استعادة
                                 </Button>
+
                                 <Button size="sm" variant="destructive" onClick={() => openDeleteDialog(item.path, item.id)}>
                                     <Trash2 className="h-4 w-4 ml-2" />
                                     حذف نهائي

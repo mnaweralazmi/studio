@@ -112,7 +112,10 @@ function ProfileView() {
             <div>
               <h2 className="text-xl font-bold">{user?.displayName || 'مستخدم جديد'}</h2>
               <p className="text-muted-foreground">{user?.email}</p>
-              <p className="text-xs text-muted-foreground mt-1">UID: {user?.uid}</p>
+              <div className="mt-2">
+                <Label htmlFor="user-uid" className="text-xs">Your User ID (for Admin)</Label>
+                <Input id="user-uid" readOnly value={user?.uid || ''} className="text-xs h-8 mt-1" onClick={(e) => (e.target as HTMLInputElement).select()} />
+              </div>
             </div>
           </div>
           
@@ -257,6 +260,7 @@ function SecurityView() {
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState('profile');
   const router = useRouter();
+  const [user, loading] = useAuthState(auth);
 
   const handleSignOut = async () => {
     try {
@@ -311,7 +315,7 @@ export default function SettingsView() {
           <SecurityView />
         </TabsContent>
         <TabsContent value="archive" className="mt-6">
-          <ArchiveView />
+          <ArchiveView user={user} />
         </TabsContent>
       </Tabs>
 
