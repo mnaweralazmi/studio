@@ -301,7 +301,7 @@ function HomeView({
                     </Button>
                   </div>
                 )}
-                {article.imageUrl && (
+                {article.imageUrl ? (
                   <Image
                     src={
                       article.imageUrl
@@ -312,6 +312,10 @@ function HomeView({
                     className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
                     data-ai-hint={article.imageHint}
                   />
+                ) : (
+                   <div className="w-full h-40 bg-secondary flex items-center justify-center">
+                    <Newspaper className="h-10 w-10 text-muted-foreground" />
+                   </div>
                 )}
                 <CardHeader>
                   <CardTitle className="text-lg">{article.title}</CardTitle>
