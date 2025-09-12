@@ -237,7 +237,6 @@ function ExpensesView({ user, collectionName, title }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">{title}</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة مصروف جديد</CardTitle>
@@ -280,7 +279,7 @@ function ExpensesView({ user, collectionName, title }) {
               />
             </div>
           </div>
-          <Button onClick={handleAddExpense} className="mt-4" disabled={isAdding}>
+          <Button onClick={handleAddExpense} className="mt-4 bg-green-600 hover:bg-green-700" disabled={isAdding}>
             {isAdding ? (
               <Loader2 className="h-4 w-4 animate-spin ml-2" />
             ) : (
@@ -291,36 +290,40 @@ function ExpensesView({ user, collectionName, title }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة المصاريف</h2>
-        <DataView<Expense>
-          loading={loading}
-          data={expenses}
-          columns={['التاريخ', 'البند', 'الفئة', 'المبلغ', 'أرشفة']}
-          emptyMessage="لا توجد مصاريف لعرضها."
-          renderRow={(expense) => (
-            <TableRow key={expense.id}>
-              <TableCell>{formatDate(expense.date)}</TableCell>
-              <TableCell className="font-medium">{expense.item}</TableCell>
-              <TableCell>
-                <Badge variant="secondary">{expense.category}</Badge>
-              </TableCell>
-              <TableCell className="font-semibold text-destructive">{`${(
-                expense.amount || 0
-              ).toFixed(3)} د.ك`}</TableCell>
-              <TableCell className="text-left">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleArchiveExpense(expense.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          )}
-        />
-      </div>
+      <Card>
+       <CardHeader>
+          <CardTitle>قائمة المصاريف</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataView<Expense>
+            loading={loading}
+            data={expenses}
+            columns={['التاريخ', 'البند', 'الفئة', 'المبلغ', 'أرشفة']}
+            emptyMessage="لا توجد مصاريف لعرضها."
+            renderRow={(expense) => (
+              <TableRow key={expense.id}>
+                <TableCell>{formatDate(expense.date)}</TableCell>
+                <TableCell className="font-medium">{expense.item}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{expense.category}</Badge>
+                </TableCell>
+                <TableCell className="font-semibold text-destructive">{`${(
+                  expense.amount || 0
+                ).toFixed(3)} د.ك`}</TableCell>
+                <TableCell className="text-left">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleArchiveExpense(expense.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -513,9 +516,6 @@ function AgriSalesView({ user }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">
-        مبيعات الزراعة
-      </h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة بيع جديد (زراعي)</CardTitle>
@@ -713,7 +713,6 @@ function DebtsView({ user }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">الديون</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة دين جديد</CardTitle>
@@ -950,7 +949,6 @@ function WorkersView({ user }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sr-only">العمال</h1>
       <Card>
         <CardHeader>
           <CardTitle>إضافة عامل جديد</CardTitle>
@@ -1090,10 +1088,8 @@ function WorkersView({ user }) {
 }
 
 function FarmManagementView({ user }) {
-  const [activeTab, setActiveTab] = useState('expenses');
-
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="expenses" className="flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
@@ -1126,10 +1122,8 @@ function FarmManagementView({ user }) {
 }
 
 function AgricultureView({ user }) {
-  const [activeTab, setActiveTab] = useState('expenses');
-
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="expenses" className="flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
@@ -1545,10 +1539,8 @@ function FlocksView({ user }) {
 }
 
 function PoultryView({ user }) {
-  const [activeTab, setActiveTab] = useState('expenses');
-
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="expenses" className="flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
@@ -1848,10 +1840,8 @@ function HerdsView({ user }) {
 }
 
 function LivestockView({ user }) {
-  const [activeTab, setActiveTab] = useState('expenses');
-
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="expenses" className="flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
@@ -1927,7 +1917,7 @@ export default function ManagementView() {
       case 'livestock':
         return <LivestockView user={user} />;
       default:
-        return null;
+        return <FarmManagementView user={user} />; // Default to farm management
     }
   };
   
@@ -1940,22 +1930,27 @@ export default function ManagementView() {
             اختر قسمًا لإدارة عملياته وبياناته.
           </p>
         </div>
-        <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-            <TabsList className={cn(
-              "h-auto w-full flex-col sm:flex-row sm:grid",
-              `sm:grid-cols-${availableTabs.length}`
-              )}>
-                {availableTabs.map((t) => (
-                   <TabsTrigger key={t.value} value={t.value} className="flex items-center justify-center gap-2 w-full sm:w-auto">
-                     <t.icon className={cn("h-4 w-4", t.rotate && 'rotate-90')} />
-                     {t.label}
-                   </TabsTrigger>
-                ))}
-            </TabsList>
-        </Tabs>
       </header>
 
-      <div className='pt-4'>{renderContent()}</div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col space-y-2">
+            {availableTabs.map((t) => (
+              <Button
+                key={t.value}
+                variant={selectedSection === t.value ? 'secondary' : 'ghost'}
+                className="w-full justify-start text-base py-6"
+                onClick={() => setSelectedSection(t.value)}
+              >
+                <t.icon className={cn('h-5 w-5 ml-3', t.rotate && 'rotate-90')} />
+                {t.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div className='pt-0'>{renderContent()}</div>
     </div>
   );
 }
