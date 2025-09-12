@@ -22,6 +22,7 @@ import {
 import { TaskList, type Task } from '@/components/task-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { isSameDay, format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -39,14 +40,16 @@ import {
 
 function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void; isAdding: boolean; }) {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [reminder, setReminder] = useState('12:00');
   const [open, setOpen] = useState(false);
 
   const handleAddTask = () => {
     if (!title || !date || isAdding) return;
-    onAddTask({ title, date: date.toISOString(), reminder });
+    onAddTask({ title, description, date: date.toISOString(), reminder });
     setTitle('');
+    setDescription('');
     setDate(new Date());
     setReminder('12:00');
     setOpen(false);
@@ -68,6 +71,10 @@ function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, '
                  <div className="space-y-2">
                     <Label htmlFor="task-title">عنوان المهمة</Label>
                     <Input id="task-title" placeholder="مثال: ري قسم البطاطس" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="task-description">وصف المهمة (اختياري)</Label>
+                    <Textarea id="task-description" placeholder="تفاصيل إضافية عن المهمة" value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="task-date">تاريخ المهمة</Label>
@@ -199,6 +206,7 @@ export default function TasksView() {
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        {/* Left Column */}
         <div className="lg:col-span-1 space-y-6">
              {/* Today's Tasks */}
             <Card>
@@ -221,6 +229,7 @@ export default function TasksView() {
             </Card>
         </div>
         
+        {/* Right Column */}
         <div className="lg:col-span-2 space-y-6">
              {/* Calendar */}
              <Card>

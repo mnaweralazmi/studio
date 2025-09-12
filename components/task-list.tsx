@@ -1,7 +1,7 @@
 'use client';
 
 import { Circle, CircleCheck, Bell, CalendarDays, Trash2 } from 'lucide-react';
-import { format, isToday } from 'date-fns';
+import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Timestamp } from 'firebase/firestore';
 import { Button } from './ui/button';
@@ -10,6 +10,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin';
 export type Task = {
   id: string;
   title: string;
+  description?: string;
   completed: boolean;
   date?: string | Date | Timestamp;
   reminder?: string;
@@ -19,6 +20,7 @@ export type Task = {
 const formatDate = (date: any) => {
   if (!date) return null;
   const d = date instanceof Timestamp ? date.toDate() : new Date(date);
+  // Example: أغسطس 24, 2025
   return format(d, 'd MMMM, yyyy', { locale: ar });
 };
 
@@ -27,6 +29,7 @@ const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(':');
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes));
+    // Example: 12:00 ص
     return format(date, 'h:mm a', { locale: ar });
 }
 
@@ -62,57 +65,60 @@ export function TaskList({
         return (
           <div
             key={task.id}
-            className={`flex items-start p-3 rounded-lg transition-all group ${
+            className={`flex items-center p-3 rounded-lg transition-all group ${
               task.completed
                 ? 'bg-muted/30'
                 : 'bg-card/70 hover:bg-secondary/50'
             }`}
           >
-             {/* Right side: Checkbox and Title */}
+             {/* Left side: Checkbox */}
             <div
-              className="flex-1 flex items-start cursor-pointer"
+              className="pr-3 cursor-pointer"
               onClick={() => onToggleTask && onToggleTask(task.id, !task.completed)}
             >
-              <div className="pl-3 mt-1">
                 {task.completed ? (
                   <CircleCheck className="h-5 w-5 text-green-500" />
                 ) : (
                   <Circle className="h-5 w-5 text-muted-foreground" />
                 )}
-              </div>
-              <div>
-                <p
-                  className={`font-medium ${
-                    task.completed
-                      ? 'text-muted-foreground line-through'
-                      : 'text-card-foreground'
-                  }`}
-                >
-                  {task.title}
-                </p>
-                 <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                   {showDate && formattedDate && (
-                     <div className="flex items-center gap-1">
-                       <CalendarDays className="h-3 w-3" />
-                       <span>{formattedDate}</span>
-                     </div>
+            </div>
+
+            {/* Middle: Title, Description, Delete Button */}
+            <div className="flex-1">
+                 <div className="flex items-center">
+                    <p
+                    className={`font-medium ${
+                        task.completed
+                        ? 'text-muted-foreground line-through'
+                        : 'text-card-foreground'
+                    }`}
+                    >
+                    {task.title}
+                    </p>
+                    {isAdmin && onDeleteTask && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 mr-auto opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                     )}
-                  {task.reminder && (
+                 </div>
+                 {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
+            </div>
+
+            {/* Right side: Date and Time */}
+             <div className="flex flex-col items-end text-xs text-muted-foreground gap-1 pl-3">
+                {formattedTime && (
                     <div className="flex items-center gap-1">
-                      <Bell className="h-3 w-3" />
                       <span>{formattedTime}</span>
+                      <Bell className="h-3 w-3" />
                     </div>
                   )}
-                </div>
-              </div>
+               {(showDate || task.date) && formattedDate && (
+                 <div className="flex items-center gap-1">
+                   <span>{formattedDate}</span>
+                   <CalendarDays className="h-3 w-3" />
+                 </div>
+                )}
             </div>
-            
-            {/* Left side: Delete button for admin */}
-             {isAdmin && onDeleteTask && (
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-            )}
           </div>
         );
       })}

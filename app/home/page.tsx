@@ -362,7 +362,7 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
+  if (loading || adminLoading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
