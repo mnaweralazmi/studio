@@ -179,20 +179,20 @@ function HomeView({
       return;
     }
     setIsSavingIdea(true);
-    let imageUrl = '';
+    let fileUrl = '';
 
     try {
        // Upload file if it exists
       if (ideaFile) {
         const storageRef = ref(storage, `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`);
         const uploadResult = await uploadBytes(storageRef, ideaFile);
-        imageUrl = await getDownloadURL(uploadResult.ref);
+        fileUrl = await getDownloadURL(uploadResult.ref);
       }
       
       await addDoc(collection(db, 'articles'), {
         title: ideaTitle,
         description: ideaDescription,
-        imageUrl: imageUrl,
+        imageUrl: fileUrl,
         imageHint: 'user generated',
         createdAt: serverTimestamp(),
         authorId: user.uid,
