@@ -166,9 +166,6 @@ function HomeView({
     setIdeaDescription('');
     setIdeaFile(null);
     setIdeaFilePreview(null);
-    if(fileInputRef.current) {
-        fileInputRef.current.value = '';
-    }
   };
   
  const handleSaveIdea = async () => {
@@ -194,15 +191,7 @@ function HomeView({
 
     try {
       let imageUrl;
-      if (ideaFile) {
-        const storageRef = ref(
-          storage,
-          `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
-        );
-        const uploadResult = await uploadBytes(storageRef, ideaFile);
-        imageUrl = await getDownloadURL(uploadResult.ref);
-      }
-
+      
       const articleData: any = {
         title: ideaTitle,
         description: ideaDescription || '',
@@ -212,7 +201,13 @@ function HomeView({
         imageHint: 'user generated',
       };
       
-      if (imageUrl) {
+      if (ideaFile) {
+        const storageRef = ref(
+          storage,
+          `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
+        );
+        const uploadResult = await uploadBytes(storageRef, ideaFile);
+        imageUrl = await getDownloadURL(uploadResult.ref);
         articleData.imageUrl = imageUrl;
       }
 
@@ -499,7 +494,7 @@ function HomeView({
             </div>
             
              <div className="space-y-2">
-                <Label>إرفاق ملف (صورة أو فيديو)</Label>
+                <Label>إرفاق صورة أو فيديو (اختياري)</Label>
                 {ideaFilePreview ? (
                 <div className="relative group">
                     {ideaFile?.type.startsWith('image/') ? (
