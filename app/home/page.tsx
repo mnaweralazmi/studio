@@ -4,7 +4,7 @@ import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   Loader2,
   Newspaper,
@@ -17,6 +17,7 @@ import {
   FileImage,
   Video,
   X,
+  Bell,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -32,6 +33,9 @@ import {
   deleteDoc,
   serverTimestamp,
   Timestamp,
+  where,
+  limit,
+  writeBatch,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -50,6 +54,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { formatDistanceToNow } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 type Article = {
   id: string;
@@ -61,6 +68,94 @@ type Article = {
   authorId?: string;
   authorName?: string;
 };
+
+type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: Timestamp;
+  read: boolean;
+};
+
+function NotificationsPopover({ user }) {
+  const notificationsQuery = user
+    ? query(
+        collection(db, 'notifications'),
+        where('target', 'in', ['all', user.uid]),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+      )
+    : null;
+  const [snapshot, loading] = useCollection(notificationsQuery);
+
+  const notifications = useMemo(
+    () =>
+      snapshot?.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Notification)
+      ) || [],
+    [snapshot]
+  );
+  
+  const hasUnread = useMemo(() => notifications.some(n => !n.read), [notifications]);
+
+  const handleOpen = async (open: boolean) => {
+    if (open && hasUnread && snapshot) {
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((d) => {
+        if (!d.data().read) {
+          batch.update(d.ref, { read: true });
+        }
+      });
+      await batch.commit();
+    }
+  };
+  
+
+  return (
+    <Popover onOpenChange={handleOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+          {hasUnread && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="grid gap-4">
+          <div className="space-y-2">
+            <h4 className="font-medium leading-none">الإشعارات</h4>
+            <p className="text-sm text-muted-foreground">
+              آخر الإشعارات والتحديثات.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            {loading ? (
+                <div className="flex justify-center items-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+            ) : notifications.length > 0 ? (
+              notifications.map((n) => (
+                <div key={n.id} className="grid grid-cols-[25px_1fr] items-start pb-4 last:pb-0">
+                  <span className={`flex h-2 w-2 translate-y-1 rounded-full ${!n.read ? 'bg-sky-500' : 'bg-muted'}`} />
+                  <div className="grid gap-1">
+                    <p className="text-sm font-medium leading-none">
+                      {n.title}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{n.body}</p>
+                     <p className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(n.createdAt.toDate(), { addSuffix: true, locale: ar })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center p-4">لا توجد إشعارات جديدة.</p>
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function HomeView({
   isAdmin,
@@ -334,6 +429,7 @@ const setFile = (file: File) => {
                 إضافة موضوع
               </Button>
             )}
+            <NotificationsPopover user={user} />
           </div>
         </div>
 

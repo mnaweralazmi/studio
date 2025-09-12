@@ -10,14 +10,17 @@ import {
   LogOut,
   Loader2,
   CheckCircle,
-  Archive
+  Archive,
+  UserCog,
+  Send,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { useAdmin } from '@/lib/hooks/useAdmin';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +37,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import ArchiveView from './ArchiveView';
+import { toast } from '../ui/use-toast';
 
 // --- Sub-page Components ---
 
@@ -254,6 +258,101 @@ function SecurityView() {
   );
 }
 
+function AdminView({ user }: { user: any }) {
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [target, setTarget] = useState<'all' | 'specific'>('all');
+  const [targetUid, setTargetUid] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendNotification = async () => {
+    if (!title || !body) {
+      toast({
+        title: 'خطأ',
+        description: 'الرجاء ملء حقل العنوان والرسالة.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (target === 'specific' && !targetUid) {
+      toast({
+        title: 'خطأ',
+        description: 'الرجاء إدخال معرف المستخدم المستهدف.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        title,
+        body,
+        target: target === 'all' ? 'all' : targetUid,
+        createdAt: serverTimestamp(),
+        read: false,
+      });
+      toast({
+        title: 'تم الإرسال بنجاح',
+        description: 'تم إرسال الإشعار للمستخدمين المستهدفين.',
+        className: 'bg-green-600 text-white',
+      });
+      setTitle('');
+      setBody('');
+      setTargetUid('');
+    } catch (e: any) {
+      toast({
+        title: 'خطأ في الإرسال',
+        description: e.message || 'لم نتمكن من إرسال الإشعار.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>إرسال إشعار</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="notif-title">عنوان الإشعار</Label>
+          <Input id="notif-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: صيانة مجدولة" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="notif-body">نص الإشعار</Label>
+          <Textarea id="notif-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="تفاصيل الرسالة..." />
+        </div>
+        <div className="space-y-2">
+          <Label>المستلم</Label>
+          <Select value={target} onValueChange={(v: any) => setTarget(v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع المستخدمين</SelectItem>
+              <SelectItem value="specific">مستخدم محدد</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {target === 'specific' && (
+          <div className="space-y-2">
+            <Label htmlFor="notif-uid">معرف المستخدم (UID)</Label>
+            <Input id="notif-uid" value={targetUid} onChange={(e) => setTargetUid(e.target.value)} placeholder="أدخل معرف المستخدم هنا" />
+          </div>
+        )}
+        <Button onClick={handleSendNotification} disabled={isSending} className="w-full">
+          {isSending ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Send className="w-4 h-4 ml-2" />}
+          {isSending ? 'جاري الإرسال...' : 'إرسال الإشعار'}
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 
 // --- Main Page Component ---
 
@@ -261,6 +360,7 @@ export default function SettingsView() {
   const [activeTab, setActiveTab] = useState('profile');
   const router = useRouter();
   const [user, loading] = useAuthState(auth);
+  const { isAdmin } = useAdmin();
 
   const handleSignOut = async () => {
     try {
@@ -271,6 +371,18 @@ export default function SettingsView() {
     }
   };
 
+  const tabs = [
+    { value: 'profile', label: 'الملف', icon: UserCircle },
+    { value: 'appearance', label: 'المظهر', icon: Palette },
+    { value: 'notifications', label: 'الإشعارات', icon: Bell },
+    { value: 'security', label: 'الأمان', icon: Shield },
+    { value: 'archive', label: 'الأرشيف', icon: Archive },
+  ];
+  
+  if (isAdmin) {
+    tabs.push({ value: 'admin', label: 'المدير', icon: UserCog });
+  }
+
   return (
     <div className="space-y-6">
       <header>
@@ -280,27 +392,13 @@ export default function SettingsView() {
         </p>
       </header>
        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="profile">
-            <UserCircle className="h-5 w-5 ml-2" />
-            الملف
-          </TabsTrigger>
-          <TabsTrigger value="appearance">
-            <Palette className="h-5 w-5 ml-2" />
-            المظهر
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="h-5 w-5 ml-2" />
-            الإشعارات
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Shield className="h-5 w-5 ml-2" />
-            الأمان
-          </TabsTrigger>
-          <TabsTrigger value="archive">
-            <Archive className="h-5 w-5 ml-2" />
-            الأرشيف
-          </TabsTrigger>
+        <TabsList className={`grid w-full grid-cols-${tabs.length}`}>
+          {tabs.map(tab => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              <tab.icon className="h-5 w-5 ml-2" />
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
         <TabsContent value="profile" className="mt-6">
           <ProfileView />
@@ -317,6 +415,11 @@ export default function SettingsView() {
         <TabsContent value="archive" className="mt-6">
           <ArchiveView user={user} />
         </TabsContent>
+         {isAdmin && (
+          <TabsContent value="admin" className="mt-6">
+            <AdminView user={user} />
+          </TabsContent>
+        )}
       </Tabs>
 
       <Card>
