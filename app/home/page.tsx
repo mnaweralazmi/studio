@@ -58,6 +58,8 @@ type Article = {
   imageUrl?: string;
   imageHint?: string;
   createdAt: Timestamp;
+  authorId?: string;
+  authorName?: string;
 };
 
 function HomeView({
@@ -313,6 +315,9 @@ function HomeView({
                 )}
                 <CardHeader>
                   <CardTitle className="text-lg">{article.title}</CardTitle>
+                   {article.authorName && (
+                    <p className="text-xs text-muted-foreground">بواسطة: {article.authorName}</p>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm line-clamp-2">
