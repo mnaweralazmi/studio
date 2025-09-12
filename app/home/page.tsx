@@ -636,7 +636,7 @@ const setFile = (file: File) => {
                 {ideaFilePreview ? (
                 <div className="relative group w-full aspect-video bg-secondary rounded-md overflow-hidden">
                     {ideaFile?.type.startsWith('image/') ? (
-                      <Image src={ideaFilePreview} alt="Preview" layout="fill" className="object-cover" />
+                      <Image src={ideaFilePreview} alt="Preview" fill={true} className="object-cover" />
                     ) : (
                       <video src={ideaFilePreview} controls className="w-full h-full object-cover" />
                     )}
