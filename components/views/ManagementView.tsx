@@ -1894,32 +1894,8 @@ export default function ManagementView() {
     if (tab && availableTabs.some(t => t.value === tab)) {
       setSelectedSection(tab);
     }
-  }, [tab]);
+  }, [tab, availableTabs]);
 
-
-  const renderContent = () => {
-    if (loadingUser) {
-      return (
-        <div className="flex justify-center items-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
-    }
-    if (!user) return null;
-
-    switch (selectedSection) {
-      case 'farmManagement':
-        return <FarmManagementView user={user} />;
-      case 'agriculture':
-        return <AgricultureView user={user} />;
-      case 'poultry':
-        return <PoultryView user={user} />;
-      case 'livestock':
-        return <LivestockView user={user} />;
-      default:
-        return <FarmManagementView user={user} />; // Default to farm management
-    }
-  };
   
   return (
     <div className="space-y-6">
@@ -1932,25 +1908,37 @@ export default function ManagementView() {
         </div>
       </header>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col space-y-2">
-            {availableTabs.map((t) => (
-              <Button
-                key={t.value}
-                variant={selectedSection === t.value ? 'secondary' : 'ghost'}
-                className="w-full justify-start text-base py-6"
-                onClick={() => setSelectedSection(t.value)}
-              >
-                <t.icon className={cn('h-5 w-5 ml-3', t.rotate && 'rotate-90')} />
+      <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+           {availableTabs.map((t) => (
+              <TabsTrigger key={t.value} value={t.value} className="flex items-center gap-2">
+                 <t.icon className={cn('h-5 w-5', t.rotate && 'rotate-90')} />
                 {t.label}
-              </Button>
+              </TabsTrigger>
             ))}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <div className='pt-0'>{renderContent()}</div>
+        </TabsList>
+
+        {loadingUser ? (
+           <div className="flex justify-center items-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        ) : !user ? null : (
+          <>
+            <TabsContent value="farmManagement" className="mt-6">
+              <FarmManagementView user={user} />
+            </TabsContent>
+            <TabsContent value="agriculture" className="mt-6">
+              <AgricultureView user={user} />
+            </TabsContent>
+            <TabsContent value="poultry" className="mt-6">
+              <PoultryView user={user} />
+            </TabsContent>
+            <TabsContent value="livestock" className="mt-6">
+              <LivestockView user={user} />
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
     </div>
   );
 }
