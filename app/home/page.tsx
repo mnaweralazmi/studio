@@ -543,8 +543,8 @@ function HomeView({
         )}
          
         {error && (
-            <Alert variant="destructive">
-                 <AlertCircle className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
                 <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
                 <AlertDescription>
                     لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. ({error.message})
@@ -555,7 +555,7 @@ function HomeView({
         )}
 
         {(displayArticles.length > 0) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {displayArticles.map((article) => (
               <Card
                 key={article.id}
@@ -668,5 +668,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
