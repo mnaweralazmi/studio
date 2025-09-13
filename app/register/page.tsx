@@ -77,8 +77,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [dob, setDob] = useState('');
-  const [gender, setGender] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -104,12 +102,9 @@ export default function RegisterPage() {
 
       await updateProfile(user, { displayName: username });
 
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
+      await setDoc(doc(db, 'users', user.uid), {
         displayName: username,
         email: user.email,
-        dob: dob,
-        gender: gender,
       });
 
       router.push('/home');
@@ -201,30 +196,6 @@ export default function RegisterPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dob">تاريخ الميلاد</Label>
-                  <Input
-                    id="dob"
-                    type="date"
-                    value={dob}
-                    onChange={(e) => setDob(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gender">الجنس</Label>
-                  <Select onValueChange={setGender} value={gender}>
-                    <SelectTrigger id="gender">
-                      <SelectValue placeholder="اختر الجنس" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">ذكر</SelectItem>
-                      <SelectItem value="female">أنثى</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <Button type="submit" className="w-full">
