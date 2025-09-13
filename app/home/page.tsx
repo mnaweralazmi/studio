@@ -185,11 +185,7 @@ function HomeView({
   user: any;
 }) {
   const [articlesSnapshot, loading, error] = useCollection(
-    query(
-      collection(db, 'articles'),
-      where('createdAt', '!=', null),
-      orderBy('createdAt', 'desc')
-    )
+    collection(db, 'articles')
   );
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -212,10 +208,18 @@ function HomeView({
   const [ideaFilePreview, setIdeaFilePreview] = useState<string | null>(null);
 
 
-  const articles =
-    articlesSnapshot?.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Article)
-    ) || [];
+  const articles = useMemo(() => {
+    const data =
+      articlesSnapshot?.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Article)
+      ) || [];
+    // Sort by createdAt descending, handling cases where it might be null
+    return data.sort((a, b) => {
+        const dateA = a.createdAt?.toDate() || new Date(0);
+        const dateB = b.createdAt?.toDate() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+    });
+  }, [articlesSnapshot]);
 
   // --- Admin Functions ---
   const openAdminDialog = (article: Partial<Article> | null = null) => {
