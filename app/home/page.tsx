@@ -59,6 +59,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type Article = {
   id: string;
@@ -325,7 +326,7 @@ function AddIdeaDialog({ user }: { user: any }) {
   );
 }
 
-function NotificationsPopover({ user }) {
+function NotificationsPopover({ user }: {user: any}) {
   const notificationsQuery = user
     ? query(
         collection(db, 'notifications'),
@@ -553,16 +554,14 @@ function HomeView({
                 <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
             </div>
         ) : error ? (
-            <div className="flex flex-col items-center justify-center text-center py-16 bg-destructive/10 text-destructive rounded-lg border-2 border-dashed border-destructive/20">
-                <AlertCircle className="h-16 w-16" />
-                <h2 className="mt-4 text-xl font-semibold">حدث خطأ أثناء تحميل المواضيع</h2>
-                <p className="mt-2 text-muted-foreground text-red-400">
-                    لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground text-red-500 max-w-md">
-                    (Error: {error.message})
-                </p>
-          </div>
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
+                <AlertDescription>
+                    <p>لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.</p>
+                    <p className="mt-2 text-xs"> (Error: {error.message})</p>
+                </AlertDescription>
+            </Alert>
         ) : articles.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {articles.map((article) => (
