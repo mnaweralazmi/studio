@@ -96,9 +96,8 @@ function NotificationsPopover({ user }) {
   }, [snapshot]);
   
   useEffect(() => {
-    if (notifications.length > 0) {
-      const unreadAndUnshown = notifications.filter(n => !n.read && !shownNotifications.has(n.id));
-      if (unreadAndUnshown.length > 0) {
+    const unreadAndUnshown = notifications.filter(n => !n.read && !shownNotifications.has(n.id));
+    if (unreadAndUnshown.length > 0) {
         const latestNotification = unreadAndUnshown[0];
         toast({
           title: latestNotification.title,
@@ -106,7 +105,6 @@ function NotificationsPopover({ user }) {
         });
         // Add to shown set to prevent re-showing
         setShownNotifications(prev => new Set(prev).add(latestNotification.id));
-      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notifications, shownNotifications]);
