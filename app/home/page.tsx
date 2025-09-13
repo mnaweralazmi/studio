@@ -37,7 +37,6 @@ import {
   where,
   limit,
   writeBatch,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -168,7 +167,6 @@ function AddIdeaDialog({ user }: { user: any }) {
         authorId: user.uid,
         authorName: user.displayName || 'مستخدم غير معروف',
         createdAt: new Date(),
-        // likes: 0,
       });
 
       toast({ title: 'تم النشر بنجاح!', description: 'شكراً لمشاركتك. سيظهر موضوعك في القائمة.', className: "bg-green-600 text-white" });
@@ -278,7 +276,6 @@ function NotificationsPopover({ user }) {
               title: latestNotification.title,
               description: latestNotification.body,
             });
-            // Add to shown set to prevent re-showing
             setShownNotifications(prev => new Set(prev).add(latestNotification.id));
         }
     }
@@ -374,7 +371,6 @@ function HomeView({
       articlesSnapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Article)
       ) || [];
-    // Sort by createdAt descending, handling cases where it might be null
     return data.sort((a, b) => {
         const dateA = a.createdAt?.toDate() || new Date(0);
         const dateB = b.createdAt?.toDate() || new Date(0);
@@ -443,7 +439,6 @@ function HomeView({
 
   return (
     <div className="space-y-12">
-      {/* Hero Section */}
       <header className="text-center space-y-4 pt-8">
         <div className="flex justify-center">
             <Badge variant="outline" className="border-green-500/50 bg-green-900/20 text-green-400 text-sm py-1 px-4">
@@ -460,7 +455,6 @@ function HomeView({
         </p>
       </header>
 
-      {/* Articles Section */}
       <section>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
@@ -554,7 +548,6 @@ function HomeView({
         )}
       </section>
 
-      {/* Add/Edit Article Dialog (Admin) */}
       <Dialog open={isArticleDialogOpen} onOpenChange={setIsArticleDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -636,7 +629,6 @@ function HomeView({
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog (Admin) */}
        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent>
           <DialogHeader>
@@ -690,5 +682,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
