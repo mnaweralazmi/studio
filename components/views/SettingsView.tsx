@@ -91,7 +91,11 @@ function ProfileView() {
   const [isSavingName, setIsSavingName] = useState(false);
 
   const [isLinking, setIsLinking] = useState(false);
-  const [isGoogleLinked, setIsGoogleLinked] = useState(false);
+  
+  const isGoogleLinked = useMemo(() => 
+    user?.providerData.some(p => p.providerId === GoogleAuthProvider.PROVIDER_ID)
+  , [user]);
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -108,10 +112,6 @@ function ProfileView() {
     };
 
     if (user) {
-      const isLinked = user.providerData.some(
-        (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID
-      );
-      setIsGoogleLinked(isLinked);
       setDisplayName(user.displayName || '');
       fetchProfile();
     }
@@ -149,17 +149,17 @@ function ProfileView() {
   };
 
   const handleLinkWithGoogle = async () => {
-    if (!user) return;
+    if (!auth.currentUser) return;
     setIsLinking(true);
     try {
       const provider = new GoogleAuthProvider();
-      await linkWithPopup(user, provider);
+      await linkWithPopup(auth.currentUser, provider);
       toast({
         title: 'تم الربط بنجاح!',
         description: 'تم ربط حسابك مع جوجل.',
         className: 'bg-green-600 text-white',
       });
-      setIsGoogleLinked(true);
+      // The useMemo will trigger a re-render automatically.
     } catch (error: any) {
       console.error('Error linking with Google: ', error);
       let description = 'حدث خطأ غير متوقع.';
@@ -271,7 +271,7 @@ function ProfileView() {
               id="user-uid"
               readOnly
               value={user?.uid || ''}
-              className="text-xs h-8 mt-1"
+              className="text-xs h-8 mt-1 cursor-pointer"
               onClick={(e) => {
                 (e.target as HTMLInputElement).select();
                  navigator.clipboard.writeText(user?.uid || '');
@@ -652,5 +652,3 @@ export default function SettingsView() {
     </div>
   );
 }
-
-    
