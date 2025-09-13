@@ -35,6 +35,7 @@ import {
   where,
   limit,
   writeBatch,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -225,7 +226,7 @@ function AddIdeaDialog({ user }: { user: any }) {
         fileType: fileType,
         authorId: user.uid,
         authorName: user.displayName || 'مستخدم غير معروف',
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
 
       toast({
@@ -668,3 +669,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+  
