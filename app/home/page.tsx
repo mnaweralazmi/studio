@@ -587,6 +587,14 @@ function HomeView({
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
             </div>
+        ) : error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
+              <AlertDescription>
+                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. ({error.message})
+              </AlertDescription>
+            </Alert>
         ) : (displayArticles.length > 0) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {displayArticles.map((article) => (
