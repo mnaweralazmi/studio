@@ -110,7 +110,7 @@ export default function RegisterPage() {
         email: user.email,
         dob: dob,
         gender: gender,
-      }, { merge: true });
+      });
 
       router.push('/home');
     } catch (error: any) {
@@ -223,7 +223,7 @@ export default function RegisterPage() {
                     <SelectTrigger id="gender">
                       <SelectValue placeholder="اختر الجنس" />
                     </SelectTrigger>
-                    <SelectContent position="item-aligned">
+                    <SelectContent>
                       <SelectItem value="male">ذكر</SelectItem>
                       <SelectItem value="female">أنثى</SelectItem>
                     </SelectContent>
