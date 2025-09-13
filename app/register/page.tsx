@@ -211,7 +211,6 @@ export default function RegisterPage() {
                     type="date"
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -219,7 +218,6 @@ export default function RegisterPage() {
                   <Select
                     onValueChange={setGender}
                     value={gender}
-                    required
                   >
                     <SelectTrigger id="gender">
                       <SelectValue placeholder="اختر الجنس" />
