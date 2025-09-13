@@ -6,7 +6,7 @@ import {
   HandCoins,
   User,
   Plus,
-  Trash2,
+  Archive,
   CreditCard,
   CheckCircle,
   Loader2,
@@ -310,9 +310,10 @@ function ExpensesView({ user, collectionName, title }) {
                   <Button
                     variant="ghost"
                     size="icon"
+                    title="أرشفة"
                     onClick={() => handleArchiveExpense(expense.id)}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Archive className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </TableCell>
               </TableRow>
@@ -432,9 +433,10 @@ function FacilitiesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchive(facility.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -618,9 +620,10 @@ function AgriSalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchiveSale(sale.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -810,9 +813,10 @@ function DebtsView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchiveDebt(debt.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -1050,10 +1054,11 @@ function WorkersView({ user }) {
                   <Button
                     variant="ghost"
                     size="icon"
+                    title="أرشفة"
                     onClick={() => handleArchiveWorker(worker.id)}
                     disabled={payingSalaryFor === worker.id}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Archive className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </div>
               </TableCell>
@@ -1284,9 +1289,10 @@ function EggSalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchive(sale.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -1433,9 +1439,10 @@ function PoultrySalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchive(sale.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -1541,9 +1548,10 @@ function FlocksView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchive(flock.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -1734,9 +1742,10 @@ function LivestockSalesView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchive(sale.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -1842,9 +1851,10 @@ function HerdsView({ user }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="أرشفة"
                   onClick={() => handleArchive(herd.id)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Archive className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -1958,5 +1968,3 @@ export default function ManagementView() {
     </div>
   );
 }
-
-    
