@@ -9,10 +9,7 @@ import {
   Loader2,
   Newspaper,
   Plus,
-  Pencil,
   Trash2,
-  CheckCircle,
-  Leaf,
   FileImage,
   Video,
   X,
@@ -20,6 +17,7 @@ import {
   AlertCircle,
   Send,
   Upload,
+  Leaf,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -535,21 +533,12 @@ function HomeView({
           </div>
         </div>
 
-        {loading ? (
+        {loading && (
              <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-white/10">
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
             </div>
-        ) : error ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
-              <AlertDescription>
-                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. ({error.message})
-                <p className="mt-2">سيتم عرض مواضيع وهمية للتجربة.</p>
-              </AlertDescription>
-            </Alert>
-        ) : null}
+        )}
          
         {(displayArticles.length > 0) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
