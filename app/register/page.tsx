@@ -82,14 +82,15 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password !== confirmPassword) {
-      setError('كلمتا المرور غير متطابقتين');
-      return;
-    }
     if (!username.trim()) {
       setError('الرجاء إدخال اسم المستخدم.');
       return;
     }
+    if (password !== confirmPassword) {
+      setError('كلمتا المرور غير متطابقتين');
+      return;
+    }
+    
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
