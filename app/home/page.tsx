@@ -468,12 +468,6 @@ function HomeView({
     collection(db, 'articles')
   );
   
-  // Admin Dialog State
-  const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
-  const [isSavingArticle, setIsSavingArticle] = useState(false);
-  const [currentArticle, setCurrentArticle] = useState<Partial<Article> | null>(
-    null
-  );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
 
@@ -490,45 +484,9 @@ function HomeView({
   }, [articlesSnapshot]);
 
   // --- Admin Functions ---
-  const openAdminDialog = (article: Partial<Article> | null = null) => {
-    setCurrentArticle(article ? { ...article } : {});
-    setIsArticleDialogOpen(true);
-  };
-  
   const openDeleteConfirmation = (id: string) => {
     setArticleToDelete(id);
     setShowDeleteConfirm(true);
-  };
-
-  const handleSaveArticle = async () => {
-    if (!currentArticle || !currentArticle.title || !currentArticle.description)
-      return;
-    setIsSavingArticle(true);
-
-    try {
-      if (currentArticle.id) {
-        const articleRef = doc(db, 'articles', currentArticle.id);
-        await updateDoc(articleRef, {
-          title: currentArticle.title,
-          description: currentArticle.description,
-          imageUrl: currentArticle.imageUrl,
-          imageHint: currentArticle.imageHint,
-        });
-      } else {
-        await addDoc(collection(db, 'articles'), {
-          ...currentArticle,
-          authorId: user.uid,
-          authorName: user.displayName || 'Admin',
-          createdAt: new Date(),
-        });
-      }
-      setIsArticleDialogOpen(false);
-      setCurrentArticle(null);
-    } catch (e) {
-      console.error('Error saving article:', e);
-    } finally {
-      setIsSavingArticle(false);
-    }
   };
 
   const handleDeleteArticle = async () => {
@@ -538,6 +496,7 @@ function HomeView({
     setArticleToDelete(null);
   };
   
+  // Conditionally render dummy articles ONLY if there's an error
   const displayArticles = error ? (DUMMY_ARTICLES as Article[]) : articles;
 
   if (adminLoading) {
@@ -572,12 +531,6 @@ function HomeView({
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
             <AddIdeaDialog user={user} />
-            {isAdmin && (
-              <Button onClick={() => openAdminDialog()} className="bg-green-600 hover:bg-green-700 text-white">
-                <Plus className="h-4 w-4 ml-2" />
-                إضافة موضوع
-              </Button>
-            )}
             <NotificationsPopover user={user} />
           </div>
         </div>
@@ -593,6 +546,9 @@ function HomeView({
               <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
               <AlertDescription>
                 لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. ({error.message})
+                <div className="mt-4">
+                  <Button onClick={() => window.location.reload()}>إعادة تحميل الصفحة</Button>
+                </div>
               </AlertDescription>
             </Alert>
         ) : (displayArticles.length > 0) ? (
@@ -602,11 +558,8 @@ function HomeView({
                 key={article.id}
                 className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-white/10 shadow-lg hover:shadow-green-500/10 transition-all duration-300"
               >
-                {isAdmin && !error && (
+                {isAdmin && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8 bg-card/70 backdrop-blur-sm" onClick={() => openAdminDialog(article)}>
-                      <Pencil className="h-4 w-4"/>
-                    </Button>
                     <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => openDeleteConfirmation(article.id)}>
                       <Trash2 className="h-4 w-4"/>
                     </Button>
@@ -657,87 +610,6 @@ function HomeView({
         )}
       </section>
 
-      <Dialog open={isArticleDialogOpen} onOpenChange={setIsArticleDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {currentArticle?.id ? 'تعديل الموضوع' : 'إضافة موضوع جديد'}
-            </DialogTitle>
-            <DialogDescription>
-              املأ التفاصيل أدناه. سيظهر هذا الموضوع في الصفحة الرئيسية.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">العنوان</Label>
-              <Input
-                id="title"
-                value={currentArticle?.title || ''}
-                onChange={(e) =>
-                  setCurrentArticle({ ...currentArticle, title: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">الوصف</Label>
-              <Textarea
-                id="description"
-                value={currentArticle?.description || ''}
-                onChange={(e) =>
-                  setCurrentArticle({
-                    ...currentArticle,
-                    description: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">رابط الصورة</Label>
-              <Input
-                id="imageUrl"
-                placeholder="https://picsum.photos/seed/..."
-                value={currentArticle?.imageUrl || ''}
-                onChange={(e) =>
-                  setCurrentArticle({
-                    ...currentArticle,
-                    imageUrl: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="imageHint">
-                كلمات دلالية للصورة (للبحث المستقبلي)
-              </Label>
-              <Input
-                id="imageHint"
-                placeholder="مثال: farm tomato"
-                value={currentArticle?.imageHint || ''}
-                onChange={(e) =>
-                  setCurrentArticle({
-                    ...currentArticle,
-                    imageHint: e.target.value,
-                  })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">إلغاء</Button>
-            </DialogClose>
-            <Button onClick={handleSaveArticle} disabled={isSavingArticle}>
-              {isSavingArticle ? (
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              ) : (
-                <CheckCircle className="h-4 w-4 ml-2" />
-              )}
-              {isSavingArticle ? 'جاري الحفظ...' : 'حفظ'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent>
           <DialogHeader>
