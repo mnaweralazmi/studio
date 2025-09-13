@@ -315,17 +315,6 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
             <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
           </div>
-        ) : error ? (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
-            <AlertDescription>
-              لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في
-              إعدادات Firebase. ({error.message})
-              <br />
-              سيتم عرض مواضيع وهمية للتجربة.
-            </AlertDescription>
-          </Alert>
         ) : null}
 
         {displayArticles.length > 0 ? (
