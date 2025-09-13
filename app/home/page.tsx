@@ -286,6 +286,7 @@ function HomeView({
                 description: 'حجم الصورة كبير جدًا. الرجاء اختيار صورة أصغر من 5 ميجابايت.',
                 variant: 'destructive',
             });
+            resetFileState();
             resetInput();
             return;
         }
@@ -301,6 +302,7 @@ function HomeView({
                     description: 'مدة الفيديو طويلة جدًا. الرجاء اختيار فيديو أقصر من 3 دقائق.',
                     variant: 'destructive',
                 });
+                resetFileState();
                 resetInput();
             } else {
                  setFile(file);
@@ -313,6 +315,7 @@ function HomeView({
             description: 'الرجاء اختيار صورة أو ملف فيديو.',
             variant: 'destructive',
         });
+        resetFileState();
         resetInput();
     }
 };
@@ -326,14 +329,17 @@ const setFile = (file: File) => {
     reader.readAsDataURL(file);
 }
 
-
   const resetIdeaForm = () => {
     setIdeaTitle('');
     setIdeaDescription('');
+    resetFileState();
+  };
+
+  const resetFileState = () => {
     setIdeaFile(null);
     setIdeaFilePreview(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+        fileInputRef.current.value = '';
     }
   };
   
@@ -395,9 +401,7 @@ const setFile = (file: File) => {
       let description = 'لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.';
       if (e.code === 'storage/unauthorized') {
           description = 'لا توجد صلاحيات كافية لرفع الملفات. يرجى مراجعة قواعد الأمان في Firebase Storage.';
-          // Reset file input if upload fails due to permissions
-          setIdeaFile(null);
-          setIdeaFilePreview(null);
+          resetFileState();
       }
       toast({
         title: 'حدث خطأ أثناء النشر',
@@ -684,7 +688,7 @@ const setFile = (file: File) => {
                         variant="destructive"
                         size="icon"
                         className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        onClick={resetIdeaForm}
+                        onClick={resetFileState}
                     >
                     <X className="h-4 w-4" />
                     </Button>
