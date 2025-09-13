@@ -82,6 +82,41 @@ type Notification = {
   read: boolean;
 };
 
+const DUMMY_ARTICLES: Partial<Article>[] = [
+    {
+        id: '1',
+        title: 'زراعة الطماطم في الصيف',
+        description: 'دليل شامل لزراعة الطماطم في الظروف الحارة والجافة لضمان أفضل محصول.',
+        imageUrl: 'https://picsum.photos/seed/tomato-summer/400/200',
+        imageHint: 'tomato plant',
+        authorName: 'خبير زراعي',
+    },
+    {
+        id: '2',
+        title: 'نصائح للعناية بأشجار النخيل',
+        description: 'تعلم كيفية تسميد وسقي أشجار النخيل لحمايتها من الآفات وزيادة إنتاجها.',
+        imageUrl: 'https://picsum.photos/seed/palm-trees/400/200',
+        imageHint: 'palm trees',
+        authorName: 'م. عبدالله',
+    },
+    {
+        id: '3',
+        title: 'استخدام البيوت المحمية',
+        description: 'فوائد استخدام البيوت المحمية لزراعة المحاصيل خارج موسمها الطبيعي.',
+        imageUrl: 'https://picsum.photos/seed/greenhouse/400/200',
+        imageHint: 'greenhouse farming',
+        authorName: 'فريق الإرشاد',
+    },
+     {
+        id: '4',
+        title: 'طرق مكافحة الآفات الطبيعية',
+        description: 'استراتيجيات صديقة للبيئة لمكافحة الحشرات والآفات دون استخدام مواد كيميائية ضارة.',
+        imageUrl: 'https://picsum.photos/seed/pest-control/400/200',
+        imageHint: 'natural pest control',
+        authorName: 'مزارع واعي',
+    }
+]
+
 function AddIdeaDialog({ user }: { user: any }) {
   const [isIdeaDialogOpen, setIsIdeaDialogOpen] = useState(false);
   const [isSavingIdea, setIsSavingIdea] = useState(false);
@@ -445,6 +480,9 @@ function HomeView({
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
 
   const articles = useMemo(() => {
+    if (error) {
+        return DUMMY_ARTICLES as Article[];
+    }
     const data =
       articlesSnapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Article)
@@ -454,7 +492,7 @@ function HomeView({
         const dateB = b.createdAt?.toDate() || new Date(0);
         return dateB.getTime() - dateA.getTime();
     });
-  }, [articlesSnapshot]);
+  }, [articlesSnapshot, error]);
 
   // --- Admin Functions ---
   const openAdminDialog = (article: Partial<Article> | null = null) => {
@@ -553,23 +591,14 @@ function HomeView({
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
             </div>
-        ) : error ? (
-            <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
-                <AlertDescription>
-                    <p>لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.</p>
-                    <p className="mt-2 text-xs"> (Error: {error.message})</p>
-                </AlertDescription>
-            </Alert>
-        ) : articles.length > 0 ? (
+        ) : (articles.length > 0 || error) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {articles.map((article) => (
               <Card
                 key={article.id}
                 className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-white/10 shadow-lg hover:shadow-green-500/10 transition-all duration-300"
               >
-                {isAdmin && (
+                {isAdmin && !error && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
                     <Button variant="outline" size="icon" className="h-8 w-8 bg-card/70 backdrop-blur-sm" onClick={() => openAdminDialog(article)}>
                       <Pencil className="h-4 w-4"/>
@@ -584,7 +613,7 @@ function HomeView({
                     src={
                       article.imageUrl
                     }
-                    alt={article.title}
+                    alt={article.title || 'Article Image'}
                     width={400}
                     height={200}
                     className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
