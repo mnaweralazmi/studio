@@ -216,7 +216,8 @@ function AddIdeaDialog({ user }: { user: any }) {
         fileUrl = await getDownloadURL(fileRef);
       }
 
-      await addDoc(collection(db, 'articles'), {
+      const articlesCollection = collection(db, 'users', user.uid, 'articles');
+      await addDoc(articlesCollection, {
         title: ideaTitle,
         description: ideaDescription,
         imageUrl: fileType === 'image' ? fileUrl : '',
@@ -462,8 +463,9 @@ function HomeView({
   adminLoading: boolean;
   user: any;
 }) {
+  const articlesCollection = user ? collection(db, 'users', user.uid, 'articles') : null;
   const [articlesSnapshot, loading, error] = useCollection(
-    collection(db, 'articles')
+    articlesCollection ? query(articlesCollection, orderBy('createdAt', 'desc')) : null
   );
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -488,8 +490,8 @@ function HomeView({
   };
 
   const handleDeleteArticle = async () => {
-    if (!articleToDelete) return;
-    await deleteDoc(doc(db, 'articles', articleToDelete));
+    if (!articleToDelete || !articlesCollection) return;
+    await deleteDoc(doc(articlesCollection, articleToDelete));
     setShowDeleteConfirm(false);
     setArticleToDelete(null);
   };
@@ -540,7 +542,19 @@ function HomeView({
             </div>
         )}
          
-        {(displayArticles.length > 0) ? (
+        {error && (
+            <Alert variant="destructive">
+                 <AlertCircle className="h-4 w-4" />
+                <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
+                <AlertDescription>
+                    لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. ({error.message})
+                    <br/>
+                    سيتم عرض مواضيع وهمية للتجربة.
+                </AlertDescription>
+            </Alert>
+        )}
+
+        {(displayArticles.length > 0) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             {displayArticles.map((article) => (
               <Card
@@ -586,8 +600,9 @@ function HomeView({
               </Card>
             ))}
           </div>
-        ) : (
-          !loading && !error && (
+        )}
+
+        {!loading && !error && displayArticles.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-white/10">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
@@ -597,7 +612,6 @@ function HomeView({
                 كن أول من يشارك فكرة أو موضوعًا جديدًا!
             </p>
           </div>
-          )
         )}
       </section>
 
@@ -654,3 +668,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
