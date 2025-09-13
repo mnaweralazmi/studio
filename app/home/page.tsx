@@ -142,8 +142,7 @@ function AddIdeaDialog({ user }: { user: any }) {
     }
 
     if (file.type.startsWith('image/')) {
-      if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit for images
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit for images
         toast({
           variant: 'destructive',
           title: 'حجم الصورة كبير جدًا',
@@ -161,8 +160,7 @@ function AddIdeaDialog({ user }: { user: any }) {
       video.preload = 'metadata';
       video.onloadedmetadata = () => {
         window.URL.revokeObjectURL(video.src);
-        if (video.duration > 60) {
-          // 60 seconds limit for videos
+        if (video.duration > 60) { // 60 seconds limit for videos
           toast({
             variant: 'destructive',
             title: 'مدة الفيديو طويلة جدًا',
@@ -480,9 +478,6 @@ function HomeView({
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
 
   const articles = useMemo(() => {
-    if (error) {
-        return DUMMY_ARTICLES as Article[];
-    }
     const data =
       articlesSnapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Article)
@@ -492,7 +487,7 @@ function HomeView({
         const dateB = b.createdAt?.toDate() || new Date(0);
         return dateB.getTime() - dateA.getTime();
     });
-  }, [articlesSnapshot, error]);
+  }, [articlesSnapshot]);
 
   // --- Admin Functions ---
   const openAdminDialog = (article: Partial<Article> | null = null) => {
@@ -543,6 +538,7 @@ function HomeView({
     setArticleToDelete(null);
   };
   
+  const displayArticles = error ? (DUMMY_ARTICLES as Article[]) : articles;
 
   if (adminLoading) {
     return (
@@ -591,9 +587,9 @@ function HomeView({
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
             </div>
-        ) : (articles.length > 0 || error) ? (
+        ) : (displayArticles.length > 0) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {articles.map((article) => (
+            {displayArticles.map((article) => (
               <Card
                 key={article.id}
                 className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-white/10 shadow-lg hover:shadow-green-500/10 transition-all duration-300"
