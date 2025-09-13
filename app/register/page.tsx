@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,7 +65,7 @@ const getFirebaseAuthErrorMessage = (errorCode: string): string => {
     case 'auth/popup-closed-by-user':
       return 'تم إغلاق نافذة تسجيل الدخول. يرجى المحاولة مرة أخرى.';
     case 'auth/credential-already-in-use':
-        return 'حساب جوجل هذا مرتبط بالفعل بحساب آخر.';
+      return 'حساب جوجل هذا مرتبط بالفعل بحساب آخر.';
     default:
       return 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
   }
@@ -84,12 +84,13 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!username.trim()) {
-      setError('الرجاء إدخال اسم المستخدم.');
-      return;
-    }
+
     if (password !== confirmPassword) {
       setError('كلمتا المرور غير متطابقتين');
+      return;
+    }
+    if (!username.trim()) {
+      setError('الرجاء إدخال اسم المستخدم.');
       return;
     }
 
@@ -125,10 +126,14 @@ export default function RegisterPage() {
       const user = result.user;
 
       const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
-        displayName: user.displayName,
-        email: user.email,
-      });
+      const docSnap = await getDoc(userDocRef);
+
+      if (!docSnap.exists()) {
+        await setDoc(userDocRef, {
+          displayName: user.displayName,
+          email: user.email,
+        });
+      }
 
       router.push('/home');
     } catch (error: any) {
