@@ -248,7 +248,7 @@ function HomeView({
       } else {
         await addDoc(collection(db, 'articles'), {
           ...currentArticle,
-          createdAt: serverTimestamp(),
+          createdAt: new Date(),
         });
       }
       setIsArticleDialogOpen(false);
@@ -372,7 +372,7 @@ const setFile = (file: File) => {
       const articleData: any = {
         title: ideaTitle,
         description: ideaDescription || '',
-        createdAt: serverTimestamp(),
+        createdAt: new Date(),
         authorId: user.uid,
         authorName: user.displayName || user.email,
         imageHint: 'user generated',
@@ -748,5 +748,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
