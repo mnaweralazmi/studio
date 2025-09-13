@@ -2,7 +2,7 @@
 
 import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import {
@@ -12,6 +12,10 @@ import {
   Bell,
   AlertCircle,
   Leaf,
+  Plus,
+  Image as ImageIcon,
+  Video,
+  X,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -27,7 +31,10 @@ import {
   where,
   limit,
   writeBatch,
+  addDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import {
   Dialog,
@@ -37,6 +44,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
@@ -49,6 +57,9 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 type Article = {
   id: string;
@@ -109,6 +120,108 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
     authorName: 'مزارع واعي',
   },
 ];
+
+function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: string; description: string; file?: File; }) => void; isSaving: boolean; user: any; }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [file, setFile] = useState<File | undefined>(undefined);
+  const [preview, setPreview] = useState<string | undefined>(undefined);
+  const [open, setOpen] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile));
+    }
+  };
+  
+  const clearForm = () => {
+    setTitle('');
+    setDescription('');
+    setFile(undefined);
+    setPreview(undefined);
+  }
+
+  const handleSave = async () => {
+    if (!title || !user) {
+      toast({
+        title: 'خطأ',
+        description: 'الرجاء إدخال عنوان للموضوع.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    await onSave({ title, description, file });
+    clearForm();
+    setOpen(false);
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-green-600 hover:bg-green-700">
+            <Plus className="h-4 w-4 ml-2" />
+            أضف فكرتك
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>أضف فكرة أو موضوع جديد</DialogTitle>
+          <DialogDescription>
+            شارك فكرة، نصيحة، أو سؤال مع مجتمع المزارعين.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="idea-title">عنوان الموضوع</Label>
+            <Input
+              id="idea-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="مثال: أفضل طريقة لتسميد الطماطم"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="idea-description">الوصف (اختياري)</Label>
+            <Textarea
+              id="idea-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="اشرح فكرتك بتفصيل أكبر..."
+            />
+          </div>
+           <div className="space-y-2">
+             <Label htmlFor="idea-file">صورة أو فيديو (اختياري)</Label>
+             <Input id="idea-file" type="file" onChange={handleFileChange} accept="image/*,video/*" />
+          </div>
+          {preview && (
+            <div className="relative">
+              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={() => { setFile(undefined); setPreview(undefined); }}>
+                 <X className="h-4 w-4" />
+              </Button>
+              {file?.type.startsWith('image/') ? (
+                <Image src={preview} alt="Preview" width={400} height={200} className="rounded-md object-cover" />
+              ) : (
+                <video src={preview} controls className="rounded-md w-full" />
+              )}
+            </div>
+           )}
+        </div>
+        <DialogFooter>
+           <DialogClose asChild>
+              <Button variant="outline" onClick={clearForm}>إلغاء</Button>
+            </DialogClose>
+          <Button onClick={handleSave} disabled={isSaving || !title}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isSaving ? 'جاري النشر...' : 'نشر الموضوع'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function NotificationsPopover({ user }: { user: any }) {
   const notificationsQuery = useMemo(
@@ -243,6 +356,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const articles = useMemo(
     () =>
@@ -251,6 +365,51 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
       ) || [],
     [articlesSnapshot]
   );
+  
+  const handleSaveIdea = async ({ title, description, file }: { title: string; description: string; file?: File; }) => {
+    if (!user) return;
+    setIsSaving(true);
+  
+    try {
+      let fileUrl = '';
+      let fileType: 'image' | 'video' | undefined = undefined;
+  
+      if (file) {
+        const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
+        const fileRef = ref(storage, filePath);
+        await uploadBytes(fileRef, file);
+        fileUrl = await getDownloadURL(fileRef);
+        fileType = file.type.startsWith('image/') ? 'image' : 'video';
+      }
+      
+      await addDoc(articlesCollection, {
+        title,
+        description,
+        imageUrl: fileType === 'image' ? fileUrl : '',
+        videoUrl: fileType === 'video' ? fileUrl : '',
+        fileType: fileType,
+        authorId: user.uid,
+        authorName: user.displayName || 'مستخدم غير معروف',
+        createdAt: serverTimestamp(),
+      });
+  
+      toast({
+        title: 'تم النشر بنجاح!',
+        description: 'تمت إضافة موضوعك الجديد.',
+        className: 'bg-green-600 text-white',
+      });
+  
+    } catch (e) {
+      console.error('Error saving idea: ', e);
+      toast({
+        variant: 'destructive',
+        title: 'خطأ في النشر',
+        description: 'لم نتمكن من حفظ الموضوع. الرجاء المحاولة مرة أخرى.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const openDeleteConfirmation = (id: string) => {
     setArticleToDelete(id);
@@ -306,9 +465,24 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
+            {isAdmin && <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} />}
             <NotificationsPopover user={user} />
           </div>
         </div>
+        
+        {error && (
+            <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
+                <AlertDescription>
+                    لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.
+                    <br/>
+                    <code className="text-xs relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono font-semibold">({error.message})</code>
+                    <br/>
+                    سيتم عرض مواضيع وهمية للتجربة.
+                </AlertDescription>
+            </Alert>
+        )}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
@@ -317,7 +491,17 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           </div>
         ) : null}
 
-        {displayArticles.length > 0 ? (
+        {!loading && displayArticles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
+            <Newspaper className="h-16 w-16 text-muted-foreground" />
+            <h2 className="mt-4 text-xl font-semibold">
+              لا توجد مواضيع لعرضها حاليًا
+            </h2>
+            <p className="mt-2 text-muted-foreground max-w-md">
+              كن أول من يشارك فكرة أو موضوعًا جديدًا!
+            </p>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {displayArticles.map((article) => (
               <Card
@@ -372,17 +556,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
               </Card>
             ))}
           </div>
-        ) : !loading ? (
-          <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
-            <Newspaper className="h-16 w-16 text-muted-foreground" />
-            <h2 className="mt-4 text-xl font-semibold">
-              لا توجد مواضيع لعرضها حاليًا
-            </h2>
-            <p className="mt-2 text-muted-foreground max-w-md">
-              كن أول من يشارك فكرة أو موضوعًا جديدًا!
-            </p>
-          </div>
-        ) : null}
+        )}
       </section>
 
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
