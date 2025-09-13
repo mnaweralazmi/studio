@@ -121,7 +121,20 @@ export default function RegisterPage() {
     setError(null);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+
+      // Save basic info to Firestore for new Google users
+      const profileRef = doc(db, 'users', user.uid, 'profile', 'data');
+      await setDoc(
+        profileRef,
+        {
+          displayName: user.displayName,
+          email: user.email,
+        },
+        { merge: true }
+      );
+
       router.push('/home');
     } catch (error: any) {
       setError(getFirebaseAuthErrorMessage(error.code));
