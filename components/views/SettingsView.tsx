@@ -14,7 +14,7 @@ import {
   Settings,
   Save,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   signOut,
