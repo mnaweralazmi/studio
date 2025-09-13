@@ -106,6 +106,7 @@ export default function RegisterPage() {
       const profileRef = doc(db, 'users', user.uid, 'profile', 'data');
       await setDoc(profileRef, {
         displayName: username,
+        email: user.email,
         dob: dob,
         gender: gender,
       }, { merge: true });
