@@ -92,7 +92,7 @@ function NotificationsPopover({ user }) {
     const data = snapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Notification)
       ) || [];
-    return data.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+    return data.sort((a, b) => (b.createdAt?.toDate()?.getTime() || 0) - (a.createdAt?.toDate()?.getTime() || 0));
   }, [snapshot]);
   
   useEffect(() => {
@@ -156,7 +156,7 @@ function NotificationsPopover({ user }) {
                     </p>
                     <p className="text-sm text-muted-foreground">{n.body}</p>
                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(n.createdAt.toDate(), { addSuffix: true, locale: ar })}
+                        {n.createdAt ? formatDistanceToNow(n.createdAt.toDate(), { addSuffix: true, locale: ar }) : ''}
                     </p>
                   </div>
                 </div>
