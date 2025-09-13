@@ -217,7 +217,7 @@ function AddIdeaDialog({ user }: { user: any }) {
         fileUrl = await getDownloadURL(fileRef);
       }
 
-      const articlesCollection = collection(db, 'users', user.uid, 'articles');
+      const articlesCollection = collection(db, 'articles');
       await addDoc(articlesCollection, {
         title: ideaTitle,
         description: ideaDescription,
@@ -464,9 +464,9 @@ function HomeView({
   adminLoading: boolean;
   user: any;
 }) {
-  const articlesCollection = user ? collection(db, 'users', user.uid, 'articles') : null;
+  const articlesCollection = collection(db, 'articles');
   const [articlesSnapshot, loading, error] = useCollection(
-    articlesCollection ? query(articlesCollection, orderBy('createdAt', 'desc')) : null
+    query(articlesCollection, orderBy('createdAt', 'desc'))
   );
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -491,7 +491,7 @@ function HomeView({
   };
 
   const handleDeleteArticle = async () => {
-    if (!articleToDelete || !articlesCollection) return;
+    if (!articleToDelete) return;
     await deleteDoc(doc(articlesCollection, articleToDelete));
     setShowDeleteConfirm(false);
     setArticleToDelete(null);
@@ -669,5 +669,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-  
