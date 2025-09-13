@@ -7,14 +7,23 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  updateProfile,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -60,12 +69,14 @@ const getFirebaseAuthErrorMessage = (errorCode: string): string => {
   }
 };
 
-
 export default function RegisterPage() {
   const router = useRouter();
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -75,8 +86,30 @@ export default function RegisterPage() {
       setError('كلمتا المرور غير متطابقتين');
       return;
     }
+    if (!username.trim()) {
+      setError('الرجاء إدخال اسم المستخدم.');
+      return;
+    }
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Update profile with username
+      await updateProfile(user, { displayName: username });
+
+      // Save additional info to Firestore
+      const profileRef = doc(db, 'users', user.uid, 'profile', 'data');
+      await setDoc(profileRef, {
+        displayName: username,
+        dob: dob,
+        gender: gender,
+      }, { merge: true });
+
       router.push('/home');
     } catch (error: any) {
       setError(getFirebaseAuthErrorMessage(error.code));
@@ -89,8 +122,7 @@ export default function RegisterPage() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       router.push('/home');
-    } catch (error: any) {
-      setError(getFirebaseAuthErrorMessage(error.code));
+    } catch (error: any)      setError(getFirebaseAuthErrorMessage(error.code));
     }
   };
 
@@ -112,6 +144,18 @@ export default function RegisterPage() {
               </Alert>
             )}
             <form onSubmit={handleRegister} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">اسم المستخدم</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="اسمك الكامل"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">البريد الإلكتروني</Label>
                 <Input
@@ -143,6 +187,36 @@ export default function RegisterPage() {
                   required
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dob">تاريخ الميلاد</Label>
+                  <Input
+                    id="dob"
+                    type="date"
+                    value={dob}
+                    onChange={(e) => setDob(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">الجنس</Label>
+                  <Select
+                    onValueChange={setGender}
+                    value={gender}
+                    required
+                  >
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder="اختر الجنس" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">ذكر</SelectItem>
+                      <SelectItem value="female">أنثى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <Button type="submit" className="w-full">
                 إنشاء حساب
               </Button>
