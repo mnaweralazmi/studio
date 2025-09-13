@@ -10,8 +10,6 @@ import {
   Newspaper,
   Plus,
   Trash2,
-  FileImage,
-  Video,
   X,
   Bell,
   AlertCircle,
@@ -29,7 +27,6 @@ import {
   orderBy,
   addDoc,
   doc,
-  updateDoc,
   deleteDoc,
   Timestamp,
   where,
@@ -252,7 +249,7 @@ function AddIdeaDialog({ user }: { user: any }) {
           variant: 'destructive',
           title: 'خطأ في النشر',
           description:
-            'لم نتمكن من حفظ موضوعك. يرجى المحاولة مرة أخرى.',
+            error.message || 'لم نتمكن من حفظ موضوعك. يرجى المحاولة مرة أخرى.',
         });
       }
     } finally {
@@ -360,13 +357,14 @@ function AddIdeaDialog({ user }: { user: any }) {
 }
 
 function NotificationsPopover({ user }: {user: any}) {
-  const notificationsQuery = user
+  const notificationsQuery = useMemo(() => user
     ? query(
         collection(db, 'notifications'),
         where('target', 'in', ['all', user.uid]),
         limit(10)
       )
-    : null;
+    : null, [user]);
+
   const [snapshot, loading] = useCollection(notificationsQuery);
   const [shownNotifications, setShownNotifications] = useState(new Set());
 
@@ -379,16 +377,14 @@ function NotificationsPopover({ user }: {user: any}) {
   
   useEffect(() => {
     if (!notifications || notifications.length === 0) return;
-    const unreadAndUnshown = notifications.filter(n => !n.read && !shownNotifications.has(n.id));
-     if (unreadAndUnshown.length > 0) {
-        const latestNotification = unreadAndUnshown[0];
-         if (latestNotification) {
-            toast({
-              title: latestNotification.title,
-              description: latestNotification.body,
-            });
-            setShownNotifications(prev => new Set(prev).add(latestNotification.id));
-        }
+    const unreadAndUnshown = notifications.find(n => !n.read && !shownNotifications.has(n.id));
+     
+     if (unreadAndUnshown) {
+        toast({
+          title: unreadAndUnshown.title,
+          description: unreadAndUnshown.body,
+        });
+        setShownNotifications(prev => new Set(prev).add(unreadAndUnshown.id));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notifications]);
@@ -404,7 +400,11 @@ function NotificationsPopover({ user }: {user: any}) {
           batch.update(d.ref, { read: true });
         }
       });
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (error) {
+        console.error("Error marking notifications as read: ", error);
+      }
     }
   };
   
@@ -457,11 +457,9 @@ function NotificationsPopover({ user }: {user: any}) {
 
 function HomeView({
   isAdmin,
-  adminLoading,
   user,
 }: {
   isAdmin: boolean;
-  adminLoading: boolean;
   user: any;
 }) {
   const articlesCollection = collection(db, 'articles');
@@ -472,19 +470,12 @@ function HomeView({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
 
-  const articles = useMemo(() => {
-    const data =
-      articlesSnapshot?.docs.map(
+  const articles = useMemo(() => 
+    articlesSnapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Article)
-      ) || [];
-    return data.sort((a, b) => {
-        const dateA = a.createdAt?.toDate() || new Date(0);
-        const dateB = b.createdAt?.toDate() || new Date(0);
-        return dateB.getTime() - dateA.getTime();
-    });
-  }, [articlesSnapshot]);
+      ) || [],
+  [articlesSnapshot]);
 
-  // --- Admin Functions ---
   const openDeleteConfirmation = (id: string) => {
     setArticleToDelete(id);
     setShowDeleteConfirm(true);
@@ -492,22 +483,18 @@ function HomeView({
 
   const handleDeleteArticle = async () => {
     if (!articleToDelete) return;
-    await deleteDoc(doc(articlesCollection, articleToDelete));
-    setShowDeleteConfirm(false);
-    setArticleToDelete(null);
+    try {
+      await deleteDoc(doc(articlesCollection, articleToDelete));
+      setShowDeleteConfirm(false);
+      setArticleToDelete(null);
+    } catch (e) {
+      console.error("Error deleting article: ", e);
+      toast({ variant: 'destructive', title: 'خطأ في الحذف', description: 'لم نتمكن من حذف الموضوع.' });
+      setShowDeleteConfirm(false);
+    }
   };
   
-  // Conditionally render dummy articles ONLY if there's an error
   const displayArticles = error ? (DUMMY_ARTICLES as Article[]) : articles;
-
-  if (adminLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-16">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-        <h2 className="mt-4 text-xl font-semibold">جاري تحميل البيانات...</h2>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-12">
@@ -571,9 +558,7 @@ function HomeView({
                 )}
                 {article.imageUrl ? (
                   <Image
-                    src={
-                      article.imageUrl
-                    }
+                    src={article.imageUrl}
                     alt={article.title || 'Article Image'}
                     width={400}
                     height={200}
@@ -650,7 +635,7 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
+  if (loading || adminLoading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -663,7 +648,7 @@ export default function HomePage() {
     <div className="pb-24">
       <Toaster />
       <main className="px-4 pt-4 container mx-auto">
-        <HomeView isAdmin={isAdmin} adminLoading={adminLoading} user={user} />
+        <HomeView isAdmin={isAdmin} user={user} />
       </main>
       <AppFooter activeView="home" />
     </div>

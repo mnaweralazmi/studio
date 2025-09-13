@@ -3,11 +3,8 @@
 import {
   Bell,
   UserCircle,
-  Shield,
-  Palette,
   LogOut,
   Loader2,
-  CheckCircle,
   Archive,
   UserCog,
   Send,
@@ -49,7 +46,6 @@ import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import ArchiveView from './ArchiveView';
 import { toast } from '../ui/use-toast';
-import { cn } from '@/lib/utils';
 import { Toggle } from '../ui/toggle';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -89,7 +85,6 @@ function ProfileView() {
   const [privateInfo, setPrivateInfo] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
-
   const [isLinking, setIsLinking] = useState(false);
   
   const isGoogleLinked = useMemo(() => 
@@ -159,7 +154,6 @@ function ProfileView() {
         description: 'تم ربط حسابك مع جوجل.',
         className: 'bg-green-600 text-white',
       });
-      // The useMemo will trigger a re-render automatically.
     } catch (error: any) {
       console.error('Error linking with Google: ', error);
       let description = 'حدث خطأ غير متوقع.';
@@ -575,15 +569,17 @@ export default function SettingsView() {
     }
   };
 
-  const tabs = [
-    { value: 'profile', label: 'الملف الشخصي', icon: UserCircle },
-    { value: 'settings', label: 'الإعدادات العامة', icon: Settings },
-    { value: 'archive', label: 'الأرشيف', icon: Archive },
-  ];
-
-  if (isAdmin) {
-    tabs.push({ value: 'admin', label: 'المدير', icon: UserCog });
-  }
+  const tabs = useMemo(() => {
+    const baseTabs = [
+      { value: 'profile', label: 'الملف الشخصي', icon: UserCircle },
+      { value: 'settings', label: 'الإعدادات العامة', icon: Settings },
+      { value: 'archive', label: 'الأرشيف', icon: Archive },
+    ];
+    if (isAdmin) {
+      baseTabs.push({ value: 'admin', label: 'المدير', icon: UserCog });
+    }
+    return baseTabs;
+  }, [isAdmin]);
 
   const renderContent = () => {
     switch (activeTab) {
