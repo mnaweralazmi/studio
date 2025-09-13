@@ -82,20 +82,18 @@ function NotificationsPopover({ user }) {
     ? query(
         collection(db, 'notifications'),
         where('target', 'in', ['all', user.uid]),
-        orderBy('createdAt', 'desc'),
         limit(10)
       )
     : null;
   const [snapshot, loading] = useCollection(notificationsQuery);
   const [shownNotifications, setShownNotifications] = useState(new Set());
 
-  const notifications = useMemo(
-    () =>
-      snapshot?.docs.map(
+  const notifications = useMemo(() =>{
+    const data = snapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Notification)
-      ) || [],
-    [snapshot]
-  );
+      ) || [];
+    return data.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+  }, [snapshot]);
   
   useEffect(() => {
     if (notifications.length > 0) {
