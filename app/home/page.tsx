@@ -13,12 +13,13 @@ import {
   Trash2,
   CheckCircle,
   Leaf,
-  Lightbulb,
   FileImage,
   Video,
   X,
   Bell,
   AlertCircle,
+  Send,
+  Upload,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -32,11 +33,11 @@ import {
   doc,
   updateDoc,
   deleteDoc,
-  serverTimestamp,
   Timestamp,
   where,
   limit,
   writeBatch,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -48,6 +49,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +66,8 @@ type Article = {
   title: string;
   description: string;
   imageUrl?: string;
+  videoUrl?: string;
+  fileType?: 'image' | 'video';
   imageHint?: string;
   createdAt: Timestamp;
   authorId?: string;
@@ -77,6 +81,174 @@ type Notification = {
   createdAt: Timestamp;
   read: boolean;
 };
+
+function AddIdeaDialog({ user }: { user: any }) {
+  const [isIdeaDialogOpen, setIsIdeaDialogOpen] = useState(false);
+  const [isSavingIdea, setIsSavingIdea] = useState(false);
+  const [ideaTitle, setIdeaTitle] = useState('');
+  const [ideaDescription, setIdeaDescription] = useState('');
+  const [ideaFile, setIdeaFile] = useState<File | null>(null);
+  const [ideaFilePreview, setIdeaFilePreview] = useState<string | null>(null);
+  const ideaFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit for images
+        toast({ variant: 'destructive', title: 'حجم الصورة كبير جدًا', description: 'يجب أن يكون حجم الصورة أقل من 5 ميجابايت.' });
+        setIdeaFile(null);
+        setIdeaFilePreview(null);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => setIdeaFilePreview(reader.result as string);
+      reader.readAsDataURL(file);
+      setIdeaFile(file);
+    } else if (file.type.startsWith('video/')) {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        if (video.duration > 60) { // 60 seconds limit for videos
+          toast({ variant: 'destructive', title: 'مدة الفيديو طويلة جدًا', description: 'يجب أن تكون مدة الفيديو أقل من 60 ثانية.' });
+          setIdeaFile(null);
+          setIdeaFilePreview(null);
+        } else {
+          setIdeaFile(file);
+          setIdeaFilePreview(URL.createObjectURL(file));
+        }
+      };
+      video.src = URL.createObjectURL(file);
+    } else {
+      toast({ variant: 'destructive', title: 'نوع الملف غير مدعوم', description: 'يرجى اختيار صورة أو ملف فيديو.' });
+      setIdeaFile(null);
+      setIdeaFilePreview(null);
+    }
+  };
+  
+  const clearFile = () => {
+      setIdeaFile(null);
+      setIdeaFilePreview(null);
+      if (ideaFileInputRef.current) {
+        ideaFileInputRef.current.value = '';
+      }
+  }
+
+  const handleSaveIdea = async () => {
+    if (!ideaTitle) {
+      toast({ variant: 'destructive', title: 'العنوان مطلوب', description: 'الرجاء إدخال عنوان للموضوع.' });
+      return;
+    }
+     if (!user || !user.uid) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'يجب أن تكون مسجلاً للدخول لنشر موضوع.' });
+      return;
+    }
+
+    setIsSavingIdea(true);
+    let fileUrl = '';
+    let fileType: 'image' | 'video' | undefined = undefined;
+
+    try {
+      if (ideaFile) {
+        fileType = ideaFile.type.startsWith('image/') ? 'image' : 'video';
+        const filePath = `articles/${user.uid}/${Date.now()}_${ideaFile.name}`;
+        const fileRef = ref(storage, filePath);
+        await uploadBytes(fileRef, ideaFile);
+        fileUrl = await getDownloadURL(fileRef);
+      }
+
+      await addDoc(collection(db, 'articles'), {
+        title: ideaTitle,
+        description: ideaDescription,
+        imageUrl: fileType === 'image' ? fileUrl : '',
+        videoUrl: fileType === 'video' ? fileUrl : '',
+        fileType: fileType,
+        authorId: user.uid,
+        authorName: user.displayName || 'مستخدم غير معروف',
+        createdAt: new Date(),
+        // likes: 0,
+      });
+
+      toast({ title: 'تم النشر بنجاح!', description: 'شكراً لمشاركتك. سيظهر موضوعك في القائمة.', className: "bg-green-600 text-white" });
+      setIdeaTitle('');
+      setIdeaDescription('');
+      clearFile();
+      setIsIdeaDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error saving idea:', error);
+       if (error.code === 'storage/unauthorized') {
+            toast({ variant: 'destructive', title: 'خطأ في الصلاحيات', description: 'لا توجد صلاحيات كافية لرفع الملفات. يرجى مراجعة قواعد الأمان في Firebase Storage.' });
+            clearFile();
+       } else {
+           toast({ variant: 'destructive', title: 'خطأ في النشر', description: 'لم نتمكن من حفظ موضوعك. يرجى المحاولة مرة أخرى.' });
+       }
+    } finally {
+      setIsSavingIdea(false);
+    }
+  };
+
+
+  return (
+    <Dialog open={isIdeaDialogOpen} onOpenChange={setIsIdeaDialogOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Plus className="h-4 w-4 ml-2" />
+          أضف فكرتك
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>موضوع جديد</DialogTitle>
+          <DialogDescription>شارك فكرة أو موضوعًا جديدًا مع الآخرين.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="idea-title">العنوان</Label>
+            <Input id="idea-title" placeholder="عنوان الموضوع" value={ideaTitle} onChange={(e) => setIdeaTitle(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="idea-description">التفاصيل</Label>
+            <Textarea id="idea-description" placeholder="اشرح فكرتك بالتفصيل..." value={ideaDescription} onChange={(e) => setIdeaDescription(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>صورة أو فيديو (اختياري)</Label>
+            {ideaFilePreview ? (
+               <div className="relative">
+                 {ideaFile?.type.startsWith('image/') ? (
+                    <Image src={ideaFilePreview} alt="معاينة" width={400} height={200} className="w-full h-48 object-cover rounded-md" />
+                 ) : (
+                    <video src={ideaFilePreview} controls className="w-full h-48 rounded-md" />
+                 )}
+                 <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={clearFile}>
+                    <X className="h-4 w-4"/>
+                 </Button>
+               </div>
+            ) : (
+              <div 
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50"
+                onClick={() => ideaFileInputRef.current?.click()}
+              >
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">اختر صورة أو فيديو</p>
+                  <p className="text-xs text-muted-foreground">الحد الأقصى: 5MB للصور، 60 ثانية للفيديو</p>
+                  <Input type="file" ref={ideaFileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline">إلغاء</Button></DialogClose>
+          <Button onClick={handleSaveIdea} disabled={isSavingIdea}>
+            {isSavingIdea ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Send className="h-4 w-4 ml-2" />}
+            {isSavingIdea ? 'جاري النشر...' : 'نشر الموضوع'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 function NotificationsPopover({ user }) {
   const notificationsQuery = user
@@ -97,10 +269,11 @@ function NotificationsPopover({ user }) {
   }, [snapshot]);
   
   useEffect(() => {
+    if (!notifications || notifications.length === 0) return;
     const unreadAndUnshown = notifications.filter(n => !n.read && !shownNotifications.has(n.id));
-    if (unreadAndUnshown.length > 0) {
+     if (unreadAndUnshown.length > 0) {
         const latestNotification = unreadAndUnshown[0];
-        if (latestNotification) {
+         if (latestNotification) {
             toast({
               title: latestNotification.title,
               description: latestNotification.body,
@@ -187,8 +360,6 @@ function HomeView({
     collection(db, 'articles')
   );
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Admin Dialog State
   const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
   const [isSavingArticle, setIsSavingArticle] = useState(false);
@@ -239,6 +410,8 @@ function HomeView({
       } else {
         await addDoc(collection(db, 'articles'), {
           ...currentArticle,
+          authorId: user.uid,
+          authorName: user.displayName || 'Admin',
           createdAt: new Date(),
         });
       }
@@ -292,6 +465,7 @@ function HomeView({
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
+            <AddIdeaDialog user={user} />
             {isAdmin && (
               <Button onClick={() => openAdminDialog()} className="bg-green-600 hover:bg-green-700 text-white">
                 <Plus className="h-4 w-4 ml-2" />
@@ -346,6 +520,8 @@ function HomeView({
                     className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
                     data-ai-hint={article.imageHint}
                   />
+                ) : article.videoUrl ? (
+                    <video src={article.videoUrl} controls className="w-full h-40 object-cover" />
                 ) : (
                    <div className="w-full h-40 bg-secondary flex items-center justify-center">
                     <Newspaper className="h-10 w-10 text-muted-foreground" />
@@ -372,14 +548,8 @@ function HomeView({
               لا توجد مواضيع لعرضها حاليًا
             </h2>
             <p className="mt-2 text-muted-foreground max-w-md">
-                سيتم عرض مربعات المواضيع مع الصور والفيديوهات والمحتوى هنا عند إضافتها.
+                كن أول من يشارك فكرة أو موضوعًا جديدًا!
             </p>
-            {isAdmin && (
-                <Button onClick={() => openAdminDialog()} className="mt-6 bg-green-600 hover:bg-green-700 text-white">
-                    <Plus className="h-4 w-4 ml-2" />
-                    أضف أول موضوع
-                </Button>
-            )}
           </div>
         )}
       </section>
@@ -520,3 +690,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
