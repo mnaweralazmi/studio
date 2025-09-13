@@ -84,7 +84,6 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 function ProfileView() {
   const [user, loading] = useAuthState(auth);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const [farmName, setFarmName] = useState('');
   const [publicInfo, setPublicInfo] = useState('');
   const [privateInfo, setPrivateInfo] = useState('');
@@ -121,7 +120,6 @@ function ProfileView() {
   const handleSaveChanges = async () => {
     if (!user) return;
     setIsSaving(true);
-    setIsSuccess(false);
     const docRef = doc(db, 'users', user.uid);
     try {
       await setDoc(
@@ -138,8 +136,6 @@ function ProfileView() {
         description: 'تم تحديث معلومات ملفك الشخصي.',
         className: 'bg-green-600 text-white',
       });
-      setIsSuccess(true);
-      setTimeout(() => setIsSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving profile: ', error);
       toast({
@@ -254,7 +250,7 @@ function ProfileView() {
                   <Button
                     size="icon"
                     onClick={handleNameChange}
-                    disabled={isSavingName}
+                    disabled={isSavingName || !displayName || displayName === user?.displayName}
                   >
                     {isSavingName ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -276,7 +272,11 @@ function ProfileView() {
               readOnly
               value={user?.uid || ''}
               className="text-xs h-8 mt-1"
-              onClick={(e) => (e.target as HTMLInputElement).select()}
+              onClick={(e) => {
+                (e.target as HTMLInputElement).select();
+                 navigator.clipboard.writeText(user?.uid || '');
+                 toast({title: "تم نسخ المعرف"});
+              }}
             />
           </div>
 
@@ -313,18 +313,16 @@ function ProfileView() {
           <Button
             className="w-full"
             onClick={handleSaveChanges}
-            disabled={isSaving || isSuccess}
+            disabled={isSaving}
           >
             {isSaving ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isSuccess ? (
-              <CheckCircle className="h-5 w-5" />
-            ) : null}
-            <span className="mx-2">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            ) : (
+              <Save className="h-5 w-5 mr-2" />
+            )}
+            <span>
               {isSaving
                 ? 'جاري الحفظ...'
-                : isSuccess
-                ? 'تم الحفظ بنجاح!'
                 : 'حفظ المعلومات الإضافية'}
             </span>
           </Button>
@@ -392,7 +390,7 @@ function GeneralSettingsView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ar">العربية</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="en" disabled>English (قريبا)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -436,7 +434,7 @@ function GeneralSettingsView() {
             <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
             <Input id="new-password" type="password" />
           </div>
-          <Button className="w-full">تحديث كلمة المرور</Button>
+          <Button className="w-full" disabled>تحديث كلمة المرور (قريبا)</Button>
         </CardContent>
       </Card>
     </div>
@@ -654,3 +652,5 @@ export default function SettingsView() {
     </div>
   );
 }
+
+    

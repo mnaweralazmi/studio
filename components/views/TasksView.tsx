@@ -78,20 +78,22 @@ function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, '
                     <Label htmlFor="task-description">وصف المهمة (اختياري)</Label>
                     <Textarea id="task-description" placeholder="تفاصيل إضافية عن المهمة" value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="task-date">تاريخ المهمة</Label>
-                    <Input type="date" id="task-date" value={date ? format(date, 'yyyy-MM-dd') : ''} onChange={(e) => setDate(e.target.value ? new Date(e.target.value) : undefined)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="task-time">وقت التذكير</Label>
-                    <Input type="time" id="task-time" value={reminder} onChange={(e) => setReminder(e.target.value)} />
-                </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="task-date">تاريخ المهمة</Label>
+                        <Input type="date" id="task-date" value={date ? format(date, 'yyyy-MM-dd') : ''} onChange={(e) => setDate(e.target.value ? new Date(e.target.value) : undefined)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="task-time">وقت التذكير</Label>
+                        <Input type="time" id="task-time" value={reminder} onChange={(e) => setReminder(e.target.value)} />
+                    </div>
+                 </div>
             </div>
              <DialogFooter>
                 <DialogClose asChild>
                     <Button variant="outline">إلغاء</Button>
                 </DialogClose>
-                <Button onClick={handleAddTask} disabled={isAdding}>
+                <Button onClick={handleAddTask} disabled={isAdding || !title || !date}>
                     {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     <span className="mr-2">{isAdding ? 'جاري الإضافة...' : 'إضافة'}</span>
                 </Button>
@@ -143,12 +145,15 @@ export default function TasksView() {
 
     const allUpcoming = [...today, ...upcoming];
     allUpcoming.sort((a,b) => new Date(a.date as string).getTime() - new Date(b.date as string).getTime());
+    
+    // Sort completed tasks by date descending
+    completed.sort((a,b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
 
     return { 
         upcomingTasks: allUpcoming, 
         todayTasks: today, 
         selectedDayTasks: selected, 
-        completedTasks: completed.reverse(), 
+        completedTasks: completed, 
         taskDates: dates 
     };
   }, [allTasks, selectedDate]);
@@ -291,3 +296,5 @@ export default function TasksView() {
     </div>
   );
 }
+
+    

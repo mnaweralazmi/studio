@@ -110,7 +110,7 @@ function NotificationsPopover({ user }) {
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications, shownNotifications]);
+  }, [notifications]);
 
 
   const hasUnread = useMemo(() => notifications.some(n => !n.read), [notifications]);
@@ -308,7 +308,12 @@ function HomeView({
         }
         video.src = URL.createObjectURL(file);
     } else {
-        setFile(file);
+        toast({
+            title: 'نوع ملف غير مدعوم',
+            description: 'الرجاء اختيار صورة أو ملف فيديو.',
+            variant: 'destructive',
+        });
+        resetInput();
     }
 };
 

@@ -30,7 +30,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { useState, useEffect }from 'react';
+import { useState, useEffect, useCallback }from 'react';
 import type { User } from 'firebase/auth';
 
 const COLLECTION_CONFIG = {
@@ -75,7 +75,7 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ path: string; id: string } | null>(null);
 
-  const fetchArchivedData = async () => {
+  const fetchArchivedData = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -110,19 +110,18 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
       
       setArchivedData(allArchivedData);
     } catch (e: any) {
-      console.error(e);
-      setError('حدث خطأ أثناء جلب البيانات المؤرشفة.');
+      console.error("Error fetching archived data:", e);
+      setError('حدث خطأ أثناء جلب البيانات المؤرشفة. قد تحتاج بعض الاستعلامات إلى فهارس خاصة في Firestore.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
       if (user) {
         fetchArchivedData();
       }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, fetchArchivedData]);
 
   const handleRestore = async (path: string) => {
     try {
@@ -164,7 +163,7 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
     return (
       <div className="flex flex-col items-center justify-center py-16 text-destructive">
         <AlertCircle className="h-12 w-12" />
-        <p className="mt-4">{error}</p>
+        <p className="mt-4 text-center">{error}</p>
       </div>
     );
   }
@@ -260,3 +259,5 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
     </div>
   );
 }
+
+    

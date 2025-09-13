@@ -72,6 +72,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { toast } from '../ui/use-toast';
 
 // Helper to convert Firestore Timestamp to a readable string
 const formatDate = (date: any) => {
@@ -108,7 +109,7 @@ type AgriSale = {
   cartonPrice: number;
   totalAmount: number;
 };
-const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجان', 'فلفل', 'كوسا'];
+const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجan', 'فلفل', 'كوسا'];
 
 // Poultry Types
 type EggSale = {
@@ -191,7 +192,7 @@ function ExpensesView({ user, collectionName, title }) {
     ? collection(db, 'users', user.uid, collectionName)
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
   );
   const expenses =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Expense)) ||
@@ -327,7 +328,7 @@ function ExpensesView({ user, collectionName, title }) {
 function FacilitiesView({ user }) {
   const collectionRef = user ? collection(db, 'users', user.uid, 'facilities') : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('name', 'asc')) : null
   );
   const facilities =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Facility)) ||
@@ -450,7 +451,7 @@ function AgriSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'agriSales')
     : null;
   const [snapshot, loading] = useCollection(
-    salesCollection ? query(salesCollection, where('archived', '==', false), orderBy('date', 'desc')) : null
+    salesCollection ? query(salesCollection, where('archived', '!=', true), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AgriSale)) ||
@@ -635,7 +636,7 @@ function DebtsView({ user }) {
     ? collection(db, 'users', user.uid, 'debts')
     : null;
   const [snapshot, loading] = useCollection(
-    debtsCollection ? query(debtsCollection, where('archived', '==', false), orderBy('dueDate', 'desc')) : null
+    debtsCollection ? query(debtsCollection, where('archived', '!=', true), orderBy('dueDate', 'desc')) : null
   );
   const debts =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Debt)) || [];
@@ -697,8 +698,18 @@ function DebtsView({ user }) {
         // Instead of deleting, we archive it
         await updateDoc(debtRef, { amount: 0, archived: true });
       }
+      toast({
+          title: "تم السداد",
+          description: `تم سداد مبلغ ${paymentValue.toFixed(3)} د.ك بنجاح.`,
+          className: "bg-green-600 text-white"
+      });
     } catch (e) {
       console.error(e);
+      toast({
+          title: "خطأ",
+          description: "لم نتمكن من معالجة عملية السداد.",
+          variant: "destructive"
+      });
     } finally {
       setPaymentDialogOpen(false);
       setSelectedDebt(null);
@@ -912,8 +923,18 @@ function WorkersView({ user }) {
         amount: worker.salary || 0,
         archived: false,
       });
+      toast({
+          title: "تم دفع الراتب",
+          description: `تم تسجيل راتب ${worker.name} كمصروف بنجاح.`,
+          className: "bg-green-600 text-white"
+      });
     } catch (e) {
       console.error(e);
+       toast({
+          title: "خطأ",
+          description: "لم نتمكن من تسجيل عملية دفع الراتب.",
+          variant: "destructive"
+      });
     } finally {
       setPayingSalaryFor(null);
     }
@@ -1157,7 +1178,7 @@ function EggSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'poultryEggSales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as EggSale)) ||
@@ -1281,7 +1302,7 @@ function PoultrySalesView({ user }) {
     ? collection(db, 'users', user.uid, 'poultrySales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PoultrySale)) ||
@@ -1430,7 +1451,7 @@ function FlocksView({ user }) {
     ? collection(db, 'users', user.uid, 'poultryFlocks')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('name', 'asc')) : null
   );
   const flocks =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Flock)) || [];
@@ -1581,7 +1602,7 @@ function LivestockSalesView({ user }) {
     ? collection(db, 'users', user.uid, 'livestockSales')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('date', 'desc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
   );
   const sales =
     snapshot?.docs.map(
@@ -1731,7 +1752,7 @@ function HerdsView({ user }) {
     ? collection(db, 'users', user.uid, 'livestockHerds')
     : null;
   const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '==', false), orderBy('name', 'asc')) : null
+    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('name', 'asc')) : null
   );
   const herds =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Herd)) || [];
@@ -1904,9 +1925,9 @@ export default function ManagementView() {
       </header>
 
       <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
            {availableTabs.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} className="flex items-center gap-2">
+              <TabsTrigger key={t.value} value={t.value} className="flex items-center gap-2 h-12 text-xs sm:text-sm">
                  <t.icon className={cn('h-5 w-5', t.rotate && 'rotate-90')} />
                 {t.label}
               </TabsTrigger>
@@ -1937,3 +1958,5 @@ export default function ManagementView() {
     </div>
   );
 }
+
+    
