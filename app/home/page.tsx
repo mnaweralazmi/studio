@@ -352,8 +352,18 @@ const setFile = (file: File) => {
     }
 
     setIsSavingIdea(true);
+    let imageUrl = '';
 
     try {
+      if (ideaFile) {
+        const storageRef = ref(
+          storage,
+          `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
+        );
+        const uploadResult = await uploadBytes(storageRef, ideaFile);
+        imageUrl = await getDownloadURL(uploadResult.ref);
+      }
+
       const articleData: any = {
         title: ideaTitle,
         description: ideaDescription || '',
@@ -361,17 +371,8 @@ const setFile = (file: File) => {
         authorId: user.uid,
         authorName: user.displayName || user.email,
         imageHint: 'user generated',
+        ...(imageUrl && { imageUrl: imageUrl }),
       };
-      
-      if (ideaFile) {
-        const storageRef = ref(
-          storage,
-          `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
-        );
-        const uploadResult = await uploadBytes(storageRef, ideaFile);
-        const imageUrl = await getDownloadURL(uploadResult.ref);
-        articleData.imageUrl = imageUrl;
-      }
 
       await addDoc(collection(db, 'articles'), articleData);
 
@@ -386,9 +387,16 @@ const setFile = (file: File) => {
 
     } catch (e: any) {
       console.error('Error saving article:', e);
+      let description = 'لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.';
+      if (e.code === 'storage/unauthorized') {
+          description = 'لا توجد صلاحيات كافية لرفع الملفات. يرجى مراجعة قواعد الأمان في Firebase Storage.';
+          // Reset file input if upload fails due to permissions
+          setIdeaFile(null);
+          setIdeaFilePreview(null);
+      }
       toast({
         title: 'حدث خطأ أثناء النشر',
-        description: e.message || 'لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.',
+        description: description,
         variant: 'destructive',
       });
     } finally {
