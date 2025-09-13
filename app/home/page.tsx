@@ -198,15 +198,6 @@ function HomeView({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
 
-  // User Idea Dialog State
-  const [isIdeaDialogOpen, setIsIdeaDialogOpen] = useState(false);
-  const [isSavingIdea, setIsSavingIdea] = useState(false);
-  const [ideaTitle, setIdeaTitle] = useState('');
-  const [ideaDescription, setIdeaDescription] = useState('');
-  const [ideaFile, setIdeaFile] = useState<File | null>(null);
-  const [ideaFilePreview, setIdeaFilePreview] = useState<string | null>(null);
-
-
   const articles = useMemo(() => {
     const data =
       articlesSnapshot?.docs.map(
@@ -267,152 +258,6 @@ function HomeView({
     setArticleToDelete(null);
   };
   
-  // --- User Idea Functions ---
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const resetInput = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    }
-
-    if (file.type.startsWith('image/')) {
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            toast({
-                title: 'خطأ في حجم الصورة',
-                description: 'حجم الصورة كبير جدًا. الرجاء اختيار صورة أصغر من 5 ميجابايت.',
-                variant: 'destructive',
-            });
-            resetFileState();
-            resetInput();
-            return;
-        }
-        setFile(file);
-    } else if (file.type.startsWith('video/')) {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.onloadedmetadata = function() {
-            window.URL.revokeObjectURL(video.src);
-            if (video.duration > 180) { // 3 minutes limit
-                toast({
-                    title: 'خطأ في مدة الفيديو',
-                    description: 'مدة الفيديو طويلة جدًا. الرجاء اختيار فيديو أقصر من 3 دقائق.',
-                    variant: 'destructive',
-                });
-                resetFileState();
-                resetInput();
-            } else {
-                 setFile(file);
-            }
-        }
-        video.src = URL.createObjectURL(file);
-    } else {
-        toast({
-            title: 'نوع ملف غير مدعوم',
-            description: 'الرجاء اختيار صورة أو ملف فيديو.',
-            variant: 'destructive',
-        });
-        resetFileState();
-        resetInput();
-    }
-};
-
-const setFile = (file: File) => {
-    setIdeaFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        setIdeaFilePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-}
-
-  const resetIdeaForm = () => {
-    setIdeaTitle('');
-    setIdeaDescription('');
-    resetFileState();
-  };
-
-  const resetFileState = () => {
-    setIdeaFile(null);
-    setIdeaFilePreview(null);
-    if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-    }
-  };
-  
- const handleSaveIdea = async () => {
-    if (!ideaTitle.trim()) {
-      toast({
-        title: 'خطأ',
-        description: 'الرجاء كتابة عنوان للموضوع قبل الإرسال.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (!user || !user.uid) {
-         toast({
-            title: 'خطأ',
-            description: 'يجب أن تكون مسجلاً للدخول لنشر موضوع.',
-            variant: 'destructive',
-        });
-        return;
-    }
-
-    setIsSavingIdea(true);
-    let imageUrl = '';
-
-    try {
-      if (ideaFile) {
-        const storageRef = ref(
-          storage,
-          `userArticles/${user.uid}/${Date.now()}_${ideaFile.name}`
-        );
-        const uploadResult = await uploadBytes(storageRef, ideaFile);
-        imageUrl = await getDownloadURL(uploadResult.ref);
-      }
-
-      const articleData: any = {
-        title: ideaTitle,
-        description: ideaDescription || '',
-        createdAt: new Date(),
-        authorId: user.uid,
-        authorName: user.displayName || user.email,
-        imageHint: 'user generated',
-        ...(imageUrl && { imageUrl: imageUrl }),
-      };
-
-      await addDoc(collection(db, 'articles'), articleData);
-
-      toast({
-        title: 'تم النشر بنجاح!',
-        description: 'شكرًا لمشاركتك. لقد تم نشر موضوعك في الصفحة الرئيسية.',
-        className: 'bg-green-600 text-white',
-      });
-      
-      setIsIdeaDialogOpen(false);
-      resetIdeaForm();
-
-    } catch (e: any) {
-      console.error('Error saving article:', e);
-      let description = 'لم نتمكن من حفظ موضوعك. الرجاء المحاولة مرة أخرى.';
-      if (e.code === 'storage/unauthorized') {
-          description = 'لا توجد صلاحيات كافية لرفع الملفات. يرجى مراجعة قواعد الأمان في Firebase Storage.';
-          resetFileState();
-      }
-      toast({
-        title: 'حدث خطأ أثناء النشر',
-        description: description,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSavingIdea(false);
-    }
-  };
-
 
   if (adminLoading) {
     return (
@@ -447,10 +292,6 @@ const setFile = (file: File) => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsIdeaDialogOpen(true)}>
-                <Lightbulb className="h-4 w-4 ml-2" />
-                شارك بفكرتك
-            </Button>
             {isAdmin && (
               <Button onClick={() => openAdminDialog()} className="bg-green-600 hover:bg-green-700 text-white">
                 <Plus className="h-4 w-4 ml-2" />
@@ -640,79 +481,6 @@ const setFile = (file: File) => {
             </DialogClose>
             <Button variant="destructive" onClick={handleDeleteArticle}>
               نعم، قم بالحذف
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Share Idea Dialog (User) */}
-      <Dialog open={isIdeaDialogOpen} onOpenChange={setIsIdeaDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>شارك بموضوع جديد</DialogTitle>
-            <DialogDescription>
-              اكتب تفاصيل موضوعك وأرفق صورة أو فيديو إن أردت. سيتم نشره في الصفحة الرئيسية.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="idea-title">عنوان الموضوع</Label>
-              <Input
-                id="idea-title"
-                placeholder="مثال: أفضل طريقة لزراعة الطماطم"
-                value={ideaTitle}
-                onChange={(e) => setIdeaTitle(e.target.value)}
-              />
-            </div>
-             <div className="space-y-2">
-              <Label htmlFor="idea-description">وصف الموضوع</Label>
-              <Textarea
-                id="idea-description"
-                placeholder="اكتب هنا شرحًا مبسطًا عن موضوعك..."
-                value={ideaDescription}
-                onChange={(e) => setIdeaDescription(e.target.value)}
-                rows={4}
-              />
-            </div>
-            
-             <div className="space-y-2">
-                <Label>إرفاق صورة أو فيديو (اختياري)</Label>
-                {ideaFilePreview ? (
-                <div className="relative group w-full aspect-video bg-secondary rounded-md overflow-hidden">
-                    {ideaFile?.type.startsWith('image/') ? (
-                      <Image src={ideaFilePreview} alt="Preview" fill={true} className="object-cover" />
-                    ) : (
-                      <video src={ideaFilePreview} controls className="w-full h-full object-cover" />
-                    )}
-                    <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        onClick={resetFileState}
-                    >
-                    <X className="h-4 w-4" />
-                    </Button>
-                </div>
-                ) : (
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
-                    <FileImage className="h-4 w-4 ml-2" />
-                    اختر صورة (بحد أقصى 5MB) أو فيديو (بحد أقصى 3 دقائق)
-                </Button>
-                )}
-                <Input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
-             </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">إلغاء</Button>
-            </DialogClose>
-            <Button onClick={handleSaveIdea} disabled={isSavingIdea} className="bg-green-600 hover:bg-green-700">
-              {isSavingIdea ? (
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              ) : (
-                <CheckCircle className="h-4 w-4 ml-2" />
-              )}
-              {isSavingIdea ? 'جاري النشر...' : 'نشر الموضوع'}
             </Button>
           </DialogFooter>
         </DialogContent>
