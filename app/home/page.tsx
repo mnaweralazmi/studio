@@ -18,6 +18,7 @@ import {
   Video,
   X,
   Bell,
+  AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -99,12 +100,14 @@ function NotificationsPopover({ user }) {
     const unreadAndUnshown = notifications.filter(n => !n.read && !shownNotifications.has(n.id));
     if (unreadAndUnshown.length > 0) {
         const latestNotification = unreadAndUnshown[0];
-        toast({
-          title: latestNotification.title,
-          description: latestNotification.body,
-        });
-        // Add to shown set to prevent re-showing
-        setShownNotifications(prev => new Set(prev).add(latestNotification.id));
+        if (latestNotification) {
+            toast({
+              title: latestNotification.title,
+              description: latestNotification.body,
+            });
+            // Add to shown set to prevent re-showing
+            setShownNotifications(prev => new Set(prev).add(latestNotification.id));
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notifications, shownNotifications]);
@@ -394,25 +397,11 @@ const setFile = (file: File) => {
   };
 
 
-  if (loading || adminLoading) {
+  if (adminLoading) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-16">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
         <h2 className="mt-4 text-xl font-semibold">جاري تحميل البيانات...</h2>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-16">
-        <Newspaper className="h-16 w-16 text-destructive" />
-        <h2 className="mt-4 text-xl font-semibold text-destructive">
-          حدث خطأ أثناء تحميل الأخبار
-        </h2>
-        <p className="mt-2 text-muted-foreground">
-          الرجاء المحاولة مرة أخرى لاحقًا.
-        </p>
       </div>
     );
   }
@@ -455,7 +444,23 @@ const setFile = (file: File) => {
           </div>
         </div>
 
-        {articles.length > 0 ? (
+        {loading ? (
+             <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-white/10">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
+            </div>
+        ) : error ? (
+            <div className="flex flex-col items-center justify-center text-center py-16 bg-destructive/10 text-destructive rounded-lg border-2 border-dashed border-destructive/20">
+                <AlertCircle className="h-16 w-16" />
+                <h2 className="mt-4 text-xl font-semibold">حدث خطأ أثناء تحميل المواضيع</h2>
+                <p className="mt-2 text-muted-foreground text-red-400">
+                    لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground text-red-500 max-w-md">
+                    (Error: {error.message})
+                </p>
+          </div>
+        ) : articles.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {articles.map((article) => (
               <Card
@@ -711,7 +716,7 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  if (loading || adminLoading || !user) {
+  if (loading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -730,3 +735,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
