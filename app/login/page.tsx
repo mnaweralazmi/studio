@@ -43,6 +43,23 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const getFirebaseAuthErrorMessage = (errorCode: string): string => {
+  switch (errorCode) {
+    case 'auth/invalid-email':
+      return 'البريد الإلكتروني الذي أدخلته غير صالح.';
+    case 'auth/user-not-found':
+      return 'لا يوجد حساب مرتبط بهذا البريد الإلكتروني.';
+    case 'auth/wrong-password':
+      return 'كلمة المرور غير صحيحة.';
+    case 'auth/too-many-requests':
+      return 'لقد حاولت تسجيل الدخول عدة مرات. يرجى المحاولة مرة أخرى لاحقًا.';
+    case 'auth/popup-closed-by-user':
+      return 'تم إغلاق نافذة تسجيل الدخول. يرجى المحاولة مرة أخرى.';
+    default:
+      return 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
+  }
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -56,7 +73,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/home');
     } catch (error: any) {
-      setError(error.message);
+      setError(getFirebaseAuthErrorMessage(error.code));
     }
   };
 
@@ -67,7 +84,7 @@ export default function LoginPage() {
       await signInWithPopup(auth, provider);
       router.push('/home');
     } catch (error: any) {
-      setError(error.message);
+      setError(getFirebaseAuthErrorMessage(error.code));
     }
   };
 
