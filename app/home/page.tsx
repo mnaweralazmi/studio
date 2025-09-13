@@ -263,7 +263,7 @@ function AddIdeaDialog({ user }: { user: any }) {
   return (
     <Dialog open={isIdeaDialogOpen} onOpenChange={setIsIdeaDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button>
           <Plus className="h-4 w-4 ml-2" />
           أضف فكرتك
         </Button>
@@ -546,19 +546,19 @@ function HomeView({
               <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
               <AlertDescription>
                 لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. ({error.message})
-                <div className="mt-4">
-                  <Button onClick={() => window.location.reload()}>إعادة تحميل الصفحة</Button>
-                </div>
+                <p className="mt-2">سيتم عرض مواضيع وهمية للتجربة.</p>
               </AlertDescription>
             </Alert>
-        ) : (displayArticles.length > 0) ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        ) : null}
+         
+        {(displayArticles.length > 0) ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             {displayArticles.map((article) => (
               <Card
                 key={article.id}
                 className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-white/10 shadow-lg hover:shadow-green-500/10 transition-all duration-300"
               >
-                {isAdmin && (
+                {isAdmin && !error && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
                     <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => openDeleteConfirmation(article.id)}>
                       <Trash2 className="h-4 w-4"/>
@@ -598,6 +598,7 @@ function HomeView({
             ))}
           </div>
         ) : (
+          !loading && !error && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-white/10">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
@@ -607,6 +608,7 @@ function HomeView({
                 كن أول من يشارك فكرة أو موضوعًا جديدًا!
             </p>
           </div>
+          )
         )}
       </section>
 
