@@ -185,7 +185,11 @@ function HomeView({
   user: any;
 }) {
   const [articlesSnapshot, loading, error] = useCollection(
-    query(collection(db, 'articles'), orderBy('createdAt', 'desc'))
+    query(
+      collection(db, 'articles'),
+      where('createdAt', '!=', null),
+      orderBy('createdAt', 'desc')
+    )
   );
   
   const fileInputRef = useRef<HTMLInputElement>(null);
