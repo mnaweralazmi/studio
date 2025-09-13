@@ -97,7 +97,7 @@ function ProfileView() {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
-      const docRef = doc(db, 'users', user.uid, 'profile', 'data');
+      const docRef = doc(db, 'users', user.uid);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -122,7 +122,7 @@ function ProfileView() {
     if (!user) return;
     setIsSaving(true);
     setIsSuccess(false);
-    const docRef = doc(db, 'users', user.uid, 'profile', 'data');
+    const docRef = doc(db, 'users', user.uid);
     try {
       await setDoc(
         docRef,
@@ -130,7 +130,6 @@ function ProfileView() {
           farmName,
           publicInfo,
           privateInfo,
-          email: user.email,
         },
         { merge: true }
       );
@@ -194,7 +193,7 @@ function ProfileView() {
     setIsSavingName(true);
     try {
       await updateProfile(user, { displayName: displayName.trim() });
-      const docRef = doc(db, 'users', user.uid, 'profile', 'data');
+      const docRef = doc(db, 'users', user.uid);
       await setDoc(docRef, { displayName: displayName.trim() }, { merge: true });
 
       toast({

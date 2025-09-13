@@ -104,8 +104,8 @@ export default function RegisterPage() {
       await updateProfile(user, { displayName: username });
 
       // Save additional info to Firestore
-      const profileRef = doc(db, 'users', user.uid, 'profile', 'data');
-      await setDoc(profileRef, {
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, {
         displayName: username,
         email: user.email,
         dob: dob,
@@ -126,9 +126,9 @@ export default function RegisterPage() {
       const user = userCredential.user;
 
       // Save basic info to Firestore for new Google users
-      const profileRef = doc(db, 'users', user.uid, 'profile', 'data');
+      const userDocRef = doc(db, 'users', user.uid);
       await setDoc(
-        profileRef,
+        userDocRef,
         {
           displayName: user.displayName,
           email: user.email,
@@ -223,7 +223,7 @@ export default function RegisterPage() {
                     <SelectTrigger id="gender">
                       <SelectValue placeholder="اختر الجنس" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="item-aligned">
                       <SelectItem value="male">ذكر</SelectItem>
                       <SelectItem value="female">أنثى</SelectItem>
                     </SelectContent>
