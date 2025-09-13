@@ -30,7 +30,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect }from 'react';
 import type { User } from 'firebase/auth';
 
 const COLLECTION_CONFIG = {
@@ -88,8 +88,6 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
       const promises = collectionKeys.map(collectionId => {
         const q = query(
           collectionGroup(db, collectionId),
-          where('__name__', '>=', `users/${user.uid}`),
-          where('__name__', '<', `users/${user.uid}~`),
           where('archived', '==', true)
         );
         return getDocs(q);
@@ -99,8 +97,10 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
 
       snapshots.forEach((snapshot, index) => {
         const collectionId = collectionKeys[index];
-        if (!snapshot.empty) {
-          allArchivedData[collectionId] = snapshot.docs.map(d => ({
+        const userDocs = snapshot.docs.filter(d => d.ref.path.startsWith(`users/${user.uid}/`));
+        
+        if (userDocs.length > 0) {
+          allArchivedData[collectionId] = userDocs.map(d => ({
             id: d.id,
             path: d.ref.path,
             ...d.data(),
@@ -118,7 +118,10 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
   };
 
   useEffect(() => {
-    fetchArchivedData();
+      if (user) {
+        fetchArchivedData();
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleRestore = async (path: string) => {
@@ -166,7 +169,8 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
     );
   }
 
-  const hasData = Object.keys(archivedData).length > 0;
+  const hasData = Object.keys(archivedData).length > 0 && Object.values(archivedData).some(arr => arr.length > 0);
+
 
   return (
     <div className="space-y-6">
@@ -185,6 +189,7 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
           ) : (
             <Accordion type="multiple" className="w-full">
               {Object.entries(archivedData).map(([collectionId, items]) => {
+                if(items.length === 0) return null;
                 const config = COLLECTION_CONFIG[collectionId];
                 if (!config) return null;
                 return (
