@@ -12,10 +12,16 @@ import {
   UserCog,
   Send,
   Settings,
+  Save,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signOut, linkWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import {
+  signOut,
+  linkWithPopup,
+  GoogleAuthProvider,
+  updateProfile,
+} from 'firebase/auth';
 import {
   collection,
   doc,
@@ -73,7 +79,6 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-
 // --- Sub-page Components ---
 
 function ProfileView() {
@@ -83,10 +88,11 @@ function ProfileView() {
   const [farmName, setFarmName] = useState('');
   const [publicInfo, setPublicInfo] = useState('');
   const [privateInfo, setPrivateInfo] = useState('');
-  
+  const [displayName, setDisplayName] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
+
   const [isLinking, setIsLinking] = useState(false);
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
-
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -101,15 +107,15 @@ function ProfileView() {
         setPrivateInfo(data.privateInfo || '');
       }
     };
-    
+
     if (user) {
-        const isLinked = user.providerData.some(
-            (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID
-        );
-        setIsGoogleLinked(isLinked);
-        fetchProfile();
+      const isLinked = user.providerData.some(
+        (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID
+      );
+      setIsGoogleLinked(isLinked);
+      setDisplayName(user.displayName || '');
+      fetchProfile();
     }
-    
   }, [user]);
 
   const handleSaveChanges = async () => {
@@ -125,8 +131,6 @@ function ProfileView() {
           publicInfo,
           privateInfo,
           email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
         },
         { merge: true }
       );
@@ -153,29 +157,62 @@ function ProfileView() {
     if (!user) return;
     setIsLinking(true);
     try {
-        const provider = new GoogleAuthProvider();
-        await linkWithPopup(user, provider);
-        toast({
-            title: "تم الربط بنجاح!",
-            description: "تم ربط حسابك مع جوجل.",
-            className: "bg-green-600 text-white",
-        });
-        setIsGoogleLinked(true);
+      const provider = new GoogleAuthProvider();
+      await linkWithPopup(user, provider);
+      toast({
+        title: 'تم الربط بنجاح!',
+        description: 'تم ربط حسابك مع جوجل.',
+        className: 'bg-green-600 text-white',
+      });
+      setIsGoogleLinked(true);
     } catch (error: any) {
-        console.error("Error linking with Google: ", error);
-        let description = "حدث خطأ غير متوقع.";
-        if (error.code === 'auth/credential-already-in-use') {
-            description = "حساب جوجل هذا مرتبط بالفعل بحساب آخر.";
-        }
-        toast({
-            title: "فشل الربط",
-            description: description,
-            variant: "destructive",
-        });
+      console.error('Error linking with Google: ', error);
+      let description = 'حدث خطأ غير متوقع.';
+      if (error.code === 'auth/credential-already-in-use') {
+        description = 'حساب جوجل هذا مرتبط بالفعل بحساب آخر.';
+      }
+      toast({
+        title: 'فشل الربط',
+        description: description,
+        variant: 'destructive',
+      });
     } finally {
-        setIsLinking(false);
+      setIsLinking(false);
     }
-};
+  };
+
+  const handleNameChange = async () => {
+    if (!user || !displayName.trim()) {
+      toast({
+        title: 'خطأ',
+        description: 'لا يمكن ترك الاسم فارغًا.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      await updateProfile(user, { displayName: displayName.trim() });
+      const docRef = doc(db, 'users', user.uid, 'profile', 'data');
+      await setDoc(docRef, { displayName: displayName.trim() }, { merge: true });
+
+      toast({
+        title: 'تم تحديث الاسم!',
+        description: 'لقد تم تغيير اسمك المعروض بنجاح.',
+        className: 'bg-green-600 text-white',
+      });
+    } catch (error) {
+      console.error('Error updating name:', error);
+      toast({
+        title: 'خطأ',
+        description: 'لم نتمكن من تحديث اسمك.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -206,24 +243,42 @@ function ProfileView() {
                 <UserCircle className="w-12 h-12 text-muted-foreground" />
               </div>
             )}
-            <div>
-              <h2 className="text-xl font-bold">
-                {user?.displayName || 'مستخدم جديد'}
-              </h2>
-              <p className="text-muted-foreground">{user?.email}</p>
-              <div className="mt-2">
-                <Label htmlFor="user-uid" className="text-xs">
-                  Your User ID (for Admin)
-                </Label>
-                <Input
-                  id="user-uid"
-                  readOnly
-                  value={user?.uid || ''}
-                  className="text-xs h-8 mt-1"
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                />
+            <div className="flex-1">
+              <div className="space-y-2">
+                <Label htmlFor="display-name">الاسم المعروض</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="display-name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleNameChange}
+                    disabled={isSavingName}
+                  >
+                    {isSavingName ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
+              <p className="text-muted-foreground mt-1">{user?.email}</p>
             </div>
+          </div>
+          <div>
+            <Label htmlFor="user-uid" className="text-xs">
+              Your User ID (for Admin)
+            </Label>
+            <Input
+              id="user-uid"
+              readOnly
+              value={user?.uid || ''}
+              className="text-xs h-8 mt-1"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
           </div>
 
           <div className="space-y-2">
@@ -271,13 +326,13 @@ function ProfileView() {
                 ? 'جاري الحفظ...'
                 : isSuccess
                 ? 'تم الحفظ بنجاح!'
-                : 'حفظ التغييرات'}
+                : 'حفظ المعلومات الإضافية'}
             </span>
           </Button>
         </CardContent>
       </Card>
-      
-       <Card>
+
+      <Card>
         <CardHeader>
           <CardTitle>الحسابات المرتبطة</CardTitle>
         </CardHeader>
@@ -288,14 +343,18 @@ function ProfileView() {
               <span>حسابك مرتبط مع جوجل.</span>
             </div>
           ) : (
-            <Button onClick={handleLinkWithGoogle} disabled={isLinking} className="w-full">
+            <Button
+              onClick={handleLinkWithGoogle}
+              disabled={isLinking}
+              className="w-full"
+            >
               {isLinking ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <GoogleIcon className="h-5 w-5" />
               )}
               <span className="mr-2">
-                {isLinking ? "جاري الربط..." : "ربط مع حساب جوجل"}
+                {isLinking ? 'جاري الربط...' : 'ربط مع حساب جوجل'}
               </span>
             </Button>
           )}
@@ -364,13 +423,13 @@ function GeneralSettingsView() {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>الأمان</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-           <div className="space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="current-password">كلمة المرور الحالية</Label>
             <Input id="current-password" type="password" />
           </div>
@@ -378,7 +437,7 @@ function GeneralSettingsView() {
             <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
             <Input id="new-password" type="password" />
           </div>
-           <Button className="w-full">تحديث كلمة المرور</Button>
+          <Button className="w-full">تحديث كلمة المرور</Button>
         </CardContent>
       </Card>
     </div>
@@ -571,17 +630,23 @@ export default function SettingsView() {
         </aside>
 
         <main className="md:col-span-3">
-          {(loading || adminLoading) ? (
-             <div className="flex justify-center items-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-          ): renderContent()}
-          </main>
+          {loading || adminLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            renderContent()
+          )}
+        </main>
       </div>
 
-       <Card>
+      <Card>
         <CardContent className="p-4">
-          <Button variant="destructive" className="w-full" onClick={handleSignOut}>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={handleSignOut}
+          >
             <LogOut className="h-5 w-5 ml-2" />
             تسجيل الخروج
           </Button>
