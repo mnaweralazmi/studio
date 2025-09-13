@@ -122,7 +122,8 @@ export default function RegisterPage() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       router.push('/home');
-    } catch (error: any)      setError(getFirebaseAuthErrorMessage(error.code));
+    } catch (error: any) {
+      setError(getFirebaseAuthErrorMessage(error.code));
     }
   };
 
