@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -10,6 +11,7 @@ import {
   Timestamp,
   addDoc,
   DocumentData,
+  getDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -160,6 +162,7 @@ export default function HomeView({ user }: { user: User }) {
     }
     setIsSaving(true);
     try {
+      // Use display name from auth, fallback to 'مستخدم غير معروف'
       const authorName = user.displayName || 'مستخدم غير معروف';
 
       const topicData: DocumentData = {

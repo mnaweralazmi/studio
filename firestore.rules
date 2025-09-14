@@ -1,33 +1,30 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can read and update their own user document
+    // Users: Allow users to read and write their own data
     match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      // New user documents are created via Google Sign-In or Register pages, handled by server-side logic implicitly
-      allow create: if request.auth != null;
+      allow read, update, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Topics can be read by any authenticated user
-    // Topics can only be created by authenticated users
-    // Topics can only be updated or deleted by their owner
+    // Topics:
+    // - Allow any authenticated user to read and create topics
+    // - Allow users to update or delete only their own topics
     match /topics/{topicId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow read, create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
 
-    // Notifications can be read by the target user or all users if target is 'all'
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
-      // Notifications are typically created by admin/server-side logic
-      allow create: if true; // Adjust as needed, for now allowing admin-like creation
+    // Notifications:
+    // - Allow authenticated users to read notifications targeted at them or 'all'
+    // - Deny writes by default (only server/admin should write)
+     match /notifications/{notificationId} {
+      allow read: if request.auth != null && (resource.data.target == request.auth.uid || resource.data.target == 'all');
+      allow write: if false; // Or a more specific admin rule
     }
-
-    // User-specific data (expenses, sales, tasks, etc.)
-    // Users can only access their own data subcollections.
-    match /users/{userId}/{subcollection}/{documentId} {
+    
+    // User-specific subcollections (e.g., tasks, expenses)
+    match /users/{userId}/{collection}/{docId} {
        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
   }
