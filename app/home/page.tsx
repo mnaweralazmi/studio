@@ -32,7 +32,6 @@ import {
   limit,
   writeBatch,
   addDoc,
-  serverTimestamp,
   DocumentData,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -106,13 +105,12 @@ function AddIdeaDialog({ user }: { user: any }) {
     const fileInput = document.getElementById('idea-file') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
-  
+
   const clearForm = useCallback(() => {
     setTitle('');
     setDescription('');
     clearFile();
   }, []);
-
 
   const handleSave = async () => {
     if (!title || !user) {
@@ -120,44 +118,43 @@ function AddIdeaDialog({ user }: { user: any }) {
     }
     setIsSaving(true);
     try {
-        const articleData: DocumentData = {
-            title,
-            description,
-            authorId: user.uid,
-            authorName: user.displayName || 'مستخدم غير معروف',
-            createdAt: new Date(),
-        };
+      const articleData: DocumentData = {
+        title,
+        description,
+        authorId: user.uid,
+        authorName: user.displayName || 'مستخدم غير معروف',
+        createdAt: new Date(),
+      };
 
-        if (file) {
-            const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-            const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
-            const fileRef = ref(storage, filePath);
-            await uploadBytes(fileRef, file);
-            const fileUrl = await getDownloadURL(fileRef);
+      if (file) {
+        const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+        const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
+        const fileRef = ref(storage, filePath);
+        await uploadBytes(fileRef, file);
+        const fileUrl = await getDownloadURL(fileRef);
 
-            if (fileType === 'image') {
-                articleData.imageUrl = fileUrl;
-            } else {
-                articleData.videoUrl = fileUrl;
-            }
-            articleData.fileType = fileType;
+        if (fileType === 'image') {
+          articleData.imageUrl = fileUrl;
+        } else {
+          articleData.videoUrl = fileUrl;
         }
+        articleData.fileType = fileType;
+      }
 
-        await addDoc(collection(db, 'articles'), articleData);
+      await addDoc(collection(db, 'articles'), articleData);
 
-        toast({
-            title: 'تم النشر بنجاح!',
-            description: `تمت إضافة موضوعك "${title}" بنجاح.`,
-            className: 'bg-green-600 text-white',
-        });
-        
-        clearForm();
-        setOpen(false);
+      toast({
+        title: 'تم النشر بنجاح!',
+        description: `تمت إضافة موضوعك "${title}" بنجاح.`,
+        className: 'bg-green-600 text-white',
+      });
 
+      clearForm();
+      setOpen(false);
     } catch (e) {
-        console.error('Error saving idea: ', e);
+      console.error('Error saving idea: ', e);
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
@@ -246,7 +243,7 @@ function AddIdeaDialog({ user }: { user: any }) {
             ) : (
               <Plus className="h-4 w-4 ml-2" />
             )}
-            {isSaving ? 'جاري النشر...' : 'نشر الموضوع'}
+            {isSaving ? 'جاري النشر...' : 'اربطه مع قاعدة البيانات'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -422,8 +419,6 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
     }
   };
 
-  const displayArticles = articles;
-
   return (
     <div className="space-y-12">
       <header className="text-center space-y-4 pt-8">
@@ -463,7 +458,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           </div>
         )}
 
-        {!loading && displayArticles.length === 0 && (
+        {!loading && articles.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
@@ -472,9 +467,9 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           </div>
         )}
 
-        {!loading && displayArticles.length > 0 && (
+        {!loading && articles.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
-            {displayArticles.map((article) => (
+            {articles.map((article) => (
               <Card
                 key={article.id}
                 className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-border shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1"
