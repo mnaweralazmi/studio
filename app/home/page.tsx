@@ -32,6 +32,7 @@ import {
   limit,
   writeBatch,
   addDoc,
+  serverTimestamp,
   DocumentData,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -123,7 +124,7 @@ function AddIdeaDialog({ user }: { user: any }) {
         description,
         authorId: user.uid,
         authorName: user.displayName || 'مستخدم غير معروف',
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       };
 
       if (file) {
@@ -462,7 +463,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
-              هل المواضيع تعرض هنا
+              لا توجد مواضيع لعرضها حاليًا
             </h2>
             <p className="text-muted-foreground mt-2">
               كن أول من يشارك فكرة أو موضوعًا جديدًا!
