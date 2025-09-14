@@ -1,10 +1,10 @@
 rules_version = '2';
 
-// Grants a user access to a node matching their user ID
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
+    // Allow read access to anyone
+    allow read;
+    // Allow write access only for authenticated users
+    allow write: if request.auth != null;
   }
 }
