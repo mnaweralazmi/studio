@@ -2,14 +2,9 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow registered users to write to their own folder only
-    // and check if the file size is less than 5MB.
-    match /{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId &&
-                       request.resource.size < 5 * 1024 * 1024;
-      // Allow registered users to read files from their own folder.
-      // For public read access for all logged-in users, change this to: allow read: if request.auth != null;
-      allow read: if request.auth != null && request.auth.uid == userId;
+    match /{allPaths=**} {
+      // السماح لأي شخص بالقراءة والكتابة دون أي شروط
+      allow read, write: if true;
     }
   }
 }
