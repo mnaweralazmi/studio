@@ -137,7 +137,8 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
   },
 ];
 
-function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { title: string; description: string; file?: File; }) => Promise<void>; isSaving: boolean; user: any; toast: any; }) {
+function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: string; description: string; file?: File; }) => Promise<void>; isSaving: boolean; user: any; }) {
+  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | undefined>(undefined);
@@ -157,6 +158,9 @@ function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { tit
     setDescription('');
     setFile(undefined);
     setPreview(undefined);
+    // Also reset the file input visually
+    const fileInput = document.getElementById('idea-file') as HTMLInputElement;
+    if(fileInput) fileInput.value = '';
   }
 
   const handleSave = async () => {
@@ -239,7 +243,8 @@ function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { tit
 }
 
 
-function NotificationsPopover({ user, toast }: { user: any; toast: any }) {
+function NotificationsPopover({ user }: { user: any }) {
+  const { toast } = useToast();
   const notificationsQuery = useMemo(
     () =>
       user
@@ -359,7 +364,8 @@ function NotificationsPopover({ user, toast }: { user: any; toast: any }) {
   );
 }
 
-function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast: any }) {
+function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
+  const { toast } = useToast();
   const articlesCollection = collection(db, 'articles');
   const [articlesSnapshot, loading, error] = useCollection(
     query(articlesCollection, orderBy('createdAt', 'desc'))
@@ -451,8 +457,8 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
 
   const displayArticles = useMemo(() => {
     if (loading) return []; // Return empty while loading to avoid flash of dummy data
-    if (error) return DUMMY_ARTICLES as Article[];
-    if (articles.length === 0) return DUMMY_ARTICLES as Article[];
+    // Show dummy articles if there's an error OR if there are no articles from DB
+    if (error || articles.length === 0) return DUMMY_ARTICLES as Article[];
     return articles;
   }, [articles, loading, error]);
 
@@ -481,8 +487,8 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
-            <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} toast={toast} />
-            <NotificationsPopover user={user} toast={toast}/>
+            <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} />
+            <NotificationsPopover user={user}/>
           </div>
         </div>
         
@@ -493,16 +499,6 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
           </div>
         ) : null}
         
-        {error && (
-             <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
-                <AlertDescription>
-                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. (Missing or insufficient permissions.)سيتم عرض مواضيع وهمية للتجربة.
-                </AlertDescription>
-              </Alert>
-        )}
-
         {!loading && displayArticles.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
@@ -598,7 +594,6 @@ export default function HomePage() {
   const [user, loading] = useAuthState(auth);
   const { isAdmin, loading: adminLoading } = useAdmin();
   const router = useRouter();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -618,7 +613,7 @@ export default function HomePage() {
   return (
     <div className="pb-24">
       <main className="px-4 pt-4 container mx-auto">
-        <HomeView isAdmin={isAdmin} user={user} toast={toast} />
+        <HomeView isAdmin={isAdmin} user={user} />
       </main>
       <AppFooter activeView="home" />
       <Toaster />
