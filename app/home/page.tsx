@@ -63,7 +63,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
-type Article = {
+type Topic = {
   id: string;
   title: string;
   description: string;
@@ -72,7 +72,7 @@ type Article = {
   fileType?: 'image' | 'video';
   imageHint?: string;
   createdAt: Timestamp;
-  authorId?: string;
+  ownerId?: string;
   authorName?: string;
 };
 
@@ -84,7 +84,7 @@ type Notification = {
   read: boolean;
 };
 
-function AddIdeaDialog({ user }: { user: any }) {
+function AddTopicDialog({ user }: { user: any }) {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -126,30 +126,30 @@ function AddIdeaDialog({ user }: { user: any }) {
         ? userDocSnap.data().displayName
         : 'مستخدم غير معروف';
 
-      const articleData: DocumentData = {
+      const topicData: DocumentData = {
         title: title,
         description: description,
-        authorId: user.uid,
+        ownerId: user.uid,
         authorName: authorName,
-        createdAt: new Date(), // Use local timestamp
+        createdAt: serverTimestamp(),
       };
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
+        const filePath = `topics/${user.uid}/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
         const fileUrl = await getDownloadURL(fileRef);
 
         if (fileType === 'image') {
-          articleData.imageUrl = fileUrl;
+          topicData.imageUrl = fileUrl;
         } else {
-          articleData.videoUrl = fileUrl;
+          topicData.videoUrl = fileUrl;
         }
-        articleData.fileType = fileType;
+        topicData.fileType = fileType;
       }
 
-      await addDoc(collection(db, 'articles'), articleData);
+      await addDoc(collection(db, 'topics'), topicData);
 
       toast({
         title: 'تم النشر بنجاح!',
@@ -160,7 +160,7 @@ function AddIdeaDialog({ user }: { user: any }) {
       clearForm();
       setOpen(false);
     } catch (e) {
-      console.error('Error saving idea: ', e);
+      console.error('Error saving topic: ', e);
       toast({
         variant: 'destructive',
         title: 'خطأ في النشر',
@@ -389,38 +389,38 @@ function NotificationsPopover({ user }: { user: any }) {
 
 function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
   const { toast } = useToast();
-  const articlesCollection = collection(db, 'articles');
-  const [articlesSnapshot, loading, error] = useCollection(
-    query(articlesCollection, orderBy('createdAt', 'desc'))
+  const topicsCollection = collection(db, 'topics');
+  const [topicsSnapshot, loading, error] = useCollection(
+    query(topicsCollection, orderBy('createdAt', 'desc'))
   );
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
+  const [topicToDelete, setTopicToDelete] = useState<string | null>(null);
 
-  const articles = useMemo(
+  const topics = useMemo(
     () =>
-      articlesSnapshot?.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Article)
+      topicsSnapshot?.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Topic)
       ) || [],
-    [articlesSnapshot]
+    [topicsSnapshot]
   );
 
   const openDeleteConfirmation = (id: string) => {
-    setArticleToDelete(id);
+    setTopicToDelete(id);
     setShowDeleteConfirm(true);
   };
 
-  const handleDeleteArticle = async () => {
-    if (!articleToDelete) return;
+  const handleDeleteTopic = async () => {
+    if (!topicToDelete) return;
     try {
-      await deleteDoc(doc(articlesCollection, articleToDelete));
+      await deleteDoc(doc(topicsCollection, topicToDelete));
       toast({
         title: 'تم الحذف',
         description: 'تم حذف الموضوع بنجاح.',
         className: 'bg-green-600 text-white',
       });
     } catch (e) {
-      console.error('Error deleting article: ', e);
+      console.error('Error deleting topic: ', e);
       toast({
         variant: 'destructive',
         title: 'خطأ في الحذف',
@@ -428,9 +428,14 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
       });
     } finally {
       setShowDeleteConfirm(false);
-      setArticleToDelete(null);
+      setTopicToDelete(null);
     }
   };
+  
+  const canDelete = (topic: Topic) => {
+      if (!user) return false;
+      return isAdmin || topic.ownerId === user.uid;
+  }
 
   return (
     <div className="space-y-12">
@@ -457,7 +462,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
-            <AddIdeaDialog user={user} />
+            <AddTopicDialog user={user} />
             <NotificationsPopover user={user} />
           </div>
         </div>
@@ -471,7 +476,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           </div>
         )}
 
-        {!loading && articles.length === 0 && (
+        {!loading && topics.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
@@ -483,37 +488,37 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           </div>
         )}
 
-        {!loading && articles.length > 0 && (
+        {!loading && topics.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
-            {articles.map((article) => (
+            {topics.map((topic) => (
               <Card
-                key={article.id}
+                key={topic.id}
                 className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-border shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1"
               >
-                {isAdmin && !error && (
+                {canDelete(topic) && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
                     <Button
                       variant="destructive"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => openDeleteConfirmation(article.id)}
+                      onClick={() => openDeleteConfirmation(topic.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
-                {article.imageUrl ? (
+                {topic.imageUrl ? (
                   <Image
-                    src={article.imageUrl}
-                    alt={article.title || 'Article Image'}
+                    src={topic.imageUrl}
+                    alt={topic.title || 'Topic Image'}
                     width={400}
                     height={200}
                     className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-                    data-ai-hint={article.imageHint}
+                    data-ai-hint={topic.imageHint}
                   />
-                ) : article.videoUrl ? (
+                ) : topic.videoUrl ? (
                   <video
-                    src={article.videoUrl}
+                    src={topic.videoUrl}
                     controls
                     className="w-full h-40 object-cover"
                   />
@@ -523,16 +528,16 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
                   </div>
                 )}
                 <CardHeader>
-                  <CardTitle className="text-lg">{article.title}</CardTitle>
-                  {article.authorName && (
+                  <CardTitle className="text-lg">{topic.title}</CardTitle>
+                  {topic.authorName && (
                     <p className="text-xs text-muted-foreground">
-                      بواسطة: {article.authorName}
+                      بواسطة: {topic.authorName}
                     </p>
                   )}
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm line-clamp-2">
-                    {article.description}
+                    {topic.description}
                   </p>
                 </CardContent>
               </Card>
@@ -546,7 +551,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           <DialogHeader>
             <DialogTitle>تأكيد الحذف</DialogTitle>
             <DialogDescription>
-              هل أنت متأكد من رغبتك في حذف هذا المقال بشكل نهائي؟ لا يمكن
+              هل أنت متأكد من رغبتك في حذف هذا الموضوع بشكل نهائي؟ لا يمكن
               التراجع عن هذا الإجراء.
             </DialogDescription>
           </DialogHeader>
@@ -554,7 +559,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
             <DialogClose asChild>
               <Button variant="outline">إلغاء</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleDeleteArticle}>
+            <Button variant="destructive" onClick={handleDeleteTopic}>
               نعم، قم بالحذف
             </Button>
           </DialogFooter>
