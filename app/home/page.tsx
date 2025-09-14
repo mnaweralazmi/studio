@@ -208,11 +208,7 @@ function AddIdeaDialog({ user }: { user: any; }) {
   
     } catch (e) {
       console.error('Error saving idea: ', e);
-      toast({
-        variant: 'destructive',
-        title: 'خطأ في النشر',
-        description: 'لم نتمكن من حفظ الموضوع. الرجاء المحاولة مرة أخرى.',
-      });
+      // Removed the toast notification for error
     } finally {
       setIsSaving(false);
     }
