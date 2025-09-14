@@ -48,7 +48,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import {
   Popover,
   PopoverContent,
@@ -121,7 +121,7 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
   },
 ];
 
-function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: string; description: string; file?: File; }) => void; isSaving: boolean; user: any; }) {
+function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { title: string; description: string; file?: File; }) => void; isSaving: boolean; user: any; toast: any; }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | undefined>(undefined);
@@ -223,7 +223,7 @@ function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: str
 }
 
 
-function NotificationsPopover({ user }: { user: any }) {
+function NotificationsPopover({ user, toast }: { user: any; toast: any }) {
   const notificationsQuery = useMemo(
     () =>
       user
@@ -265,7 +265,7 @@ function NotificationsPopover({ user }: { user: any }) {
       setShownNotifications((prev) => new Set(prev).add(unreadAndUnshown.id));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications]);
+  }, [notifications, toast]);
 
   const hasUnread = useMemo(
     () => notifications.some((n) => !n.read),
@@ -348,7 +348,7 @@ function NotificationsPopover({ user }: { user: any }) {
   );
 }
 
-function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
+function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast: any }) {
   const articlesCollection = collection(db, 'articles');
   const [articlesSnapshot, loading, error] = useCollection(
     query(articlesCollection, orderBy('createdAt', 'desc'))
@@ -465,10 +465,24 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
-            {isAdmin && <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} />}
-            <NotificationsPopover user={user} />
+            {isAdmin && <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} toast={toast} />}
+            <NotificationsPopover user={user} toast={toast}/>
           </div>
         </div>
+
+        {error && (
+           <Alert variant="destructive" className="mb-4">
+             <AlertCircle className="h-4 w-4" />
+             <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
+             <AlertDescription>
+                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.
+                <br />
+                <code className="text-xs">({(error as Error).message})</code>
+                <br />
+                سيتم عرض مواضيع وهمية للتجربة.
+             </AlertDescription>
+           </Alert>
+        )}
         
         {loading ? (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
@@ -572,6 +586,7 @@ export default function HomePage() {
   const [user, loading] = useAuthState(auth);
   const { isAdmin, loading: adminLoading } = useAdmin();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -591,7 +606,7 @@ export default function HomePage() {
   return (
     <div className="pb-24">
       <main className="px-4 pt-4 container mx-auto">
-        <HomeView isAdmin={isAdmin} user={user} />
+        <HomeView isAdmin={isAdmin} user={user} toast={toast} />
       </main>
       <AppFooter activeView="home" />
       <Toaster />
