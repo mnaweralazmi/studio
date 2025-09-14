@@ -381,7 +381,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
   const { toast } = useToast();
   const articlesCollection = collection(db, 'articles');
   const [articlesSnapshot, loading, error] = useCollection(
-    query(articlesCollection, orderBy('createdAt', 'desc'))
+    query(articlesCollection)
   );
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -422,10 +422,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
     }
   };
 
-  const displayArticles = useMemo(() => {
-    if (loading) return [];
-    return articles;
-  }, [articles, loading]);
+  const displayArticles = articles;
 
   return (
     <div className="space-y-12">
@@ -470,11 +467,8 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
-              لا توجد مواضيع لعرضها حاليًا
+              هل المواضيع تعرض هنا
             </h2>
-            <p className="mt-2 text-muted-foreground max-w-md">
-              كن أول من يشارك فكرة أو موضوعًا جديدًا!
-            </p>
           </div>
         )}
 
