@@ -470,20 +470,6 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           </div>
         </div>
         
-        {error && (
-            <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
-                <AlertDescription>
-                    لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.
-                    <br/>
-                    <code className="text-xs relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono font-semibold">({error.message})</code>
-                    <br/>
-                    سيتم عرض مواضيع وهمية للتجربة.
-                </AlertDescription>
-            </Alert>
-        )}
-
         {loading ? (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
