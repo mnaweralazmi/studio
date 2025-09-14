@@ -92,12 +92,12 @@ export default function HomeView({ user }: { user: User }) {
         description: 'تم حذف الموضوع بنجاح.',
         className: 'bg-green-600 text-white',
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error deleting topic: ', e);
       toast({
         variant: 'destructive',
         title: 'خطأ في الحذف',
-        description: 'لم نتمكن من حذف الموضوع.',
+        description: e.message || 'لم نتمكن من حذف الموضوع.',
       });
     } finally {
       setShowDeleteConfirm(false);
@@ -111,7 +111,6 @@ export default function HomeView({ user }: { user: User }) {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Revoke previous URL if it exists
     if (preview) {
       URL.revokeObjectURL(preview);
     }
@@ -142,7 +141,6 @@ export default function HomeView({ user }: { user: User }) {
     clearFile();
   }, [clearFile]);
 
-  // Cleanup effect for object URL
   useEffect(() => {
     return () => {
       if (preview) {
@@ -153,6 +151,11 @@ export default function HomeView({ user }: { user: User }) {
 
   const handleSave = async () => {
     if (!title.trim() || !user) {
+      toast({
+        variant: 'destructive',
+        title: 'خطأ',
+        description: 'عنوان الموضوع مطلوب.',
+      });
       return;
     }
     setIsSaving(true);
@@ -164,12 +167,12 @@ export default function HomeView({ user }: { user: User }) {
         description: description,
         ownerId: user.uid,
         authorName: authorName,
-        createdAt: new Date(),
+        createdAt: Timestamp.now(),
       };
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        // Correct path according to the new security rules
+        // Correct path according to the new security rules: users/{userId}/{fileName}
         const filePath = `users/${user.uid}/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
@@ -193,12 +196,12 @@ export default function HomeView({ user }: { user: User }) {
 
       clearForm();
       setDialogOpen(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error saving topic: ', e);
       toast({
         variant: 'destructive',
         title: 'خطأ في النشر',
-        description: 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.',
+        description: e.message || 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.',
       });
     } finally {
       setIsSaving(false);
