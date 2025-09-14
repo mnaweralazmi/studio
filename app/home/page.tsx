@@ -469,20 +469,6 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
             <NotificationsPopover user={user} toast={toast}/>
           </div>
         </div>
-
-        {error && (
-           <Alert variant="destructive" className="mb-4">
-             <AlertCircle className="h-4 w-4" />
-             <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
-             <AlertDescription>
-                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase.
-                <br />
-                <code className="text-xs">({(error as Error).message})</code>
-                <br />
-                سيتم عرض مواضيع وهمية للتجربة.
-             </AlertDescription>
-           </Alert>
-        )}
         
         {loading ? (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
