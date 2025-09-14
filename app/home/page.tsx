@@ -82,61 +82,6 @@ type Notification = {
   read: boolean;
 };
 
-const DUMMY_ARTICLES: Partial<Article>[] = [
-  {
-    id: '1',
-    title: 'زراعة الطماطم في الصيف',
-    description:
-      'دليل شامل لزراعة الطماطم في الظروف الحارة والجافة لضمان أفضل محصول.',
-    imageUrl: 'https://picsum.photos/seed/tomato-summer/400/200',
-    imageHint: 'tomato plant',
-    authorName: 'خبير زراعي',
-  },
-  {
-    id: '2',
-    title: 'نصائح للعناية بأشجار النخيل',
-    description:
-      'تعلم كيفية تسميد وسقي أشجار النخيل لحمايتها من الآفات وزيادة إنتاجها.',
-    imageUrl: 'https://picsum.photos/seed/palm-trees/400/200',
-    imageHint: 'palm trees',
-    authorName: 'م. عبدالله',
-  },
-  {
-    id: '3',
-    title: 'فوائد استخدام البيوت المحمية',
-    description:
-      'اكتشف كيف تساهم البيوت المحمية في حماية النباتات وزيادة الإنتاج على مدار العام.',
-    imageUrl: 'https://picsum.photos/seed/greenhouse/400/200',
-    imageHint: 'greenhouse farming',
-    authorName: 'فريق الإرشاد',
-  },
-  {
-    id: '4',
-    title: 'طرق مكافحة الآفات الطبيعية',
-    description:
-      'استراتيجيات صديقة للبيئة لمكافحة الحشرات والآفات دون استخدام مواد كيميائية ضارة.',
-    imageUrl: 'https://picsum.photos/seed/pest-control/400/200',
-    imageHint: 'natural pest control',
-    authorName: 'مزارع واعي',
-  },
-  {
-    id: '5',
-    title: 'أهمية تحليل التربة',
-    description: 'لماذا يعتبر تحليل التربة خطوة أساسية قبل البدء في أي مشروع زراعي ناجح؟',
-    imageUrl: 'https://picsum.photos/seed/soil-analysis/400/200',
-    imageHint: 'soil analysis',
-    authorName: 'مختبر المزرعة',
-  },
-  {
-    id: '6',
-    title: 'جدول تسميد الخضروات الورقية',
-    description: 'أفضل برنامج تسميد للحصول على خضروات ورقية طازجة وصحية.',
-    imageUrl: 'https://picsum.photos/seed/leafy-greens/400/200',
-    imageHint: 'leafy greens',
-    authorName: 'خبير تسميد',
-  },
-];
-
 function AddIdeaDialog({ user }: { user: any; }) {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
@@ -451,10 +396,9 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
   };
 
   const displayArticles = useMemo(() => {
-    if (loading) return []; // Return empty while loading to avoid flash of dummy data
-    if (error || articles.length === 0) return DUMMY_ARTICLES as Article[];
+    if (loading) return [];
     return articles;
-  }, [articles, loading, error]);
+  }, [articles, loading]);
 
   return (
     <div className="space-y-12">
