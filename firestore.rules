@@ -1,31 +1,39 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users: Allow users to read and write their own data
+
+    // Users Collection
+    // - Allow users to read and update their own profile.
+    // - Allow users to create their own profile document.
     match /users/{userId} {
-      allow read, update, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
-    // Topics:
-    // - Allow any authenticated user to read and create topics
-    // - Allow users to update or delete only their own topics
+    // Topics Collection
+    // - Allow any authenticated user to read and create topics.
+    // - Only allow the owner of a topic to update or delete it.
     match /topics/{topicId} {
       allow read, create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
     }
 
-    // Notifications:
-    // - Allow authenticated users to read notifications targeted at them or 'all'
-    // - Deny writes by default (only server/admin should write)
-     match /notifications/{notificationId} {
-      allow read: if request.auth != null && (resource.data.target == request.auth.uid || resource.data.target == 'all');
-      allow write: if false; // Or a more specific admin rule
+    // Notifications Collection
+    // - Admins can create notifications.
+    // - Users can read notifications targeted to them or to 'all'.
+    match /notifications/{notificationId} {
+      allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/configuration/admins).data.uids;
+      allow read, update: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
     }
     
-    // User-specific subcollections (e.g., tasks, expenses)
-    match /users/{userId}/{collection}/{docId} {
-       allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    // Tasks Subcollection
+    match /users/{userId}/tasks/{taskId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // All other financial and management subcollections
+    match /users/{userId}/{collectionId}/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

@@ -11,7 +11,6 @@ import {
   Timestamp,
   addDoc,
   DocumentData,
-  getDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -162,7 +161,6 @@ export default function HomeView({ user }: { user: User }) {
     }
     setIsSaving(true);
     try {
-      // Use display name from auth, fallback to 'مستخدم غير معروف'
       const authorName = user.displayName || 'مستخدم غير معروف';
 
       const topicData: DocumentData = {
@@ -175,7 +173,7 @@ export default function HomeView({ user }: { user: User }) {
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        // Correct path according to the new security rules: users/{userId}/{fileName}
+        // Correct, secure path according to the new security rules: users/{userId}/{fileName}
         const filePath = `users/${user.uid}/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
@@ -201,10 +199,14 @@ export default function HomeView({ user }: { user: User }) {
       setDialogOpen(false);
     } catch (e: any) {
       console.error('Error saving topic: ', e);
+       let description = e.message || 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
+       if (e.code === 'storage/unauthorized' || e.code === 'permission-denied') {
+          description = 'ليس لديك الصلاحية لرفع الملفات. تأكد من أن قواعد الأمان صحيحة.';
+       }
       toast({
         variant: 'destructive',
         title: 'خطأ في النشر',
-        description: e.message || 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.',
+        description: description,
       });
     } finally {
       setIsSaving(false);
