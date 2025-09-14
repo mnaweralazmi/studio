@@ -173,8 +173,8 @@ export default function HomeView({ user }: { user: User }) {
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        // Correct, secure path according to the new security rules: users/{userId}/{fileName}
-        const filePath = `users/${user.uid}/${Date.now()}_${file.name}`;
+        // A simplified and secure path
+        const filePath = `topics/${user.uid}-${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
         const fileUrl = await getDownloadURL(fileRef);
@@ -199,7 +199,7 @@ export default function HomeView({ user }: { user: User }) {
       setDialogOpen(false);
     } catch (e: any) {
       console.error('Error saving topic: ', e);
-       let description = e.message || 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
+       let description = 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
        if (e.code === 'storage/unauthorized' || e.code === 'permission-denied') {
           description = 'ليس لديك الصلاحية لرفع الملفات. تأكد من أن قواعد الأمان صحيحة.';
        }
