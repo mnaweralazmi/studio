@@ -100,18 +100,18 @@ function AddIdeaDialog({ user }: { user: any; }) {
     }
   };
   
-  const clearFile = () => {
+  const clearFile = useCallback(() => {
     setFile(undefined);
     setPreview(undefined);
     const fileInput = document.getElementById('idea-file') as HTMLInputElement;
     if(fileInput) fileInput.value = '';
-  }
+  }, []);
 
   const clearForm = useCallback(() => {
     setTitle('');
     setDescription('');
     clearFile();
-  }, []);
+  }, [clearFile]);
 
   const handleSave = async () => {
     if (!title || !user) {
@@ -135,7 +135,7 @@ function AddIdeaDialog({ user }: { user: any; }) {
         description,
         imageUrl: fileType === 'image' ? fileUrl : '',
         videoUrl: fileType === 'video' ? fileUrl : '',
-        fileType: fileType,
+        ...(fileType && { fileType: fileType }),
         authorId: user.uid,
         authorName: user.displayName || 'مستخدم غير معروف',
         createdAt: serverTimestamp(),
