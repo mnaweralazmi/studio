@@ -33,6 +33,7 @@ import {
   writeBatch,
   addDoc,
   serverTimestamp,
+  DocumentData,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -82,7 +83,7 @@ type Notification = {
   read: boolean;
 };
 
-function AddIdeaDialog({ user }: { user: any; }) {
+function AddIdeaDialog({ user }: { user: any }) {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -91,7 +92,6 @@ function AddIdeaDialog({ user }: { user: any; }) {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -99,19 +99,20 @@ function AddIdeaDialog({ user }: { user: any; }) {
       setPreview(URL.createObjectURL(selectedFile));
     }
   };
-  
-  const clearFile = useCallback(() => {
+
+  const clearFile = () => {
     setFile(undefined);
     setPreview(undefined);
     const fileInput = document.getElementById('idea-file') as HTMLInputElement;
-    if(fileInput) fileInput.value = '';
-  }, []);
-
+    if (fileInput) fileInput.value = '';
+  };
+  
   const clearForm = useCallback(() => {
     setTitle('');
     setDescription('');
     clearFile();
-  }, [clearFile]);
+  }, []);
+
 
   const handleSave = async () => {
     if (!title || !user) {
@@ -119,50 +120,61 @@ function AddIdeaDialog({ user }: { user: any; }) {
     }
     setIsSaving(true);
     try {
-      let fileUrl = '';
-      let fileType: 'image' | 'video' | undefined = undefined;
-  
-      if (file) {
-        const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
-        const fileRef = ref(storage, filePath);
-        await uploadBytes(fileRef, file);
-        fileUrl = await getDownloadURL(fileRef);
-        fileType = file.type.startsWith('image/') ? 'image' : 'video';
-      }
-      
-      await addDoc(collection(db, 'articles'), {
-        title,
-        description,
-        imageUrl: fileType === 'image' ? fileUrl : '',
-        videoUrl: fileType === 'video' ? fileUrl : '',
-        ...(fileType && { fileType: fileType }),
-        authorId: user.uid,
-        authorName: user.displayName || 'مستخدم غير معروف',
-        createdAt: serverTimestamp(),
-      });
-  
-      toast({
-        title: 'تم النشر بنجاح!',
-        description: `تمت إضافة موضوعك "${title}" بنجاح.`,
-        className: 'bg-green-600 text-white',
-      });
-      
-      clearForm();
-      setOpen(false);
-  
+        const articleData: DocumentData = {
+            title,
+            description,
+            authorId: user.uid,
+            authorName: user.displayName || 'مستخدم غير معروف',
+            createdAt: serverTimestamp(),
+        };
+
+        if (file) {
+            const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+            const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
+            const fileRef = ref(storage, filePath);
+            await uploadBytes(fileRef, file);
+            const fileUrl = await getDownloadURL(fileRef);
+
+            if (fileType === 'image') {
+                articleData.imageUrl = fileUrl;
+            } else {
+                articleData.videoUrl = fileUrl;
+            }
+            articleData.fileType = fileType;
+        }
+
+        await addDoc(collection(db, 'articles'), articleData);
+
+        toast({
+            title: 'تم النشر بنجاح!',
+            description: `تمت إضافة موضوعك "${title}" بنجاح.`,
+            className: 'bg-green-600 text-white',
+        });
+        
+        clearForm();
+        setOpen(false);
+
     } catch (e) {
-      console.error('Error saving idea: ', e);
+        console.error('Error saving idea: ', e);
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
   };
-  
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) { clearForm(); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+          clearForm();
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button className="bg-green-600 hover:bg-green-700">
-            <Plus className="h-4 w-4 ml-2" />
-            أضف فكرتك
+          <Plus className="h-4 w-4 ml-2" />
+          أضف فكرتك
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
@@ -191,29 +203,49 @@ function AddIdeaDialog({ user }: { user: any; }) {
               placeholder="اشرح فكرتك بتفصيل أكبر..."
             />
           </div>
-           <div className="space-y-2">
-             <Label htmlFor="idea-file">صورة أو فيديو (اختياري)</Label>
-             <Input id="idea-file" type="file" onChange={handleFileChange} accept="image/*,video/*" />
+          <div className="space-y-2">
+            <Label htmlFor="idea-file">صورة أو فيديو (اختياري)</Label>
+            <Input
+              id="idea-file"
+              type="file"
+              onChange={handleFileChange}
+              accept="image/*,video/*"
+            />
           </div>
           {preview && (
             <div className="relative">
-              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={clearFile}>
-                 <X className="h-4 w-4" />
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute -top-2 -right-2 h-6 w-6 z-10"
+                onClick={clearFile}
+              >
+                <X className="h-4 w-4" />
               </Button>
               {file?.type.startsWith('image/') ? (
-                <Image src={preview} alt="Preview" width={400} height={200} className="rounded-md object-cover" />
+                <Image
+                  src={preview}
+                  alt="Preview"
+                  width={400}
+                  height={200}
+                  className="rounded-md object-cover"
+                />
               ) : (
                 <video src={preview} controls className="rounded-md w-full" />
               )}
             </div>
-           )}
+          )}
         </div>
         <DialogFooter>
-           <DialogClose asChild>
-              <Button variant="outline">إلغاء</Button>
-            </DialogClose>
+          <DialogClose asChild>
+            <Button variant="outline">إلغاء</Button>
+          </DialogClose>
           <Button onClick={handleSave} disabled={isSaving || !title}>
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin ml-2" />
+            ) : (
+              <Plus className="h-4 w-4 ml-2" />
+            )}
             {isSaving ? 'جاري النشر...' : 'نشر الموضوع'}
           </Button>
         </DialogFooter>
@@ -221,7 +253,6 @@ function AddIdeaDialog({ user }: { user: any; }) {
     </Dialog>
   );
 }
-
 
 function NotificationsPopover({ user }: { user: any }) {
   const { toast } = useToast();
@@ -242,9 +273,11 @@ function NotificationsPopover({ user }: { user: any }) {
   const [shownNotifications, setShownNotifications] = useState(new Set());
 
   const notifications = useMemo(() => {
-    return snapshot?.docs.map(
+    return (
+      snapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Notification)
-      ) || [];
+      ) || []
+    );
   }, [snapshot]);
 
   useEffect(() => {
@@ -388,7 +421,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
       setArticleToDelete(null);
     }
   };
-  
+
   const displayArticles = useMemo(() => {
     if (loading) return [];
     return articles;
@@ -420,17 +453,19 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
             <AddIdeaDialog user={user} />
-            <NotificationsPopover user={user}/>
+            <NotificationsPopover user={user} />
           </div>
         </div>
-        
+
         {loading && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
+            <h2 className="mt-4 text-xl font-semibold">
+              جاري تحميل المواضيع...
+            </h2>
           </div>
         )}
-        
+
         {!loading && displayArticles.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
