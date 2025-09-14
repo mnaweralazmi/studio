@@ -34,6 +34,7 @@ import {
   addDoc,
   serverTimestamp,
   DocumentData,
+  getDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -119,11 +120,16 @@ function AddIdeaDialog({ user }: { user: any }) {
     }
     setIsSaving(true);
     try {
+      // Fetch the latest user data to get the correct displayName
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const authorName = userDocSnap.exists() ? userDocSnap.data().displayName : 'مستخدم غير معروف';
+
       const articleData: DocumentData = {
         title: title,
         description: description,
         authorId: user.uid,
-        authorName: user.displayName || 'مستخدم غير معروف',
+        authorName: authorName,
         createdAt: serverTimestamp(),
       };
 
