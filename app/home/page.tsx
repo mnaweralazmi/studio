@@ -115,12 +115,6 @@ function AddIdeaDialog({ user }: { user: any; }) {
 
   const handleSave = async () => {
     if (!title || !user) {
-      // toast for error is commented out based on user request
-      /* toast({
-        title: 'خطأ',
-        description: 'الرجاء إدخال عنوان للموضوع.',
-        variant: 'destructive',
-      });*/
       return;
     }
     setIsSaving(true);
