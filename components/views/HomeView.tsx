@@ -158,11 +158,7 @@ export default function HomeView({ user }: { user: User }) {
     }
     setIsSaving(true);
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      const authorName = userDocSnap.exists()
-        ? userDocSnap.data().displayName
-        : 'مستخدم غير معروف';
+      const authorName = user.displayName || 'مستخدم غير معروف';
 
       const topicData: DocumentData = {
         title: title,
@@ -296,9 +292,11 @@ export default function HomeView({ user }: { user: User }) {
                         <X className="h-4 w-4" />
                       </Button>
                       {file?.type.startsWith('image/') ? (
-                        <img
+                        <Image
                           src={preview}
                           alt="Preview"
+                          width={400}
+                          height={225}
                           className="rounded-md object-cover w-full aspect-video"
                         />
                       ) : (
