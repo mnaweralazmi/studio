@@ -10,11 +10,8 @@ import {
   Newspaper,
   Trash2,
   Bell,
-  AlertCircle,
   Leaf,
   Plus,
-  Image as ImageIcon,
-  Video,
   X,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,7 +55,6 @@ import {
 } from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -94,25 +90,42 @@ function AddTopicDialog({ user }: { user: any }) {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      const objectUrl = URL.createObjectURL(selectedFile);
       setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
+      setPreview(objectUrl);
     }
   };
 
-  const clearFile = () => {
+  const clearFile = useCallback(() => {
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
     setFile(undefined);
     setPreview(undefined);
     const fileInput = document.getElementById('idea-file') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
-  };
+  }, [preview]);
 
   const clearForm = useCallback(() => {
     setTitle('');
     setDescription('');
     clearFile();
-  }, []);
+  }, [clearFile]);
+
+  // Cleanup effect to revoke URL on unmount
+  useEffect(() => {
+    return () => {
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
+
 
   const handleSave = async () => {
     if (!title.trim() || !user) {
@@ -233,13 +246,13 @@ function AddTopicDialog({ user }: { user: any }) {
                 <X className="h-4 w-4" />
               </Button>
               {file?.type.startsWith('image/') ? (
-                <Image
-                  src={preview}
-                  alt="Preview"
-                  width={400}
-                  height={200}
-                  className="rounded-md object-cover"
-                />
+                 <img
+                    src={preview}
+                    alt="Preview"
+                    width={400}
+                    height={200}
+                    className="rounded-md object-cover w-full"
+                  />
               ) : (
                 <video src={preview} controls className="rounded-md w-full" />
               )}
