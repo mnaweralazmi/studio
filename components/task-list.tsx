@@ -20,16 +20,14 @@ export type Task = {
 const formatDate = (date: any) => {
   if (!date) return null;
   const d = date instanceof Timestamp ? date.toDate() : new Date(date);
-  // Example: أغسطس 24, 2025
   return format(d, 'd MMMM, yyyy', { locale: ar });
 };
 
 const formatTime = (timeStr: string) => {
-    if (!timeStr) return null;
+    if (!timeStr || !/^\d{2}:\d{2}$/.test(timeStr)) return null;
     const [hours, minutes] = timeStr.split(':');
     const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes));
-    // Example: 12:00 ص
+    date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
     return format(date, 'h:mm a', { locale: ar });
 }
 
@@ -72,19 +70,19 @@ export function TaskList({
             }`}
           >
              <div className="flex-1 flex items-start gap-4">
-                {/* Right side: Checkbox */}
-                <div
-                    className="pt-1 cursor-pointer"
-                    onClick={() => onToggleTask && onToggleTask(task.id, !task.completed)}
-                    >
-                    {task.completed ? (
-                        <CircleCheck className="h-5 w-5 text-green-500" />
-                    ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
-                    )}
-                </div>
+                {onToggleTask && (
+                  <div
+                      className="pt-1 cursor-pointer"
+                      onClick={() => onToggleTask(task.id, !task.completed)}
+                      >
+                      {task.completed ? (
+                          <CircleCheck className="h-5 w-5 text-green-500" />
+                      ) : (
+                          <Circle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                  </div>
+                )}
 
-                {/* Middle: Title, Description */}
                 <div className="flex-1">
                     <div className="flex items-center">
                         <p
@@ -106,8 +104,7 @@ export function TaskList({
                 </div>
             </div>
 
-            {/* Left side: Date and Time */}
-             <div className="flex flex-col items-end text-xs text-muted-foreground gap-1 pl-1 pt-1">
+            <div className="flex flex-col items-end text-xs text-muted-foreground gap-1 pl-1 pt-1">
                 {formattedTime && (
                     <div className="flex items-center gap-1">
                       <Bell className="h-3 w-3" />

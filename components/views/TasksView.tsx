@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp, where } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { isSameDay, format, isToday } from 'date-fns';
+import { isSameDay, format, isToday, startOfToday } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 import {
@@ -115,14 +115,16 @@ export default function TasksView() {
     tasksCollection ? query(tasksCollection, orderBy('date', 'asc')) : null
   );
 
-  const allTasks: Task[] = allTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
-
   const { upcomingTasks, todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
+    const allTasks: Task[] = allTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
+
     const upcoming: Task[] = [];
     const today: Task[] = [];
     const selected: Task[] = [];
     const completed: Task[] = [];
     const dates: Date[] = [];
+    
+    const todayDate = startOfToday();
 
     allTasks.forEach(task => {
       const taskDate = task.date ? (task.date instanceof Timestamp ? task.date.toDate() : new Date(task.date)) : null;
@@ -131,11 +133,10 @@ export default function TasksView() {
         completed.push(task);
       } else if (taskDate) {
         dates.push(taskDate);
-        if (!isToday(taskDate) && taskDate > new Date()) {
-          upcoming.push(task);
-        }
         if (isToday(taskDate)) {
           today.push(task);
+        } else if (taskDate > todayDate) {
+           upcoming.push(task);
         }
         if (selectedDate && isSameDay(taskDate, selectedDate)) {
           selected.push(task);
@@ -146,7 +147,6 @@ export default function TasksView() {
     const allUpcoming = [...today, ...upcoming];
     allUpcoming.sort((a,b) => new Date(a.date as string).getTime() - new Date(b.date as string).getTime());
     
-    // Sort completed tasks by date descending
     completed.sort((a,b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
 
     return { 
@@ -156,7 +156,7 @@ export default function TasksView() {
         completedTasks: completed, 
         taskDates: dates 
     };
-  }, [allTasks, selectedDate]);
+  }, [allTasksSnapshot, selectedDate]);
   
   const modifiers = { hasTask: taskDates };
   const modifiersClassNames = { hasTask: 'has-task' };
@@ -205,7 +205,7 @@ export default function TasksView() {
         <div>
             <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
             <p className="mt-1 text-muted-foreground">
-                عرض وإدارة المهام المجدولة لهذا اليوم.
+                عرض وإدارة المهام المجدولة لمزرعتك.
             </p>
         </div>
         <AddTaskDialog onAddTask={handleAddTask} isAdding={isAdding} />
@@ -245,7 +245,7 @@ export default function TasksView() {
                     <div>
                         <Card>
                             <CardHeader>
-                            <CardTitle>مهام لليوم المحدد ({selectedDayTasks.length})</CardTitle>
+                            <CardTitle>مهام {selectedDate && isToday(selectedDate) ? 'اليوم' : 'اليوم المحدد'} ({selectedDayTasks.length})</CardTitle>
                             <CardDescription>
                                 {selectedDate ? format(selectedDate, 'eeee, d MMMM', {locale: ar}) : 'الرجاء تحديد يوم لعرض مهامه.'}
                             </CardDescription>
@@ -296,5 +296,3 @@ export default function TasksView() {
     </div>
   );
 }
-
-    

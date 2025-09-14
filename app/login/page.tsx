@@ -49,17 +49,20 @@ const getFirebaseAuthErrorMessage = (errorCode: string): string => {
     case 'auth/invalid-email':
       return 'البريد الإلكتروني الذي أدخلته غير صالح.';
     case 'auth/user-not-found':
-      return 'لا يوجد حساب مرتبط بهذا البريد الإلكتروني.';
+    case 'auth/user-disabled':
+      return 'لا يوجد حساب مرتبط بهذا البريد الإلكتروني أو تم تعطيله.';
     case 'auth/wrong-password':
-      return 'كلمة المرور غير صحيحة.';
+      return 'كلمة المرور غير صحيحة. الرجاء المحاولة مرة أخرى.';
     case 'auth/too-many-requests':
-      return 'لقد حاولت تسجيل الدخول عدة مرات. يرجى المحاولة مرة أخرى لاحقًا.';
+      return 'تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول. يرجى المحاولة مرة أخرى لاحقًا.';
     case 'auth/popup-closed-by-user':
       return 'تم إغلاق نافذة تسجيل الدخول. يرجى المحاولة مرة أخرى.';
     case 'auth/credential-already-in-use':
       return 'حساب جوجل هذا مرتبط بحساب آخر.';
+    case 'auth/network-request-failed':
+      return 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
     default:
-      return 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
+      return 'حدث خطأ غير متوقع أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.';
   }
 };
 
@@ -95,6 +98,7 @@ export default function LoginPage() {
         await setDoc(userDocRef, {
           displayName: user.displayName,
           email: user.email,
+          createdAt: serverTimestamp(),
         });
       }
 
@@ -117,7 +121,7 @@ export default function LoginPage() {
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>خطأ</AlertTitle>
+                <AlertTitle>خطأ في تسجيل الدخول</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}

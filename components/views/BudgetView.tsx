@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useCollectionData } from 'react-firebase-hooks/firestore';
+import { collection, query, where, DocumentData } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import {
@@ -24,7 +24,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-// Generic Types
 type Expense = { amount: number };
 type Sale = { totalAmount: number };
 type Debt = { amount: number; type: 'دين لنا' | 'دين علينا' };
@@ -53,6 +52,7 @@ const StatCard = ({
 );
 
 const SectionBudgetDisplay = ({ data }) => {
+    if (!data) return null;
     const netProfit = data.totalIncome - data.totalExpenses;
     
     return (
@@ -106,63 +106,53 @@ const SectionBudgetDisplay = ({ data }) => {
     );
 };
 
+const useArchivedFilteredCollection = (collectionName: string) => {
+    const [user] = useAuthState(auth);
+    const collectionRef = user ? collection(db, 'users', user.uid, collectionName) : null;
+    const q = collectionRef ? query(collectionRef, where('archived', '!=', true)) : null;
+    const [data, loading, error] = useCollectionData(q);
+    return { data, loading, error };
+}
+
 
 export default function BudgetView() {
   const [user, loadingUser] = useAuthState(auth);
   const [selectedSection, setSelectedSection] = useState('total');
 
-  // --- Collection Refs ---
-  const expensesCollection = user ? collection(db, 'users', user.uid, 'expenses') : null;
-  const agriExpensesCollection = user ? collection(db, 'users', user.uid, 'agriExpenses') : null;
-  const poultryExpensesCollection = user ? collection(db, 'users', user.uid, 'poultryExpenses') : null;
-  const livestockExpensesCollection = user ? collection(db, 'users', user.uid, 'livestockExpenses') : null;
-  
-  const agriSalesCollection = user ? collection(db, 'users', user.uid, 'agriSales') : null;
-  const poultryEggSalesCollection = user ? collection(db, 'users', user.uid, 'poultryEggSales') : null;
-  const poultrySalesCollection = user ? collection(db, 'users', user.uid, 'poultrySales') : null;
-  const livestockSalesCollection = user ? collection(db, 'users', user.uid, 'livestockSales') : null;
-
-  const debtsCollection = user ? collection(db, 'users', user.uid, 'debts') : null;
-  const workersCollection = user ? collection(db, 'users', user.uid, 'workers') : null;
-
-  // --- Hooks ---
-  const [expensesSnapshot, loadingExpenses] = useCollection(expensesCollection ? query(expensesCollection, where('archived', '!=', true)) : null);
-  const [agriExpensesSnapshot, loadingAgriExpenses] = useCollection(agriExpensesCollection ? query(agriExpensesCollection, where('archived', '!=', true)) : null);
-  const [poultryExpensesSnapshot, loadingPoultryExpenses] = useCollection(poultryExpensesCollection ? query(poultryExpensesCollection, where('archived', '!=', true)) : null);
-  const [livestockExpensesSnapshot, loadingLivestockExpenses] = useCollection(livestockExpensesCollection ? query(livestockExpensesCollection, where('archived', '!=', true)) : null);
-
-  const [agriSalesSnapshot, loadingAgriSales] = useCollection(agriSalesCollection ? query(agriSalesCollection, where('archived', '!=', true)) : null);
-  const [poultryEggSalesSnapshot, loadingPoultryEggSales] = useCollection(poultryEggSalesCollection ? query(poultryEggSalesCollection, where('archived', '!=', true)) : null);
-  const [poultrySalesSnapshot, loadingPoultrySales] = useCollection(poultrySalesCollection ? query(poultrySalesCollection, where('archived', '!=', true)) : null);
-  const [livestockSalesSnapshot, loadingLivestockSales] = useCollection(livestockSalesCollection ? query(livestockSalesCollection, where('archived', '!=', true)) : null);
-
-  const [debtsSnapshot, loadingDebts] = useCollection(debtsCollection ? query(debtsCollection, where('archived', '!=', true)) : null);
-  const [workersSnapshot, loadingWorkers] = useCollection(workersCollection ? query(workersCollection, where('archived', '!=', true)) : null);
+  const { data: expenses, loading: loadingExpenses } = useArchivedFilteredCollection('expenses');
+  const { data: agriExpenses, loading: loadingAgriExpenses } = useArchivedFilteredCollection('agriExpenses');
+  const { data: poultryExpenses, loading: loadingPoultryExpenses } = useArchivedFilteredCollection('poultryExpenses');
+  const { data: livestockExpenses, loading: loadingLivestockExpenses } = useArchivedFilteredCollection('livestockExpenses');
+  const { data: agriSales, loading: loadingAgriSales } = useArchivedFilteredCollection('agriSales');
+  const { data: poultryEggSales, loading: loadingPoultryEggSales } = useArchivedFilteredCollection('poultryEggSales');
+  const { data: poultrySales, loading: loadingPoultrySales } = useArchivedFilteredCollection('poultrySales');
+  const { data: livestockSales, loading: loadingLivestockSales } = useArchivedFilteredCollection('livestockSales');
+  const { data: debts, loading: loadingDebts } = useArchivedFilteredCollection('debts');
+  const { data: workers, loading: loadingWorkers } = useArchivedFilteredCollection('workers');
 
   const budgetData = useMemo(() => {
-    const calculateTotal = (snapshot) => snapshot?.docs.reduce((sum, doc) => sum + (doc.data().amount || doc.data().totalAmount || 0), 0) || 0;
-    const calculateSalaryTotal = (snapshot) => snapshot?.docs.reduce((sum, doc) => sum + (doc.data().salary || 0), 0) || 0;
+    const calculateTotal = (data: DocumentData[] | undefined, key: string) => data?.reduce((sum, doc) => sum + (doc[key] || 0), 0) || 0;
 
-    // --- All Sales ---
-    const totalAgriSales = calculateTotal(agriSalesSnapshot);
-    const totalPoultryEggSales = calculateTotal(poultryEggSalesSnapshot);
-    const totalPoultrySales = calculateTotal(poultrySalesSnapshot);
-    const totalLivestockSales = calculateTotal(livestockSalesSnapshot);
+    // All Sales
+    const totalAgriSales = calculateTotal(agriSales, 'totalAmount');
+    const totalPoultryEggSales = calculateTotal(poultryEggSales, 'totalAmount');
+    const totalPoultrySales = calculateTotal(poultrySales, 'totalAmount');
+    const totalLivestockSales = calculateTotal(livestockSales, 'totalAmount');
     const totalIncome = totalAgriSales + totalPoultryEggSales + totalPoultrySales + totalLivestockSales;
 
-    // --- All Expenses ---
-    const totalGeneralExpenses = calculateTotal(expensesSnapshot);
-    const totalAgriExpenses = calculateTotal(agriExpensesSnapshot);
-    const totalPoultryExpenses = calculateTotal(poultryExpensesSnapshot);
-    const totalLivestockExpenses = calculateTotal(livestockExpensesSnapshot);
-    const totalWorkerSalaries = calculateSalaryTotal(workersSnapshot);
+    // All Expenses
+    const totalGeneralExpenses = calculateTotal(expenses, 'amount');
+    const totalAgriExpenses = calculateTotal(agriExpenses, 'amount');
+    const totalPoultryExpenses = calculateTotal(poultryExpenses, 'amount');
+    const totalLivestockExpenses = calculateTotal(livestockExpenses, 'amount');
+    const totalWorkerSalaries = calculateTotal(workers, 'salary');
     const totalOperationalExpenses = totalGeneralExpenses + totalAgriExpenses + totalPoultryExpenses + totalLivestockExpenses;
     const grandTotalExpenses = totalOperationalExpenses + totalWorkerSalaries;
     
-    // --- Debts ---
-    const debts = debtsSnapshot?.docs.map((doc) => doc.data() as Debt) || [];
-    const totalDebtsForUs = debts.filter((d) => d.type === 'دين لنا').reduce((sum, d) => sum + (d.amount || 0), 0);
-    const totalDebtsOnUs = debts.filter((d) => d.type === 'دين علينا').reduce((sum, d) => sum + (d.amount || 0), 0);
+    // Debts
+    const debtsData = (debts as Debt[]) || [];
+    const totalDebtsForUs = debtsData.filter((d) => d.type === 'دين لنا').reduce((sum, d) => sum + (d.amount || 0), 0);
+    const totalDebtsOnUs = debtsData.filter((d) => d.type === 'دين علينا').reduce((sum, d) => sum + (d.amount || 0), 0);
     
     const netProfit = totalIncome - grandTotalExpenses;
 
@@ -201,9 +191,9 @@ export default function BudgetView() {
       }
     };
   }, [
-    agriSalesSnapshot, poultryEggSalesSnapshot, poultrySalesSnapshot, livestockSalesSnapshot,
-    expensesSnapshot, agriExpensesSnapshot, poultryExpensesSnapshot, livestockExpensesSnapshot, 
-    workersSnapshot, debtsSnapshot
+    agriSales, poultryEggSales, poultrySales, livestockSales,
+    expenses, agriExpenses, poultryExpenses, livestockExpenses, 
+    workers, debts
   ]);
 
   const loading =

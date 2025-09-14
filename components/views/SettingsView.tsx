@@ -11,7 +11,7 @@ import {
   Settings,
   Save,
 } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   signOut,
@@ -259,7 +259,7 @@ function ProfileView() {
           </div>
           <div>
             <Label htmlFor="user-uid" className="text-xs">
-              Your User ID (for Admin)
+              معرف المستخدم الخاص بك (للمشرف)
             </Label>
             <Input
               id="user-uid"
@@ -295,12 +295,12 @@ function ProfileView() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="private-info">معلومات خاصة (تظهر لك فقط)</Label>
+            <Label htmlFor="private-info">ملاحظات خاصة (تظهر لك فقط)</Label>
             <Textarea
               id="private-info"
               value={privateInfo}
               onChange={(e) => setPrivateInfo(e.target.value)}
-              placeholder="ملاحظات، أرقام هواتف، أو أي معلومات خاصة..."
+              placeholder="أرقام هواتف، أو أي معلومات خاصة..."
             />
           </div>
 
@@ -337,6 +337,7 @@ function ProfileView() {
             <Button
               onClick={handleLinkWithGoogle}
               disabled={isLinking}
+              variant="outline"
               className="w-full"
             >
               {isLinking ? (
@@ -397,19 +398,21 @@ function GeneralSettingsView() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 rounded-lg bg-background">
-            <Label htmlFor="task-notifications">إشعارات المهام</Label>
+            <Label htmlFor="task-notifications" className="flex-1">إشعارات المهام</Label>
             <Toggle
               id="task-notifications"
               pressed={taskNotifications}
               onPressedChange={setTaskNotifications}
+              aria-label="Toggle task notifications"
             />
           </div>
           <div className="flex items-center justify-between p-4 rounded-lg bg-background">
-            <Label htmlFor="sales-notifications">إشعارات المبيعات</Label>
+            <Label htmlFor="sales-notifications" className="flex-1">إشعارات المبيعات</Label>
             <Toggle
               id="sales-notifications"
               pressed={salesNotifications}
               onPressedChange={setSalesNotifications}
+              aria-label="Toggle sales notifications"
             />
           </div>
         </CardContent>
@@ -491,7 +494,7 @@ function AdminView({ user }: { user: any }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>إرسال إشعار</CardTitle>
+        <CardTitle>إرسال إشعار للمستخدمين</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -576,12 +579,12 @@ export default function SettingsView() {
       { value: 'archive', label: 'الأرشيف', icon: Archive },
     ];
     if (isAdmin) {
-      baseTabs.push({ value: 'admin', label: 'المدير', icon: UserCog });
+      baseTabs.push({ value: 'admin', label: 'لوحة التحكم', icon: UserCog });
     }
     return baseTabs;
   }, [isAdmin]);
 
-  const renderContent = () => {
+  const renderContent = useCallback(() => {
     switch (activeTab) {
       case 'profile':
         return <ProfileView />;
@@ -594,7 +597,7 @@ export default function SettingsView() {
       default:
         return <ProfileView />;
     }
-  };
+  }, [activeTab, user, isAdmin]);
 
   return (
     <div className="space-y-6">

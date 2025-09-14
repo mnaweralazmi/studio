@@ -69,6 +69,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -418,31 +419,35 @@ function FacilitiesView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة المرافق</h2>
-        <DataView<Facility>
-          loading={loading}
-          data={facilities}
-          columns={['الاسم', 'النوع', 'أرشفة']}
-          emptyMessage="لا توجد مرافق لعرضها."
-          renderRow={(facility) => (
-            <TableRow key={facility.id}>
-              <TableCell className="font-medium">{facility.name}</TableCell>
-              <TableCell><Badge variant="secondary">{facility.type}</Badge></TableCell>
-              <TableCell className="text-left">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="أرشفة"
-                  onClick={() => handleArchive(facility.id)}
-                >
-                  <Archive className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          )}
-        />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة المرافق</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataView<Facility>
+            loading={loading}
+            data={facilities}
+            columns={['الاسم', 'النوع', 'أرشفة']}
+            emptyMessage="لا توجد مرافق لعرضها."
+            renderRow={(facility) => (
+              <TableRow key={facility.id}>
+                <TableCell className="font-medium">{facility.name}</TableCell>
+                <TableCell><Badge variant="secondary">{facility.type}</Badge></TableCell>
+                <TableCell className="text-left">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="أرشفة"
+                    onClick={() => handleArchive(facility.id)}
+                  >
+                    <Archive className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -589,8 +594,11 @@ function AgriSalesView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة المبيعات الزراعية</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة المبيعات الزراعية</CardTitle>
+        </CardHeader>
+        <CardContent>
         <DataView<AgriSale>
           loading={loading}
           data={sales}
@@ -629,7 +637,8 @@ function AgriSalesView({ user }) {
             </TableRow>
           )}
         />
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -698,12 +707,11 @@ function DebtsView({ user }) {
       if (newAmount > 0) {
         await updateDoc(debtRef, { amount: newAmount });
       } else {
-        // Instead of deleting, we archive it
         await updateDoc(debtRef, { amount: 0, archived: true });
       }
       toast({
-          title: "تم السداد",
-          description: `تم سداد مبلغ ${paymentValue.toFixed(3)} د.ك بنجاح.`,
+          title: "تم السداد بنجاح",
+          description: `تم سداد مبلغ ${paymentValue.toFixed(3)} د.ك من دين ${selectedDebt.party}.`,
           className: "bg-green-600 text-white"
       });
     } catch (e) {
@@ -779,62 +787,65 @@ function DebtsView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة الديون</h2>
-        <DataView<Debt>
-          loading={loading}
-          data={debts}
-          columns={['الجهة', 'تاريخ الاستحقاق', 'نوع الدين', 'المبلغ', 'الإجراءات']}
-          emptyMessage="لا توجد ديون لعرضها."
-          renderRow={(debt) => (
-            <TableRow key={debt.id}>
-              <TableCell className="font-medium">{debt.party}</TableCell>
-              <TableCell>{formatDate(debt.dueDate)}</TableCell>
-              <TableCell>
-                <Badge variant={debt.type === 'دين لنا' ? 'default' : 'destructive'}>
-                  {debt.type}
-                </Badge>
-              </TableCell>
-              <TableCell
-                className={`font-semibold ${
-                  debt.type === 'دين لنا' ? 'text-green-600' : 'text-destructive'
-                }`}
-              >{`${(debt.amount || 0).toFixed(3)} د.ك`}</TableCell>
-              <TableCell className="text-left flex items-center justify-end gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleOpenPaymentDialog(debt)}
-                  className="flex items-center gap-1"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  سداد
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="أرشفة"
-                  onClick={() => handleArchiveDebt(debt.id)}
-                >
-                  <Archive className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          )}
-        />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة الديون</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataView<Debt>
+            loading={loading}
+            data={debts}
+            columns={['الجهة', 'تاريخ الاستحقاق', 'نوع الدين', 'المبلغ', 'الإجراءات']}
+            emptyMessage="لا توجد ديون لعرضها."
+            renderRow={(debt) => (
+              <TableRow key={debt.id}>
+                <TableCell className="font-medium">{debt.party}</TableCell>
+                <TableCell>{formatDate(debt.dueDate)}</TableCell>
+                <TableCell>
+                  <Badge variant={debt.type === 'دين لنا' ? 'default' : 'destructive'}>
+                    {debt.type}
+                  </Badge>
+                </TableCell>
+                <TableCell
+                  className={`font-semibold ${
+                    debt.type === 'دين لنا' ? 'text-green-600' : 'text-destructive'
+                  }`}
+                >{`${(debt.amount || 0).toFixed(3)} د.ك`}</TableCell>
+                <TableCell className="text-left flex items-center justify-end gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenPaymentDialog(debt)}
+                    className="flex items-center gap-1"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    سداد
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="أرشفة"
+                    onClick={() => handleArchiveDebt(debt.id)}
+                  >
+                    <Archive className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+          />
+        </CardContent>
+      </Card>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>سداد دين</DialogTitle>
+            <DialogDescription>
+              {selectedDebt && `أنت على وشك سداد دين لـ ${selectedDebt.party}.`}
+            </DialogDescription>
           </DialogHeader>
           {selectedDebt && (
             <div className="grid gap-4 py-4">
-              <p>
-                أنت على وشك سداد دين لـ
-                <span className="font-bold"> {selectedDebt.party}</span>.
-              </p>
               <p>
                 المبلغ المتبقي:
                 <span className="font-bold text-destructive">
@@ -881,7 +892,7 @@ function WorkersView({ user }) {
     : null;
 
   const [snapshot, loading] = useCollection(
-    workersCollection ? query(workersCollection, where('archived', '==', false), orderBy('name', 'asc')) : null
+    workersCollection ? query(workersCollection, where('archived', '!=', true), orderBy('name', 'asc')) : null
   );
   const workers =
     snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Worker)) ||
@@ -928,8 +939,8 @@ function WorkersView({ user }) {
         archived: false,
       });
       toast({
-          title: "تم دفع الراتب",
-          description: `تم تسجيل راتب ${worker.name} كمصروف بنجاح.`,
+          title: "تم دفع الراتب بنجاح",
+          description: `تم تسجيل راتب ${worker.name} كمصروف.`,
           className: "bg-green-600 text-white"
       });
     } catch (e) {
@@ -1011,61 +1022,65 @@ function WorkersView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة العمال</h2>
-        <DataView<Worker>
-          loading={loading}
-          data={workers}
-          columns={['الاسم', 'راتب العامل', 'الإجراءات']}
-          emptyMessage="لا يوجد عمال لعرضهم."
-          renderRow={(worker) => (
-            <TableRow key={worker.id}>
-              <TableCell className="font-medium flex items-center">
-                <div className="p-2 rounded-lg border bg-secondary/30 mr-3 rtl:mr-0 rtl:ml-3">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                {worker.name}
-              </TableCell>
-              <TableCell>{`${(worker.salary || 0).toFixed(3)} د.ك`}</TableCell>
-              <TableCell className="text-left">
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSalaryPayment(worker)}
-                    disabled={payingSalaryFor === worker.id}
-                    className="flex items-center gap-1"
-                  >
-                    {payingSalaryFor === worker.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CreditCard className="h-4 w-4" />
-                    )}
-                    دفع الراتب
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleOpenEditDialog(worker)}
-                    disabled={payingSalaryFor === worker.id}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    title="أرشفة"
-                    onClick={() => handleArchiveWorker(worker.id)}
-                    disabled={payingSalaryFor === worker.id}
-                  >
-                    <Archive className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة العمال</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataView<Worker>
+            loading={loading}
+            data={workers}
+            columns={['الاسم', 'راتب العامل', 'الإجراءات']}
+            emptyMessage="لا يوجد عمال لعرضهم."
+            renderRow={(worker) => (
+              <TableRow key={worker.id}>
+                <TableCell className="font-medium flex items-center">
+                  <div className="p-2 rounded-lg border bg-secondary/30 mr-3 rtl:mr-0 rtl:ml-3">
+                    <User className="h-6 w-6 text-primary" />
+                  </div>
+                  {worker.name}
+                </TableCell>
+                <TableCell>{`${(worker.salary || 0).toFixed(3)} د.ك`}</TableCell>
+                <TableCell className="text-left">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSalaryPayment(worker)}
+                      disabled={payingSalaryFor === worker.id}
+                      className="flex items-center gap-1"
+                    >
+                      {payingSalaryFor === worker.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4" />
+                      )}
+                      دفع الراتب
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleOpenEditDialog(worker)}
+                      disabled={payingSalaryFor === worker.id}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="أرشفة"
+                      onClick={() => handleArchiveWorker(worker.id)}
+                      disabled={payingSalaryFor === worker.id}
+                    >
+                      <Archive className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          />
+        </CardContent>
+      </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -1268,37 +1283,41 @@ function EggSalesView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة مبيعات البيض</h2>
-        <DataView<EggSale>
-          loading={loading}
-          data={sales}
-          columns={['التاريخ', 'عدد الأطباق', 'سعر الطبق', 'المبلغ الإجمالي', 'أرشفة']}
-          emptyMessage="لا توجد مبيعات بيض لعرضها."
-          renderRow={(sale) => (
-            <TableRow key={sale.id}>
-              <TableCell>{formatDate(sale.date)}</TableCell>
-              <TableCell>{sale.trayCount || 0}</TableCell>
-              <TableCell>{`${(sale.trayPrice || 0).toFixed(
-                3
-              )} د.ك`}</TableCell>
-              <TableCell className="font-semibold text-green-600">{`${(
-                sale.totalAmount || 0
-              ).toFixed(3)} د.ك`}</TableCell>
-              <TableCell className="text-left">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="أرشفة"
-                  onClick={() => handleArchive(sale.id)}
-                >
-                  <Archive className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          )}
-        />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة مبيعات البيض</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataView<EggSale>
+            loading={loading}
+            data={sales}
+            columns={['التاريخ', 'عدد الأطباق', 'سعر الطبق', 'المبلغ الإجمالي', 'أرشفة']}
+            emptyMessage="لا توجد مبيعات بيض لعرضها."
+            renderRow={(sale) => (
+              <TableRow key={sale.id}>
+                <TableCell>{formatDate(sale.date)}</TableCell>
+                <TableCell>{sale.trayCount || 0}</TableCell>
+                <TableCell>{`${(sale.trayPrice || 0).toFixed(
+                  3
+                )} د.ك`}</TableCell>
+                <TableCell className="font-semibold text-green-600">{`${(
+                  sale.totalAmount || 0
+                ).toFixed(3)} د.ك`}</TableCell>
+                <TableCell className="text-left">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="أرشفة"
+                    onClick={() => handleArchive(sale.id)}
+                  >
+                    <Archive className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1410,8 +1429,11 @@ function PoultrySalesView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة مبيعات الدواجن</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة مبيعات الدواجن</CardTitle>
+        </CardHeader>
+        <CardContent>
         <DataView<PoultrySale>
           loading={loading}
           data={sales}
@@ -1448,7 +1470,8 @@ function PoultrySalesView({ user }) {
             </TableRow>
           )}
         />
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1533,8 +1556,11 @@ function FlocksView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة قطعان الدواجن</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة قطعان الدواجن</CardTitle>
+        </CardHeader>
+        <CardContent>
         <DataView<Flock>
           loading={loading}
           data={flocks}
@@ -1557,7 +1583,8 @@ function FlocksView({ user }) {
             </TableRow>
           )}
         />
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1713,8 +1740,11 @@ function LivestockSalesView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة مبيعات المواشي</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة مبيعات المواشي</CardTitle>
+        </CardHeader>
+        <CardContent>
         <DataView<LivestockSale>
           loading={loading}
           data={sales}
@@ -1751,7 +1781,8 @@ function LivestockSalesView({ user }) {
             </TableRow>
           )}
         />
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1836,8 +1867,11 @@ function HerdsView({ user }) {
         </CardContent>
       </Card>
 
-      <div className="bg-card p-6 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4">قائمة قطعان المواشي</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة قطعان المواشي</CardTitle>
+        </CardHeader>
+        <CardContent>
         <DataView<Herd>
           loading={loading}
           data={herds}
@@ -1860,7 +1894,8 @@ function HerdsView({ user }) {
             </TableRow>
           )}
         />
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1920,7 +1955,7 @@ export default function ManagementView() {
     if (tab && availableTabs.some(t => t.value === tab)) {
       setSelectedSection(tab);
     }
-  }, [tab, availableTabs]);
+  }, [tab]);
 
   
   return (
@@ -1937,7 +1972,7 @@ export default function ManagementView() {
       <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
            {availableTabs.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} className="flex items-center gap-2 h-12 text-xs sm:text-sm">
+              <TabsTrigger key={t.value} value={t.value} className="flex items-center justify-center gap-2 h-12 text-xs sm:text-sm">
                  <t.icon className={cn('h-5 w-5', t.rotate && 'rotate-90')} />
                 {t.label}
               </TabsTrigger>

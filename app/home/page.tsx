@@ -4,7 +4,7 @@ import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Loader2,
   Newspaper,
@@ -137,13 +137,15 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
   },
 ];
 
-function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: string; description: string; file?: File; }) => Promise<void>; isSaving: boolean; user: any; }) {
+function AddIdeaDialog({ user }: { user: any; }) {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | undefined>(undefined);
   const [preview, setPreview] = useState<string | undefined>(undefined);
   const [open, setOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -153,15 +155,14 @@ function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: str
     }
   };
   
-  const clearForm = () => {
+  const clearForm = useCallback(() => {
     setTitle('');
     setDescription('');
     setFile(undefined);
     setPreview(undefined);
-    // Also reset the file input visually
     const fileInput = document.getElementById('idea-file') as HTMLInputElement;
     if(fileInput) fileInput.value = '';
-  }
+  }, []);
 
   const handleSave = async () => {
     if (!title || !user) {
@@ -172,9 +173,49 @@ function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: str
       });
       return;
     }
-    await onSave({ title, description, file });
-    clearForm();
-    setOpen(false);
+    setIsSaving(true);
+    try {
+      let fileUrl = '';
+      let fileType: 'image' | 'video' | undefined = undefined;
+  
+      if (file) {
+        const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
+        const fileRef = ref(storage, filePath);
+        await uploadBytes(fileRef, file);
+        fileUrl = await getDownloadURL(fileRef);
+        fileType = file.type.startsWith('image/') ? 'image' : 'video';
+      }
+      
+      await addDoc(collection(db, 'articles'), {
+        title,
+        description,
+        imageUrl: fileType === 'image' ? fileUrl : '',
+        videoUrl: fileType === 'video' ? fileUrl : '',
+        fileType: fileType,
+        authorId: user.uid,
+        authorName: user.displayName || 'مستخدم غير معروف',
+        createdAt: serverTimestamp(),
+      });
+  
+      toast({
+        title: 'تم النشر بنجاح!',
+        description: `تمت إضافة موضوعك "${title}" بنجاح.`,
+        className: 'bg-green-600 text-white',
+      });
+      
+      clearForm();
+      setOpen(false);
+  
+    } catch (e) {
+      console.error('Error saving idea: ', e);
+      toast({
+        variant: 'destructive',
+        title: 'خطأ في النشر',
+        description: 'لم نتمكن من حفظ الموضوع. الرجاء المحاولة مرة أخرى.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   return (
@@ -217,7 +258,7 @@ function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: str
           </div>
           {preview && (
             <div className="relative">
-              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={() => { setFile(undefined); setPreview(undefined); const fileInput = document.getElementById('idea-file') as HTMLInputElement; if(fileInput) fileInput.value = ''; }}>
+              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={clearForm}>
                  <X className="h-4 w-4" />
               </Button>
               {file?.type.startsWith('image/') ? (
@@ -230,7 +271,7 @@ function AddIdeaDialog({ onSave, isSaving, user }: { onSave: (idea: { title: str
         </div>
         <DialogFooter>
            <DialogClose asChild>
-              <Button variant="outline" onClick={clearForm}>إلغاء</Button>
+              <Button variant="outline">إلغاء</Button>
             </DialogClose>
           <Button onClick={handleSave} disabled={isSaving || !title}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
@@ -281,7 +322,7 @@ function NotificationsPopover({ user }: { user: any }) {
       setShownNotifications((prev) => new Set(prev).add(unreadAndUnshown.id));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications]);
+  }, [notifications, toast]);
 
   const hasUnread = useMemo(
     () => notifications.some((n) => !n.read),
@@ -373,7 +414,6 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   const articles = useMemo(
     () =>
@@ -382,51 +422,6 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
       ) || [],
     [articlesSnapshot]
   );
-  
-  const handleSaveIdea = async ({ title, description, file }: { title: string; description: string; file?: File; }) => {
-    if (!user) return;
-    setIsSaving(true);
-  
-    try {
-      let fileUrl = '';
-      let fileType: 'image' | 'video' | undefined = undefined;
-  
-      if (file) {
-        const filePath = `articles/${user.uid}/${Date.now()}_${file.name}`;
-        const fileRef = ref(storage, filePath);
-        await uploadBytes(fileRef, file);
-        fileUrl = await getDownloadURL(fileRef);
-        fileType = file.type.startsWith('image/') ? 'image' : 'video';
-      }
-      
-      await addDoc(articlesCollection, {
-        title,
-        description,
-        imageUrl: fileType === 'image' ? fileUrl : '',
-        videoUrl: fileType === 'video' ? fileUrl : '',
-        fileType: fileType,
-        authorId: user.uid,
-        authorName: user.displayName || 'مستخدم غير معروف',
-        createdAt: serverTimestamp(),
-      });
-  
-      toast({
-        title: 'تم النشر بنجاح!',
-        description: 'تمت إضافة موضوعك الجديد.',
-        className: 'bg-green-600 text-white',
-      });
-  
-    } catch (e) {
-      console.error('Error saving idea: ', e);
-      toast({
-        variant: 'destructive',
-        title: 'خطأ في النشر',
-        description: 'لم نتمكن من حفظ الموضوع. الرجاء المحاولة مرة أخرى.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const openDeleteConfirmation = (id: string) => {
     setArticleToDelete(id);
@@ -457,7 +452,6 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
 
   const displayArticles = useMemo(() => {
     if (loading) return []; // Return empty while loading to avoid flash of dummy data
-    // Show dummy articles if there's an error OR if there are no articles from DB
     if (error || articles.length === 0) return DUMMY_ARTICLES as Article[];
     return articles;
   }, [articles, loading, error]);
@@ -487,19 +481,19 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
-            <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} />
+            <AddIdeaDialog user={user} />
             <NotificationsPopover user={user}/>
           </div>
         </div>
         
-        {loading ? (
+        {loading && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
             <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
           </div>
-        ) : null}
+        )}
         
-        {!loading && displayArticles.length === 0 ? (
+        {!loading && displayArticles.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
@@ -509,7 +503,9 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
               كن أول من يشارك فكرة أو موضوعًا جديدًا!
             </p>
           </div>
-        ) : (
+        )}
+
+        {!loading && displayArticles.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             {displayArticles.map((article) => (
               <Card

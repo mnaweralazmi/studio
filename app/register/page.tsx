@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,15 +19,17 @@ import { AlertCircle } from 'lucide-react';
 const getFirebaseAuthErrorMessage = (errorCode: string): string => {
   switch (errorCode) {
     case 'auth/email-already-in-use':
-      return 'هذا البريد الإلكتروني مسجل بالفعل.';
+      return 'هذا البريد الإلكتروني مسجل بالفعل. حاول تسجيل الدخول بدلاً من ذلك.';
     case 'auth/invalid-email':
       return 'البريد الإلكتروني الذي أدخلته غير صالح.';
     case 'auth/operation-not-allowed':
-      return 'إنشاء حساب جديد معطل حاليًا.';
+      return 'إنشاء حساب جديد معطل حاليًا. يرجى مراجعة الدعم الفني.';
     case 'auth/weak-password':
       return 'كلمة المرور ضعيفة جدًا. يجب أن تتكون من 6 أحرف على الأقل.';
+    case 'auth/network-request-failed':
+        return 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
     default:
-      return 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
+      return 'حدث خطأ غير متوقع أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.';
   }
 };
 
@@ -65,6 +67,7 @@ export default function RegisterPage() {
       await setDoc(doc(db, 'users', user.uid), {
         displayName: username,
         email: user.email,
+        createdAt: serverTimestamp(),
       });
 
       router.push('/home');
@@ -86,7 +89,7 @@ export default function RegisterPage() {
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>خطأ</AlertTitle>
+                <AlertTitle>خطأ في التسجيل</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
