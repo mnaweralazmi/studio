@@ -87,7 +87,7 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
     id: '1',
     title: 'زراعة الطماطم في الصيف',
     description:
-      'دليل شامل لزراعة الطмаطم في الظروف الحارة والجافة لضمان أفضل محصول.',
+      'دليل شامل لزراعة الطماطم في الظروف الحارة والجافة لضمان أفضل محصول.',
     imageUrl: 'https://picsum.photos/seed/tomato-summer/400/200',
     imageHint: 'tomato plant',
     authorName: 'خبير زراعي',
@@ -103,9 +103,9 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
   },
   {
     id: '3',
-    title: 'استخدام البيوت المحمية',
+    title: 'فوائد استخدام البيوت المحمية',
     description:
-      'فوائد استخدام البيوت المحمية لزراعة المحاصيل خارج موسمها الطبيعي.',
+      'اكتشف كيف تساهم البيوت المحمية في حماية النباتات وزيادة الإنتاج على مدار العام.',
     imageUrl: 'https://picsum.photos/seed/greenhouse/400/200',
     imageHint: 'greenhouse farming',
     authorName: 'فريق الإرشاد',
@@ -118,6 +118,22 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
     imageUrl: 'https://picsum.photos/seed/pest-control/400/200',
     imageHint: 'natural pest control',
     authorName: 'مزارع واعي',
+  },
+  {
+    id: '5',
+    title: 'أهمية تحليل التربة',
+    description: 'لماذا يعتبر تحليل التربة خطوة أساسية قبل البدء في أي مشروع زراعي ناجح؟',
+    imageUrl: 'https://picsum.photos/seed/soil-analysis/400/200',
+    imageHint: 'soil analysis',
+    authorName: 'مختبر المزرعة',
+  },
+  {
+    id: '6',
+    title: 'جدول تسميد الخضروات الورقية',
+    description: 'أفضل برنامج تسميد للحصول على خضروات ورقية طازجة وصحية.',
+    imageUrl: 'https://picsum.photos/seed/leafy-greens/400/200',
+    imageHint: 'leafy greens',
+    authorName: 'خبير تسميد',
   },
 ];
 
@@ -433,7 +449,12 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
     }
   };
 
-  const displayArticles = error ? (DUMMY_ARTICLES as Article[]) : articles;
+  const displayArticles = useMemo(() => {
+    if (loading) return []; // Return empty while loading to avoid flash of dummy data
+    if (error) return DUMMY_ARTICLES as Article[];
+    if (articles.length === 0) return DUMMY_ARTICLES as Article[];
+    return articles;
+  }, [articles, loading, error]);
 
   return (
     <div className="space-y-12">
@@ -473,18 +494,16 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
         ) : null}
         
         {error && (
-            <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-destructive/50">
-                <AlertCircle className="h-16 w-16 text-destructive" />
-                <h2 className="mt-4 text-xl font-semibold text-destructive">
-                حدث خطأ أثناء تحميل المواضيع
-                </h2>
-                <p className="mt-2 text-muted-foreground max-w-md">
-                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. سيتم عرض مواضيع وهمية للتجربة.
-                </p>
-          </div>
+             <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>حدث خطأ أثناء تحميل المواضيع</AlertTitle>
+                <AlertDescription>
+                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. (Missing or insufficient permissions.)سيتم عرض مواضيع وهمية للتجربة.
+                </AlertDescription>
+              </Alert>
         )}
 
-        {!loading && displayArticles.length === 0 && !error ? (
+        {!loading && displayArticles.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
