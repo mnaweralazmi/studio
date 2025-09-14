@@ -10,7 +10,6 @@ import {
   Timestamp,
   addDoc,
   getDoc,
-  serverTimestamp,
   DocumentData,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -179,6 +178,7 @@ export default function HomeView({ user }: { user: User }) {
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+        // Corrected filePath to align with storage rules
         const filePath = `topics/${user.uid}/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
@@ -304,9 +304,7 @@ export default function HomeView({ user }: { user: User }) {
                         <img
                           src={preview}
                           alt="Preview"
-                          width={400}
-                          height={200}
-                          className="rounded-md object-cover w-full"
+                          className="rounded-md object-cover w-full aspect-video"
                         />
                       ) : (
                         <video src={preview} controls className="rounded-md w-full" />
