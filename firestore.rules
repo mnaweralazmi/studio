@@ -1,19 +1,11 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the user is authenticated
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Match any document in the 'users' collection
-    match /users/{userId}/{documents=**} {
-      // Allow read and write access only if the requesting user's UID
-      // matches the userId in the path. This ensures users can only
-      // access their own data.
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    // Allow read/write access to all documents for authenticated users
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
