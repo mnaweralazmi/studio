@@ -62,8 +62,10 @@ export default function RegisterPage() {
       );
       const user = userCredential.user;
 
+      // Update the user's profile in Firebase Auth
       await updateProfile(user, { displayName: username });
 
+      // Create a user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         displayName: username,
         email: user.email,
@@ -155,5 +157,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    
