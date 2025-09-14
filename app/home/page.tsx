@@ -114,14 +114,14 @@ function AddIdeaDialog({ user }: { user: any }) {
   }, []);
 
   const handleSave = async () => {
-    if (!title || !user) {
+    if (!title.trim() || !user) {
       return;
     }
     setIsSaving(true);
     try {
       const articleData: DocumentData = {
-        title,
-        description,
+        title: title,
+        description: description,
         authorId: user.uid,
         authorName: user.displayName || 'مستخدم غير معروف',
         createdAt: serverTimestamp(),
@@ -154,6 +154,11 @@ function AddIdeaDialog({ user }: { user: any }) {
       setOpen(false);
     } catch (e) {
       console.error('Error saving idea: ', e);
+      toast({
+        variant: 'destructive',
+        title: 'خطأ في النشر',
+        description: 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -463,7 +468,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
-              لا توجد مواضيع لعرضها حاليًا
+              هل المواضيع تعرض هنا
             </h2>
             <p className="text-muted-foreground mt-2">
               كن أول من يشارك فكرة أو موضوعًا جديدًا!
