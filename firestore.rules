@@ -1,50 +1,30 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Users Collection: Allow users to read/write their own data
-    match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
-    }
-
-    // Topics Collection
+    // Allow reading topics for any authenticated user
     match /topics/{topicId} {
-      // Anyone can read topics
-      allow read: if true;
-      
-      // Only authenticated users can create topics
-      allow create: if request.auth != null;
-      
-      // Only the owner of the topic or an admin can delete/update it
-      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/configuration/admins).data.uids);
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      // Allow delete only for the owner or an admin
+      allow delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true);
+      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
 
-    // Notifications Collection
-    match /notifications/{notificationId} {
-        // Allow users to read notifications targeted to them or to everyone
-        allow read: if request.auth != null && (resource.data.target == request.auth.uid || resource.data.target == 'all');
-        
-        // Allow users to mark their notifications as read
-        allow update: if request.auth != null && resource.data.target == request.auth.uid;
-        
-        // Only admins can create notifications
-        allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/configuration/admins).data.uids;
-        
-        // No one can delete notifications via client SDK
-        allow delete: if false;
+    // Users can read/write their own document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // User-specific subcollections
-    match /users/{userId}/{collectionId}/{docId} {
-       allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    // Notifications can be read by target user or all users (if target is 'all')
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && (resource.data.target == request.auth.uid || resource.data.target == 'all');
+      // Admin-only write access
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-     // Admin configuration document
-    match /configuration/admins {
-      allow read: if true;
-      allow write: if false; // Should be managed from the Firebase Console only
+    // Rules for user-specific subcollections (expenses, sales, etc.)
+    match /users/{userId}/{collectionId}/{docId} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
