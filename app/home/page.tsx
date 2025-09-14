@@ -155,13 +155,17 @@ function AddIdeaDialog({ user }: { user: any; }) {
     }
   };
   
-  const clearForm = useCallback(() => {
-    setTitle('');
-    setDescription('');
+  const clearFile = () => {
     setFile(undefined);
     setPreview(undefined);
     const fileInput = document.getElementById('idea-file') as HTMLInputElement;
     if(fileInput) fileInput.value = '';
+  }
+
+  const clearForm = useCallback(() => {
+    setTitle('');
+    setDescription('');
+    clearFile();
   }, []);
 
   const handleSave = async () => {
@@ -254,7 +258,7 @@ function AddIdeaDialog({ user }: { user: any; }) {
           </div>
           {preview && (
             <div className="relative">
-              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={clearForm}>
+              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={clearFile}>
                  <X className="h-4 w-4" />
               </Button>
               {file?.type.startsWith('image/') ? (
