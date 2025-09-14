@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   collection,
   query,
@@ -19,14 +19,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin';
 import type { User } from 'firebase/auth';
 import { useCollection } from 'react-firebase-hooks/firestore';
 
-import {
-  Loader2,
-  Newspaper,
-  Trash2,
-  Leaf,
-  Plus,
-  X,
-} from 'lucide-react';
+import { Loader2, Newspaper, Trash2, Leaf, Plus, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +37,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-
 import NotificationsPopover from '@/components/home/NotificationsPopover';
 
 type Topic = {
@@ -119,16 +111,19 @@ export default function HomeView({ user }: { user: User }) {
     return isAdmin || topic.ownerId === user.uid;
   };
 
-  // Logic from AddTopicDialog
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Revoke previous URL if it exists
     if (preview) {
       URL.revokeObjectURL(preview);
     }
+    
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      const objectUrl = URL.createObjectURL(selectedFile);
       setFile(selectedFile);
-      setPreview(objectUrl);
+      setPreview(URL.createObjectURL(selectedFile));
+    } else {
+      setFile(undefined);
+      setPreview(undefined);
     }
   };
 
@@ -148,6 +143,7 @@ export default function HomeView({ user }: { user: User }) {
     clearFile();
   }, [clearFile]);
 
+  // Cleanup effect for object URL
   useEffect(() => {
     return () => {
       if (preview) {
@@ -178,6 +174,7 @@ export default function HomeView({ user }: { user: User }) {
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+        // Simplified path
         const filePath = `topics/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
