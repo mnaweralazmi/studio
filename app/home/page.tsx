@@ -157,7 +157,6 @@ function AddIdeaDialog({ user }: { user: any; }) {
   
     } catch (e) {
       console.error('Error saving idea: ', e);
-      // Removed the toast notification for error
     } finally {
       setIsSaving(false);
     }
@@ -394,7 +393,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
       setArticleToDelete(null);
     }
   };
-
+  
   const displayArticles = useMemo(() => {
     if (loading) return [];
     return articles;
