@@ -109,7 +109,7 @@ type AgriSale = {
   cartonPrice: number;
   totalAmount: number;
 };
-const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجan', 'فلفل', 'كوسا'];
+const vegetableOptions = ['طماطم', 'خيار', 'بطاطس', 'باذنجان', 'فلفل', 'كوسا'];
 
 // Poultry Types
 type EggSale = {
