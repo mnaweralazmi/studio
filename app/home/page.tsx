@@ -125,7 +125,7 @@ function AddIdeaDialog({ user }: { user: any }) {
             description,
             authorId: user.uid,
             authorName: user.displayName || 'مستخدم غير معروف',
-            createdAt: serverTimestamp(),
+            createdAt: new Date(),
         };
 
         if (file) {
@@ -381,7 +381,7 @@ function HomeView({ isAdmin, user }: { isAdmin: boolean; user: any }) {
   const { toast } = useToast();
   const articlesCollection = collection(db, 'articles');
   const [articlesSnapshot, loading, error] = useCollection(
-    query(articlesCollection)
+    query(articlesCollection, orderBy('createdAt', 'desc'))
   );
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
