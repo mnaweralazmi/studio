@@ -178,7 +178,8 @@ export default function HomeView({ user }: { user: User }) {
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        const filePath = `topics/${user.uid}/${Date.now()}_${file.name}`;
+        // This path MUST match the storage rules structure: /{userId}/{filename}
+        const filePath = `${user.uid}/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
         const fileUrl = await getDownloadURL(fileRef);
