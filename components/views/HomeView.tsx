@@ -9,7 +9,6 @@ import {
   deleteDoc,
   Timestamp,
   addDoc,
-  getDoc,
   DocumentData,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
