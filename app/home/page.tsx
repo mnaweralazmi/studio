@@ -87,7 +87,7 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
     id: '1',
     title: 'زراعة الطماطم في الصيف',
     description:
-      'دليل شامل لزراعة الطماطم في الظروف الحارة والجافة لضمان أفضل محصول.',
+      'دليل شامل لزراعة الطмаطم في الظروف الحارة والجافة لضمان أفضل محصول.',
     imageUrl: 'https://picsum.photos/seed/tomato-summer/400/200',
     imageHint: 'tomato plant',
     authorName: 'خبير زراعي',
@@ -121,7 +121,7 @@ const DUMMY_ARTICLES: Partial<Article>[] = [
   },
 ];
 
-function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { title: string; description: string; file?: File; }) => void; isSaving: boolean; user: any; toast: any; }) {
+function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { title: string; description: string; file?: File; }) => Promise<void>; isSaving: boolean; user: any; toast: any; }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | undefined>(undefined);
@@ -158,7 +158,7 @@ function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { tit
   };
   
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) { clearForm(); } }}>
       <DialogTrigger asChild>
         <Button className="bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4 ml-2" />
@@ -197,7 +197,7 @@ function AddIdeaDialog({ onSave, isSaving, user, toast }: { onSave: (idea: { tit
           </div>
           {preview && (
             <div className="relative">
-              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={() => { setFile(undefined); setPreview(undefined); }}>
+              <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={() => { setFile(undefined); setPreview(undefined); const fileInput = document.getElementById('idea-file') as HTMLInputElement; if(fileInput) fileInput.value = ''; }}>
                  <X className="h-4 w-4" />
               </Button>
               {file?.type.startsWith('image/') ? (
@@ -230,6 +230,7 @@ function NotificationsPopover({ user, toast }: { user: any; toast: any }) {
         ? query(
             collection(db, 'notifications'),
             where('target', 'in', ['all', user.uid]),
+            orderBy('createdAt', 'desc'),
             limit(10)
           )
         : null,
@@ -240,15 +241,9 @@ function NotificationsPopover({ user, toast }: { user: any; toast: any }) {
   const [shownNotifications, setShownNotifications] = useState(new Set());
 
   const notifications = useMemo(() => {
-    const data =
-      snapshot?.docs.map(
+    return snapshot?.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Notification)
       ) || [];
-    return data.sort(
-      (a, b) =>
-        (b.createdAt?.toDate()?.getTime() || 0) -
-        (a.createdAt?.toDate()?.getTime() || 0)
-    );
   }, [snapshot]);
 
   useEffect(() => {
@@ -265,7 +260,7 @@ function NotificationsPopover({ user, toast }: { user: any; toast: any }) {
       setShownNotifications((prev) => new Set(prev).add(unreadAndUnshown.id));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications, toast]);
+  }, [notifications]);
 
   const hasUnread = useMemo(
     () => notifications.some((n) => !n.read),
@@ -465,7 +460,7 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
           <div className="flex items-center gap-2">
-            {isAdmin && <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} toast={toast} />}
+            <AddIdeaDialog onSave={handleSaveIdea} isSaving={isSaving} user={user} toast={toast} />
             <NotificationsPopover user={user} toast={toast}/>
           </div>
         </div>
@@ -476,8 +471,20 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
             <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
           </div>
         ) : null}
+        
+        {error && (
+            <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-destructive/50">
+                <AlertCircle className="h-16 w-16 text-destructive" />
+                <h2 className="mt-4 text-xl font-semibold text-destructive">
+                حدث خطأ أثناء تحميل المواضيع
+                </h2>
+                <p className="mt-2 text-muted-foreground max-w-md">
+                لم نتمكن من جلب البيانات. قد يكون السبب مشكلة في الشبكة أو خطأ في إعدادات Firebase. سيتم عرض مواضيع وهمية للتجربة.
+                </p>
+          </div>
+        )}
 
-        {!loading && displayArticles.length === 0 ? (
+        {!loading && displayArticles.length === 0 && !error ? (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
@@ -488,7 +495,7 @@ function HomeView({ isAdmin, user, toast }: { isAdmin: boolean; user: any; toast
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             {displayArticles.map((article) => (
               <Card
                 key={article.id}
