@@ -1,10 +1,15 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      // السماح لأي مستخدم مسجل بقراءة وكتابة الملفات
-      allow read, write: if request.auth != null;
+    // تنطبق هذه القاعدة على المجلدات التي تحمل اسم معرّف المستخدم داخل مجلد 'users'
+    match /users/{userId}/{allPaths=**} {
+      // السماح بالقراءة والكتابة فقط إذا كان المستخدم هو صاحب المجلد
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // قاعدة إضافية للسماح بقراءة المواضيع العامة من قبل أي مستخدم مسجل
+    match /topics/{allPaths=**} {
+       allow read: if request.auth != null;
     }
   }
 }

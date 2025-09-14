@@ -169,7 +169,8 @@ export default function HomeView({ user }: { user: User }) {
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        const filePath = `topics/${Date.now()}_${file.name}`;
+        // Correct path according to the new security rules
+        const filePath = `users/${user.uid}/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
         const fileUrl = await getDownloadURL(fileRef);
