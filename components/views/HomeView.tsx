@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
-import { db, storage } from '@/lib/firebase';
+import { db, storage, auth } from '@/lib/firebase';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import type { User } from 'firebase/auth';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -151,7 +151,17 @@ export default function HomeView({ user }: { user: User }) {
   }, [preview]);
 
   const handleSave = async () => {
-    if (!title.trim() || !user) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+        toast({
+            variant: 'destructive',
+            title: 'خطأ',
+            description: 'يجب أن تكون مسجلاً للدخول للنشر.',
+        });
+        return;
+    }
+
+    if (!title.trim()) {
       toast({
         variant: 'destructive',
         title: 'خطأ',
@@ -161,20 +171,20 @@ export default function HomeView({ user }: { user: User }) {
     }
     setIsSaving(true);
     try {
-      const authorName = user.displayName || 'مستخدم غير معروف';
+      const authorName = currentUser.displayName || 'مستخدم غير معروف';
 
       const topicData: DocumentData = {
         title: title,
         description: description,
-        ownerId: user.uid,
+        ownerId: currentUser.uid,
         authorName: authorName,
         createdAt: Timestamp.now(),
       };
 
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        // A simplified and secure path
-        const filePath = `topics/${user.uid}-${Date.now()}_${file.name}`;
+        // Correct, secure path that matches storage.rules
+        const filePath = `users/${currentUser.uid}/topics/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
         const fileUrl = await getDownloadURL(fileRef);
@@ -201,7 +211,7 @@ export default function HomeView({ user }: { user: User }) {
       console.error('Error saving topic: ', e);
        let description = 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
        if (e.code === 'storage/unauthorized' || e.code === 'permission-denied') {
-          description = 'ليس لديك الصلاحية لرفع الملفات. تأكد من أن قواعد الأمان صحيحة.';
+          description = 'ليس لديك الصلاحية لرفع الملفات أو إنشاء الموضوع. تحقق من قواعد الأمان.';
        }
       toast({
         variant: 'destructive',

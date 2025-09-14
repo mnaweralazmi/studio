@@ -2,10 +2,12 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow any authenticated user to read and write files.
-    // This is a simpler rule to ensure functionality.
-    // We secure access to the file URLs in Firestore rules.
-    match /{allPaths=**} {
+    // Allow users to read and write to their own folder within 'users'
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+     // Allow users to read and write to the topics folder. This is less secure but will prevent permission errors.
+     match /topics/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
   }
