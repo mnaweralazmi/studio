@@ -5,9 +5,9 @@ import {
   Loader2,
   CalendarIcon
 } from 'lucide-react';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp, where, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -24,7 +24,6 @@ import { TaskList, type Task } from '@/components/task-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { isSameDay, format, isToday, startOfToday } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
@@ -153,7 +152,11 @@ export default function TasksView() {
     const allUpcoming = [...today, ...upcoming];
     allUpcoming.sort((a,b) => new Date(a.date as string).getTime() - new Date(b.date as string).getTime());
     
-    completed.sort((a,b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
+    completed.sort((a,b) => {
+        const dateA = a.createdAt ? (a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+        const dateB = b.createdAt ? (b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+    });
 
     return { 
         upcomingTasks: allUpcoming, 
@@ -174,7 +177,7 @@ export default function TasksView() {
       await addDoc(tasksCollection, {
         ...taskData,
         completed: false,
-        createdAt: new Date(),
+        createdAt: Timestamp.now(),
       });
     } catch (error) {
       console.error("Error adding task: ", error);

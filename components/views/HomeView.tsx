@@ -12,7 +12,6 @@ import {
   collectionGroup,
   where,
   serverTimestamp,
-  getDocs,
   limit,
   onSnapshot,
   QuerySnapshot,
@@ -146,9 +145,9 @@ export default function HomeView({ user }: { user: User }) {
 
   function handleSnapshotError(e: any, label = 'snapshot') {
     console.error(`[${label}] snapshot error:`, e);
-    if (e?.code === 'permission-denied') {
+    if (e?.code === 'permission-denied' || e?.code === 'PERMISSION_DENIED') {
       setError('ليس لديك صلاحية لقراءة هذه البيانات. تحقق من قواعد Firestore.');
-    } else if (String(e).toLowerCase().includes('index') || String(e).toLowerCase().includes('requires index')) {
+    } else if (String(e).toLowerCase().includes('index') || String(e).toLowerCase().includes('requires an index')) {
       setError('هذا الاستعلام يحتاج إلى فهرس (index). أنشئ الفهرس في Firebase Console.');
     } else {
       setError('حدث خطأ أثناء جلب البيانات. تأكد من الاتصال أو أعد المحاولة.');
@@ -203,7 +202,7 @@ export default function HomeView({ user }: { user: User }) {
           }
         );
       } else {
-        setUserLoaded(true);
+        setUserLoaded(true); // If no user, user topics are "loaded" (as an empty array)
       }
     } catch (e) {
       handleSnapshotError(e, 'userTopics-setup');
@@ -352,7 +351,7 @@ export default function HomeView({ user }: { user: User }) {
         <div className="flex justify-center">
           <Badge
             variant="outline"
-            className="border-primary/30 bg-primary/10 text-primary-foreground text-sm py-1 px-4"
+            className="border-primary/30 bg-primary/10 text-primary text-sm py-1 px-4"
           >
             <Leaf className="h-4 w-4 ml-2" />
             مزارع كويتي

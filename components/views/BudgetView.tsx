@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useCollection, useCollectionData } from 'react-firebase-hooks/firestore';
+import { useCollectionData } from 'react-firebase-hooks/firestore';
 import { collection, query, where, DocumentData } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -10,8 +10,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   HandCoins,
-  Wallet,
-  Landmark,
   PiggyBank,
   Users,
   Tractor,
@@ -19,15 +17,13 @@ import {
   GitCommit,
   Briefcase,
   Scaling,
+  Landmark,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-type Expense = { amount: number };
-type Sale = { totalAmount: number };
 type Debt = { amount: number; type: 'دين لنا' | 'دين علينا' };
-type Worker = { salary: number };
 
 const StatCard = ({
   title,
