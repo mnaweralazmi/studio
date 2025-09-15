@@ -122,7 +122,6 @@ export default function HomeView({ user }: { user: User }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
 
-  // --- State لعرض المواضيع والأخطاء ---
   const [topics, setTopics] = useState<Topic[]>([]);
   const [publicTopics, setPublicTopics] = useState<Topic[]>([]);
   const [userTopics, setUserTopics] = useState<Topic[]>([]);
@@ -132,7 +131,6 @@ export default function HomeView({ user }: { user: User }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
 
-  // --- State لنموذج إضافة موضوع ---
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -159,8 +157,6 @@ export default function HomeView({ user }: { user: User }) {
       setLoading(false);
       return;
     }
-
-    setLoading(true);
 
     // --- مستمع المواضيع العامة من جميع المستخدمين ---
     const publicQuery = query(
@@ -208,22 +204,17 @@ export default function HomeView({ user }: { user: User }) {
   useEffect(() => {
       const allTopicsMap = new Map<string, Topic>();
        
-      // إضافة المواضيع العامة أولاً
       publicTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
-      // إضافة مواضيع المستخدم الخاصة (إذا كان للمستخدم مواضيع، ستستبدل أي نسخة عامة موجودة)
       userTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
 
       const combinedTopics = Array.from(allTopicsMap.values());
        
-      // فرز كل المواضيع حسب تاريخ الإنشاء لضمان الترتيب الصحيح
       combinedTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
       setTopics(combinedTopics);
-      // توقف التحميل فقط بعد أول عملية جلب ناجحة
-      if (loading) {
-         setLoading(false);
-      }
-  }, [publicTopics, userTopics, loading]);
+      setLoading(false); // إيقاف التحميل بعد دمج البيانات بنجاح
+
+  }, [publicTopics, userTopics]);
 
 
   const openDeleteConfirmation = (topic: Topic) => {
