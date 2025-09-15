@@ -72,6 +72,7 @@ async function createTopicWithFile(
   }
 
   let topicRef;
+  // --- إنشاء مرجع لمجموعة المواضيع الخاصة بالمستخدم ---
   const userTopicsCollection = collection(db, 'users', currentUser.uid, 'topics');
 
   try {
@@ -90,11 +91,10 @@ async function createTopicWithFile(
 
     // 2. إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد
     if (file) {
-      // بناء مسار آمن ومتوافق مع storage.rules
       const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
       const fileRef = ref(storage, filePath);
       
-      // رفع الملف
+      // --- رفع الملف إلى Firebase Storage ---
       await uploadBytes(fileRef, file);
       imageUrl = await getDownloadURL(fileRef);
 
@@ -144,7 +144,7 @@ export default function HomeView({ user }: { user: User }) {
 
     setLoading(true);
 
-    // الاستعلام عن المواضيع العامة من جميع المستخدمين
+    // --- مستمع المواضيع العامة من جميع المستخدمين ---
     const publicQuery = query(
       collectionGroup(db, 'topics'),
       where('isPublic', '==', true),
@@ -152,7 +152,7 @@ export default function HomeView({ user }: { user: User }) {
       limit(50)
     );
 
-    // الاستعلام عن مواضيع المستخدم الحالي الخاصة فقط
+    // --- مستمع مواضيع المستخدم الحالي الخاصة فقط ---
     const userQuery = query(
       collection(db, 'users', user.uid, 'topics'),
       where('isPublic', '==', false),
@@ -162,13 +162,13 @@ export default function HomeView({ user }: { user: User }) {
     let publicTopics: Topic[] = [];
     let userTopics: Topic[] = [];
     
-    // دالة لدمج وفرز النتائج
+    // --- دالة لدمج وفرز النتائج وتحديث الواجهة ---
     const processAndSetTopics = () => {
        const allTopicsMap = new Map<string, Topic>();
        
        // إضافة المواضيع العامة أولاً
        publicTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
-       // إضافة مواضيع المستخدم (سوف تستبدل أي نسخة عامة بنفس الـ ID)
+       // إضافة مواضيع المستخدم الخاصة
        userTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
 
        const combinedTopics = Array.from(allTopicsMap.values());
@@ -177,7 +177,7 @@ export default function HomeView({ user }: { user: User }) {
        combinedTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
        setTopics(combinedTopics);
-       setError(null);
+       setError(null); // مسح أي أخطاء سابقة عند النجاح
        setLoading(false);
     };
 
@@ -211,7 +211,7 @@ export default function HomeView({ user }: { user: User }) {
         processAndSetTopics();
     }, handleSnapshotError);
     
-    // تنظيف المستمعين عند مغادرة المكون
+    // --- تنظيف المستمعين عند مغادرة المكون ---
     return () => {
         unsubscribePublic();
         unsubscribeUser();
