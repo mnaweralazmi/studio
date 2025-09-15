@@ -1,31 +1,32 @@
-// قواعد Firebase Storage لمشروع "مزارع كويتي"
-//
-// الغرض من هذا الملف:
-// 1. تأمين مسارات رفع الملفات لتكون خاصة بكل مستخدم.
-// 2. السماح بقراءة الملفات بشكل عام.
-//
-// لتغيير صلاحيات القراءة من "عامة" إلى "للمسجلين فقط"،
+// --- FILE: storage.rules ---
+// هذه القواعد تهدف إلى تأمين ملفاتك على Firebase Storage.
+// لتغيير قواعد القراءة من "عامة" إلى "مقيدة للمسجلين فقط"،
 // استبدل `allow read: if true;` بـ `allow read: if request.auth != null;`
+
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // --- قواعد مسار ملفات المواضيع ---
-    // المسار: users/{userId}/topics/{topicId}/{fileName}
-    // يسمح للمستخدم فقط برفع الملفات المرتبطة بمواضيعه.
-    match /users/{userId}/topics/{topicId}/{allPaths=**} {
-      // القراءة عامة للجميع (مثل صور المواضيع)
+  
+    // --- قاعدة ملفات المواضيع (Topics) ---
+    // المسار: users/{uid}/topics/{topicId}/{fileName}
+    // تسمح هذه القاعدة للمستخدم مالك `uid` فقط برفع الملفات (الكتابة).
+    // القراءة متاحة للجميع بشكل افتراضي.
+    match /users/{uid}/topics/{topicId}/{fileName} {
+      // القراءة عامة (يمكن لأي شخص لديه الرابط عرض الملف).
       allow read: if true;
-
-      // الكتابة (إنشاء، تحديث، حذف) مسموحة فقط لمالك الحساب
-      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // الكتابة (الرفع) مسموحة فقط للمستخدم الذي يتطابق `uid` الخاص به
+      // مع المجلد الذي يحاول الرفع إليه.
+      allow write: if request.auth != null && request.auth.uid == uid;
     }
-
-    // --- مثال: قواعد مسار صور الملف الشخصي (Avatar) ---
-    // المسار: users/{userId}/avatar/{fileName}
-    match /users/{userId}/avatar/{fileName} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    
+    // --- مثال: قاعدة صورة البروفايل (Avatar) ---
+    // المسار: users/{uid}/avatar/{fileName}
+    // تسمح للمستخدم برفع صورة بروفايل واحدة وتحديثها.
+    match /users/{uid}/avatar/{fileName} {
+       allow read: if true;
+       allow write: if request.auth != null && request.auth.uid == uid;
     }
   }
 }
+// --- END FILE ---
