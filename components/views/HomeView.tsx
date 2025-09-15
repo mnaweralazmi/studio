@@ -15,6 +15,7 @@ import {
   serverTimestamp,
   getDocs,
   limit,
+  onSnapshot,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
