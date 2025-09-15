@@ -215,7 +215,7 @@ export default function HomeView({ user }: { user: User }) {
       if (userUnsub) userUnsub();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, user]);
+  }, [user]);
 
   useEffect(() => {
     if (!publicLoaded || !userLoaded) return;
