@@ -1,42 +1,58 @@
-// لتقييد القراءة للمستخدمين المسجلين فقط، غيّر `allow read` إلى: `if request.auth != null;`
+// لتقييد قراءة المواضيع العامة للمستخدمين المسجلين فقط،
+// غيّر الشرط في السطر 15 إلى: allow read: if request.auth != null;
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // القاعدة الرئيسية: تمنع الوصول لأي مستند بشكل افتراضي
+    
+    // --- User Profile ---
+    // يمكن لكل مستخدم قراءة وإنشاء وتحديث ملفه الشخصي فقط
+    match /users/{userId} {
+      allow read, create, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- Generic Data Collections (Topics, Tasks, Notifications) ---
+    match /users/{userId}/topics/{topicId} {
+      // يمكن قراءة الموضوع إذا كان عامًا، أو إذا كان المالك هو من يقرأه
+      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+      // يمكن للمالك فقط إنشاء، تحديث، وحذف الموضوع
+      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /users/{userId}/tasks/{taskId} {
+      allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- Management Collections (Expenses, Sales, etc.) ---
+    // قاعدة موحدة لمعظم مجموعات الإدارة
+    match /users/{userId}/{collectionId}/{docId} 
+      where collectionId in [
+        'expenses', 'agriExpenses', 'poultryExpenses', 'livestockExpenses',
+        'agriSales', 'poultryEggSales', 'poultrySales', 'livestockSales',
+        'debts', 'workers', 'facilities', 
+        'poultryFlocks', 'livestockHerds'
+      ] {
+      // فقط المالك يمكنه الوصول الكامل لهذه البيانات
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- Public read-only collections ---
+    match /notifications/{notificationId} {
+        // يمكن للجميع قراءة الإشعارات
+        allow read: if true;
+        // لا أحد يمكنه الكتابة مباشرة (تتم عبر الدوال السحابية أو من طرف المشرف)
+        allow write: if false;
+    }
+    
+    // --- Collection Group Rule for Public Topics ---
+    // هذه القاعدة ضرورية للسماح باستعلام collectionGroup بقراءة المواضيع العامة
+    match /{path=**}/topics/{topicId} {
+        allow read: if resource.data.isPublic == true;
+    }
+
+    // --- Default Deny ---
+    // منع أي وصول آخر بشكل افتراضي
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    // قاعدة تسمح بقراءة مجموعة "topics" إذا كانت عامة
-    match /{path=**}/topics/{topicId} {
-      allow read: if resource.data.isPublic == true;
-    }
-
-    // قواعد الوصول لمستندات المستخدمين
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-
-      // قواعد لمجموعة "topics" الفرعية
-      match /topics/{topicId} {
-        // يمكن للمستخدم قراءة مواضيعه الخاصة
-        // يمكن للجميع قراءة المواضيع العامة (مغطاة بالقاعدة أعلاه لكن هذه للتوضيح)
-        allow read: if (request.auth != null && request.auth.uid == userId) || resource.data.isPublic == true;
-
-        // يمكن للمستخدم إنشاء موضوع إذا كان مسجلاً ويملك المستند
-        allow create: if request.auth != null && request.auth.uid == userId
-                      && request.resource.data.userId == userId // تأكيد أن userId في المستند هو نفسه
-                      && request.resource.data.title is string
-                      && request.resource.data.title.size() > 0;
-
-        // يمكن للمستخدم تحديث أو حذف مواضيعه الخاصة فقط
-        allow update, delete: if request.auth != null && request.auth.uid == userId;
-      }
-      
-      // يمكنك إضافة قواعد للمجموعات الفرعية الأخرى هنا
-      // مثال:
-      // match /tasks/{taskId} {
-      //   allow read, write: if request.auth != null && request.auth.uid == userId;
-      // }
     }
   }
 }
