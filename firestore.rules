@@ -1,34 +1,42 @@
-// لتقييد قراءة المواضيع العامة للمستخدمين المسجلين فقط، قم بتغيير السطر "allow read: if resource.data.isPublic == true;"
-// إلى "allow read: if resource.data.isPublic == true && request.auth != null;"
-
+// لتقييد القراءة للمستخدمين المسجلين فقط، غيّر `allow read` إلى: `if request.auth != null;`
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // القاعدة الرئيسية: تمنع الوصول لأي مستند بشكل افتراضي
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
-    // هذه القاعدة تسمح باستعلام collectionGroup على "topics" بالعمل
-    // للمواضيع العامة فقط، وهو أمر ضروري لعرضها في الصفحة الرئيسية.
+    // قاعدة تسمح بقراءة مجموعة "topics" إذا كانت عامة
     match /{path=**}/topics/{topicId} {
       allow read: if resource.data.isPublic == true;
     }
 
-    // هذه القاعدة تؤمن الوصول المباشر إلى مستندات المستخدم
-    match /users/{userId}/{document=**} {
+    // قواعد الوصول لمستندات المستخدمين
+    match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
 
-    // هذه القاعدة تخصص صلاحيات دقيقة لمجموعة "topics" الفرعية
-    match /users/{userId}/topics/{topicId} {
-      // السماح بالقراءة إذا كان الموضوع عامًا، أو إذا كان المستخدم هو المالك
-      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+      // قواعد لمجموعة "topics" الفرعية
+      match /topics/{topicId} {
+        // يمكن للمستخدم قراءة مواضيعه الخاصة
+        // يمكن للجميع قراءة المواضيع العامة (مغطاة بالقاعدة أعلاه لكن هذه للتوضيح)
+        allow read: if (request.auth != null && request.auth.uid == userId) || resource.data.isPublic == true;
+
+        // يمكن للمستخدم إنشاء موضوع إذا كان مسجلاً ويملك المستند
+        allow create: if request.auth != null && request.auth.uid == userId
+                      && request.resource.data.userId == userId // تأكيد أن userId في المستند هو نفسه
+                      && request.resource.data.title is string
+                      && request.resource.data.title.size() > 0;
+
+        // يمكن للمستخدم تحديث أو حذف مواضيعه الخاصة فقط
+        allow update, delete: if request.auth != null && request.auth.uid == userId;
+      }
       
-      // السماح بالكتابة (إنشاء، تحديث، حذف) فقط لمالك المستند
-      allow write: if request.auth != null && request.auth.uid == userId;
-
-      // شروط إضافية عند الإنشاء
-      allow create: if request.auth != null 
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.title is string
-                    && request.resource.data.title.size() > 0;
+      // يمكنك إضافة قواعد للمجموعات الفرعية الأخرى هنا
+      // مثال:
+      // match /tasks/{taskId} {
+      //   allow read, write: if request.auth != null && request.auth.uid == userId;
+      // }
     }
   }
 }
