@@ -1,33 +1,22 @@
-rules_version = '2';
+// قواعد أمان Firebase Storage لمشروع kuwaity-farm
+// هذه القواعد تضمن أن المستخدمين يمكنهم فقط رفع الملفات إلى مساراتهم المخصصة.
 
+rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-  
-    // --- User-Specific File Paths ---
-    // Rule: This path structure is for files owned by a specific user.
-    // Example sub-paths: /users/{userId}/topics/... or /users/{userId}/avatar/...
-    match /users/{userId}/{allPaths=**} {
     
-      // To restrict reading to authenticated users only, change to:
-      // allow read: if request.auth != null;
-      // To restrict reading to the owner only, change to:
-      // allow read: if request.auth.uid == userId;
-      allow read: if true;
+    // القاعدة الخاصة بملفات المواضيع
+    // المسار: users/<uid>/topics/<topicId>/<fileName>
+    match /users/{userId}/topics/{topicId}/{allPaths=**} {
       
-      // Allow the authenticated owner to write (create, update, delete) to their own path.
+      // شروط الكتابة (الرفع):
+      // فقط المستخدم المالك (الذي يتطابق uid الخاص به مع {userId} في المسار) يمكنه الرفع.
       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // --- Example: Avatar Path Rule ---
-    // Rule: A user can only write to their own avatar path.
-    match /users/{userId}/avatar/{fileName} {
-       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // --- Example: Topic-specific file uploads ---
-    // Rule: User can only upload to a topic folder they own.
-    match /users/{userId}/topics/{topicId}/{fileName} {
-        allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // شروط القراءة (التحميل):
+      // حاليًا، أي شخص لديه الرابط يمكنه قراءة/عرض الملف.
+      // للتغيير إلى "للمستخدمين المسجلين فقط"، استبدل `if true;` بـ `if request.auth != null;`
+      allow read: if true;
     }
   }
 }

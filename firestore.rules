@@ -1,42 +1,30 @@
-rules_version = '2';
+// قواعد أمان Firestore لمشروع kuwaity-farm
+// هذه القواعد تضمن عزل بيانات المستخدم والسماح بعرض المواضيع العامة بشكل آمن.
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Private User Data ---
-    // Rule: Allow users to fully control their own data within their "users/{userId}" path.
-    // This includes collections like "topics", "tasks", etc.
-    match /users/{userId}/{document=**} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
-    }
-    
-    // --- Topics Collection (Specific Rules for Creation) ---
-    // Rule: Apply specific validation when creating a document in the "topics" subcollection.
+    // القاعدة الخاصة بمواضيع المستخدمين
+    // كل مستخدم يملك مواضيعه الخاصة داخل users/<uid>/topics/<topicId>
     match /users/{userId}/topics/{topicId} {
-        allow create: if request.auth != null 
-                    && request.auth.uid == userId
-                    && request.resource.data.userId == request.auth.uid
+      
+      // شروط القراءة:
+      // 1. يمكن لأي شخص قراءة الموضوع إذا كان عامًا (isPublic == true).
+      // 2. يمكن للمستخدم مالك الموضوع قراءته دائمًا، حتى لو كان خاصًا.
+      allow read: if resource.data.isPublic == true || request.auth.uid == userId;
+
+      // شروط الإنشاء:
+      // 1. يجب أن يكون المستخدم مسجلاً.
+      // 2. يجب أن يكون userId في المستند الجديد مطابقًا لمعرف المستخدم الذي يقوم بالعملية.
+      // 3. يجب أن يكون العنوان نصًا وأطول من حرف واحد.
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.userId
                     && request.resource.data.title is string
                     && request.resource.data.title.size() > 1;
-    }
 
-    // --- Public Posts Collection ---
-    // Rule: Allow anyone to read, but only authenticated users to create posts for themselves.
-    // Editing and deleting is restricted to the post owner.
-    match /posts/{postId} {
-      // To restrict reading to authenticated users only, change to: allow read: if request.auth != null;
-      allow read: if true;
-      
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-    }
-    
-    // --- Notifications Collection ---
-    // Rule: Read access is for the target user or for 'all'. Write is disallowed from client.
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null && (resource.data.target == request.auth.uid || resource.data.target == 'all');
-      allow create, update, delete: if false; // Should be handled by backend/admin only
+      // شروط التحديث والحذف:
+      // فقط مالك الموضوع يمكنه تعديله أو حذفه.
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
   }
 }

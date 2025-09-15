@@ -11,6 +11,9 @@ import {
   addDoc,
   updateDoc,
   DocumentData,
+  collectionGroup,
+  where,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -19,7 +22,7 @@ import { useAdmin } from '@/lib/hooks/useAdmin';
 import type { User } from 'firebase/auth';
 import { useCollection } from 'react-firebase-hooks/firestore';
 
-import { Loader2, Newspaper, Trash2, Leaf, Plus, X } from 'lucide-react';
+import { Loader2, Newspaper, Trash2, Leaf, Plus, X, Lock, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,34 +41,39 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
+import { Switch } from '@/components/ui/switch';
 
 type Topic = {
   id: string;
   title: string;
   description: string;
   imageUrl?: string;
-  videoUrl?: string;
-  fileType?: 'image' | 'video';
-  imageHint?: string;
+  isPublic: boolean;
   createdAt: Timestamp;
-  ownerId?: string;
+  userId: string;
   authorName?: string;
 };
 
 export default function HomeView({ user }: { user: User }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
-  const topicsCollection = collection(db, 'topics');
+  
+  // Listener for public topics using collectionGroup
   const [topicsSnapshot, loading] = useCollection(
-    query(topicsCollection, orderBy('createdAt', 'desc'))
+    query(
+      collectionGroup(db, 'topics'), 
+      where('isPublic', '==', true), 
+      orderBy('createdAt', 'desc')
+    )
   );
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [topicToDelete, setTopicToDelete] = useState<string | null>(null);
+  const [topicToDelete, setTopicToDelete] = useState<{ id: string; path: string } | null>(null);
 
   // State for AddTopicDialog
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
   const [file, setFile] = useState<File | undefined>(undefined);
   const [preview, setPreview] = useState<string | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -79,15 +87,17 @@ export default function HomeView({ user }: { user: User }) {
     [topicsSnapshot]
   );
 
-  const openDeleteConfirmation = (id: string) => {
-    setTopicToDelete(id);
+  const openDeleteConfirmation = (topic: Topic) => {
+    // Construct the path to the document for deletion
+    const path = `users/${topic.userId}/topics/${topic.id}`;
+    setTopicToDelete({ id: topic.id, path });
     setShowDeleteConfirm(true);
   };
 
   const handleDeleteTopic = async () => {
     if (!topicToDelete) return;
     try {
-      await deleteDoc(doc(topicsCollection, topicToDelete));
+      await deleteDoc(doc(db, topicToDelete.path));
       toast({
         title: 'تم الحذف',
         description: 'تم حذف الموضوع بنجاح.',
@@ -112,7 +122,7 @@ export default function HomeView({ user }: { user: User }) {
 
   const canDelete = (topic: Topic) => {
     if (!user) return false;
-    return isAdmin || topic.ownerId === user.uid;
+    return isAdmin || topic.userId === user.uid;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,6 +153,7 @@ export default function HomeView({ user }: { user: User }) {
   const clearForm = useCallback(() => {
     setTitle('');
     setDescription('');
+    setIsPublic(true);
     clearFile();
   }, [clearFile]);
 
@@ -168,36 +179,31 @@ export default function HomeView({ user }: { user: User }) {
     setIsSaving(true);
     
     let topicRef;
+    const userTopicsCollection = collection(db, "users", currentUser.uid, "topics");
+
     try {
-      // Step 1: Create the document in a user-specific collection to get an ID
-      const userTopicsCollection = collection(db, "users", currentUser.uid, "topics");
+      // Step 1: Create the document first to get an ID.
       topicRef = await addDoc(userTopicsCollection, {
         title: title.trim(),
         description: description.trim(),
-        userId: currentUser.uid, // Correct field for security rules
+        userId: currentUser.uid,
         authorName: currentUser.displayName || 'مستخدم غير معروف',
-        createdAt: Timestamp.now(),
-        // imageUrl will be added later
+        isPublic: isPublic,
+        createdAt: serverTimestamp(),
+        // imageUrl will be added in step 3
       });
 
-      // Step 2: If there's a file, upload it using the document ID in the path
+      // Step 2: If there's a file, upload it using the new document ID in the path.
       if (file) {
-        const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        // This path matches the secure storage.rules
+        // This path is compliant with the secure storage.rules
         const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
         const fileRef = ref(storage, filePath);
         
         await uploadBytes(fileRef, file);
         const downloadURL = await getDownloadURL(fileRef);
 
-        // Step 3: Update the original document with the file URL
-        const updateData: DocumentData = { fileType };
-        if (fileType === 'image') {
-          updateData.imageUrl = downloadURL;
-        } else {
-          updateData.videoUrl = downloadURL;
-        }
-        await updateDoc(topicRef, updateData);
+        // Step 3: Update the original document with the file URL.
+        await updateDoc(topicRef, { imageUrl: downloadURL });
       }
 
       toast({
@@ -216,9 +222,8 @@ export default function HomeView({ user }: { user: User }) {
       }
       toast({ variant: 'destructive', title: 'خطأ في النشر', description });
 
-      // If the process fails, delete the created document to avoid orphaned data
+      // Clean up: If the process fails after the document was created, delete it.
       if (topicRef) {
-        const userTopicsCollection = collection(db, "users", currentUser.uid, "topics");
         await deleteDoc(doc(userTopicsCollection, topicRef.id));
       }
     } finally {
@@ -325,6 +330,12 @@ export default function HomeView({ user }: { user: User }) {
                       )}
                     </div>
                   )}
+                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <Switch id="is-public" checked={isPublic} onCheckedChange={setIsPublic} />
+                    <Label htmlFor="is-public" className="cursor-pointer">
+                      {isPublic ? 'موضوع عام (يظهر للجميع)' : 'موضوع خاص (يظهر لك فقط)'}
+                    </Label>
+                  </div>
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
@@ -373,13 +384,20 @@ export default function HomeView({ user }: { user: User }) {
                 key={topic.id}
                 className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-border shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1"
               >
+                <div className="absolute top-2 right-2 z-10">
+                   {topic.isPublic ? (
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"><Globe className="h-3 w-3 ml-1" />عام</Badge>
+                    ) : (
+                      <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"><Lock className="h-3 w-3 ml-1" />خاص</Badge>
+                    )}
+                </div>
                 {canDelete(topic) && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openDeleteConfirmation(topic.id)}
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => openDeleteConfirmation(topic)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -392,13 +410,6 @@ export default function HomeView({ user }: { user: User }) {
                     width={400}
                     height={200}
                     className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-                    data-ai-hint={topic.imageHint}
-                  />
-                ) : topic.videoUrl ? (
-                  <video
-                    src={topic.videoUrl}
-                    controls
-                    className="w-full h-40 object-cover"
                   />
                 ) : (
                   <div className="w-full h-40 bg-secondary flex items-center justify-center">
