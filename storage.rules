@@ -1,21 +1,29 @@
+// لجعل قراءة جميع الملفات مقتصرة على المستخدمين المسجلين فقط، غيّر `allow read: if true` إلى `allow read: if request.auth != null;` في القواعد أدناه.
+
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // تأمين مسار رفع الصور الخاصة بالمواضيع
-    match /users/{userId}/topics/{topicId}/{allPaths=**} {
-      // فقط مالك الموضوع يمكنه الكتابة
+
+    // --- مسار ملفات تعريف المستخدمين ---
+    // يسمح للمستخدم بكتابة صورته الشخصية فقط.
+    // القراءة متاحة للجميع (عامة).
+    match /users/{userId}/avatar/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
-      // للسماح للجميع بالقراءة. لتقييد القراءة للمسجلين فقط، غيّرها إلى: request.auth != null
       allow read: if true;
     }
 
-    // مثال لمسار صور رمزية للمستخدمين
-    match /users/{userId}/avatar/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
-       allow read: if true; // عامة للجميع، أو request.auth != null للمسجلين فقط
+    // --- مسار ملفات المواضيع (صور وفيديوهات) ---
+    // يسمح للمستخدم بالكتابة في مساره الخاص فقط.
+    // القراءة تعتمد على حالة الموضوع في Firestore:
+    // - إذا كان الموضوع `isPublic == true`، فالقراءة متاحة للجميع.
+    // - إذا كان الموضوع خاصًا، فالقراءة متاحة لصاحب الموضوع فقط.
+    match /users/{userId}/topics/{topicId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if get(/databases/$(database)/documents/users/$(userId)/topics/$(topicId)).data.isPublic == true || (request.auth != null && request.auth.uid == userId);
     }
-
-    // منع الوصول إلى جميع المسارات الأخرى
+    
+    // --- منع الوصول إلى جميع المسارات الأخرى بشكل افتراضي ---
     match /{allPaths=**} {
       allow read, write: if false;
     }
