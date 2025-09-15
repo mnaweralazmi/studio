@@ -1,4 +1,4 @@
-// --- FILE: components/views/HomeView.tsx ---
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -234,7 +234,8 @@ export default function HomeView({ user }: { user: User }) {
       if (publicUnsub) publicUnsub();
       if (userUnsub) userUnsub();
     };
-  }, [db, user, publicLoaded, userLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, user]);
 
 
   useEffect(() => {
@@ -627,3 +628,5 @@ export default function HomeView({ user }: { user: User }) {
     </div>
   );
 }
+
+    
