@@ -1075,5 +1075,3 @@ export const LucideProps: any;
 export const LucideProvider: (props: {
     children: import('react').ReactNode;
 } & import('react').SVGAttributes<SVGElement>) => any;
-
-    
