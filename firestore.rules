@@ -1,41 +1,31 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper function to check if a user is an admin by checking against a hardcoded list of UIDs
     function isAdmin() {
-      // To get admin privileges, add your Firebase User ID (UID) to this array.
-      // You can find your UID on the "Settings" page of the app after logging in.
-      // Example: return request.auth.uid in ['YOUR_UID_HERE', 'ANOTHER_ADMIN_UID_HERE'];
+      // The admin UIDs must be hardcoded here because security rules cannot access app code.
       return request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2'];
     }
 
-    // Allow users to read their own user document and admins to read any user document
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if request.auth != null && request.auth.uid == userId;
-
-      // Allow users to manage their own subcollections
-      match /{subcollection}/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+    // Users can generally read/write their own data. Admins have full access.
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth.uid == userId || isAdmin();
     }
     
-    // Rules for the 'notifications' collection
-    match /notifications/{notificationId} {
-      // Admins can create/send notifications
-      allow create: if isAdmin();
-      // Users can read notifications targeted to them or to 'all'
-      allow read: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
-      // Only admins can update or delete notifications (optional)
-      allow update, delete: if isAdmin();
+    // Topics: Public topics are readable by anyone. Users can write to their own topics. Admins can write anywhere.
+    match /{path=**}/topics/{topicId} {
+      allow read: if resource.data.isPublic == true || 
+                   (request.auth != null && (request.auth.uid == resource.data.userId || isAdmin()));
+      allow create, update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
-    // Rules for the 'topics' collection group
-    match /{path=**}/topics/{topicId} {
-       // Allow anyone to read a topic if it is public
-      allow read: if resource.data.isPublic == true;
-       // Allow owner to write/update/delete their own topic
-      allow write: if request.auth != null && request.auth.uid == resource.data.userId;
+    // Notifications: Admins can create them, and authenticated users can read them if targeted.
+    match /notifications/{notificationId} {
+      allow create: if isAdmin();
+      allow read: if request.auth != null && 
+                   (resource.data.target == 'all' || resource.data.target == request.auth.uid);
     }
   }
 }
