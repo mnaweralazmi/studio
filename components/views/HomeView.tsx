@@ -18,13 +18,13 @@ import {
   onSnapshot,
   QuerySnapshot,
   DocumentData,
+  Unsubscribe,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
 import { db, storage, auth } from '@/lib/firebase';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import type { User } from 'firebase/auth';
-import type { Topic } from '@/types/firestore';
 
 import {
   Loader2,
@@ -57,6 +57,20 @@ import { useToast } from '@/components/ui/use-toast';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+
+type Topic = {
+  id: string;
+  path: string; // المسار الكامل للمستند
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  isPublic?: boolean;
+  createdAt?: { seconds?: number; toMillis: () => number } | any; // Timestamp can be complex
+  userId?: string;
+  authorName?: string;
+  [k: string]: any;
+};
+
 
 // --- دالة إنشاء الموضوع مع رفع الملف ---
 async function createTopicWithFile(
@@ -126,6 +140,7 @@ export default function HomeView({ user }: { user: User }) {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   const [publicLoaded, setPublicLoaded] = useState(false);
   const [userLoaded, setUserLoaded] = useState(false);
 
@@ -141,23 +156,21 @@ export default function HomeView({ user }: { user: User }) {
   const [isSaving, setIsSaving] = useState(false);
 
   function handleSnapshotError(e: any, label = 'snapshot') {
-    console.error(label, e);
-    if (e?.code === 'permission-denied')
-      setError(
-        'لا تملك صلاحية قراءة المواضيع. تحقق من قواعد الأمان في Firestore.'
-      );
-    else if (String(e).toLowerCase().includes('index'))
-      setError(
-        'هذا الاستعلام يحتاج إلى فهرس. أنشئ index في Firestore Console.'
-      );
-    else setError('حدث خطأ أثناء جلب المواضيع.');
+    console.error(`[${label}] snapshot error:`, e);
+    if (e?.code === 'permission-denied') {
+      setError('ليس لديك صلاحية لقراءة هذه البيانات. تحقق من قواعد Firestore.');
+    } else if (String(e).toLowerCase().includes('index') || String(e).toLowerCase().includes('requires index')) {
+      setError('هذا الاستعلام يحتاج إلى فهرس (index). أنشئ الفهرس في Firebase Console.');
+    } else {
+      setError('حدث خطأ أثناء جلب البيانات. تأكد من الاتصال أو أعد المحاولة.');
+    }
   }
 
   useEffect(() => {
-    let unsubPublic: (() => void) | null = null;
-    let unsubUser: (() => void) | null = null;
+    let publicUnsub: Unsubscribe | null = null;
+    let userUnsub: Unsubscribe | null = null;
 
-    // مستمع المواضيع العامة عبر collectionGroup
+    // --- مستمع المواضيع العامة (collectionGroup) ---
     try {
       const publicQ = query(
         collectionGroup(db, 'topics'),
@@ -165,80 +178,99 @@ export default function HomeView({ user }: { user: User }) {
         orderBy('createdAt', 'desc')
       );
 
-      unsubPublic = onSnapshot(
+      publicUnsub = onSnapshot(
         publicQ,
         (snap: QuerySnapshot<DocumentData>) => {
-          const arr = snap.docs.map((d) => ({
-            id: d.id,
-            path: d.ref.path,
-            ...(d.data() as any),
-          })) as Topic[];
+          const arr: Topic[] = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...(d.data() as any) }));
+          console.log('[publicTopics] snapshot received, count=', arr.length);
           setPublicTopics(arr);
-          setPublicLoaded(true);
+          if (!publicLoaded) setPublicLoaded(true);
         },
-        (e) => handleSnapshotError(e, 'publicTopics')
+        (e) => {
+          console.error('[publicTopics] snapshot error:', e);
+          handleSnapshotError(e, 'publicTopics');
+          if (!publicLoaded) setPublicLoaded(true);
+        }
       );
     } catch (e) {
+      console.error('publicTopics setup failed:', e);
       handleSnapshotError(e, 'publicTopics-setup');
       setPublicLoaded(true);
     }
 
-    // مستمع مواضيع المستخدم (إن كان مسجلاً)
+    // --- مستمع مواضيع المستخدم (users/{uid}/topics) ---
     try {
       if (user) {
         const userQ = query(
           collection(db, 'users', user.uid, 'topics'),
           orderBy('createdAt', 'desc')
         );
-        unsubUser = onSnapshot(
+
+        userUnsub = onSnapshot(
           userQ,
-          (snap) => {
-            const arr = snap.docs.map((d) => ({
-              id: d.id,
-              path: d.ref.path,
-              ...(d.data() as any),
-            })) as Topic[];
+          (snap: QuerySnapshot<DocumentData>) => {
+            const arr: Topic[] = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...(d.data() as any) }));
+            console.log('[userTopics] snapshot received, count=', arr.length);
             setUserTopics(arr);
-            setUserLoaded(true);
+            if (!userLoaded) setUserLoaded(true);
           },
-          (e) => handleSnapshotError(e, 'userTopics')
+          (e) => {
+            console.error('[userTopics] snapshot error:', e);
+            handleSnapshotError(e, 'userTopics');
+            if (!userLoaded) setUserLoaded(true);
+          }
         );
       } else {
-        setUserLoaded(true); // لا ننتظر مواضيع المستخدم إن لم يكن مسجلًا
+        console.log('[userTopics] no user provided (treat as loaded)');
+        setUserLoaded(true);
       }
     } catch (e) {
+      console.error('userTopics setup failed:', e);
       handleSnapshotError(e, 'userTopics-setup');
       setUserLoaded(true);
     }
 
     return () => {
-      if (unsubPublic) unsubPublic();
-      if (unsubUser) unsubUser();
+      if (publicUnsub) publicUnsub();
+      if (userUnsub) userUnsub();
     };
-  }, [db, user]);
+  }, [db, user, publicLoaded, userLoaded]);
 
-  // دمج وترتيب النتائج فقط بعد التحميل الأولي
+
   useEffect(() => {
     if (!publicLoaded || !userLoaded) return;
-    
-    // المواضيع العامة + مواضيع المستخدم (الخاصة والعامة)
+
     const merged = [...userTopics, ...publicTopics];
-    
-    // ازالة تكرار حسب id, مع إعطاء الأولوية لموضوع المستخدم إذا كان مكررًا
     const map = new Map<string, Topic>();
-    merged.forEach((t) => map.set(t.id, t));
+    merged.forEach(t => map.set(t.id, t));
+    const deduped = Array.from(map.values());
 
-    const finalArr = Array.from(map.values());
-
-    finalArr.sort((a, b) => {
+    deduped.sort((a, b) => {
       const aTs = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
       const bTs = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
       return bTs - aTs;
     });
 
-    setTopics(finalArr);
+    setTopics(deduped);
     setLoading(false);
   }, [publicLoaded, userLoaded, publicTopics, userTopics]);
+
+
+   useEffect(() => {
+    const timeoutMs = 12000;
+    const t = setTimeout(() => {
+      if (loading) {
+        console.warn('fallback timeout: forcing loading=false');
+        setLoading(false);
+        if (!error) {
+          setError('تعذر تحميل بعض البيانات: قد تكون مشكلة اتصال أو قواعد أمان. تحقق من Console.');
+        }
+      }
+    }, timeoutMs);
+
+    return () => clearTimeout(t);
+  }, [loading, error]);
+
 
   const openDeleteConfirmation = (topic: Topic) => {
     setTopicToDelete(topic);
@@ -484,7 +516,7 @@ export default function HomeView({ user }: { user: User }) {
           </Alert>
         )}
 
-        {!loading && !error && topics.length === 0 && (
+        {!loading && topics.length === 0 && !error && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
@@ -496,7 +528,7 @@ export default function HomeView({ user }: { user: User }) {
           </div>
         )}
 
-        {!loading && !error && topics.length > 0 && (
+        {!loading && topics.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             {topics.map((topic) => (
               <Card

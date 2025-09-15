@@ -1,5 +1,64 @@
-// types/firestore.ts
-export type Topic = {
+// --- FILE: components/views/HomeView.tsx ---
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import {
+  collection,
+  query,
+  orderBy,
+  doc,
+  deleteDoc,
+  addDoc,
+  updateDoc,
+  collectionGroup,
+  where,
+  serverTimestamp,
+  getDocs,
+  limit,
+  onSnapshot,
+  QuerySnapshot,
+  DocumentData,
+  Unsubscribe,
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Image from 'next/image';
+import { db, storage, auth } from '@/lib/firebase';
+import { useAdmin } from '@/lib/hooks/useAdmin';
+import type { User } from 'firebase/auth';
+
+import {
+  Loader2,
+  Newspaper,
+  Trash2,
+  Leaf,
+  Plus,
+  X,
+  Lock,
+  Globe,
+  AlertCircle,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import NotificationsPopover from '@/components/home/NotificationsPopover';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+
+type Topic = {
   id: string;
   path: string; // المسار الكامل للمستند
   title?: string;
@@ -11,3 +70,560 @@ export type Topic = {
   authorName?: string;
   [k: string]: any;
 };
+
+
+// --- دالة إنشاء الموضوع مع رفع الملف ---
+async function createTopicWithFile(
+  title: string,
+  description: string,
+  file: File | undefined,
+  isPublic: boolean
+): Promise<{ topicId: string; imageUrl?: string }> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('يجب تسجيل الدخول لإنشاء موضوع.');
+  }
+
+  let topicRef;
+  // --- إنشاء مرجع لمجموعة المواضيع الخاصة بالمستخدم ---
+  const userTopicsCollection = collection(
+    db,
+    'users',
+    currentUser.uid,
+    'topics'
+  );
+
+  try {
+    // 1. إنشاء مستند الموضوع أولاً بدون رابط الصورة للحصول على ID فريد
+    topicRef = await addDoc(userTopicsCollection, {
+      title: title.trim(),
+      description: description.trim(),
+      userId: currentUser.uid,
+      authorName: currentUser.displayName || 'مستخدم غير معروف',
+      isPublic: isPublic,
+      createdAt: serverTimestamp(),
+      imageUrl: null, // سيتم التحديث لاحقًا
+    });
+
+    let imageUrl: string | undefined = undefined;
+
+    // 2. إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد
+    if (file) {
+      const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
+      const fileRef = ref(storage, filePath);
+
+      // --- رفع الملف إلى Firebase Storage ---
+      await uploadBytes(fileRef, file);
+      imageUrl = await getDownloadURL(fileRef);
+
+      // 3. تحديث المستند الأصلي برابط الصورة بعد نجاح الرفع
+      await updateDoc(topicRef, { imageUrl: imageUrl });
+    }
+
+    return { topicId: topicRef.id, imageUrl }; // إرجاع المعرف والرابط
+  } catch (error) {
+    // تنظيف: إذا فشلت العملية بعد إنشاء المستند، قم بحذفه لمنع البيانات المعلقة
+    if (topicRef) {
+      await deleteDoc(doc(userTopicsCollection, topicRef.id));
+    }
+    // إرجاع الخطأ ليتم التعامل معه في الواجهة
+    throw error;
+  }
+}
+
+export default function HomeView({ user }: { user: User }) {
+  const { toast } = useToast();
+  const { isAdmin } = useAdmin();
+
+  const [publicTopics, setPublicTopics] = useState<Topic[]>([]);
+  const [userTopics, setUserTopics] = useState<Topic[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [publicLoaded, setPublicLoaded] = useState(false);
+  const [userLoaded, setUserLoaded] = useState(false);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
+  const [file, setFile] = useState<File | undefined>(undefined);
+  const [preview, setPreview] = useState<string | undefined>(undefined);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  function handleSnapshotError(e: any, label = 'snapshot') {
+    console.error(`[${label}] snapshot error:`, e);
+    if (e?.code === 'permission-denied') {
+      setError('ليس لديك صلاحية لقراءة هذه البيانات. تحقق من قواعد Firestore.');
+    } else if (String(e).toLowerCase().includes('index') || String(e).toLowerCase().includes('requires index')) {
+      setError('هذا الاستعلام يحتاج إلى فهرس (index). أنشئ الفهرس في Firebase Console.');
+    } else {
+      setError('حدث خطأ أثناء جلب البيانات. تأكد من الاتصال أو أعد المحاولة.');
+    }
+  }
+
+  useEffect(() => {
+    let publicUnsub: Unsubscribe | null = null;
+    let userUnsub: Unsubscribe | null = null;
+
+    // --- مستمع المواضيع العامة (collectionGroup) ---
+    try {
+      const publicQ = query(
+        collectionGroup(db, 'topics'),
+        where('isPublic', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+
+      publicUnsub = onSnapshot(
+        publicQ,
+        (snap: QuerySnapshot<DocumentData>) => {
+          const arr: Topic[] = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...(d.data() as any) }));
+          console.log('[publicTopics] snapshot received, count=', arr.length);
+          setPublicTopics(arr);
+          if (!publicLoaded) setPublicLoaded(true);
+        },
+        (e) => {
+          console.error('[publicTopics] snapshot error:', e);
+          handleSnapshotError(e, 'publicTopics');
+          if (!publicLoaded) setPublicLoaded(true);
+        }
+      );
+    } catch (e) {
+      console.error('publicTopics setup failed:', e);
+      handleSnapshotError(e, 'publicTopics-setup');
+      setPublicLoaded(true);
+    }
+
+    // --- مستمع مواضيع المستخدم (users/{uid}/topics) ---
+    try {
+      if (user) {
+        const userQ = query(
+          collection(db, 'users', user.uid, 'topics'),
+          orderBy('createdAt', 'desc')
+        );
+
+        userUnsub = onSnapshot(
+          userQ,
+          (snap: QuerySnapshot<DocumentData>) => {
+            const arr: Topic[] = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...(d.data() as any) }));
+            console.log('[userTopics] snapshot received, count=', arr.length);
+            setUserTopics(arr);
+            if (!userLoaded) setUserLoaded(true);
+          },
+          (e) => {
+            console.error('[userTopics] snapshot error:', e);
+            handleSnapshotError(e, 'userTopics');
+            if (!userLoaded) setUserLoaded(true);
+          }
+        );
+      } else {
+        console.log('[userTopics] no user provided (treat as loaded)');
+        setUserLoaded(true);
+      }
+    } catch (e) {
+      console.error('userTopics setup failed:', e);
+      handleSnapshotError(e, 'userTopics-setup');
+      setUserLoaded(true);
+    }
+
+    return () => {
+      if (publicUnsub) publicUnsub();
+      if (userUnsub) userUnsub();
+    };
+  }, [db, user, publicLoaded, userLoaded]);
+
+
+  useEffect(() => {
+    if (!publicLoaded || !userLoaded) return;
+
+    const merged = [...userTopics, ...publicTopics];
+    const map = new Map<string, Topic>();
+    merged.forEach(t => map.set(t.id, t));
+    const deduped = Array.from(map.values());
+
+    deduped.sort((a, b) => {
+      const aTs = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTs = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTs - aTs;
+    });
+
+    setTopics(deduped);
+    setLoading(false);
+  }, [publicLoaded, userLoaded, publicTopics, userTopics]);
+
+
+   useEffect(() => {
+    const timeoutMs = 12000;
+    const t = setTimeout(() => {
+      if (loading) {
+        console.warn('fallback timeout: forcing loading=false');
+        setLoading(false);
+        if (!error) {
+          setError('تعذر تحميل بعض البيانات: قد تكون مشكلة اتصال أو قواعد أمان. تحقق من Console.');
+        }
+      }
+    }, timeoutMs);
+
+    return () => clearTimeout(t);
+  }, [loading, error]);
+
+
+  const openDeleteConfirmation = (topic: Topic) => {
+    setTopicToDelete(topic);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteTopic = async () => {
+    if (!topicToDelete) return;
+    try {
+      await deleteDoc(doc(db, topicToDelete.path));
+      toast({
+        title: 'تم الحذف',
+        description: 'تم حذف الموضوع بنجاح.',
+        className: 'bg-green-600 text-white',
+      });
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'خطأ في الحذف',
+        description: e.message || 'لم نتمكن من حذف الموضوع.',
+      });
+    } finally {
+      setShowDeleteConfirm(false);
+      setTopicToDelete(null);
+    }
+  };
+
+  const canDelete = (topic: Topic) => {
+    return isAdmin || topic.userId === user.uid;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (preview) URL.revokeObjectURL(preview);
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile));
+    } else {
+      setFile(undefined);
+      setPreview(undefined);
+    }
+  };
+
+  const clearFile = useCallback(() => {
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(undefined);
+    setPreview(undefined);
+    const fileInput = document.getElementById('idea-file') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  }, [preview]);
+
+  const clearForm = useCallback(() => {
+    setTitle('');
+    setDescription('');
+    setIsPublic(true);
+    clearFile();
+  }, [clearFile]);
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  const handleSave = async () => {
+    if (!title.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'خطأ',
+        description: 'عنوان الموضوع مطلوب.',
+      });
+      return;
+    }
+    setIsSaving(true);
+
+    try {
+      await createTopicWithFile(title, description, file, isPublic);
+      toast({
+        title: 'تم النشر بنجاح!',
+        description: `تمت إضافة موضوعك "${title}" بنجاح.`,
+        className: 'bg-green-600 text-white',
+      });
+      clearForm();
+      setDialogOpen(false);
+    } catch (e: any) {
+      console.error('Error saving topic: ', e);
+      let description = 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
+      if (e.code === 'storage/unauthorized' || e.code === 'permission-denied') {
+        description =
+          'ليس لديك الصلاحية لرفع الملفات أو إنشاء الموضوع. تحقق من قواعد الأمان.';
+      }
+      toast({ variant: 'destructive', title: 'خطأ في النشر', description });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-12">
+      <header className="text-center space-y-4 pt-8">
+        <div className="flex justify-center">
+          <Badge
+            variant="outline"
+            className="border-primary/30 bg-primary/10 text-primary-foreground text-sm py-1 px-4"
+          >
+            <Leaf className="h-4 w-4 ml-2" />
+            مزارع كويتي
+          </Badge>
+        </div>
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-muted-foreground">
+          بوابتك لعالم الزراعة
+        </h1>
+        <p className="max-w-2xl mx-auto text-lg text-muted-foreground">
+          اكتشف مقالات وفيديوهات ونصائح الخبراء لمساعدتك في كل خطوة من رحلتك
+          الزراعية.
+        </p>
+      </header>
+
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
+          <div className="flex items-center gap-2">
+            <Dialog
+              open={dialogOpen}
+              onOpenChange={(isOpen) => {
+                setDialogOpen(isOpen);
+                if (!isOpen) clearForm();
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button className="bg-green-600 hover:bg-green-700">
+                  <Plus className="h-4 w-4 ml-2" />
+                  أضف فكرتك
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>أضف فكرة أو موضوع جديد</DialogTitle>
+                  <DialogDescription>
+                    شارك فكرة، نصيحة، أو سؤال مع مجتمع المزارعين.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="idea-title">عنوان الموضوع</Label>
+                    <Input
+                      id="idea-title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="مثال: أفضل طريقة لتسميد الطماطم"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="idea-description">الوصف (اختياري)</Label>
+                    <Textarea
+                      id="idea-description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="اشرح فكرتك بتفصيل أكبر..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="idea-file">صورة أو فيديو (اختياري)</Label>
+                    <Input
+                      id="idea-file"
+                      type="file"
+                      onChange={handleFileChange}
+                      accept="image/*,video/*"
+                    />
+                  </div>
+                  {preview && (
+                    <div className="relative">
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 z-10"
+                        onClick={clearFile}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      {file?.type.startsWith('image/') ? (
+                        <Image
+                          src={preview}
+                          alt="Preview"
+                          width={400}
+                          height={225}
+                          className="rounded-md object-cover w-full aspect-video"
+                        />
+                      ) : (
+                        <video src={preview} controls className="rounded-md w-full" />
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <Switch
+                      id="is-public"
+                      checked={isPublic}
+                      onCheckedChange={setIsPublic}
+                    />
+                    <Label htmlFor="is-public" className="cursor-pointer">
+                      {isPublic
+                        ? 'موضوع عام (يظهر للجميع)'
+                        : 'موضوع خاص (يظهر لك فقط)'}
+                    </Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">إلغاء</Button>
+                  </DialogClose>
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving || !title.trim()}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 ml-2" />
+                    )}
+                    {isSaving ? 'جاري النشر...' : 'نشر الموضوع'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <NotificationsPopover user={user} />
+          </div>
+        </div>
+
+        {loading && (
+          <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <h2 className="mt-4 text-xl font-semibold">
+              جاري تحميل المواضيع...
+            </h2>
+          </div>
+        )}
+
+        {error && (
+          <Alert variant="destructive" className="my-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>حدث خطأ</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {!loading && topics.length === 0 && !error && (
+          <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
+            <Newspaper className="h-16 w-16 text-muted-foreground" />
+            <h2 className="mt-4 text-xl font-semibold">
+              لا توجد مواضيع لعرضها حاليًا
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              كن أول من يشارك فكرة أو موضوعًا جديدًا!
+            </p>
+          </div>
+        )}
+
+        {!loading && topics.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+            {topics.map((topic) => (
+              <Card
+                key={topic.id}
+                className="group relative flex flex-col overflow-hidden bg-card/50 shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 border"
+              >
+                {canDelete(topic) && (
+                  <div className="absolute top-2 left-2 z-10 flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => openDeleteConfirmation(topic)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                <div className="relative aspect-[16/9] w-full overflow-hidden">
+                  {topic.imageUrl ? (
+                    <Image
+                      src={topic.imageUrl}
+                      alt={topic.title || 'Topic Image'}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-secondary flex items-center justify-center">
+                      <Newspaper className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 z-10">
+                    {topic.isPublic ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700"
+                      >
+                        <Globe className="h-3 w-3 ml-1" />
+                        عام
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="destructive"
+                        className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700"
+                      >
+                        <Lock className="h-3 w-3 ml-1" />
+                        خاص
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-between p-4 bg-background/80">
+                  <div>
+                    <CardTitle className="text-lg mb-1 leading-tight">
+                      {topic.title}
+                    </CardTitle>
+                    {topic.description && (
+                      <p className="text-muted-foreground text-sm line-clamp-2">
+                        {topic.description}
+                      </p>
+                    )}
+                  </div>
+                  {topic.authorName && (
+                    <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                      بواسطة: {topic.authorName}
+                    </p>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد الحذف</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من رغبتك في حذف هذا الموضوع بشكل نهائي؟ لا يمكن
+              التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">إلغاء</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleDeleteTopic}>
+              نعم، قم بالحذف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
