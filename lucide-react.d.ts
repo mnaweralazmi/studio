@@ -1075,7 +1075,5 @@ export const LucideProps: any;
 export const LucideProvider: (props: {
     children: import('react').ReactNode;
 } & import('react').SVGAttributes<SVGElement>) => any;
-export const CalendarIcon: (props: import('react').SVGProps<SVGSVGElement>) => import('react').ReactElement;
-export const CircleCheck: (props: import('react').SVGProps<SVGSVGElement>) => import('react').ReactElement;
-export const HandCoins: (props: import('react').SVGProps<SVGSVGElement>) => import('react').ReactElement;
-export const UserCircle: (props: import('react').SVGProps<SVGSVGElement>) => import('react').ReactElement;
+
+    
