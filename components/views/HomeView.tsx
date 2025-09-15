@@ -135,7 +135,7 @@ export default function HomeView({ user }: { user: User }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- Hook لجلب المواضيع العامة باستخدام collectionGroup ---
+  // --- Hook لجلب المواضيع العامة ومواضيع المستخدم ---
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -143,59 +143,64 @@ export default function HomeView({ user }: { user: User }) {
     }
 
     setLoading(true);
-    // الاستعلام عن المواضيع العامة
+
+    // الاستعلام عن المواضيع العامة من جميع المستخدمين
     const publicQuery = query(
-      collectionGroup(db, 'topics'), 
-      where('isPublic', '==', true), 
+      collectionGroup(db, 'topics'),
+      where('isPublic', '==', true),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
 
-    // الاستعلام عن مواضيع المستخدم الخاصة
+    // الاستعلام عن مواضيع المستخدم الحالي الخاصة فقط
     const userQuery = query(
       collection(db, 'users', user.uid, 'topics'),
       where('isPublic', '==', false),
       orderBy('createdAt', 'desc')
     );
 
-    const processSnapshots = (publicTopics: Topic[], userTopics: Topic[]) => {
-       // دمج النتائج وإزالة التكرار (قد يكون موضوع المستخدم عامًا أيضًا)
+    let publicTopics: Topic[] = [];
+    let userTopics: Topic[] = [];
+    
+    // دالة لدمج وفرز النتائج
+    const processAndSetTopics = () => {
        const allTopicsMap = new Map<string, Topic>();
        
+       // إضافة المواضيع العامة أولاً
        publicTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
+       // إضافة مواضيع المستخدم (سوف تستبدل أي نسخة عامة بنفس الـ ID)
        userTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
 
        const combinedTopics = Array.from(allTopicsMap.values());
        
-       // فرز كل المواضيع حسب تاريخ الإنشاء
+       // فرز كل المواضيع حسب تاريخ الإنشاء لضمان الترتيب الصحيح
        combinedTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
        setTopics(combinedTopics);
        setError(null);
        setLoading(false);
-    }
-    
-    let publicTopics: Topic[] = [];
-    let userTopics: Topic[] = [];
+    };
 
+    const handleSnapshotError = (err: any) => {
+        console.error("Firestore snapshot error:", err);
+        if (err.code === 'permission-denied') {
+            setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان في Firestore.');
+        } else if (err.code === 'failed-precondition') {
+            setError('خطأ: هذا الاستعلام يتطلب فهرسًا مركبًا. يرجى إنشاء الفهرس المطلوب في لوحة تحكم Firebase.');
+        } else {
+            setError('حدث خطأ أثناء جلب المواضيع.');
+        }
+        setLoading(false);
+    };
+    
     const unsubscribePublic = onSnapshot(publicQuery, (snapshot) => {
       publicTopics = snapshot.docs.map(doc => ({
         id: doc.id,
         path: doc.ref.path,
         ...doc.data()
       } as Topic));
-      processSnapshots(publicTopics, userTopics);
-    }, (err) => {
-      console.error("Public topics listener error:", err);
-      if (err.code === 'permission-denied') {
-        setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان في Firestore.');
-      } else if (err.code === 'failed-precondition') {
-        setError('خطأ: هذا الاستعلام يتطلب فهرسًا مركبًا. يرجى إنشاء الفهرس المطلوب في لوحة تحكم Firebase.');
-      } else {
-        setError('حدث خطأ أثناء جلب المواضيع العامة.');
-      }
-      setLoading(false);
-    });
+      processAndSetTopics();
+    }, handleSnapshotError);
 
     const unsubscribeUser = onSnapshot(userQuery, (snapshot) => {
         userTopics = snapshot.docs.map(doc => ({
@@ -203,13 +208,10 @@ export default function HomeView({ user }: { user: User }) {
             path: doc.ref.path,
             ...doc.data()
         } as Topic));
-        processSnapshots(publicTopics, userTopics);
-    }, (err) => {
-        console.error("User topics listener error:", err);
-        setError('حدث خطأ أثناء جلب مواضيعك الخاصة.');
-        setLoading(false);
-    });
+        processAndSetTopics();
+    }, handleSnapshotError);
     
+    // تنظيف المستمعين عند مغادرة المكون
     return () => {
         unsubscribePublic();
         unsubscribeUser();

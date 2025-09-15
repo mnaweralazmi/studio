@@ -1,24 +1,33 @@
-// لتقييد القراءة للمستخدمين المسجلين فقط، غيّر الشرط العام إلى: request.auth != null
+// قواعد محدثة لإصلاح مشاكل collectionGroup
+// لتقييد القراءة للمسجلين فقط، قم بتغيير `allow read: if true` إلى `allow read: if request.auth != null` في القاعدة العامة
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // السماح بقراءة المواضيع العامة للجميع، مع صلاحيات كاملة للمالك
+    // --- القاعدة الأساسية للوصول المباشر للمستندات ---
+    // هذه القاعدة تؤمّن الوصول المباشر للمستخدم إلى مواضيعه الخاصة
     match /users/{userId}/topics/{topicId} {
+      // يمكن قراءة الموضوع إما إذا كان عامًا (isPublic) أو إذا كان المالك هو من يقرأ
       allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+      
+      // لا يمكن إنشاء موضوع إلا لمستخدم مسجل، ويجب أن يكون هو مالك المستند
       allow create: if request.auth != null 
                     && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.title is string
+                    && request.resource.data.title is string 
                     && request.resource.data.title.size() > 1;
+      
+      // التعديل والحذف مسموح فقط لمالك المستند
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
-    
-    // قاعدة إضافية لدعم استعلام collectionGroup بشكل آمن
+
+    // --- قاعدة خاصة باستعلامات collectionGroup ---
+    // هذه القاعدة ضرورية للسماح لواجهة المستخدم بجلب كل المواضيع العامة
     match /{path=**}/topics/{topicId} {
-        allow read: if resource.data.isPublic == true;
+      // اسمح بقراءة أي موضوع من مجموعة "topics" إذا كان عامًا
+      allow read: if resource.data.isPublic == true;
     }
-    
-    // أغلق جميع المسارات الأخرى افتراضيًا
+
+    // قاعدة افتراضية تمنع أي وصول غير محدد أعلاه
     match /{document=**} {
       allow read, write: if false;
     }
