@@ -1,35 +1,34 @@
-// قواعد محدثة لإصلاح مشاكل collectionGroup
-// لتقييد القراءة للمسجلين فقط، قم بتغيير `allow read: if true` إلى `allow read: if request.auth != null` في القاعدة العامة
+// لتقييد قراءة المواضيع العامة للمستخدمين المسجلين فقط، قم بتغيير السطر "allow read: if resource.data.isPublic == true;"
+// إلى "allow read: if resource.data.isPublic == true && request.auth != null;"
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- القاعدة الأساسية للوصول المباشر للمستندات ---
-    // هذه القاعدة تؤمّن الوصول المباشر للمستخدم إلى مواضيعه الخاصة
-    match /users/{userId}/topics/{topicId} {
-      // يمكن قراءة الموضوع إما إذا كان عامًا (isPublic) أو إذا كان المالك هو من يقرأ
-      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
-      
-      // لا يمكن إنشاء موضوع إلا لمستخدم مسجل، ويجب أن يكون هو مالك المستند
-      allow create: if request.auth != null 
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.title is string 
-                    && request.resource.data.title.size() > 1;
-      
-      // التعديل والحذف مسموح فقط لمالك المستند
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-    }
-
-    // --- قاعدة خاصة باستعلامات collectionGroup ---
-    // هذه القاعدة ضرورية للسماح لواجهة المستخدم بجلب كل المواضيع العامة
+    // هذه القاعدة تسمح باستعلام collectionGroup على "topics" بالعمل
+    // للمواضيع العامة فقط، وهو أمر ضروري لعرضها في الصفحة الرئيسية.
     match /{path=**}/topics/{topicId} {
-      // اسمح بقراءة أي موضوع من مجموعة "topics" إذا كان عامًا
       allow read: if resource.data.isPublic == true;
     }
 
-    // قاعدة افتراضية تمنع أي وصول غير محدد أعلاه
-    match /{document=**} {
-      allow read, write: if false;
+    // هذه القاعدة تؤمن الوصول المباشر إلى مستندات المستخدم
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // هذه القاعدة تخصص صلاحيات دقيقة لمجموعة "topics" الفرعية
+    match /users/{userId}/topics/{topicId} {
+      // السماح بالقراءة إذا كان الموضوع عامًا، أو إذا كان المستخدم هو المالك
+      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+      
+      // السماح بالكتابة (إنشاء، تحديث، حذف) فقط لمالك المستند
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // شروط إضافية عند الإنشاء
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 0;
     }
   }
 }
