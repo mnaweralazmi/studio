@@ -10,8 +10,9 @@ import {
   Send,
   Settings,
   Save,
+  Camera,
 } from 'lucide-react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   signOut,
@@ -27,7 +28,8 @@ import {
   addDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import { ThemeSwitcher } from '@/components/theme-switcher';
@@ -86,11 +88,16 @@ function ProfileView() {
   const [displayName, setDisplayName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
-  
-  const isGoogleLinked = useMemo(() => 
-    user?.providerData.some(p => p.providerId === GoogleAuthProvider.PROVIDER_ID)
-  , [user]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
+  const isGoogleLinked = useMemo(
+    () =>
+      user?.providerData.some(
+        (p) => p.providerId === GoogleAuthProvider.PROVIDER_ID
+      ),
+    [user]
+  );
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -184,7 +191,11 @@ function ProfileView() {
     try {
       await updateProfile(user, { displayName: displayName.trim() });
       const docRef = doc(db, 'users', user.uid);
-      await setDoc(docRef, { displayName: displayName.trim() }, { merge: true });
+      await setDoc(
+        docRef,
+        { displayName: displayName.trim() },
+        { merge: true }
+      );
 
       toast({
         title: 'تم تحديث الاسم!',
@@ -200,6 +211,48 @@ function ProfileView() {
       });
     } finally {
       setIsSavingName(false);
+    }
+  };
+
+  const handleImageChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!event.target.files || !event.target.files[0] || !user) {
+      return;
+    }
+    const file = event.target.files[0];
+    setIsUploading(true);
+
+    try {
+      // 1. Upload file to Storage
+      const filePath = `users/${user.uid}/profile-picture/${file.name}`;
+      const fileRef = ref(storage, filePath);
+      const uploadResult = await uploadBytes(fileRef, file);
+
+      // 2. Get download URL
+      const photoURL = await getDownloadURL(uploadResult.ref);
+
+      // 3. Update Firebase Auth profile
+      await updateProfile(user, { photoURL });
+
+      // 4. Update Firestore user document
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, { photoURL }, { merge: true });
+
+      toast({
+        title: 'تم تحديث الصورة',
+        description: 'تم تغيير صورتك الشخصية بنجاح.',
+        className: 'bg-green-600 text-white',
+      });
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast({
+        title: 'خطأ في رفع الصورة',
+        description: 'لم نتمكن من تحديث صورتك الشخصية. يرجى المحاولة مرة أخرى.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -219,19 +272,41 @@ function ProfileView() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-4 rtl:space-x-reverse">
-            {user?.photoURL ? (
-              <Image
-                src={user.photoURL}
-                alt={user.displayName || 'صورة المستخدم'}
-                width={80}
-                height={80}
-                className="rounded-full"
+            <div className="relative group">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                accept="image/png, image/jpeg, image/gif"
+                className="hidden"
               />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
-                <UserCircle className="w-12 h-12 text-muted-foreground" />
-              </div>
-            )}
+              {user?.photoURL ? (
+                <Image
+                  src={user.photoURL}
+                  alt={user.displayName || 'صورة المستخدم'}
+                  width={80}
+                  height={80}
+                  className="rounded-full object-cover w-20 h-20"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
+                  <UserCircle className="w-12 h-12 text-muted-foreground" />
+                </div>
+              )}
+              <Button
+                size="icon"
+                variant="default"
+                className="absolute bottom-0 right-0 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
             <div className="flex-1">
               <div className="space-y-2">
                 <Label htmlFor="display-name">الاسم المعروض</Label>
@@ -244,7 +319,11 @@ function ProfileView() {
                   <Button
                     size="icon"
                     onClick={handleNameChange}
-                    disabled={isSavingName || !displayName || displayName === user?.displayName}
+                    disabled={
+                      isSavingName ||
+                      !displayName ||
+                      displayName === user?.displayName
+                    }
                   >
                     {isSavingName ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -268,8 +347,8 @@ function ProfileView() {
               className="text-xs h-8 mt-1 cursor-pointer"
               onClick={(e) => {
                 (e.target as HTMLInputElement).select();
-                 navigator.clipboard.writeText(user?.uid || '');
-                 toast({title: "تم نسخ المعرف"});
+                navigator.clipboard.writeText(user?.uid || '');
+                toast({ title: 'تم نسخ المعرف' });
               }}
             />
           </div>
@@ -315,9 +394,7 @@ function ProfileView() {
               <Save className="h-5 w-5 mr-2" />
             )}
             <span>
-              {isSaving
-                ? 'جاري الحفظ...'
-                : 'حفظ المعلومات الإضافية'}
+              {isSaving ? 'جاري الحفظ...' : 'حفظ المعلومات الإضافية'}
             </span>
           </Button>
         </CardContent>
@@ -385,7 +462,9 @@ function GeneralSettingsView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ar">العربية</SelectItem>
-                <SelectItem value="en" disabled>English (قريبا)</SelectItem>
+                <SelectItem value="en" disabled>
+                  English (قريبا)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -398,7 +477,9 @@ function GeneralSettingsView() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 rounded-lg bg-background">
-            <Label htmlFor="task-notifications" className="flex-1">إشعارات المهام</Label>
+            <Label htmlFor="task-notifications" className="flex-1">
+              إشعارات المهام
+            </Label>
             <Toggle
               id="task-notifications"
               pressed={taskNotifications}
@@ -407,7 +488,9 @@ function GeneralSettingsView() {
             />
           </div>
           <div className="flex items-center justify-between p-4 rounded-lg bg-background">
-            <Label htmlFor="sales-notifications" className="flex-1">إشعارات المبيعات</Label>
+            <Label htmlFor="sales-notifications" className="flex-1">
+              إشعارات المبيعات
+            </Label>
             <Toggle
               id="sales-notifications"
               pressed={salesNotifications}
@@ -431,7 +514,9 @@ function GeneralSettingsView() {
             <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
             <Input id="new-password" type="password" />
           </div>
-          <Button className="w-full" disabled>تحديث كلمة المرور (قريبا)</Button>
+          <Button className="w-full" disabled>
+            تحديث كلمة المرور (قريبا)
+          </Button>
         </CardContent>
       </Card>
     </div>
