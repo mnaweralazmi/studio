@@ -1,29 +1,33 @@
-// قواعد أمان Firestore لمشروع kuwaity-farm
-// هذه القواعد تضمن عزل بيانات المستخدم والسماح بعرض المواضيع العامة بشكل آمن.
-
+// هذه القواعد تضمن:
+// 1. عزل بيانات المستخدمين: كل مستخدم يتحكم في بياناته فقط ضمن /users/{userId}.
+// 2. عرض المواضيع العامة: تسمح لأي شخص بقراءة المواضيع التي تم تحديدها كـ "عامة" (isPublic == true) عبر collectionGroup.
+// 3. أمان الإنشاء والتعديل: تفرض التحقق من هوية المستخدم عند إنشاء أو تعديل البيانات.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // القاعدة الخاصة بمواضيع المستخدمين
-    // كل مستخدم يملك مواضيعه الخاصة داخل users/<uid>/topics/<topicId>
-    match /users/{userId}/topics/{topicId} {
-      
-      // شروط القراءة:
-      // 1. يمكن لأي شخص قراءة الموضوع إذا كان عامًا (isPublic == true).
-      // 2. يمكن للمستخدم مالك الموضوع قراءته دائمًا، حتى لو كان خاصًا.
-      allow read: if resource.data.isPublic == true || request.auth.uid == userId;
+    // === قواعد خاصة بمستخدمين محددين ===
+    // تضمن أن المستخدم لا يستطيع الوصول إلا إلى بياناته الخاصة.
+    match /users/{userId}/{documents=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // === قواعد لمجموعة المواضيع العامة (Topics) ===
+    // هذه القاعدة ضرورية لعمل استعلامات collectionGroup.
+    match /{path=**}/topics/{topicId} {
+      // السماح بالقراءة في حالتين:
+      // 1. إذا كان الموضوع عامًا (isPublic == true).
+      // 2. إذا كان المستخدم هو مالك الموضوع.
+      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == resource.data.userId);
 
-      // شروط الإنشاء:
-      // 1. يجب أن يكون المستخدم مسجلاً.
-      // 2. يجب أن يكون userId في المستند الجديد مطابقًا لمعرف المستخدم الذي يقوم بالعملية.
-      // 3. يجب أن يكون العنوان نصًا وأطول من حرف واحد.
+      // السماح بالإنشاء فقط للمستخدمين المسجلين، مع التحقق من:
+      // 1. أن المستخدم ينشئ الموضوع لنفسه (userId في المستند يطابق uid).
+      // 2. أن العنوان موجود وهو نص.
       allow create: if request.auth != null 
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.title is string
+                    && request.resource.data.userId == request.auth.uid
+                    && 'title' in request.resource.data && request.resource.data.title is string
                     && request.resource.data.title.size() > 1;
 
-      // شروط التحديث والحذف:
-      // فقط مالك الموضوع يمكنه تعديله أو حذفه.
+      // السماح بالتحديث والحذف فقط لمالك الموضوع.
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
   }

@@ -10,7 +10,6 @@ import {
   Timestamp,
   addDoc,
   updateDoc,
-  DocumentData,
   collectionGroup,
   where,
   serverTimestamp,
@@ -58,7 +57,9 @@ export default function HomeView({ user }: { user: User }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
   
-  // Listener for public topics using collectionGroup
+  // الخطوة 1: الاستماع إلى المواضيع العامة باستخدام collectionGroup
+  // هذا الاستعلام يبحث في كل مجموعات 'topics' الفرعية داخل قاعدة البيانات
+  // ويعرض فقط تلك التي تحمل علامة 'isPublic == true'.
   const [topicsSnapshot, loading] = useCollection(
     query(
       collectionGroup(db, 'topics'), 
@@ -88,7 +89,7 @@ export default function HomeView({ user }: { user: User }) {
   );
 
   const openDeleteConfirmation = (topic: Topic) => {
-    // Construct the path to the document for deletion
+    // بناء المسار الصحيح للمستند المطلوب حذفه
     const path = `users/${topic.userId}/topics/${topic.id}`;
     setTopicToDelete({ id: topic.id, path });
     setShowDeleteConfirm(true);
@@ -97,6 +98,7 @@ export default function HomeView({ user }: { user: User }) {
   const handleDeleteTopic = async () => {
     if (!topicToDelete) return;
     try {
+      // الحذف باستخدام المسار الكامل للمستند
       await deleteDoc(doc(db, topicToDelete.path));
       toast({
         title: 'تم الحذف',
@@ -106,6 +108,7 @@ export default function HomeView({ user }: { user: User }) {
     } catch (e: any) {
       console.error('Error deleting topic: ', e);
       let description = 'لم نتمكن من حذف الموضوع.';
+      // قواعد الأمان ستمنع هذا، لكن من الجيد التعامل معه
       if (e.code === 'permission-denied') {
         description = 'ليس لديك الصلاحية لحذف هذا الموضوع.';
       }
@@ -122,6 +125,7 @@ export default function HomeView({ user }: { user: User }) {
 
   const canDelete = (topic: Topic) => {
     if (!user) return false;
+    // يمكن للمشرف أو مالك الموضوع فقط الحذف
     return isAdmin || topic.userId === user.uid;
   };
 
@@ -165,8 +169,10 @@ export default function HomeView({ user }: { user: User }) {
     };
   }, [preview]);
 
+  // الخطوة 2: تطبيق منطق الرفع الآمن (إنشاء المستند أولاً)
   const handleSave = async () => {
     const currentUser = auth.currentUser;
+    // التحقق من وجود مستخدم مسجل قبل أي عملية
     if (!currentUser) {
       toast({ variant: 'destructive', title: 'خطأ', description: 'يجب أن تكون مسجلاً للدخول للنشر.' });
       return;
@@ -179,30 +185,32 @@ export default function HomeView({ user }: { user: User }) {
     setIsSaving(true);
     
     let topicRef;
+    // تحديد المسار الصحيح لمجموعة المواضيع الخاصة بالمستخدم
     const userTopicsCollection = collection(db, "users", currentUser.uid, "topics");
 
     try {
-      // Step 1: Create the document first to get an ID.
+      // الخطوة 2.1: إنشاء مستند الموضوع أولاً بدون رابط الصورة للحصول على ID فريد.
       topicRef = await addDoc(userTopicsCollection, {
         title: title.trim(),
         description: description.trim(),
-        userId: currentUser.uid,
+        userId: currentUser.uid, // هذا الحقل ضروري لقواعد الأمان
         authorName: currentUser.displayName || 'مستخدم غير معروف',
         isPublic: isPublic,
         createdAt: serverTimestamp(),
-        // imageUrl will be added in step 3
+        // سيتم إضافة imageUrl لاحقًا
       });
 
-      // Step 2: If there's a file, upload it using the new document ID in the path.
+      // الخطوة 2.2: إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد.
       if (file) {
-        // This path is compliant with the secure storage.rules
+        // بناء مسار آمن ومتوافق مع storage.rules
         const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
         const fileRef = ref(storage, filePath);
         
+        // رفع الملف (سيتم التحقق من الصلاحيات هنا بواسطة قواعد التخزين)
         await uploadBytes(fileRef, file);
         const downloadURL = await getDownloadURL(fileRef);
 
-        // Step 3: Update the original document with the file URL.
+        // الخطوة 2.3: تحديث المستند الأصلي برابط الصورة بعد نجاح الرفع.
         await updateDoc(topicRef, { imageUrl: downloadURL });
       }
 
@@ -222,7 +230,7 @@ export default function HomeView({ user }: { user: User }) {
       }
       toast({ variant: 'destructive', title: 'خطأ في النشر', description });
 
-      // Clean up: If the process fails after the document was created, delete it.
+      // تنظيف: إذا فشلت العملية بعد إنشاء المستند، قم بحذفه لمنع وجود بيانات معلقة.
       if (topicRef) {
         await deleteDoc(doc(userTopicsCollection, topicRef.id));
       }
