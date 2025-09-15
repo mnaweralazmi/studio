@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -170,27 +169,28 @@ export default function HomeView({ user }: { user: User }) {
     
     let topicRef;
     try {
-      // الخطوة 1: إنشاء المستند في Firestore أولاً للحصول على ID
-      topicRef = await addDoc(collection(db, 'topics'), {
+      // Step 1: Create the document in a user-specific collection to get an ID
+      const userTopicsCollection = collection(db, "users", currentUser.uid, "topics");
+      topicRef = await addDoc(userTopicsCollection, {
         title: title.trim(),
         description: description.trim(),
-        ownerId: currentUser.uid,
+        userId: currentUser.uid, // Correct field for security rules
         authorName: currentUser.displayName || 'مستخدم غير معروف',
         createdAt: Timestamp.now(),
-        // سيتم إضافة imageUrl أو videoUrl لاحقاً
+        // imageUrl will be added later
       });
 
-      // الخطوة 2: إذا كان هناك ملف، قم برفعه باستخدام ID المستند
+      // Step 2: If there's a file, upload it using the document ID in the path
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        // بناء المسار الآمن الذي يتوافق مع قواعد الأمان
+        // This path matches the secure storage.rules
         const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
         const fileRef = ref(storage, filePath);
         
         await uploadBytes(fileRef, file);
         const downloadURL = await getDownloadURL(fileRef);
 
-        // الخطوة 3: تحديث المستند الأصلي برابط الملف
+        // Step 3: Update the original document with the file URL
         const updateData: DocumentData = { fileType };
         if (fileType === 'image') {
           updateData.imageUrl = downloadURL;
@@ -216,9 +216,10 @@ export default function HomeView({ user }: { user: User }) {
       }
       toast({ variant: 'destructive', title: 'خطأ في النشر', description });
 
-      // إذا فشلت عملية الرفع، قم بحذف المستند الذي تم إنشاؤه لتجنب البيانات المعلقة
+      // If the process fails, delete the created document to avoid orphaned data
       if (topicRef) {
-        await deleteDoc(topicRef);
+        const userTopicsCollection = collection(db, "users", currentUser.uid, "topics");
+        await deleteDoc(doc(userTopicsCollection, topicRef.id));
       }
     } finally {
       setIsSaving(false);

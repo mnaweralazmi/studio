@@ -1,39 +1,42 @@
-// --- FILE: firestore.rules ---
-// هذه القواعد تهدف إلى تأمين قاعدة بيانات Firestore الخاصة بك.
-// لتغيير قواعد القراءة من "عامة" إلى "مقيدة للمسجلين فقط"،
-// استبدل `allow read: if true;` بـ `allow read: if request.auth != null;`
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // --- قواعد مجموعة المواضيع العامة (Posts) ---
-    // هذه المجموعة متاحة للقراءة من قبل أي شخص، ولكن لا يمكن إنشاؤها أو تعديلها
-    // إلا من قبل المستخدمين المسجلين والمصرح لهم.
+
+    // --- Private User Data ---
+    // Rule: Allow users to fully control their own data within their "users/{userId}" path.
+    // This includes collections like "topics", "tasks", etc.
+    match /users/{userId}/{document=**} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
+    }
+    
+    // --- Topics Collection (Specific Rules for Creation) ---
+    // Rule: Apply specific validation when creating a document in the "topics" subcollection.
+    match /users/{userId}/topics/{topicId} {
+        allow create: if request.auth != null 
+                    && request.auth.uid == userId
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 1;
+    }
+
+    // --- Public Posts Collection ---
+    // Rule: Allow anyone to read, but only authenticated users to create posts for themselves.
+    // Editing and deleting is restricted to the post owner.
     match /posts/{postId} {
-      // القراءة عامة للجميع.
+      // To restrict reading to authenticated users only, change to: allow read: if request.auth != null;
       allow read: if true;
       
-      // الإنشاء مسموح فقط للمستخدمين المسجلين، بشرط أن يكون `userId`
-      // في المستند الجديد مطابقًا لمعرف المستخدم الذي أرسل الطلب.
-      // كما يتم التحقق من أن العنوان موجود وهو نص.
-      allow create: if request.auth != null 
-                    && request.resource.data.userId == request.auth.uid
-                    && 'title' in request.resource.data && request.resource.data.title is string
-                    && request.resource.data.title.size() > 1;
-                    
-      // التحديث والحذف مسموحان فقط لمالك المنشور.
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
-    // --- قواعد المجموعات الخاصة بالمستخدمين (Topics) ---
-    // هذه القواعد تضمن أن كل مستخدم لديه سيطرة كاملة على بياناته الخاصة
-    // داخل المسار `users/{uid}`، ولا يمكن لأي مستخدم آخر الوصول إليها.
-    match /users/{uid}/{documents=**} {
-      // السماح للمستخدم مالك `uid` فقط بقراءة، كتابة، تعديل، وحذف
-      // أي مستندات داخل مجلده الخاص.
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // --- Notifications Collection ---
+    // Rule: Read access is for the target user or for 'all'. Write is disallowed from client.
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && (resource.data.target == request.auth.uid || resource.data.target == 'all');
+      allow create, update, delete: if false; // Should be handled by backend/admin only
     }
   }
 }
-// --- END FILE ---

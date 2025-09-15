@@ -1,32 +1,33 @@
-// --- FILE: storage.rules ---
-// هذه القواعد تهدف إلى تأمين ملفاتك على Firebase Storage.
-// لتغيير قواعد القراءة من "عامة" إلى "مقيدة للمسجلين فقط"،
-// استبدل `allow read: if true;` بـ `allow read: if request.auth != null;`
-
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
   
-    // --- قاعدة ملفات المواضيع (Topics) ---
-    // المسار: users/{uid}/topics/{topicId}/{fileName}
-    // تسمح هذه القاعدة للمستخدم مالك `uid` فقط برفع الملفات (الكتابة).
-    // القراءة متاحة للجميع بشكل افتراضي.
-    match /users/{uid}/topics/{topicId}/{fileName} {
-      // القراءة عامة (يمكن لأي شخص لديه الرابط عرض الملف).
+    // --- User-Specific File Paths ---
+    // Rule: This path structure is for files owned by a specific user.
+    // Example sub-paths: /users/{userId}/topics/... or /users/{userId}/avatar/...
+    match /users/{userId}/{allPaths=**} {
+    
+      // To restrict reading to authenticated users only, change to:
+      // allow read: if request.auth != null;
+      // To restrict reading to the owner only, change to:
+      // allow read: if request.auth.uid == userId;
       allow read: if true;
       
-      // الكتابة (الرفع) مسموحة فقط للمستخدم الذي يتطابق `uid` الخاص به
-      // مع المجلد الذي يحاول الرفع إليه.
-      allow write: if request.auth != null && request.auth.uid == uid;
+      // Allow the authenticated owner to write (create, update, delete) to their own path.
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // --- مثال: قاعدة صورة البروفايل (Avatar) ---
-    // المسار: users/{uid}/avatar/{fileName}
-    // تسمح للمستخدم برفع صورة بروفايل واحدة وتحديثها.
-    match /users/{uid}/avatar/{fileName} {
-       allow read: if true;
-       allow write: if request.auth != null && request.auth.uid == uid;
+    // --- Example: Avatar Path Rule ---
+    // Rule: A user can only write to their own avatar path.
+    match /users/{userId}/avatar/{fileName} {
+       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // --- Example: Topic-specific file uploads ---
+    // Rule: User can only upload to a topic folder they own.
+    match /users/{userId}/topics/{topicId}/{fileName} {
+        allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
-// --- END FILE ---
