@@ -1,64 +1,34 @@
-// This rule set is designed for the kuwaity-farm project.
-// It secures user-specific topics, allows public read access via collectionGroup,
-// and manages a separate public 'posts' collection.
 
+// هذه القواعد تهدف إلى تأمين الوصول إلى قاعدة بيانات Firestore.
+// القاعدة الأساسية هي منع الوصول افتراضيًا والسماح به فقط عند الحاجة.
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Rule for collectionGroup queries ---
-    // This rule is specifically for allowing collectionGroup queries on 'topics'.
-    // It allows anyone to read a topic if it is marked as public.
-    // This is necessary because collectionGroup queries don't evaluate the full path.
+    // القاعدة الخاصة باستعلام collectionGroup على مجموعة 'topics'
+    // هذه القاعدة ضرورية لتمكين جلب جميع المواضيع العامة من جميع المستخدمين.
     match /{path=**}/topics/{topicId} {
+      // السماح بالقراءة فقط إذا كان الموضوع عامًا.
       allow read: if resource.data.isPublic == true;
     }
 
-    // --- Rules for direct document access ---
+    // قواعد خاصة بمجموعة مواضيع كل مستخدم على حدة
     match /users/{userId}/topics/{topicId} {
-      // Allow read if the topic is public OR if the user is the owner.
-      // The owner check is for direct access to private topics.
+      // 1. السماح بالقراءة إذا كان الموضوع عامًا أو إذا كان المستخدم هو المالك.
       allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
 
-      // Allow creation only by logged-in users who own the document.
-      // Also, validates the 'title' field to be a non-empty string.
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId
-                      && request.resource.data.title is string
-                      && request.resource.data.title.size() > 1;
-
-      // Allow updates and deletes only by the owner of the topic.
+      // 2. السماح بالإنشاء فقط للمستخدمين المسجلين، بشرط أن يكونوا مالكي المستند
+      // ويجب أن يحتوي على حقل عنوان نصي غير فارغ.
+      allow create: if request.auth != null 
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 1;
+      
+      // 3. السماح بالتحديث والحذف فقط لمالك المستند.
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
-    // Secure other user-specific data. Only the user can access their own documents.
-    match /users/{userId}/{document=**} {
-        allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // --- Rules for the public 'posts' collection ---
-    match /posts/{postId} {
-        // Anyone can read posts.
-        // To restrict to logged-in users, change to: allow read: if request.auth != null;
-        allow read: if true;
-        
-        // Logged-in users can create posts, but only for themselves.
-        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-        
-        // Only the post owner can update or delete it.
-        allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-    }
-
-    // --- Rules for notifications ---
-    match /notifications/{notificationId} {
-      // Allow users to read notifications targeted to 'all' or their specific UID.
-      allow read: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
-      
-      // Allow users to update the 'read' status of their own notifications.
-      allow update: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
-
-      // Deny create and delete for clients.
-      allow create, delete: if false;
-    }
+    // أي مسارات أخرى لم يتم تحديدها هنا ستكون ممنوعة بشكل افتراضي.
   }
 }
