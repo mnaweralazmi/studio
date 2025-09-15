@@ -1,34 +1,64 @@
-// هذه القواعد تضمن:
-// 1. عزل بيانات المستخدمين: كل مستخدم يتحكم في بياناته فقط ضمن /users/{userId}.
-// 2. عرض المواضيع العامة: تسمح لأي شخص بقراءة المواضيع التي تم تحديدها كـ "عامة" (isPublic == true) عبر collectionGroup.
-// 3. أمان الإنشاء والتعديل: تفرض التحقق من هوية المستخدم عند إنشاء أو تعديل البيانات.
+// This rule set is designed for the kuwaity-farm project.
+// It secures user-specific topics, allows public read access via collectionGroup,
+// and manages a separate public 'posts' collection.
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // === قواعد خاصة بمستخدمين محددين ===
-    // تضمن أن المستخدم لا يستطيع الوصول إلا إلى بياناته الخاصة.
-    match /users/{userId}/{documents=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    
+    // --- Rule for collectionGroup queries ---
+    // This rule is specifically for allowing collectionGroup queries on 'topics'.
+    // It allows anyone to read a topic if it is marked as public.
+    // This is necessary because collectionGroup queries don't evaluate the full path.
+    match /{path=**}/topics/{topicId} {
+      allow read: if resource.data.isPublic == true;
+    }
+
+    // --- Rules for direct document access ---
+    match /users/{userId}/topics/{topicId} {
+      // Allow read if the topic is public OR if the user is the owner.
+      // The owner check is for direct access to private topics.
+      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+
+      // Allow creation only by logged-in users who own the document.
+      // Also, validates the 'title' field to be a non-empty string.
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId
+                      && request.resource.data.title is string
+                      && request.resource.data.title.size() > 1;
+
+      // Allow updates and deletes only by the owner of the topic.
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
-    // === قواعد لمجموعة المواضيع العامة (Topics) ===
-    // هذه القاعدة ضرورية لعمل استعلامات collectionGroup.
-    match /{path=**}/topics/{topicId} {
-      // السماح بالقراءة في حالتين:
-      // 1. إذا كان الموضوع عامًا (isPublic == true).
-      // 2. إذا كان المستخدم هو مالك الموضوع.
-      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == resource.data.userId);
+    // Secure other user-specific data. Only the user can access their own documents.
+    match /users/{userId}/{document=**} {
+        allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // --- Rules for the public 'posts' collection ---
+    match /posts/{postId} {
+        // Anyone can read posts.
+        // To restrict to logged-in users, change to: allow read: if request.auth != null;
+        allow read: if true;
+        
+        // Logged-in users can create posts, but only for themselves.
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+        
+        // Only the post owner can update or delete it.
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
 
-      // السماح بالإنشاء فقط للمستخدمين المسجلين، مع التحقق من:
-      // 1. أن المستخدم ينشئ الموضوع لنفسه (userId في المستند يطابق uid).
-      // 2. أن العنوان موجود وهو نص.
-      allow create: if request.auth != null 
-                    && request.resource.data.userId == request.auth.uid
-                    && 'title' in request.resource.data && request.resource.data.title is string
-                    && request.resource.data.title.size() > 1;
+    // --- Rules for notifications ---
+    match /notifications/{notificationId} {
+      // Allow users to read notifications targeted to 'all' or their specific UID.
+      allow read: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
+      
+      // Allow users to update the 'read' status of their own notifications.
+      allow update: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
 
-      // السماح بالتحديث والحذف فقط لمالك الموضوع.
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Deny create and delete for clients.
+      allow create, delete: if false;
     }
   }
 }
