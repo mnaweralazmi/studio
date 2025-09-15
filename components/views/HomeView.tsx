@@ -425,14 +425,7 @@ export default function HomeView({ user }: { user: User }) {
         {!loading && !error && topics.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             {topics.map((topic) => (
-              <Card key={topic.id} className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-border shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
-                <div className="absolute top-2 right-2 z-10">
-                   {topic.isPublic ? (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"><Globe className="h-3 w-3 ml-1" />عام</Badge>
-                    ) : (
-                      <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"><Lock className="h-3 w-3 ml-1" />خاص</Badge>
-                    )}
-                </div>
+              <Card key={topic.id} className="group relative flex flex-col overflow-hidden bg-card/50 shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 border">
                 {canDelete(topic) && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
                     <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openDeleteConfirmation(topic)}>
@@ -440,20 +433,31 @@ export default function HomeView({ user }: { user: User }) {
                     </Button>
                   </div>
                 )}
-                {topic.imageUrl ? (
-                  <Image src={topic.imageUrl} alt={topic.title || 'Topic Image'} width={400} height={200} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
-                ) : (
-                  <div className="w-full h-40 bg-secondary flex items-center justify-center">
-                    <Newspaper className="h-10 w-10 text-muted-foreground" />
+                
+                <div className="relative aspect-[16/9] w-full overflow-hidden">
+                    {topic.imageUrl ? (
+                      <Image src={topic.imageUrl} alt={topic.title || 'Topic Image'} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <div className="w-full h-full bg-secondary flex items-center justify-center">
+                        <Newspaper className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 z-10">
+                       {topic.isPublic ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700"><Globe className="h-3 w-3 ml-1" />عام</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700"><Lock className="h-3 w-3 ml-1" />خاص</Badge>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-between p-4 bg-background/80">
+                  <div>
+                    <CardTitle className="text-lg mb-1 leading-tight">{topic.title}</CardTitle>
+                    {topic.description && <p className="text-muted-foreground text-sm line-clamp-2">{topic.description}</p>}
                   </div>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-lg">{topic.title}</CardTitle>
-                  {topic.authorName && (<p className="text-xs text-muted-foreground">بواسطة: {topic.authorName}</p>)}
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm line-clamp-2">{topic.description}</p>
-                </CardContent>
+                  {topic.authorName && (<p className="text-xs text-muted-foreground mt-3 pt-3 border-t">بواسطة: {topic.authorName}</p>)}
+                </div>
               </Card>
             ))}
           </div>
