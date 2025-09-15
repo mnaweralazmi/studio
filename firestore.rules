@@ -1,56 +1,27 @@
-// لتقييد قراءة المواضيع العامة للمستخدمين المسجلين فقط،
-// غيّر الشرط في السطر 15 إلى: allow read: if request.auth != null;
+// Firestore security rules (قابلة للنشر)
+// ملاحظة: غيّر شرط allow read إن أردت تقييد القراءة للمسجلين فقط.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- User Profile ---
-    // يمكن لكل مستخدم قراءة وإنشاء وتحديث ملفه الشخصي فقط
-    match /users/{userId} {
-      allow read, create, update: if request.auth != null && request.auth.uid == userId;
-    }
 
-    // --- Generic Data Collections (Topics, Tasks, Notifications) ---
+    // مواضيع المستخدمين: users/{userId}/topics/{topicId}
     match /users/{userId}/topics/{topicId} {
-      // يمكن قراءة الموضوع إذا كان عامًا، أو إذا كان المالك هو من يقرأه
-      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
-      // يمكن للمالك فقط إنشاء، تحديث، وحذف الموضوع
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    match /users/{userId}/tasks/{taskId} {
-      allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      // قراءة عامة فقط إذا isPublic == true، وإلا صاحب الموضوع فقط
+      allow read: if resource.data.isPublic == true
+                  || (request.auth != null && request.auth.uid == userId);
+
+      // إنشاء: فقط المستخدم المسجل ويجب أن يكون userId في الـ request.resource مطابقًا
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 1;
+
+      // تحديث/حذف: فقط صاحب الموضوع المسجل
+      allow update, delete: if request.auth != null
+                            && request.auth.uid == resource.data.userId;
     }
 
-    // --- Management Collections (Expenses, Sales, etc.) ---
-    // قاعدة موحدة لمعظم مجموعات الإدارة
-    match /users/{userId}/{collectionId}/{docId} 
-      where collectionId in [
-        'expenses', 'agriExpenses', 'poultryExpenses', 'livestockExpenses',
-        'agriSales', 'poultryEggSales', 'poultrySales', 'livestockSales',
-        'debts', 'workers', 'facilities', 
-        'poultryFlocks', 'livestockHerds'
-      ] {
-      // فقط المالك يمكنه الوصول الكامل لهذه البيانات
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // --- Public read-only collections ---
-    match /notifications/{notificationId} {
-        // يمكن للجميع قراءة الإشعارات
-        allow read: if true;
-        // لا أحد يمكنه الكتابة مباشرة (تتم عبر الدوال السحابية أو من طرف المشرف)
-        allow write: if false;
-    }
-    
-    // --- Collection Group Rule for Public Topics ---
-    // هذه القاعدة ضرورية للسماح باستعلام collectionGroup بقراءة المواضيع العامة
-    match /{path=**}/topics/{topicId} {
-        allow read: if resource.data.isPublic == true;
-    }
-
-    // --- Default Deny ---
-    // منع أي وصول آخر بشكل افتراضي
+    // منع الوصول إلى بقية المسارات افتراضياً
     match /{document=**} {
       allow read, write: if false;
     }
