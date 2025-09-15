@@ -1,31 +1,28 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Topics can be read by any authenticated user.
-    // Users can only create topics if they are logged in.
-    // Users can only update or delete topics they own.
+  
+    // Allow users to read and create topics if they are authenticated
     match /topics/{topicId} {
       allow read, create: if request.auth != null;
+      
+      // Allow users to update or delete their own topics
       allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
-
-    // Users can read and write to their own user document.
-    match /users/{userId} {
+    
+    // Rules for user-specific data
+    match /users/{userId}/{documents=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Notifications can be read by the targeted user or all users if specified.
-    // Only admins should be able to create notifications (this rule is open for now).
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid);
-      allow create: if request.auth != null; // In a real app, you'd restrict this to admins.
-    }
 
-    // Allow users to manage their own data within subcollections.
-    match /users/{userId}/{subcollection}/{document=**} {
-      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    // Rules for public notifications
+    match /notifications/{notificationId} {
+        allow read: if request.auth != null;
+        // For admin-only writes, you would typically use custom claims or a list of admin UIDs.
+        // This is a basic setup.
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }

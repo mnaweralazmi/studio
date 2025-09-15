@@ -95,10 +95,14 @@ export default function HomeView({ user }: { user: User }) {
       });
     } catch (e: any) {
       console.error('Error deleting topic: ', e);
+      let description = 'لم نتمكن من حذف الموضوع.';
+      if (e.code === 'permission-denied') {
+        description = 'ليس لديك الصلاحية لحذف هذا الموضوع.';
+      }
       toast({
         variant: 'destructive',
         title: 'خطأ في الحذف',
-        description: e.message || 'لم نتمكن من حذف الموضوع.',
+        description,
       });
     } finally {
       setShowDeleteConfirm(false);
@@ -184,7 +188,7 @@ export default function HomeView({ user }: { user: User }) {
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
         // Correct, secure path that matches storage.rules
-        const filePath = `users/${currentUser.uid}/topics/${Date.now()}_${file.name}`;
+        const filePath = `users/${currentUser.uid}/${Date.now()}_${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
         const fileUrl = await getDownloadURL(fileRef);
