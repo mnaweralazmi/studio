@@ -1,25 +1,21 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // السماح للمستخدم فقط برفع الملفات في مساره الخاص
-    // القراءة عامة للجميع، يمكن تقييدها للمستخدمين المسجلين فقط
+    // تأمين مسار رفع الصور الخاصة بالمواضيع
     match /users/{userId}/topics/{topicId}/{allPaths=**} {
+      // فقط مالك الموضوع يمكنه الكتابة
       allow write: if request.auth != null && request.auth.uid == userId;
-      // لتقييد القراءة للمستخدمين المسجلين فقط، غيّر السطر التالي إلى:
-      // allow read: if request.auth != null;
+      // للسماح للجميع بالقراءة. لتقييد القراءة للمسجلين فقط، غيّرها إلى: request.auth != null
       allow read: if true;
     }
 
-    // مثال لمسار صور المستخدم الشخصية
+    // مثال لمسار صور رمزية للمستخدمين
     match /users/{userId}/avatar/{allPaths=**} {
        allow write: if request.auth != null && request.auth.uid == userId;
-       // لتقييد القراءة للمستخدمين المسجلين فقط، غيّر السطر التالي إلى:
-       // allow read: if request.auth != null;
-       allow read: if true;
+       allow read: if true; // عامة للجميع، أو request.auth != null للمسجلين فقط
     }
 
-    // منع الوصول إلى جميع المسارات الأخرى بشكل افتراضي
+    // منع الوصول إلى جميع المسارات الأخرى
     match /{allPaths=**} {
       allow read, write: if false;
     }

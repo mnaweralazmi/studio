@@ -143,35 +143,77 @@ export default function HomeView({ user }: { user: User }) {
     }
 
     setLoading(true);
-    const q = query(
+    // الاستعلام عن المواضيع العامة
+    const publicQuery = query(
       collectionGroup(db, 'topics'), 
       where('isPublic', '==', true), 
       orderBy('createdAt', 'desc'),
       limit(50)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedTopics = snapshot.docs.map(doc => ({
+    // الاستعلام عن مواضيع المستخدم الخاصة
+    const userQuery = query(
+      collection(db, 'users', user.uid, 'topics'),
+      where('isPublic', '==', false),
+      orderBy('createdAt', 'desc')
+    );
+
+    const processSnapshots = (publicTopics: Topic[], userTopics: Topic[]) => {
+       // دمج النتائج وإزالة التكرار (قد يكون موضوع المستخدم عامًا أيضًا)
+       const allTopicsMap = new Map<string, Topic>();
+       
+       publicTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
+       userTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
+
+       const combinedTopics = Array.from(allTopicsMap.values());
+       
+       // فرز كل المواضيع حسب تاريخ الإنشاء
+       combinedTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+       setTopics(combinedTopics);
+       setError(null);
+       setLoading(false);
+    }
+    
+    let publicTopics: Topic[] = [];
+    let userTopics: Topic[] = [];
+
+    const unsubscribePublic = onSnapshot(publicQuery, (snapshot) => {
+      publicTopics = snapshot.docs.map(doc => ({
         id: doc.id,
         path: doc.ref.path,
         ...doc.data()
       } as Topic));
-      setTopics(fetchedTopics);
-      setError(null);
-      setLoading(false);
+      processSnapshots(publicTopics, userTopics);
     }, (err) => {
-      console.error("Firestore listener error:", err);
+      console.error("Public topics listener error:", err);
       if (err.code === 'permission-denied') {
         setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان في Firestore.');
       } else if (err.code === 'failed-precondition') {
         setError('خطأ: هذا الاستعلام يتطلب فهرسًا مركبًا. يرجى إنشاء الفهرس المطلوب في لوحة تحكم Firebase.');
       } else {
-        setError('حدث خطأ أثناء جلب المواضيع.');
+        setError('حدث خطأ أثناء جلب المواضيع العامة.');
       }
       setLoading(false);
     });
+
+    const unsubscribeUser = onSnapshot(userQuery, (snapshot) => {
+        userTopics = snapshot.docs.map(doc => ({
+            id: doc.id,
+            path: doc.ref.path,
+            ...doc.data()
+        } as Topic));
+        processSnapshots(publicTopics, userTopics);
+    }, (err) => {
+        console.error("User topics listener error:", err);
+        setError('حدث خطأ أثناء جلب مواضيعك الخاصة.');
+        setLoading(false);
+    });
     
-    return () => unsubscribe();
+    return () => {
+        unsubscribePublic();
+        unsubscribeUser();
+    };
   }, [user]);
 
 
