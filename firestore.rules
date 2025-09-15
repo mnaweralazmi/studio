@@ -1,40 +1,38 @@
-// This file is auto-generated, do not edit.
+// لتقييد القراءة للمستخدمين المسجلين فقط، يمكنك تغيير allow read
+// في القاعدة أدناه إلى: if request.auth != null;
 rules_version = '2';
-
-// لتقييد القراءة للمسجلين فقط، غيّر `allow read: if true;` إلى `allow read: if request.auth != null;`
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // ---
-    // القواعد الخاصة بـ collectionGroup('topics')
-    // هذه القاعدة تسمح لأي شخص بقراءة المواضيع العامة
-    // ---
-    match /{path=**}/topics/{topicId} {
-      allow read: if resource.data.isPublic == true;
-    }
-
-    // ---
-    // قواعد الوصول المباشر لمواضيع المستخدم
-    // ---
+    // قواعد خاصة بالوصول المباشر للمواضيع داخل مستندات المستخدمين
     match /users/{userId}/topics/{topicId} {
-      // يمكن للمستخدم قراءة مواضيعه الخاصة (العامة والخاصة)
-      // ويمكن للآخرين قراءة مواضيعه العامة فقط
-      allow read: if (request.auth != null && request.auth.uid == userId) || resource.data.isPublic == true;
-
-      // يمكن للمستخدم المسجل فقط إنشاء موضوع، بشرط أن يطابق userId هويته
-      // ونتحقق من وجود عنوان للموضوع
+      // يمكن قراءة الموضوع إذا كان عامًا، أو إذا كان المستخدم هو المالك
+      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+      
+      // يمكن للمستخدم المسجل فقط إنشاء موضوع، بشرط أن يكون هو المالك
+      // وأن يحتوي الموضوع على عنوان صالح
       allow create: if request.auth != null 
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.title is string
                     && request.resource.data.title.size() > 1;
-
-      // يمكن للمستخدم فقط تعديل أو حذف مواضيعه الخاصة
+      
+      // يمكن للمالك فقط تعديل أو حذف الموضوع
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
-    // ---
-    // حماية جميع المسارات الأخرى بشكل افتراضي
-    // ---
+    // --- قاعدة جديدة وحاسمة لعمل collectionGroup ---
+    // هذه القاعدة تسمح لقارئ (حتى لو لم يكن مسجلاً) بتنفيذ استعلام
+    // collectionGroup على "topics" بشرط أن تكون المواضيع عامة.
+    match /{path=**}/topics/{topicId} {
+        allow read: if resource.data.isPublic == true;
+    }
+    
+    // اسمح للمستخدمين بقراءة وكتابة مستنداتهم الخاصة فقط
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // قاعدة عامة لحظر أي وصول غير محدد أعلاه
     match /{document=**} {
       allow read, write: if false;
     }
