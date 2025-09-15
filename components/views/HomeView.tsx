@@ -10,6 +10,7 @@ import {
   deleteDoc,
   Timestamp,
   addDoc,
+  updateDoc,
   DocumentData,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -157,12 +158,12 @@ export default function HomeView({ user }: { user: User }) {
   const handleSave = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-        toast({
-            variant: 'destructive',
-            title: 'خطأ',
-            description: 'يجب أن تكون مسجلاً للدخول للنشر.',
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'خطأ',
+        description: 'يجب أن تكون مسجلاً للدخول للنشر.',
+      });
+      return;
     }
 
     if (!title.trim()) {
@@ -177,31 +178,34 @@ export default function HomeView({ user }: { user: User }) {
     try {
       const authorName = currentUser.displayName || 'مستخدم غير معروف';
 
-      const topicData: DocumentData = {
+      // Step 1: Create the document in Firestore first to get an ID
+      const topicRef = await addDoc(collection(db, 'topics'), {
         title: title,
         description: description,
         ownerId: currentUser.uid,
         authorName: authorName,
         createdAt: Timestamp.now(),
-      };
+        // imageUrl and videoUrl will be added later
+      });
 
+      // Step 2: If there is a file, upload it using the document ID in the path
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
         // Correct, secure path that matches storage.rules
-        const filePath = `users/${currentUser.uid}/${Date.now()}_${file.name}`;
+        const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
         const fileRef = ref(storage, filePath);
         await uploadBytes(fileRef, file);
-        const fileUrl = await getDownloadURL(fileRef);
+        const downloadURL = await getDownloadURL(fileRef);
 
+        // Step 3: Update the document with the file URL
+        const updateData: DocumentData = { fileType };
         if (fileType === 'image') {
-          topicData.imageUrl = fileUrl;
+          updateData.imageUrl = downloadURL;
         } else {
-          topicData.videoUrl = fileUrl;
+          updateData.videoUrl = downloadURL;
         }
-        topicData.fileType = fileType;
+        await updateDoc(topicRef, updateData);
       }
-
-      await addDoc(collection(db, 'topics'), topicData);
 
       toast({
         title: 'تم النشر بنجاح!',
@@ -213,10 +217,11 @@ export default function HomeView({ user }: { user: User }) {
       setDialogOpen(false);
     } catch (e: any) {
       console.error('Error saving topic: ', e);
-       let description = 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
-       if (e.code === 'storage/unauthorized' || e.code === 'permission-denied') {
-          description = 'ليس لديك الصلاحية لرفع الملفات أو إنشاء الموضوع. تحقق من قواعد الأمان.';
-       }
+      let description = 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
+      if (e.code === 'storage/unauthorized' || e.code === 'permission-denied') {
+        description =
+          'ليس لديك الصلاحية لرفع الملفات أو إنشاء الموضوع. تحقق من قواعد الأمان.';
+      }
       toast({
         variant: 'destructive',
         title: 'خطأ في النشر',
