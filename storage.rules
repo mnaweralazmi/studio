@@ -1,27 +1,43 @@
-// قواعد أمان Cloud Storage لمشروع kuwaity-farm
+// قواعد أمان Firebase Storage - rules_version = '2'
+//
+// ملخص القواعد:
+// 1. ملفات المواضيع (topics): فقط مالك الحساب (uid) يمكنه رفع الملفات إلى مجلده الخاص.
+// 2. صور الأفاتار (avatar): فقط مالك الحساب يمكنه رفع صورة الأفاتار الخاصة به.
+// 3. القراءة: افتراضيًا، قراءة جميع الملفات المرفوعة عامة (متاحة للجميع).
+//
+// لتقييد قراءة الملفات للمستخدمين المسجلين فقط،
+// غيّر `allow read: if true;` إلى `allow read: if request.auth != null;`
+
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // القاعدة الخاصة بملفات المواضيع (الصور، الفيديوهات، إلخ)
-    // المسار: /users/{userId}/topics/{topicId}/{fileName}
+    // --- قاعدة ملفات المواضيع ---
+    // المسار: users/{userId}/topics/{topicId}/{anyFileName}
+    // {allPaths=**} تطابق أي ملف أو مجلد داخل المسار.
     match /users/{userId}/topics/{topicId}/{allPaths=**} {
-      // السماح بالكتابة (رفع، تحديث، حذف) فقط لمالك المجلد (نفس المستخدم).
+      // الكتابة (Upload): مسموحة فقط إذا كان المستخدم مسجلاً وuid الخاص به يطابق {userId} في المسار.
       allow write: if request.auth != null && request.auth.uid == userId;
 
-      // السماح بالقراءة للجميع (ملفات عامة).
-      // لتقييد القراءة للمستخدمين المسجلين فقط، غيّر السطر التالي إلى:
-      // allow read: if request.auth != null;
+      // القراءة (Download): متاحة للجميع.
+      // لتقييدها، غيّر `true` إلى `request.auth != null`.
       allow read: if true;
     }
 
-    // مثال لقاعدة أخرى: صور المستخدم الشخصية (الأفاتار)
-    // المسار: /users/{userId}/avatar/{fileName}
+    // --- مثال: قاعدة صور الأفاتار ---
+    // المسار: users/{userId}/avatar/{anyFileName}
     match /users/{userId}/avatar/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
-       allow read: if true; // أو if request.auth != null; للقراءة المقيدة
+       // الكتابة (Upload): فقط مالك الحساب يمكنه رفع صورة الأفاتار.
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // القراءة (Download): متاحة للجميع.
+      allow read: if true;
     }
 
-    // أي مسارات أخرى غير معرّفة هنا ستكون ممنوعة افتراضيًا.
+    // قاعدة تمنع الوصول إلى أي مسارات أخرى لم يتم تحديدها أعلاه.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }

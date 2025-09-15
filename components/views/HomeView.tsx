@@ -1,3 +1,4 @@
+// --- FILE: components/views/HomeView.tsx ---
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -65,9 +66,8 @@ async function createTopicWithFile(
   description: string,
   file: File | undefined,
   isPublic: boolean
-): Promise<string> {
+): Promise<{ topicId: string; imageUrl?: string }> {
   const currentUser = auth.currentUser;
-  // 1. التحقق من وجود مستخدم مسجل
   if (!currentUser) {
     throw new Error('يجب تسجيل الدخول لإنشاء موضوع.');
   }
@@ -76,7 +76,7 @@ async function createTopicWithFile(
   const userTopicsCollection = collection(db, 'users', currentUser.uid, 'topics');
 
   try {
-    // 2. إنشاء مستند الموضوع أولاً بدون رابط الصورة للحصول على ID فريد
+    // 1. إنشاء مستند الموضوع أولاً بدون رابط الصورة للحصول على ID فريد
     topicRef = await addDoc(userTopicsCollection, {
       title: title.trim(),
       description: description.trim(),
@@ -87,7 +87,9 @@ async function createTopicWithFile(
       imageUrl: null, // سيتم التحديث لاحقًا
     });
 
-    // 3. إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد
+    let imageUrl: string | undefined = undefined;
+
+    // 2. إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد
     if (file) {
       // بناء مسار آمن ومتوافق مع storage.rules
       const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
@@ -95,16 +97,15 @@ async function createTopicWithFile(
       
       // رفع الملف
       await uploadBytes(fileRef, file);
-      const downloadURL = await getDownloadURL(fileRef);
+      imageUrl = await getDownloadURL(fileRef);
 
-      // 4. تحديث المستند الأصلي برابط الصورة بعد نجاح الرفع
-      await updateDoc(topicRef, { imageUrl: downloadURL });
-      return downloadURL; // إرجاع رابط الصورة
+      // 3. تحديث المستند الأصلي برابط الصورة بعد نجاح الرفع
+      await updateDoc(topicRef, { imageUrl: imageUrl });
     }
 
-    return topicRef.id; // إرجاع معرّف الموضوع
+    return { topicId: topicRef.id, imageUrl }; // إرجاع المعرف والرابط
   } catch (error) {
-    // تنظيف: إذا فشلت العملية بعد إنشاء المستند، قم بحذفه
+    // تنظيف: إذا فشلت العملية بعد إنشاء المستند، قم بحذفه لمنع البيانات المعلقة
     if (topicRef) {
       await deleteDoc(doc(userTopicsCollection, topicRef.id));
     }
@@ -137,7 +138,6 @@ export default function HomeView({ user }: { user: User }) {
 
   // --- Hook لجلب المواضيع العامة باستخدام collectionGroup ---
   useEffect(() => {
-    // التأكد من أن المستخدم مسجل للدخول قبل بدء الاستماع
     if (!user) {
       setLoading(false);
       return;
@@ -148,13 +148,13 @@ export default function HomeView({ user }: { user: User }) {
       collectionGroup(db, 'topics'), 
       where('isPublic', '==', true), 
       orderBy('createdAt', 'desc'),
-      limit(50) // تحديد عدد المواضيع لتجنب جلب بيانات كثيرة
+      limit(50)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedTopics = snapshot.docs.map(doc => ({
         id: doc.id,
-        path: doc.ref.path, // حفظ المسار الكامل للمستند
+        path: doc.ref.path,
         ...doc.data()
       } as Topic));
       setTopics(fetchedTopics);
@@ -162,7 +162,6 @@ export default function HomeView({ user }: { user: User }) {
       setLoading(false);
     }, (err) => {
       console.error("Firestore listener error:", err);
-      // التعامل مع أخطاء Firestore الشائعة
       if (err.code === 'permission-denied') {
         setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان.');
       } else if (err.code === 'failed-precondition') {
@@ -173,7 +172,6 @@ export default function HomeView({ user }: { user: User }) {
       setLoading(false);
     });
     
-    // دالة التنظيف لإلغاء الاشتراك عند مغادرة الصفحة
     return () => unsubscribe();
   }, [user]);
 
@@ -186,7 +184,6 @@ export default function HomeView({ user }: { user: User }) {
   const handleDeleteTopic = async () => {
     if (!topicToDelete) return;
     try {
-      // الحذف باستخدام المسار الكامل للمستند
       await deleteDoc(doc(db, topicToDelete.path));
       toast({
         title: 'تم الحذف',
