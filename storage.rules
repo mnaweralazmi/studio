@@ -1,32 +1,25 @@
-// قواعد Firebase Storage لتأمين رفع الملفات والصور
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // --- قواعد رفع صور المواضيع ---
-    // هذا المسار يؤمن ملفات كل موضوع على حدة.
+    // السماح للمستخدم فقط برفع الملفات في مساره الخاص
+    // القراءة عامة للجميع، يمكن تقييدها للمستخدمين المسجلين فقط
     match /users/{userId}/topics/{topicId}/{allPaths=**} {
-      // السماح بالكتابة (الرفع) فقط إذا كان المستخدم هو مالك هذا المسار.
       allow write: if request.auth != null && request.auth.uid == userId;
-
-      // السماح بالقراءة للجميع (ملفات عامة).
       // لتقييد القراءة للمستخدمين المسجلين فقط، غيّر السطر التالي إلى:
       // allow read: if request.auth != null;
       allow read: if true;
     }
 
-    // --- مثال لقواعد رفع صورة شخصية (Avatar) ---
-    // مسار مخصص لصور المستخدمين الشخصية.
+    // مثال لمسار صور المستخدم الشخصية
     match /users/{userId}/avatar/{allPaths=**} {
-       // السماح بالكتابة (الرفع) فقط إذا كان المستخدم هو مالك هذا المسار.
-      allow write: if request.auth != null && request.auth.uid == userId;
-
-      // السماح بالقراءة للجميع.
-      allow read: if true;
+       allow write: if request.auth != null && request.auth.uid == userId;
+       // لتقييد القراءة للمستخدمين المسجلين فقط، غيّر السطر التالي إلى:
+       // allow read: if request.auth != null;
+       allow read: if true;
     }
 
-    // --- حظر جميع المسارات الأخرى ---
-    // أي مسار لا يتطابق مع القواعد أعلاه سيكون محظورًا للقراءة والكتابة.
+    // منع الوصول إلى جميع المسارات الأخرى بشكل افتراضي
     match /{allPaths=**} {
       allow read, write: if false;
     }

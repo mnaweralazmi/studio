@@ -1,52 +1,27 @@
-// قواعد Firestore هذه مصممة لتأمين بيانات المستخدمين والسماح بعرض المواضيع العامة.
-// لتقييد قراءة المواضيع العامة للمستخدمين المسجلين فقط،
-// غيّر 'allow read: if resource.data.isPublic == true;'
-// إلى 'allow read: if request.auth != null && resource.data.isPublic == true;'.
-
+// لتقييد القراءة للمسجلين فقط، غيّر `allow read` إلى `if request.auth != null;` في القواعد المناسبة.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- القاعدة الخاصة باستعلام collectionGroup على "topics" ---
-    // هذه القاعدة تسمح لأي شخص (مسجل أو غير مسجل) بقراءة أي مستند في أي مجموعة "topics"
-    // بشرط أن يكون الحقل 'isPublic' فيه يساوي 'true'.
-    // هذه القاعدة ضرورية لعملية جلب المواضيع العامة من الصفحة الرئيسية.
-    match /{path=**}/topics/{topicId} {
-      allow read: if resource.data.isPublic == true;
-    }
-
-    // --- قواعد الوصول المباشر لمواضيع المستخدم ---
-    // هذه القاعدة تؤمن الوصول المباشر إلى مستندات المستخدم.
+    // السماح بقراءة المواضيع العامة للجميع، والسماح للمالك بالوصول الكامل
     match /users/{userId}/topics/{topicId} {
-      // السماح بالقراءة في حالتين:
-      // 1. إذا كان الموضوع عامًا (isPublic == true).
-      // 2. إذا كان المستخدم الحالي هو مالك المستند.
       allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
-
-      // السماح بالإنشاء فقط للمستخدم المسجل، ويجب أن يكون هو مالك المستند،
-      // مع التحقق من أن العنوان موجود وهو نص.
-      allow create: if request.auth != null
+      allow create: if request.auth != null 
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.title is string
                     && request.resource.data.title.size() > 1;
-
-      // السماح بالتحديث والحذف فقط لمالك المستند.
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
-    
-    // --- قواعد تأمين بيانات المستخدمين الأخرى ---
-    // تمنع هذه القاعدة أي شخص من قراءة أو كتابة أي مستند آخر
-    // داخل مسار المستخدم إلا المالك نفسه.
+
+    // السماح للمستخدم المسجل فقط بالوصول الكامل إلى بياناته الخاصة
     match /users/{userId}/{document=**} {
        allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // --- قواعد الإشعارات (notifications) ---
-    // تسمح لأي مستخدم مسجل بقراءة الإشعارات.
-    // الكتابة ممنوعة من طرف العميل لمنع إرسال إشعارات مزيفة.
-    match /notifications/{notificationId} {
-        allow read: if request.auth != null;
-        allow write: if false; // الكتابة تتم من طرف الخادم فقط (Admin SDK)
+    // قاعدة ل collectionGroup على 'topics' للسماح بقراءة المواضيع العامة فقط
+    match /{path=**}/topics/{topicId} {
+      allow read: if resource.data.isPublic == true;
     }
+
   }
 }

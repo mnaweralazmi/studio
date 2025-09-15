@@ -23,7 +23,6 @@ import Image from 'next/image';
 import { db, storage, auth } from '@/lib/firebase';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import type { User } from 'firebase/auth';
-import { useCollection } from 'react-firebase-hooks/firestore';
 
 import { Loader2, Newspaper, Trash2, Leaf, Plus, X, Lock, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
