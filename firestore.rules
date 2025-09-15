@@ -1,45 +1,37 @@
 // قواعد أمان Firestore لمشروع kuwaity-farm
-// هذه القواعد تضمن أن بيانات المستخدمين معزولة وآمنة،
-// مع السماح بقراءة المواضيع العامة من قبل أي شخص (حتى الزوار).
-// لتقييد القراءة للمستخدمين المسجلين فقط، قم بتغيير "allow read: if true;"
-// إلى "allow read: if request.auth != null;".
-
+// لتقييد قراءة المواضيع العامة للمستخدمين المسجلين فقط، غيّر `resource.data.isPublic == true`
+// إلى `request.auth != null && resource.data.isPublic == true` في القاعدة أدناه.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- قواعد خاصة بمجموعة 'topics' لتمكين الاستعلام العام ---
-    // هذه القاعدة ضرورية لعمل collectionGroup('topics') بشكل صحيح.
-    // هي تسمح بقراءة أي مستند في أي مجموعة فرعية اسمها 'topics' إذا كان الحقل isPublic صحيحًا.
-    match /{path=**}/topics/{topicId} {
-      allow read: if resource.data.isPublic == true;
-    }
-    
-    // --- قواعد خاصة ببيانات المستخدمين ---
-    // تضمن هذه القاعدة أن المستخدم يمكنه فقط الوصول إلى بياناته الخاصة.
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
 
-    // --- قواعد مفصلة للمواضيع داخل بيانات المستخدم ---
-    // هذه القواعد توفر تحكمًا دقيقًا في القراءة والكتابة للمواضيع.
+    // القاعدة الخاصة بمواضيع المستخدمين
     match /users/{userId}/topics/{topicId} {
-      // السماح بالقراءة إذا كان الموضوع عامًا (مكرر للوصول المباشر) أو إذا كان المستخدم هو المالك.
+      // السماح بالقراءة:
+      // 1. إذا كان الموضوع عامًا (isPublic == true).
+      // 2. أو إذا كان المستخدم هو مالك الموضوع.
       allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
-      
-      // السماح بالكتابة (إنشاء، تحديث، حذف) فقط للمالك.
-      allow write: if request.auth != null && request.auth.uid == userId;
-      
-      // قواعد أكثر تفصيلاً (اختياري لكن موصى به)
-      // allow create: if request.auth != null && request.auth.uid == request.resource.data.userId
-      //             && request.resource.data.title is string
-      //             && request.resource.data.title.size() > 1;
-      // allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // السماح بالإنشاء:
+      // 1. يجب أن يكون المستخدم مسجلاً للدخول.
+      // 2. يجب أن يكون userId في المستند الجديد مطابقًا لـ uid الخاص بالمستخدم.
+      // 3. يجب أن يكون العنوان نصيًا وأطول من حرف واحد.
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 1;
+
+      // السماح بالتحديث والحذف فقط لمالك الموضوع.
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
-    // قاعدة لحماية أي مجموعات بيانات أخرى قد تنشئها في المستقبل
-    match /{document=**} {
-      allow read, write: if false;
+    // قاعدة خاصة ومهمة لدعم استعلام collectionGroup على 'topics'
+    // هذه القاعدة تسمح فقط بقراءة المواضيع التي تحمل علامة 'isPublic'
+    match /{path=**}/topics/{topicId} {
+        allow read: if resource.data.isPublic == true;
     }
+    
+    // يمكنك إضافة قواعد لمجموعات أخرى هنا
+    // match /posts/{postId} { ... }
   }
 }

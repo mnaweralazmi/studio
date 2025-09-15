@@ -13,6 +13,8 @@ import {
   collectionGroup,
   where,
   serverTimestamp,
+  getDocs,
+  limit,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -41,9 +43,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 type Topic = {
   id: string;
+  path: string; // المسار الكامل للمستند
   title: string;
   description: string;
   imageUrl?: string;
@@ -53,25 +58,74 @@ type Topic = {
   authorName?: string;
 };
 
+// --- دالة إنشاء الموضوع مع رفع الملف ---
+async function createTopicWithFile(
+  title: string,
+  description: string,
+  file: File | undefined,
+  isPublic: boolean
+): Promise<string> {
+  const currentUser = auth.currentUser;
+  // 1. التحقق من وجود مستخدم مسجل
+  if (!currentUser) {
+    throw new Error('يجب تسجيل الدخول لإنشاء موضوع.');
+  }
+
+  let topicRef;
+  const userTopicsCollection = collection(db, 'users', currentUser.uid, 'topics');
+
+  try {
+    // 2. إنشاء مستند الموضوع أولاً بدون رابط الصورة للحصول على ID فريد
+    topicRef = await addDoc(userTopicsCollection, {
+      title: title.trim(),
+      description: description.trim(),
+      userId: currentUser.uid,
+      authorName: currentUser.displayName || 'مستخدم غير معروف',
+      isPublic: isPublic,
+      createdAt: serverTimestamp(),
+      imageUrl: null, // سيتم التحديث لاحقًا
+    });
+
+    // 3. إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد
+    if (file) {
+      // بناء مسار آمن ومتوافق مع storage.rules
+      const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
+      const fileRef = ref(storage, filePath);
+      
+      // رفع الملف
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
+
+      // 4. تحديث المستند الأصلي برابط الصورة بعد نجاح الرفع
+      await updateDoc(topicRef, { imageUrl: downloadURL });
+      return downloadURL; // إرجاع رابط الصورة
+    }
+
+    return topicRef.id; // إرجاع معرّف الموضوع
+  } catch (error) {
+    // تنظيف: إذا فشلت العملية بعد إنشاء المستند، قم بحذفه
+    if (topicRef) {
+      await deleteDoc(doc(userTopicsCollection, topicRef.id));
+    }
+    // إرجاع الخطأ ليتم التعامل معه في الواجهة
+    throw error;
+  }
+}
+
+
 export default function HomeView({ user }: { user: User }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
+
+  // --- State لعرض المواضيع والأخطاء ---
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // الخطوة 1: الاستماع إلى المواضيع العامة باستخدام collectionGroup
-  // هذا الاستعلام يبحث في كل مجموعات 'topics' الفرعية داخل قاعدة البيانات
-  // ويعرض فقط تلك التي تحمل علامة 'isPublic == true'.
-  const [topicsSnapshot, loading] = useCollection(
-    query(
-      collectionGroup(db, 'topics'), 
-      where('isPublic', '==', true), 
-      orderBy('createdAt', 'desc')
-    )
-  );
-
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [topicToDelete, setTopicToDelete] = useState<{ id: string; path: string } | null>(null);
+  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
 
-  // State for AddTopicDialog
+  // --- State لنموذج إضافة موضوع ---
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -80,18 +134,51 @@ export default function HomeView({ user }: { user: User }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const topics = useMemo(
-    () =>
-      topicsSnapshot?.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Topic)
-      ) || [],
-    [topicsSnapshot]
-  );
+  // --- Hook لجلب المواضيع العامة باستخدام collectionGroup ---
+  useEffect(() => {
+    // التأكد من أن المستخدم مسجل للدخول قبل بدء الاستماع
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const q = query(
+      collectionGroup(db, 'topics'), 
+      where('isPublic', '==', true), 
+      orderBy('createdAt', 'desc'),
+      limit(50) // تحديد عدد المواضيع لتجنب جلب بيانات كثيرة
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedTopics = snapshot.docs.map(doc => ({
+        id: doc.id,
+        path: doc.ref.path, // حفظ المسار الكامل للمستند
+        ...doc.data()
+      } as Topic));
+      setTopics(fetchedTopics);
+      setError(null);
+      setLoading(false);
+    }, (err) => {
+      console.error("Firestore listener error:", err);
+      // التعامل مع أخطاء Firestore الشائعة
+      if (err.code === 'permission-denied') {
+        setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان.');
+      } else if (err.code === 'failed-precondition') {
+        setError('خطأ: هذا الاستعلام يتطلب فهرسًا مركبًا. يرجى إنشاء الفهرس المطلوب في لوحة تحكم Firebase.');
+      } else {
+        setError('حدث خطأ أثناء جلب المواضيع.');
+      }
+      setLoading(false);
+    });
+    
+    // دالة التنظيف لإلغاء الاشتراك عند مغادرة الصفحة
+    return () => unsubscribe();
+  }, [user]);
+
 
   const openDeleteConfirmation = (topic: Topic) => {
-    // بناء المسار الصحيح للمستند المطلوب حذفه
-    const path = `users/${topic.userId}/topics/${topic.id}`;
-    setTopicToDelete({ id: topic.id, path });
+    setTopicToDelete(topic);
     setShowDeleteConfirm(true);
   };
 
@@ -106,16 +193,10 @@ export default function HomeView({ user }: { user: User }) {
         className: 'bg-green-600 text-white',
       });
     } catch (e: any) {
-      console.error('Error deleting topic: ', e);
-      let description = 'لم نتمكن من حذف الموضوع.';
-      // قواعد الأمان ستمنع هذا، لكن من الجيد التعامل معه
-      if (e.code === 'permission-denied') {
-        description = 'ليس لديك الصلاحية لحذف هذا الموضوع.';
-      }
       toast({
         variant: 'destructive',
         title: 'خطأ في الحذف',
-        description,
+        description: e.message || 'لم نتمكن من حذف الموضوع.',
       });
     } finally {
       setShowDeleteConfirm(false);
@@ -124,16 +205,11 @@ export default function HomeView({ user }: { user: User }) {
   };
 
   const canDelete = (topic: Topic) => {
-    if (!user) return false;
-    // يمكن للمشرف أو مالك الموضوع فقط الحذف
     return isAdmin || topic.userId === user.uid;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (preview) {
-      URL.revokeObjectURL(preview);
-    }
-    
+    if (preview) URL.revokeObjectURL(preview);
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
@@ -145,9 +221,7 @@ export default function HomeView({ user }: { user: User }) {
   };
 
   const clearFile = useCallback(() => {
-    if (preview) {
-      URL.revokeObjectURL(preview);
-    }
+    if (preview) URL.revokeObjectURL(preview);
     setFile(undefined);
     setPreview(undefined);
     const fileInput = document.getElementById('idea-file') as HTMLInputElement;
@@ -160,66 +234,25 @@ export default function HomeView({ user }: { user: User }) {
     setIsPublic(true);
     clearFile();
   }, [clearFile]);
-
+  
   useEffect(() => {
-    return () => {
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
-    };
+    return () => { if (preview) URL.revokeObjectURL(preview); };
   }, [preview]);
 
-  // الخطوة 2: تطبيق منطق الرفع الآمن (إنشاء المستند أولاً)
   const handleSave = async () => {
-    const currentUser = auth.currentUser;
-    // التحقق من وجود مستخدم مسجل قبل أي عملية
-    if (!currentUser) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'يجب أن تكون مسجلاً للدخول للنشر.' });
-      return;
-    }
-
     if (!title.trim()) {
       toast({ variant: 'destructive', title: 'خطأ', description: 'عنوان الموضوع مطلوب.' });
       return;
     }
     setIsSaving(true);
     
-    let topicRef;
-    // تحديد المسار الصحيح لمجموعة المواضيع الخاصة بالمستخدم
-    const userTopicsCollection = collection(db, "users", currentUser.uid, "topics");
-
     try {
-      // الخطوة 2.1: إنشاء مستند الموضوع أولاً بدون رابط الصورة للحصول على ID فريد.
-      topicRef = await addDoc(userTopicsCollection, {
-        title: title.trim(),
-        description: description.trim(),
-        userId: currentUser.uid, // هذا الحقل ضروري لقواعد الأمان
-        authorName: currentUser.displayName || 'مستخدم غير معروف',
-        isPublic: isPublic,
-        createdAt: serverTimestamp(),
-        // سيتم إضافة imageUrl لاحقًا
-      });
-
-      // الخطوة 2.2: إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد.
-      if (file) {
-        // بناء مسار آمن ومتوافق مع storage.rules
-        const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
-        const fileRef = ref(storage, filePath);
-        
-        // رفع الملف (سيتم التحقق من الصلاحيات هنا بواسطة قواعد التخزين)
-        await uploadBytes(fileRef, file);
-        const downloadURL = await getDownloadURL(fileRef);
-
-        // الخطوة 2.3: تحديث المستند الأصلي برابط الصورة بعد نجاح الرفع.
-        await updateDoc(topicRef, { imageUrl: downloadURL });
-      }
-
+      await createTopicWithFile(title, description, file, isPublic);
       toast({
         title: 'تم النشر بنجاح!',
         description: `تمت إضافة موضوعك "${title}" بنجاح.`,
         className: 'bg-green-600 text-white',
       });
-
       clearForm();
       setDialogOpen(false);
     } catch (e: any) {
@@ -229,11 +262,6 @@ export default function HomeView({ user }: { user: User }) {
         description = 'ليس لديك الصلاحية لرفع الملفات أو إنشاء الموضوع. تحقق من قواعد الأمان.';
       }
       toast({ variant: 'destructive', title: 'خطأ في النشر', description });
-
-      // تنظيف: إذا فشلت العملية بعد إنشاء المستند، قم بحذفه لمنع وجود بيانات معلقة.
-      if (topicRef) {
-        await deleteDoc(doc(userTopicsCollection, topicRef.id));
-      }
     } finally {
       setIsSaving(false);
     }
@@ -243,7 +271,7 @@ export default function HomeView({ user }: { user: User }) {
   return (
     <div className="space-y-12">
       <header className="text-center space-y-4 pt-8">
-        <div className="flex justify-center">
+         <div className="flex justify-center">
           <Badge
             variant="outline"
             className="border-primary/30 bg-primary/10 text-primary-foreground text-sm py-1 px-4"
@@ -267,12 +295,7 @@ export default function HomeView({ user }: { user: User }) {
           <div className="flex items-center gap-2">
             <Dialog
               open={dialogOpen}
-              onOpenChange={(isOpen) => {
-                setDialogOpen(isOpen);
-                if (!isOpen) {
-                  clearForm();
-                }
-              }}
+              onOpenChange={(isOpen) => { setDialogOpen(isOpen); if (!isOpen) clearForm(); }}
             >
               <DialogTrigger asChild>
                 <Button className="bg-green-600 hover:bg-green-700">
@@ -283,56 +306,26 @@ export default function HomeView({ user }: { user: User }) {
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>أضف فكرة أو موضوع جديد</DialogTitle>
-                  <DialogDescription>
-                    شارك فكرة، نصيحة، أو سؤال مع مجتمع المزارعين.
-                  </DialogDescription>
+                  <DialogDescription>شارك فكرة، نصيحة، أو سؤال مع مجتمع المزارعين.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="idea-title">عنوان الموضوع</Label>
-                    <Input
-                      id="idea-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="مثال: أفضل طريقة لتسميد الطماطم"
-                    />
+                    <Input id="idea-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: أفضل طريقة لتسميد الطماطم" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="idea-description">الوصف (اختياري)</Label>
-                    <Textarea
-                      id="idea-description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="اشرح فكرتك بتفصيل أكبر..."
-                    />
+                    <Textarea id="idea-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="اشرح فكرتك بتفصيل أكبر..." />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="idea-file">صورة أو فيديو (اختياري)</Label>
-                    <Input
-                      id="idea-file"
-                      type="file"
-                      onChange={handleFileChange}
-                      accept="image/*,video/*"
-                    />
+                    <Input id="idea-file" type="file" onChange={handleFileChange} accept="image/*,video/*" />
                   </div>
                   {preview && (
                     <div className="relative">
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6 z-10"
-                        onClick={clearFile}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={clearFile}><X className="h-4 w-4" /></Button>
                       {file?.type.startsWith('image/') ? (
-                        <Image
-                          src={preview}
-                          alt="Preview"
-                          width={400}
-                          height={225}
-                          className="rounded-md object-cover w-full aspect-video"
-                        />
+                        <Image src={preview} alt="Preview" width={400} height={225} className="rounded-md object-cover w-full aspect-video" />
                       ) : (
                         <video src={preview} controls className="rounded-md w-full" />
                       )}
@@ -346,15 +339,9 @@ export default function HomeView({ user }: { user: User }) {
                   </div>
                 </div>
                 <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">إلغاء</Button>
-                  </DialogClose>
+                  <DialogClose asChild><Button variant="outline">إلغاء</Button></DialogClose>
                   <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                    ) : (
-                      <Plus className="h-4 w-4 ml-2" />
-                    )}
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
                     {isSaving ? 'جاري النشر...' : 'نشر الموضوع'}
                   </Button>
                 </DialogFooter>
@@ -367,31 +354,30 @@ export default function HomeView({ user }: { user: User }) {
         {loading && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            <h2 className="mt-4 text-xl font-semibold">
-              جاري تحميل المواضيع...
-            </h2>
+            <h2 className="mt-4 text-xl font-semibold">جاري تحميل المواضيع...</h2>
           </div>
         )}
 
-        {!loading && topics.length === 0 && (
+        {error && (
+            <Alert variant="destructive" className="my-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>حدث خطأ</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
+
+        {!loading && !error && topics.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
-            <h2 className="mt-4 text-xl font-semibold">
-              لا توجد مواضيع لعرضها حاليًا
-            </h2>
-            <p className="text-muted-foreground mt-2">
-              كن أول من يشارك فكرة أو موضوعًا جديدًا!
-            </p>
+            <h2 className="mt-4 text-xl font-semibold">لا توجد مواضيع لعرضها حاليًا</h2>
+            <p className="text-muted-foreground mt-2">كن أول من يشارك فكرة أو موضوعًا جديدًا!</p>
           </div>
         )}
 
-        {!loading && topics.length > 0 && (
+        {!loading && !error && topics.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             {topics.map((topic) => (
-              <Card
-                key={topic.id}
-                className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-border shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1"
-              >
+              <Card key={topic.id} className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-border shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
                 <div className="absolute top-2 right-2 z-10">
                    {topic.isPublic ? (
                       <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"><Globe className="h-3 w-3 ml-1" />عام</Badge>
@@ -401,24 +387,13 @@ export default function HomeView({ user }: { user: User }) {
                 </div>
                 {canDelete(topic) && (
                   <div className="absolute top-2 left-2 z-10 flex gap-2">
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => openDeleteConfirmation(topic)}
-                    >
+                    <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openDeleteConfirmation(topic)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
                 {topic.imageUrl ? (
-                  <Image
-                    src={topic.imageUrl}
-                    alt={topic.title || 'Topic Image'}
-                    width={400}
-                    height={200}
-                    className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <Image src={topic.imageUrl} alt={topic.title || 'Topic Image'} width={400} height={200} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
                   <div className="w-full h-40 bg-secondary flex items-center justify-center">
                     <Newspaper className="h-10 w-10 text-muted-foreground" />
@@ -426,16 +401,10 @@ export default function HomeView({ user }: { user: User }) {
                 )}
                 <CardHeader>
                   <CardTitle className="text-lg">{topic.title}</CardTitle>
-                  {topic.authorName && (
-                    <p className="text-xs text-muted-foreground">
-                      بواسطة: {topic.authorName}
-                    </p>
-                  )}
+                  {topic.authorName && (<p className="text-xs text-muted-foreground">بواسطة: {topic.authorName}</p>)}
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground text-sm line-clamp-2">
-                    {topic.description}
-                  </p>
+                  <p className="text-muted-foreground text-sm line-clamp-2">{topic.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -447,18 +416,11 @@ export default function HomeView({ user }: { user: User }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>تأكيد الحذف</DialogTitle>
-            <DialogDescription>
-              هل أنت متأكد من رغبتك في حذف هذا الموضوع بشكل نهائي؟ لا يمكن
-              التراجع عن هذا الإجراء.
-            </DialogDescription>
+            <DialogDescription>هل أنت متأكد من رغبتك في حذف هذا الموضوع بشكل نهائي؟ لا يمكن التراجع عن هذا الإجراء.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">إلغاء</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleDeleteTopic}>
-              نعم، قم بالحذف
-            </Button>
+            <DialogClose asChild><Button variant="outline">إلغاء</Button></DialogClose>
+            <Button variant="destructive" onClick={handleDeleteTopic}>نعم، قم بالحذف</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
