@@ -18,7 +18,11 @@ import {
   limit,
   onSnapshot,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
 import Image from 'next/image';
 import { db, storage, auth } from '@/lib/firebase';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -120,6 +124,8 @@ export default function HomeView({ user }: { user: User }) {
 
   // --- State لعرض المواضيع والأخطاء ---
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [publicTopics, setPublicTopics] = useState<Topic[]>([]);
+  const [userTopics, setUserTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -134,6 +140,18 @@ export default function HomeView({ user }: { user: User }) {
   const [preview, setPreview] = useState<string | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  const handleSnapshotError = useCallback((err: any) => {
+      console.error("Firestore snapshot error:", err);
+      if (err.code === 'permission-denied') {
+          setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان في Firestore.');
+      } else if (err.code === 'failed-precondition') {
+          setError('خطأ: هذا الاستعلام يتطلب فهرسًا مركبًا. يرجى إنشاء الفهرس المطلوب في لوحة تحكم Firebase.');
+      } else {
+          setError('حدث خطأ أثناء جلب المواضيع.');
+      }
+      setLoading(false);
+  }, []);
 
   // --- Hook لجلب المواضيع العامة ومواضيع المستخدم ---
   useEffect(() => {
@@ -158,57 +176,25 @@ export default function HomeView({ user }: { user: User }) {
       where('isPublic', '==', false),
       orderBy('createdAt', 'desc')
     );
-
-    let publicTopics: Topic[] = [];
-    let userTopics: Topic[] = [];
-    
-    // --- دالة لدمج وفرز النتائج وتحديث الواجهة ---
-    const processAndSetTopics = () => {
-       const allTopicsMap = new Map<string, Topic>();
-       
-       // إضافة المواضيع العامة أولاً
-       publicTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
-       // إضافة مواضيع المستخدم الخاصة
-       userTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
-
-       const combinedTopics = Array.from(allTopicsMap.values());
-       
-       // فرز كل المواضيع حسب تاريخ الإنشاء لضمان الترتيب الصحيح
-       combinedTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-
-       setTopics(combinedTopics);
-       setError(null); // مسح أي أخطاء سابقة عند النجاح
-       setLoading(false);
-    };
-
-    const handleSnapshotError = (err: any) => {
-        console.error("Firestore snapshot error:", err);
-        if (err.code === 'permission-denied') {
-            setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان في Firestore.');
-        } else if (err.code === 'failed-precondition') {
-            setError('خطأ: هذا الاستعلام يتطلب فهرسًا مركبًا. يرجى إنشاء الفهرس المطلوب في لوحة تحكم Firebase.');
-        } else {
-            setError('حدث خطأ أثناء جلب المواضيع.');
-        }
-        setLoading(false);
-    };
     
     const unsubscribePublic = onSnapshot(publicQuery, (snapshot) => {
-      publicTopics = snapshot.docs.map(doc => ({
+      const fetchedTopics = snapshot.docs.map(doc => ({
         id: doc.id,
         path: doc.ref.path,
         ...doc.data()
       } as Topic));
-      processAndSetTopics();
+      setPublicTopics(fetchedTopics);
+      setError(null);
     }, handleSnapshotError);
 
     const unsubscribeUser = onSnapshot(userQuery, (snapshot) => {
-        userTopics = snapshot.docs.map(doc => ({
+        const fetchedTopics = snapshot.docs.map(doc => ({
             id: doc.id,
             path: doc.ref.path,
             ...doc.data()
         } as Topic));
-        processAndSetTopics();
+        setUserTopics(fetchedTopics);
+        setError(null);
     }, handleSnapshotError);
     
     // --- تنظيف المستمعين عند مغادرة المكون ---
@@ -216,7 +202,28 @@ export default function HomeView({ user }: { user: User }) {
         unsubscribePublic();
         unsubscribeUser();
     };
-  }, [user]);
+  }, [user, handleSnapshotError]);
+
+  // --- Effect لدمج المصدرين وتحديث الواجهة ---
+  useEffect(() => {
+      const allTopicsMap = new Map<string, Topic>();
+       
+      // إضافة المواضيع العامة أولاً
+      publicTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
+      // إضافة مواضيع المستخدم الخاصة (إذا كان للمستخدم مواضيع، ستستبدل أي نسخة عامة موجودة)
+      userTopics.forEach(topic => allTopicsMap.set(topic.id, topic));
+
+      const combinedTopics = Array.from(allTopicsMap.values());
+       
+      // فرز كل المواضيع حسب تاريخ الإنشاء لضمان الترتيب الصحيح
+      combinedTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+      setTopics(combinedTopics);
+      // توقف التحميل فقط بعد أول عملية جلب ناجحة
+      if (loading) {
+         setLoading(false);
+      }
+  }, [publicTopics, userTopics, loading]);
 
 
   const openDeleteConfirmation = (topic: Topic) => {
