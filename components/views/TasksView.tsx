@@ -5,7 +5,7 @@ import {
   Loader2,
   CalendarIcon
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -78,10 +78,16 @@ function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, '
                     <Label htmlFor="task-description">وصف المهمة (اختياري)</Label>
                     <Textarea id="task-description" placeholder="تفاصيل إضافية عن المهمة" value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="task-date">تاريخ المهمة</Label>
-                        <Input type="date" id="task-date" value={date ? format(date, 'yyyy-MM-dd') : ''} onChange={(e) => setDate(e.target.value ? new Date(e.target.value) : undefined)} />
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2 flex flex-col">
+                        <Label>تاريخ المهمة</Label>
+                        <Calendar
+                            mode="single"
+                            selected={date}
+                            onSelect={setDate}
+                            className="rounded-md border self-center"
+                            locale={ar}
+                            />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="task-time">وقت التذكير</Label>
@@ -217,12 +223,12 @@ export default function TasksView() {
         </div>
       ) : (
       <div>
-        <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="calendar" className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />التقويم</TabsTrigger>
-            <TabsTrigger value="today">مهام اليوم ({todayTasks.length})</TabsTrigger>
-            <TabsTrigger value="all">كل المهام ({upcomingTasks.length})</TabsTrigger>
-            <TabsTrigger value="completed">المهام المنجزة ({completedTasks.length})</TabsTrigger>
+        <Tabs defaultValue="calendar" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+              <TabsTrigger value="calendar" className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />التقويم</TabsTrigger>
+              <TabsTrigger value="today">مهام اليوم ({todayTasks.length})</TabsTrigger>
+              <TabsTrigger value="all">كل المهام ({upcomingTasks.length})</TabsTrigger>
+              <TabsTrigger value="completed">المنجزة ({completedTasks.length})</TabsTrigger>
             </TabsList>
             
             <TabsContent value="calendar" className="mt-6">

@@ -1163,7 +1163,7 @@ function AgricultureView({ user }) {
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="expenses" className="flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
-          المصاريف الزراعية
+          المصاريف
         </TabsTrigger>
         <TabsTrigger value="sales" className="flex items-center gap-2">
           <ShoppingCart className="h-4 w-4" />
@@ -1914,7 +1914,7 @@ function LivestockView({ user }) {
         </TabsTrigger>
         <TabsTrigger value="herds" className="flex items-center gap-2">
           <GitCommit className="h-4 w-4 rotate-90" />
-          القطيع
+          القطعان
         </TabsTrigger>
       </TabsList>
       <TabsContent value="expenses" className="mt-6">
@@ -1955,7 +1955,7 @@ export default function ManagementView() {
     if (tab && availableTabs.some(t => t.value === tab)) {
       setSelectedSection(tab);
     }
-  }, [tab]);
+  }, [tab, availableTabs]);
 
   
   return (

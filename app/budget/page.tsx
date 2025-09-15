@@ -29,7 +29,7 @@ export default function BudgetPage() {
 
   return (
     <div className="pb-24">
-      <main className="px-4 pt-4">
+      <main className="px-4 pt-4 container mx-auto">
         <BudgetView />
       </main>
       <AppFooter activeView="budget" />

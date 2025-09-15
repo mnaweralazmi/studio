@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   collection,
   query,
@@ -60,17 +59,16 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 type Topic = {
   id: string;
-  path: string; // المسار الكامل للمستند
+  path: string;
   title?: string;
   description?: string;
   imageUrl?: string;
   isPublic?: boolean;
-  createdAt?: { seconds?: number; toMillis: () => number } | any; // Timestamp can be complex
+  createdAt?: { seconds?: number; toMillis: () => number } | any;
   userId?: string;
   authorName?: string;
   [k: string]: any;
 };
-
 
 // --- دالة إنشاء الموضوع مع رفع الملف ---
 async function createTopicWithFile(
@@ -85,7 +83,6 @@ async function createTopicWithFile(
   }
 
   let topicRef;
-  // --- إنشاء مرجع لمجموعة المواضيع الخاصة بالمستخدم ---
   const userTopicsCollection = collection(
     db,
     'users',
@@ -94,7 +91,6 @@ async function createTopicWithFile(
   );
 
   try {
-    // 1. إنشاء مستند الموضوع أولاً بدون رابط الصورة للحصول على ID فريد
     topicRef = await addDoc(userTopicsCollection, {
       title: title.trim(),
       description: description.trim(),
@@ -102,31 +98,24 @@ async function createTopicWithFile(
       authorName: currentUser.displayName || 'مستخدم غير معروف',
       isPublic: isPublic,
       createdAt: serverTimestamp(),
-      imageUrl: null, // سيتم التحديث لاحقًا
+      imageUrl: null,
     });
 
     let imageUrl: string | undefined = undefined;
 
-    // 2. إذا كان هناك ملف، قم برفعه باستخدام ID المستند الجديد
     if (file) {
       const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
       const fileRef = ref(storage, filePath);
-
-      // --- رفع الملف إلى Firebase Storage ---
       await uploadBytes(fileRef, file);
       imageUrl = await getDownloadURL(fileRef);
-
-      // 3. تحديث المستند الأصلي برابط الصورة بعد نجاح الرفع
       await updateDoc(topicRef, { imageUrl: imageUrl });
     }
 
-    return { topicId: topicRef.id, imageUrl }; // إرجاع المعرف والرابط
+    return { topicId: topicRef.id, imageUrl };
   } catch (error) {
-    // تنظيف: إذا فشلت العملية بعد إنشاء المستند، قم بحذفه لمنع البيانات المعلقة
     if (topicRef) {
       await deleteDoc(doc(userTopicsCollection, topicRef.id));
     }
-    // إرجاع الخطأ ليتم التعامل معه في الواجهة
     throw error;
   }
 }
@@ -170,7 +159,6 @@ export default function HomeView({ user }: { user: User }) {
     let publicUnsub: Unsubscribe | null = null;
     let userUnsub: Unsubscribe | null = null;
 
-    // --- مستمع المواضيع العامة (collectionGroup) ---
     try {
       const publicQ = query(
         collectionGroup(db, 'topics'),
@@ -182,23 +170,19 @@ export default function HomeView({ user }: { user: User }) {
         publicQ,
         (snap: QuerySnapshot<DocumentData>) => {
           const arr: Topic[] = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...(d.data() as any) }));
-          console.log('[publicTopics] snapshot received, count=', arr.length);
           setPublicTopics(arr);
           if (!publicLoaded) setPublicLoaded(true);
         },
         (e) => {
-          console.error('[publicTopics] snapshot error:', e);
           handleSnapshotError(e, 'publicTopics');
           if (!publicLoaded) setPublicLoaded(true);
         }
       );
     } catch (e) {
-      console.error('publicTopics setup failed:', e);
       handleSnapshotError(e, 'publicTopics-setup');
       setPublicLoaded(true);
     }
 
-    // --- مستمع مواضيع المستخدم (users/{uid}/topics) ---
     try {
       if (user) {
         const userQ = query(
@@ -210,22 +194,18 @@ export default function HomeView({ user }: { user: User }) {
           userQ,
           (snap: QuerySnapshot<DocumentData>) => {
             const arr: Topic[] = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...(d.data() as any) }));
-            console.log('[userTopics] snapshot received, count=', arr.length);
             setUserTopics(arr);
             if (!userLoaded) setUserLoaded(true);
           },
           (e) => {
-            console.error('[userTopics] snapshot error:', e);
             handleSnapshotError(e, 'userTopics');
             if (!userLoaded) setUserLoaded(true);
           }
         );
       } else {
-        console.log('[userTopics] no user provided (treat as loaded)');
         setUserLoaded(true);
       }
     } catch (e) {
-      console.error('userTopics setup failed:', e);
       handleSnapshotError(e, 'userTopics-setup');
       setUserLoaded(true);
     }
@@ -236,7 +216,6 @@ export default function HomeView({ user }: { user: User }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, user]);
-
 
   useEffect(() => {
     if (!publicLoaded || !userLoaded) return;
@@ -256,7 +235,6 @@ export default function HomeView({ user }: { user: User }) {
     setLoading(false);
   }, [publicLoaded, userLoaded, publicTopics, userTopics]);
 
-
    useEffect(() => {
     const timeoutMs = 12000;
     const t = setTimeout(() => {
@@ -271,7 +249,6 @@ export default function HomeView({ user }: { user: User }) {
 
     return () => clearTimeout(t);
   }, [loading, error]);
-
 
   const openDeleteConfirmation = (topic: Topic) => {
     setTopicToDelete(topic);
@@ -300,7 +277,7 @@ export default function HomeView({ user }: { user: User }) {
   };
 
   const canDelete = (topic: Topic) => {
-    return isAdmin || topic.userId === user.uid;
+    return isAdmin || (user && topic.userId === user.uid);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -628,5 +605,3 @@ export default function HomeView({ user }: { user: User }) {
     </div>
   );
 }
-
-    
