@@ -158,46 +158,39 @@ export default function HomeView({ user }: { user: User }) {
   const handleSave = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      toast({
-        variant: 'destructive',
-        title: 'خطأ',
-        description: 'يجب أن تكون مسجلاً للدخول للنشر.',
-      });
+      toast({ variant: 'destructive', title: 'خطأ', description: 'يجب أن تكون مسجلاً للدخول للنشر.' });
       return;
     }
 
     if (!title.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'خطأ',
-        description: 'عنوان الموضوع مطلوب.',
-      });
+      toast({ variant: 'destructive', title: 'خطأ', description: 'عنوان الموضوع مطلوب.' });
       return;
     }
     setIsSaving(true);
+    
+    let topicRef;
     try {
-      const authorName = currentUser.displayName || 'مستخدم غير معروف';
-
-      // Step 1: Create the document in Firestore first to get an ID
-      const topicRef = await addDoc(collection(db, 'topics'), {
-        title: title,
-        description: description,
+      // الخطوة 1: إنشاء المستند في Firestore أولاً للحصول على ID
+      topicRef = await addDoc(collection(db, 'topics'), {
+        title: title.trim(),
+        description: description.trim(),
         ownerId: currentUser.uid,
-        authorName: authorName,
+        authorName: currentUser.displayName || 'مستخدم غير معروف',
         createdAt: Timestamp.now(),
-        // imageUrl and videoUrl will be added later
+        // سيتم إضافة imageUrl أو videoUrl لاحقاً
       });
 
-      // Step 2: If there is a file, upload it using the document ID in the path
+      // الخطوة 2: إذا كان هناك ملف، قم برفعه باستخدام ID المستند
       if (file) {
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        // Correct, secure path that matches storage.rules
+        // بناء المسار الآمن الذي يتوافق مع قواعد الأمان
         const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
         const fileRef = ref(storage, filePath);
+        
         await uploadBytes(fileRef, file);
         const downloadURL = await getDownloadURL(fileRef);
 
-        // Step 3: Update the document with the file URL
+        // الخطوة 3: تحديث المستند الأصلي برابط الملف
         const updateData: DocumentData = { fileType };
         if (fileType === 'image') {
           updateData.imageUrl = downloadURL;
@@ -219,14 +212,14 @@ export default function HomeView({ user }: { user: User }) {
       console.error('Error saving topic: ', e);
       let description = 'لم نتمكن من نشر موضوعك. يرجى المحاولة مرة أخرى.';
       if (e.code === 'storage/unauthorized' || e.code === 'permission-denied') {
-        description =
-          'ليس لديك الصلاحية لرفع الملفات أو إنشاء الموضوع. تحقق من قواعد الأمان.';
+        description = 'ليس لديك الصلاحية لرفع الملفات أو إنشاء الموضوع. تحقق من قواعد الأمان.';
       }
-      toast({
-        variant: 'destructive',
-        title: 'خطأ في النشر',
-        description: description,
-      });
+      toast({ variant: 'destructive', title: 'خطأ في النشر', description });
+
+      // إذا فشلت عملية الرفع، قم بحذف المستند الذي تم إنشاؤه لتجنب البيانات المعلقة
+      if (topicRef) {
+        await deleteDoc(topicRef);
+      }
     } finally {
       setIsSaving(false);
     }

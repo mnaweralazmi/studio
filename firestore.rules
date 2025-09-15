@@ -1,32 +1,38 @@
-
+// قواعد بيانات Firestore لمشروع "مزارع كويتي"
+//
+// الغرض من هذا الملف:
+// 1. تأمين كولكشن 'topics' الخاصة بكل مستخدم.
+// 2. توفير قواعد لكولكشن 'posts' عامة مع صلاحيات محددة.
+//
+// لتغيير صلاحيات القراءة من "عامة" إلى "للمسجلين فقط"،
+// استبدل `allow read: if true;` بـ `allow read: if request.auth != null;`
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Topics Collection
-    match /topics/{topicId} {
-      // Allow any authenticated user to read topics.
-      allow read: if request.auth != null;
-
-      // Allow creating a topic only if the user is authenticated and the ownerId matches their UID.
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-
-      // Allow updating a topic (e.g., to add imageUrl) only by the owner.
-      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
-      
-      // Allow deleting a topic only by the owner.
-      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-    }
-
-    // Notifications (as they were)
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null;
-      allow write: if false; // By default, only backend can write
-    }
-
-    // User data (as it was)
+    // --- قواعد الكولكشن الخاصة بالمستخدمين ---
+    // المسار: /users/{userId}/topics/{topicId}
+    // تسمح هذه القاعدة للمستخدم بالتحكم الكامل في بياناته فقط.
     match /users/{userId}/{documents=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- قواعد الكولكشن العامة للمواضيع ---
+    // المسار: /topics/{topicId}
+    // هذه هي مجموعة المواضيع الرئيسية التي تظهر للجميع.
+    match /topics/{topicId} {
+      // السماح بالقراءة للجميع (يمكن تغييرها إلى `request.auth != null` للمسجلين فقط)
+      allow read: if true;
+
+      // السماح بالإنشاء للمستخدم المسجل فقط، مع التحقق من البيانات
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 1
+                    && request.resource.data.title.size() < 100;
+
+      // السماح بالتحديث والحذف لمالك الموضوع فقط
+      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
   }
 }

@@ -1,12 +1,30 @@
-
+// قواعد Firebase Storage لمشروع "مزارع كويتي"
+//
+// الغرض من هذا الملف:
+// 1. تأمين مسارات رفع الملفات لتكون خاصة بكل مستخدم.
+// 2. السماح بقراءة الملفات بشكل عام.
+//
+// لتغيير صلاحيات القراءة من "عامة" إلى "للمسجلين فقط"،
+// استبدل `allow read: if true;` بـ `allow read: if request.auth != null;`
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Secure rule: Users can only write to a folder matching their UID.
-    // The path in the client code must match this structure.
-    // Example: users/{userId}/topics/{topicId}/{fileName}
-    match /users/{userId}/{allPaths=**} {
-      allow read; // Allow anyone to read files (e.g., to view images in posts)
+
+    // --- قواعد مسار ملفات المواضيع ---
+    // المسار: users/{userId}/topics/{topicId}/{fileName}
+    // يسمح للمستخدم فقط برفع الملفات المرتبطة بمواضيعه.
+    match /users/{userId}/topics/{topicId}/{allPaths=**} {
+      // القراءة عامة للجميع (مثل صور المواضيع)
+      allow read: if true;
+
+      // الكتابة (إنشاء، تحديث، حذف) مسموحة فقط لمالك الحساب
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- مثال: قواعد مسار صور الملف الشخصي (Avatar) ---
+    // المسار: users/{userId}/avatar/{fileName}
+    match /users/{userId}/avatar/{fileName} {
+      allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
