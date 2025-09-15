@@ -1,29 +1,24 @@
-// Firestore security rules (قابلة للنشر)
-// ملاحظة: غيّر شرط allow read إن أردت تقييد القراءة للمسجلين فقط.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // مواضيع المستخدمين: users/{userId}/topics/{topicId}
-    match /users/{userId}/topics/{topicId} {
-      // قراءة عامة فقط إذا isPublic == true، وإلا صاحب الموضوع فقط
-      allow read: if resource.data.isPublic == true
-                  || (request.auth != null && request.auth.uid == userId);
-
-      // إنشاء: فقط المستخدم المسجل ويجب أن يكون userId في الـ request.resource مطابقًا
-      allow create: if request.auth != null
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.title is string
-                    && request.resource.data.title.size() > 1;
-
-      // تحديث/حذف: فقط صاحب الموضوع المسجل
-      allow update, delete: if request.auth != null
-                            && request.auth.uid == resource.data.userId;
+    // القاعدة الأساسية: السماح للمستخدمين بقراءة وكتابة بياناتهم الخاصة فقط
+    match /users/{userId}/{documents=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // منع الوصول إلى بقية المسارات افتراضياً
-    match /{document=**} {
-      allow read, write: if false;
+    // القاعدة الجديدة: السماح لأي شخص بقراءة المواضيع العامة
+    // هذا يسمح لـ collectionGroup query بالعمل على المواضيع التي تحمل علامة 'isPublic'
+    match /{path=**}/topics/{topicId} {
+      allow read: if resource.data.isPublic == true;
+      
+      // السماح للمالك فقط بالتعديل والحذف
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
+
+    // القاعدة القديمة: هذه القاعدة كانت تحد من الوصول وتمنع collectionGroup
+    // match /users/{userId}/topics/{topicId} {
+    //  allow create: if request.auth != null && request.auth.uid == userId;
+    //  allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    // }
   }
 }
