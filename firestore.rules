@@ -1,27 +1,42 @@
-// لتقييد القراءة للمسجلين فقط، غيّر `allow read` إلى `if request.auth != null;` في القواعد المناسبة.
+// This file is auto-generated, do not edit.
 rules_version = '2';
+
+// لتقييد القراءة للمسجلين فقط، غيّر `allow read: if true;` إلى `allow read: if request.auth != null;`
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // السماح بقراءة المواضيع العامة للجميع، والسماح للمالك بالوصول الكامل
-    match /users/{userId}/topics/{topicId} {
-      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
-      allow create: if request.auth != null 
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.title is string
-                    && request.resource.data.title.size() > 1;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-    }
-
-    // السماح للمستخدم المسجل فقط بالوصول الكامل إلى بياناته الخاصة
-    match /users/{userId}/{document=**} {
-       allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // قاعدة ل collectionGroup على 'topics' للسماح بقراءة المواضيع العامة فقط
+    
+    // ---
+    // القواعد الخاصة بـ collectionGroup('topics')
+    // هذه القاعدة تسمح لأي شخص بقراءة المواضيع العامة
+    // ---
     match /{path=**}/topics/{topicId} {
       allow read: if resource.data.isPublic == true;
     }
 
+    // ---
+    // قواعد الوصول المباشر لمواضيع المستخدم
+    // ---
+    match /users/{userId}/topics/{topicId} {
+      // يمكن للمستخدم قراءة مواضيعه الخاصة (العامة والخاصة)
+      // ويمكن للآخرين قراءة مواضيعه العامة فقط
+      allow read: if (request.auth != null && request.auth.uid == userId) || resource.data.isPublic == true;
+
+      // يمكن للمستخدم المسجل فقط إنشاء موضوع، بشرط أن يطابق userId هويته
+      // ونتحقق من وجود عنوان للموضوع
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 1;
+
+      // يمكن للمستخدم فقط تعديل أو حذف مواضيعه الخاصة
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // ---
+    // حماية جميع المسارات الأخرى بشكل افتراضي
+    // ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

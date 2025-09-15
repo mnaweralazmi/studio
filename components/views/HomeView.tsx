@@ -162,7 +162,7 @@ export default function HomeView({ user }: { user: User }) {
     }, (err) => {
       console.error("Firestore listener error:", err);
       if (err.code === 'permission-denied') {
-        setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان.');
+        setError('خطأ في الأذونات: ليس لديك الصلاحية لقراءة هذه البيانات. تأكد من صحة قواعد الأمان في Firestore.');
       } else if (err.code === 'failed-precondition') {
         setError('خطأ: هذا الاستعلام يتطلب فهرسًا مركبًا. يرجى إنشاء الفهرس المطلوب في لوحة تحكم Firebase.');
       } else {
