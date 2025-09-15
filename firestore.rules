@@ -1,34 +1,45 @@
+// قواعد أمان Firestore لمشروع kuwaity-farm
+// هذه القواعد تضمن أن بيانات المستخدمين معزولة وآمنة،
+// مع السماح بقراءة المواضيع العامة من قبل أي شخص (حتى الزوار).
+// لتقييد القراءة للمستخدمين المسجلين فقط، قم بتغيير "allow read: if true;"
+// إلى "allow read: if request.auth != null;".
 
-// هذه القواعد تهدف إلى تأمين الوصول إلى قاعدة بيانات Firestore.
-// القاعدة الأساسية هي منع الوصول افتراضيًا والسماح به فقط عند الحاجة.
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // القاعدة الخاصة باستعلام collectionGroup على مجموعة 'topics'
-    // هذه القاعدة ضرورية لتمكين جلب جميع المواضيع العامة من جميع المستخدمين.
+    // --- قواعد خاصة بمجموعة 'topics' لتمكين الاستعلام العام ---
+    // هذه القاعدة ضرورية لعمل collectionGroup('topics') بشكل صحيح.
+    // هي تسمح بقراءة أي مستند في أي مجموعة فرعية اسمها 'topics' إذا كان الحقل isPublic صحيحًا.
     match /{path=**}/topics/{topicId} {
-      // السماح بالقراءة فقط إذا كان الموضوع عامًا.
       allow read: if resource.data.isPublic == true;
     }
-
-    // قواعد خاصة بمجموعة مواضيع كل مستخدم على حدة
-    match /users/{userId}/topics/{topicId} {
-      // 1. السماح بالقراءة إذا كان الموضوع عامًا أو إذا كان المستخدم هو المالك.
-      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
-
-      // 2. السماح بالإنشاء فقط للمستخدمين المسجلين، بشرط أن يكونوا مالكي المستند
-      // ويجب أن يحتوي على حقل عنوان نصي غير فارغ.
-      allow create: if request.auth != null 
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.title is string
-                    && request.resource.data.title.size() > 1;
-      
-      // 3. السماح بالتحديث والحذف فقط لمالك المستند.
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-    }
     
-    // أي مسارات أخرى لم يتم تحديدها هنا ستكون ممنوعة بشكل افتراضي.
+    // --- قواعد خاصة ببيانات المستخدمين ---
+    // تضمن هذه القاعدة أن المستخدم يمكنه فقط الوصول إلى بياناته الخاصة.
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- قواعد مفصلة للمواضيع داخل بيانات المستخدم ---
+    // هذه القواعد توفر تحكمًا دقيقًا في القراءة والكتابة للمواضيع.
+    match /users/{userId}/topics/{topicId} {
+      // السماح بالقراءة إذا كان الموضوع عامًا (مكرر للوصول المباشر) أو إذا كان المستخدم هو المالك.
+      allow read: if resource.data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+      
+      // السماح بالكتابة (إنشاء، تحديث، حذف) فقط للمالك.
+      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // قواعد أكثر تفصيلاً (اختياري لكن موصى به)
+      // allow create: if request.auth != null && request.auth.uid == request.resource.data.userId
+      //             && request.resource.data.title is string
+      //             && request.resource.data.title.size() > 1;
+      // allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // قاعدة لحماية أي مجموعات بيانات أخرى قد تنشئها في المستقبل
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
