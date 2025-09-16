@@ -2,33 +2,36 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+  
+    // Allow users to manage their own data
+    match /users/{userId}/{documents=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
 
-    // Helper function to check for admin privileges
-    function isAdmin() {
-      // The adminUids array is hardcoded here from lib/firebase.ts
-      let adminUids = ['JU2IAJu8XEeCqM33bu1wzlrA7id2'];
-      return request.auth.uid in adminUids;
+    // Allow public read for topics marked as public
+    match /users/{userId}/topics/{topicId} {
+      allow get: if resource.data.isPublic == true;
+      allow list: if resource.data.isPublic == true;
     }
     
-    // Allow admins to create notifications at the root level
+    // Allow public read for site content
+    match /siteContent/{docId} {
+      allow get: if true;
+      allow list: if true;
+    }
+    
+    // Allow admin write access to site content.
+    // NOTE: This rule depends on the admin UIDs defined in the app code.
+    // For production, consider a more robust role-based system within Firestore data.
+    match /siteContent/adMarquee {
+       allow write: if request.auth != null && request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2'];
+    }
+
+    // Allow logged-in users to read notifications targeted to them or to all.
+    // Writes are handled by a server-side function/admin SDK for security.
     match /notifications/{notificationId} {
-      allow create: if isAdmin();
-    }
-
-    // Rules for user-specific data, including their own documents
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth.uid == userId;
-    }
-
-    // Rules for reading public topics via collectionGroup query
-    match /{path=**}/topics/{topicId} {
-       allow read: if resource.data.isPublic == true;
-    }
-
-    // Rules for reading notifications via collectionGroup query
-    match /{path=**}/notifications/{notificationId} {
-      allow read: if request.auth != null && 
-                     (resource.data.target == 'all' || resource.data.target == request.auth.uid);
+      allow read: if request.auth != null && ('all' in resource.data.target || request.auth.uid in resource.data.target);
+      allow write: if request.auth != null && request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2']; // Allow admins to write
     }
   }
 }
