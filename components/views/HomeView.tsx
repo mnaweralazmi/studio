@@ -18,7 +18,7 @@ import {
   DocumentData,
   Unsubscribe,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import Image from 'next/image';
 import { db, storage, auth } from '@/lib/firebase';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -62,6 +62,7 @@ type Topic = {
   title?: string;
   description?: string;
   imageUrl?: string;
+  imagePath?: string;
   isPublic?: boolean;
   createdAt?: { seconds?: number; toMillis: () => number } | any;
   userId?: string;
@@ -81,7 +82,6 @@ async function createTopicWithFile(
     throw new Error('يجب تسجيل الدخول لإنشاء موضوع.');
   }
 
-  let topicRef;
   const userTopicsCollection = collection(
     db,
     'users',
@@ -89,34 +89,45 @@ async function createTopicWithFile(
     'topics'
   );
 
-  try {
-    topicRef = await addDoc(userTopicsCollection, {
-      title: title.trim(),
-      description: description.trim(),
-      userId: currentUser.uid,
-      authorName: currentUser.displayName || 'مستخدم غير معروف',
-      isPublic: isPublic,
-      createdAt: serverTimestamp(),
-      imageUrl: null,
-    });
+  // 1. إنشاء المستند أولاً للحصول على ID
+  const topicRef = await addDoc(userTopicsCollection, {
+    title: title.trim(),
+    description: description.trim(),
+    userId: currentUser.uid,
+    authorName: currentUser.displayName || 'مستخدم غير معروف',
+    isPublic: isPublic,
+    createdAt: serverTimestamp(),
+    imageUrl: null,
+    imagePath: null,
+  });
 
-    let imageUrl: string | undefined = undefined;
+  // 2. إذا كان هناك ملف، قم برفعه وتحديث المستند
+  if (file) {
+    try {
+      const imagePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
+      const imageRef = ref(storage, imagePath);
+      
+      // رفع الملف
+      await uploadBytes(imageRef, file);
+      
+      // الحصول على رابط التحميل
+      const imageUrl = await getDownloadURL(imageRef);
 
-    if (file) {
-      const filePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
-      const fileRef = ref(storage, filePath);
-      await uploadBytes(fileRef, file);
-      imageUrl = await getDownloadURL(fileRef);
-      await updateDoc(topicRef, { imageUrl: imageUrl });
+      // تحديث المستند بالرابط والمسار
+      await updateDoc(topicRef, { 
+        imageUrl: imageUrl,
+        imagePath: imagePath,
+      });
+
+      return { topicId: topicRef.id, imageUrl };
+    } catch (uploadError) {
+      // إذا فشل الرفع، احذف المستند الذي تم إنشاؤه
+      await deleteDoc(topicRef);
+      throw uploadError; // أعد إرسال خطأ الرفع
     }
-
-    return { topicId: topicRef.id, imageUrl };
-  } catch (error) {
-    if (topicRef) {
-      await deleteDoc(doc(userTopicsCollection, topicRef.id));
-    }
-    throw error;
   }
+
+  return { topicId: topicRef.id };
 }
 
 export default function HomeView({ user }: { user: User }) {
@@ -257,13 +268,22 @@ export default function HomeView({ user }: { user: User }) {
   const handleDeleteTopic = async () => {
     if (!topicToDelete) return;
     try {
+      // Delete the Firestore document
       await deleteDoc(doc(db, topicToDelete.path));
+
+      // If there's an image, delete it from Storage
+      if (topicToDelete.imagePath) {
+        const imageRef = ref(storage, topicToDelete.imagePath);
+        await deleteObject(imageRef);
+      }
+      
       toast({
         title: 'تم الحذف',
         description: 'تم حذف الموضوع بنجاح.',
         className: 'bg-green-600 text-white',
       });
     } catch (e: any) {
+      console.error("Error deleting topic:", e);
       toast({
         variant: 'destructive',
         title: 'خطأ في الحذف',
