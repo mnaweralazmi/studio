@@ -272,6 +272,19 @@ function TopicDialog({
     await onSave({ title, description, isPublic, file, imageRemoved });
   };
 
+  const isVideo = useMemo(() => {
+      if (file) return file.type.startsWith('video/');
+      if (preview) {
+         try {
+             const url = new URL(preview);
+             return url.pathname.toLowerCase().includes('.mp4') || url.pathname.toLowerCase().includes('.mov') || url.search.toLowerCase().includes('.mp4');
+         } catch(e) {
+             return false;
+         }
+      }
+      return false;
+  }, [file, preview]);
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
@@ -299,10 +312,10 @@ function TopicDialog({
               <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={clearFile}>
                 <X className="h-4 w-4" />
               </Button>
-              { (file?.type.startsWith('image/') || (preview.includes('firebasestorage') && !preview.includes('.mp4'))) && !file?.type.startsWith('video/') ? (
-                <Image src={preview} alt="Preview" width={400} height={225} className="rounded-md object-cover w-full aspect-video" />
+              { isVideo ? (
+                 <video src={preview} controls className="rounded-md w-full" />
               ) : (
-                <video src={preview} controls className="rounded-md w-full" />
+                <Image src={preview} alt="Preview" width={400} height={225} className="rounded-md object-cover w-full aspect-video" />
               )}
             </div>
           )}
@@ -569,12 +582,16 @@ export default function HomeView({ user }: { user: User }) {
 
                 <div className="relative aspect-[16/9] w-full overflow-hidden">
                   {topic.imageUrl ? (
-                    <Image
-                      src={topic.imageUrl}
-                      alt={topic.title || 'Topic Image'}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    (topic.imageUrl.includes('.mp4') || topic.imageUrl.includes('.mov')) ? (
+                       <video src={topic.imageUrl} controls className="w-full h-full object-cover" />
+                    ) : (
+                      <Image
+                        src={topic.imageUrl}
+                        alt={topic.title || 'Topic Image'}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full bg-secondary flex items-center justify-center">
                       <Newspaper className="h-10 w-10 text-muted-foreground" />

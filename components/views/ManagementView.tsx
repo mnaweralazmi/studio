@@ -213,7 +213,7 @@ function ExpensesView({ user, collectionName, title }) {
 
     try {
       await addDoc(collectionRef, {
-        date: new Date(),
+        date: Timestamp.now(),
         item: newExpense.item,
         category: newExpense.category,
         amount: parseFloat(newExpense.amount) || 0,
@@ -221,7 +221,7 @@ function ExpensesView({ user, collectionName, title }) {
       });
       setNewExpense({ item: '', category: '', amount: '' });
     } catch (e) {
-      console.error(e);
+      console.error('Error adding expense:', e);
     } finally {
       setIsAdding(false);
     }
@@ -347,7 +347,7 @@ function FacilitiesView({ user }) {
     if (!name || !type || !collectionRef || isAdding) return;
     setIsAdding(true);
     try {
-      await addDoc(collectionRef, { name, type, archived: false });
+      await addDoc(collectionRef, { name, type, archived: false, createdAt: Timestamp.now() });
       setNewFacility({ name: '', type: 'محمية' });
     } catch (e) {
       console.error(e);
@@ -491,7 +491,7 @@ function AgriSalesView({ user }) {
 
     try {
       await addDoc(salesCollection, {
-        date: new Date(),
+        date: Timestamp.now(),
         item,
         cartonCount: count,
         cartonWeight,
@@ -671,7 +671,7 @@ function DebtsView({ user }) {
     try {
       await addDoc(debtsCollection, {
         party,
-        dueDate: new Date(),
+        dueDate: Timestamp.now(),
         amount: parseFloat(amount) || 0,
         type,
         archived: false,
@@ -911,7 +911,7 @@ function WorkersView({ user }) {
     if (!name || !salary || !workersCollection || isAdding) return;
     setIsAdding(true);
     try {
-      await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0, archived: false });
+      await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0, archived: false, createdAt: Timestamp.now() });
       setNewWorker({ name: '', salary: '' });
     } catch (e) {
       console.error(e);
@@ -932,7 +932,7 @@ function WorkersView({ user }) {
     const currentYear = new Date().getFullYear();
     try {
       await addDoc(expensesCollection, {
-        date: new Date(),
+        date: Timestamp.now(),
         item: `راتب العامل: ${worker.name} (شهر ${currentMonth}/${currentYear})`,
         category: 'رواتب',
         amount: worker.salary || 0,
@@ -969,6 +969,11 @@ function WorkersView({ user }) {
 
     try {
       await updateDoc(workerRef, { salary: salaryValue });
+       toast({
+          title: "تم تحديث الراتب",
+          description: `تم تحديث راتب ${editingWorker.name} بنجاح.`,
+          className: "bg-green-600 text-white"
+      });
     } catch (e) {
       console.error(e);
     } finally {
@@ -1218,7 +1223,7 @@ function EggSalesView({ user }) {
 
     try {
       await addDoc(collectionRef, {
-        date: new Date(),
+        date: Timestamp.now(),
         trayCount: count,
         trayPrice: price,
         totalAmount,
@@ -1352,7 +1357,7 @@ function PoultrySalesView({ user }) {
 
     try {
       await addDoc(collectionRef, {
-        date: new Date(),
+        date: Timestamp.now(),
         poultryType,
         count: numCount,
         pricePerUnit: price,
@@ -1498,6 +1503,7 @@ function FlocksView({ user }) {
         name,
         birdCount: parseInt(birdCount) || 0,
         archived: false,
+        createdAt: Timestamp.now()
       });
       setNewFlock({ name: '', birdCount: '' });
     } catch (e) {
@@ -1663,7 +1669,7 @@ function LivestockSalesView({ user }) {
 
     try {
       await addDoc(collectionRef, {
-        date: new Date(),
+        date: Timestamp.now(),
         animalType,
         count: numCount,
         pricePerUnit: price,
@@ -1809,6 +1815,7 @@ function HerdsView({ user }) {
         name,
         animalCount: parseInt(animalCount) || 0,
         archived: false,
+        createdAt: Timestamp.now(),
       });
       setNewHerd({ name: '', animalCount: '' });
     } catch (e) {
