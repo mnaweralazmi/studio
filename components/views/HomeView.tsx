@@ -277,8 +277,14 @@ function TopicDialog({
       if (preview) {
          try {
              const url = new URL(preview);
-             return url.pathname.toLowerCase().includes('.mp4') || url.pathname.toLowerCase().includes('.mov') || url.search.toLowerCase().includes('.mp4');
+             const path = url.pathname.toLowerCase();
+             const search = url.search.toLowerCase();
+             // Check for common video extensions in path or query params (for signed URLs)
+             return path.endsWith('.mp4') || path.endsWith('.mov') || path.endsWith('.webm') ||
+                    search.includes('.mp4') || search.includes('.mov') || search.includes('.webm');
          } catch(e) {
+             // If preview is a data URI, check MIME type
+             if (preview.startsWith('data:video')) return true;
              return false;
          }
       }
@@ -582,7 +588,7 @@ export default function HomeView({ user }: { user: User }) {
 
                 <div className="relative aspect-[16/9] w-full overflow-hidden">
                   {topic.imageUrl ? (
-                    (topic.imageUrl.includes('.mp4') || topic.imageUrl.includes('.mov')) ? (
+                    (topic.imageUrl.includes('.mp4') || topic.imageUrl.includes('.mov') || topic.imageUrl.includes('video')) ? (
                        <video src={topic.imageUrl} controls className="w-full h-full object-cover" />
                     ) : (
                       <Image
