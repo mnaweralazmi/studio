@@ -25,6 +25,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useToast } from '@/components/ui/use-toast';
+import { useAdmin } from '@/lib/hooks/useAdmin';
 
 type Notification = {
   id: string;
@@ -33,22 +34,29 @@ type Notification = {
   body: string;
   createdAt: Timestamp;
   read: boolean;
+  target?: string;
 };
 
 export default function NotificationsPopover({ user }: { user: User }) {
   const { toast } = useToast();
-  const notificationsQuery = useMemo(
-    () =>
-      user
-        ? query(
-            collectionGroup(db, 'notifications'),
-            where('target', 'in', ['all', user.uid]),
-            orderBy('createdAt', 'desc'),
-            limit(10)
-          )
-        : null,
-    [user]
-  );
+  const { isAdmin } = useAdmin();
+  
+  const notificationsQuery = useMemo(() => {
+    if (!user) return null;
+
+    const targets = ['all', user.uid];
+    // Admin user also gets notifications targeted to 'admin'
+    if (isAdmin) {
+      targets.push('admin');
+    }
+
+    return query(
+      collectionGroup(db, 'notifications'),
+      where('target', 'in', targets),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+  }, [user, isAdmin]);
 
   const [snapshot, loading] = useCollection(notificationsQuery);
   const [shownNotifications, setShownNotifications] = useState(new Set());
@@ -88,8 +96,8 @@ export default function NotificationsPopover({ user }: { user: User }) {
       const batch = writeBatch(db);
       notifications.forEach((n) => {
         if (!n.read) {
-          // Correctly reference the document in the root 'notifications' collection
-          const docRef = doc(db, 'notifications', n.id);
+          // The path property from collectionGroup is the full path to the document
+          const docRef = doc(db, n.path);
           batch.update(docRef, { read: true });
         }
       });

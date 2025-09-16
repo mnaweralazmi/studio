@@ -15,7 +15,6 @@ import {
   onSnapshot,
   QuerySnapshot,
   DocumentData,
-  Unsubscribe,
   Timestamp,
   setDoc,
 } from 'firebase/firestore';
@@ -54,7 +53,6 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,57 +71,57 @@ type Topic = {
   imageUrl?: string;
   imagePath?: string;
   isPublic?: boolean;
-  createdAt?: Timestamp | any;
+  createdAt?: Timestamp;
   userId?: string;
   authorName?: string;
   [k: string]: any;
 };
 
+type TopicFormData = {
+  title: string;
+  description: string;
+  isPublic: boolean;
+  file?: File;
+  imageRemoved?: boolean;
+};
+
+
 // --- Firestore & Storage Helper Functions ---
 
 async function createTopic(
-  title: string,
-  description: string,
-  isPublic: boolean,
-  file?: File
+  data: TopicFormData
 ): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('يجب تسجيل الدخول لإنشاء موضوع.');
 
   const topicCollection = collection(db, 'users', currentUser.uid, 'topics');
-  const topicRef = doc(topicCollection); // Create a reference with a new ID
+  const topicRef = doc(topicCollection); // Create a ref with a new ID
 
-  let imageUrl: string | null = null;
-  let imagePath: string | null = null;
-
-  if (file) {
-    imagePath = `users/${currentUser.uid}/topics/${topicRef.id}/${file.name}`;
-    const imageRef = ref(storage, imagePath);
-    await uploadBytes(imageRef, file);
-    imageUrl = await getDownloadURL(imageRef);
-  }
-
-  await setDoc(topicRef, {
-    title: title.trim(),
-    description: description.trim(),
+  const newTopic: Omit<Topic, 'id'|'path'> = {
+    title: data.title.trim(),
+    description: data.description.trim(),
     userId: currentUser.uid,
     authorName: currentUser.displayName || 'مستخدم غير معروف',
-    isPublic,
-    createdAt: serverTimestamp(),
-    imageUrl,
-    imagePath,
-  });
+    isPublic: data.isPublic,
+    createdAt: serverTimestamp() as Timestamp,
+    imageUrl: '',
+    imagePath: '',
+  };
+  
+  if (data.file) {
+    const imagePath = `users/${currentUser.uid}/topics/${topicRef.id}/${data.file.name}`;
+    const imageRef = ref(storage, imagePath);
+    await uploadBytes(imageRef, data.file);
+    newTopic.imageUrl = await getDownloadURL(imageRef);
+    newTopic.imagePath = imagePath;
+  }
+
+  await setDoc(topicRef, newTopic);
 }
 
 async function updateTopic(
   topic: Topic,
-  newData: {
-    title: string;
-    description: string;
-    isPublic: boolean;
-    file?: File;
-    imageRemoved: boolean;
-  }
+  newData: TopicFormData
 ): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('مستخدم غير مصرح له.');
@@ -137,10 +135,7 @@ async function updateTopic(
     isPublic: newData.isPublic,
   };
 
-  let newImagePath: string | null = topic.imagePath || null;
-  let newImageUrl: string | null = topic.imageUrl || null;
-
-  // Case 1: New file is uploaded
+  // Case 1: New file is uploaded, replacing the old one
   if (newData.file) {
     // Delete the old image if it exists
     if (topic.imagePath) {
@@ -150,26 +145,34 @@ async function updateTopic(
       );
     }
     // Upload the new image
-    newImagePath = `users/${currentUser.uid}/topics/${topic.id}/${newData.file.name}`;
+    const newImagePath = `users/${currentUser.uid}/topics/${topic.id}/${newData.file.name}`;
     const newImageRef = ref(storage, newImagePath);
     await uploadBytes(newImageRef, newData.file);
-    newImageUrl = await getDownloadURL(newImageRef);
+    updateData.imageUrl = await getDownloadURL(newImageRef);
+    updateData.imagePath = newImagePath;
   }
-  // Case 2: Existing image is removed
+  // Case 2: Existing image is removed without replacement
   else if (newData.imageRemoved && topic.imagePath) {
     const oldImageRef = ref(storage, topic.imagePath);
     await deleteObject(oldImageRef).catch((e) =>
       console.warn('Failed to delete old image:', e)
     );
-    newImagePath = null;
-    newImageUrl = null;
+    updateData.imagePath = '';
+    updateData.imageUrl = '';
   }
-  
-  updateData.imagePath = newImagePath;
-  updateData.imageUrl = newImageUrl;
 
   await updateDoc(topicRef, updateData);
 }
+
+async function deleteTopic(topic: Topic): Promise<void> {
+    const topicRef = doc(db, topic.path);
+    await deleteDoc(topicRef);
+    if (topic.imagePath) {
+        const imageRef = ref(storage, topic.imagePath);
+        await deleteObject(imageRef).catch(e => console.error("Error deleting topic image", e));
+    }
+}
+
 
 // --- Reusable Dialog Component for Add/Edit ---
 function TopicDialog({
@@ -181,7 +184,7 @@ function TopicDialog({
 }: {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: TopicFormData) => Promise<void>;
   isSaving: boolean;
   initialTopic?: Topic | null;
 }) {
@@ -210,7 +213,7 @@ function TopicDialog({
             setDescription(initialTopic.description || '');
             setIsPublic(initialTopic.isPublic ?? true);
             setPreview(initialTopic.imageUrl);
-            setImageRemoved(false);
+            setImageRemoved(false); // Reset on open
         } else {
             clearForm();
         }
@@ -231,22 +234,32 @@ function TopicDialog({
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (preview && preview.startsWith('blob:')) URL.revokeObjectURL(preview);
-    setPreview(undefined);
-
+    // Clear previous blob object if exists
+    if (preview && preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview);
+    }
+    
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreview(URL.createObjectURL(selectedFile));
-      setImageRemoved(false);
+      setImageRemoved(false); // A new file is selected, so we are not removing the image.
+    } else {
+      // No file selected, clear file and preview
+      setFile(undefined);
+      setPreview(initialTopic?.imageUrl || undefined); // Revert to initial if available
     }
   };
 
   const clearFile = () => {
+    // Clear blob
     if (preview && preview.startsWith('blob:')) URL.revokeObjectURL(preview);
+
     setFile(undefined);
     setPreview(undefined);
     setImageRemoved(true);
+
+    // Reset the file input element
     const fileInput = document.getElementById('topic-file') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
@@ -339,6 +352,22 @@ export default function HomeView({ user }: { user: User }) {
     
     setLoading(true);
 
+    const topicStore: Record<string, Topic[]> = { public: [], user: [] };
+
+    const processSnapshots = () => {
+      const merged = [...topicStore.user, ...topicStore.public];
+      const uniqueTopics = Array.from(new Map(merged.map(t => [t.id, t])).values());
+      uniqueTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+      setTopics(uniqueTopics);
+      setLoading(false);
+    };
+
+    const handleSnapshotError = (e: any, label: string) => {
+      console.error(`[${label}] snapshot error:`, e);
+      setError('حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.');
+      setLoading(false);
+    };
+
     // Query for public topics
     const publicQ = query(
       collectionGroup(db, 'topics'),
@@ -346,41 +375,25 @@ export default function HomeView({ user }: { user: User }) {
       orderBy('createdAt', 'desc')
     );
     const publicUnsub = onSnapshot(publicQ, 
-      (snap) => processSnapshots(snap, 'public'),
+      (snap) => {
+        topicStore.public = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
+        processSnapshots();
+      },
       (e) => handleSnapshotError(e, 'public')
     );
 
-    // Query for user's own topics
+    // Query for user's own topics (public and private)
     const userQ = query(
       collection(db, 'users', user.uid, 'topics'),
       orderBy('createdAt', 'desc')
     );
     const userUnsub = onSnapshot(userQ, 
-      (snap) => processSnapshots(snap, 'user'),
+      (snap) => {
+        topicStore.user = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
+        processSnapshots();
+      },
       (e) => handleSnapshotError(e, 'user')
     );
-
-    const topicStore = { public: [] as Topic[], user: [] as Topic[] };
-
-    function processSnapshots(snap: QuerySnapshot<DocumentData>, type: 'public' | 'user') {
-      topicStore[type] = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
-      
-      const merged = [...topicStore.user, ...topicStore.public];
-      const map = new Map<string, Topic>();
-      merged.forEach(t => map.set(t.id, t));
-      const deduped = Array.from(map.values());
-      
-      deduped.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-
-      setTopics(deduped);
-      setLoading(false);
-    }
-    
-    function handleSnapshotError(e: any, label: string) {
-        console.error(`[${label}] snapshot error:`, e);
-        setError('حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.');
-        setLoading(false);
-    }
     
     return () => {
       publicUnsub();
@@ -390,10 +403,10 @@ export default function HomeView({ user }: { user: User }) {
 
   // --- Handlers ---
 
-  const handleSaveNewTopic = async (data: any) => {
+  const handleSaveNewTopic = async (data: TopicFormData) => {
     setIsSaving(true);
     try {
-      await createTopic(data.title, data.description, data.isPublic, data.file);
+      await createTopic(data);
       toast({
         title: 'تم النشر بنجاح!',
         description: `تمت إضافة موضوعك "${data.title}" بنجاح.`,
@@ -402,13 +415,13 @@ export default function HomeView({ user }: { user: User }) {
       setIsAddDialogOpen(false);
     } catch (e: any) {
       console.error('Error saving topic: ', e);
-      toast({ variant: 'destructive', title: 'خطأ في النشر', description: 'لم نتمكن من نشر موضوعك.' });
+      toast({ variant: 'destructive', title: 'خطأ في النشر', description: e.message || 'لم نتمكن من نشر موضوعك.' });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSaveUpdatedTopic = async (data: any) => {
+  const handleSaveUpdatedTopic = async (data: TopicFormData) => {
     if (!topicToEdit) return;
     setIsSaving(true);
     try {
@@ -420,10 +433,9 @@ export default function HomeView({ user }: { user: User }) {
       });
       setIsEditDialogOpen(false);
       setTopicToEdit(null);
-    } catch (e: any)
-    {
+    } catch (e: any) {
       console.error('Error updating topic: ', e);
-      toast({ variant: 'destructive', title: 'خطأ في التحديث', description: 'لم نتمكن من حفظ التغييرات.' });
+      toast({ variant: 'destructive', title: 'خطأ في التحديث', description: e.message || 'لم نتمكن من حفظ التغييرات.' });
     } finally {
       setIsSaving(false);
     }
@@ -434,14 +446,10 @@ export default function HomeView({ user }: { user: User }) {
     setShowDeleteConfirm(true);
   };
 
-  const handleDeleteTopic = async () => {
+  const handleDeleteConfirmed = async () => {
     if (!topicToDelete) return;
     try {
-      await deleteDoc(doc(db, topicToDelete.path));
-      if (topicToDelete.imagePath) {
-        const imageRef = ref(storage, topicToDelete.imagePath);
-        await deleteObject(imageRef);
-      }
+      await deleteTopic(topicToDelete);
       toast({
         title: 'تم الحذف',
         description: 'تم حذف الموضوع بنجاح.',
@@ -649,7 +657,7 @@ export default function HomeView({ user }: { user: User }) {
             <DialogClose asChild>
               <Button variant="outline">إلغاء</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleDeleteTopic}>
+            <Button variant="destructive" onClick={handleDeleteConfirmed}>
               نعم، قم بالحذف
             </Button>
           </DialogFooter>
