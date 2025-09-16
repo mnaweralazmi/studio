@@ -87,7 +87,8 @@ export default function NotificationsPopover({ user }: { user: User }) {
       const batch = writeBatch(db);
       notifications.forEach((n) => {
         if (!n.read) {
-          const docRef = doc(db, n.path);
+          // Correctly reference the document in the root 'notifications' collection
+          const docRef = doc(db, 'notifications', n.id);
           batch.update(docRef, { read: true });
         }
       });
