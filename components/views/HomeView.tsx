@@ -41,6 +41,7 @@ import {
   Globe,
   AlertCircle,
   Pencil,
+  Save,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ import { useToast } from '@/components/ui/use-toast';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import AdMarquee from '../home/AdMarquee';
 
 type Topic = {
   id: string;
@@ -483,6 +485,8 @@ export default function HomeView({ user }: { user: User }) {
           الزراعية.
         </p>
       </header>
+
+      <AdMarquee />
 
       <section>
         <div className="flex items-center justify-between mb-6">
