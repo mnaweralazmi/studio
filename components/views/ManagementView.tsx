@@ -228,7 +228,7 @@ function ExpensesView({ user, collectionName, title }) {
   };
 
   const handleArchiveExpense = async (id: string) => {
-    if (!user) return;
+    if (!user || !collectionName) return;
     await updateDoc(doc(db, 'users', user.uid, collectionName, id), { archived: true });
   };
 

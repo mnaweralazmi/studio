@@ -133,11 +133,14 @@ export default function TasksView() {
 
     allTasks.forEach(task => {
       const taskDate = task.date ? (task.date instanceof Timestamp ? task.date.toDate() : new Date(task.date)) : null;
+      
+      if (taskDate) {
+        dates.push(taskDate); // Add all dates for the dot indicator
+      }
 
       if (task.completed) {
         completed.push(task);
       } else if (taskDate) {
-        dates.push(taskDate);
         if (isToday(taskDate)) {
           today.push(task);
         } else if (taskDate > todayDate) {
@@ -256,7 +259,7 @@ export default function TasksView() {
                             <CardHeader>
                             <CardTitle>مهام {selectedDate && isToday(selectedDate) ? 'اليوم' : 'اليوم المحدد'} ({selectedDayTasks.length})</CardTitle>
                             <CardDescription>
-                                {selectedDate ? format(selectedDate, 'eeee, d MMMM', {locale: ar}) : 'الرجاء تحديد يوم لعرض مهامه.'}
+                                {selectedDate ? format(selectedDate, 'eeee, d MMMM, yyyy', {locale: ar}) : 'الرجاء تحديد يوم لعرض مهامه.'}
                             </CardDescription>
                             </CardHeader>
                             <CardContent>
