@@ -1,15 +1,27 @@
 'use client';
-import { Megaphone } from 'lucide-react';
-
-const ads = [
-  'خصم 20% على جميع أنواع الأسمدة العضوية! لا تفوت الفرصة.',
-  'ندوة زراعية عن أحدث تقنيات الزراعة المائية يوم السبت القادم.',
-  'متوفر الآن: شتلات طماطم كرزية مقاومة للأمراض.',
-  'هل تبحث عن عمالة مدربة؟ تواصل معنا للمساعدة.',
-  'خدمات تنسيق الحدائق والمزارع بأسعار تنافسية.',
-];
+import { Megaphone, Loader2 } from 'lucide-react';
+import { useDocument } from 'react-firebase-hooks/firestore';
+import { doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function AdMarquee() {
+  const [snapshot, loading, error] = useDocument(doc(db, 'siteContent', 'adMarquee'));
+  
+  const ads = snapshot?.data()?.ads || [];
+
+  if (loading) {
+    return (
+       <div className="relative flex items-center justify-center overflow-hidden border-y bg-accent/50 text-accent-foreground py-3 my-8 h-16">
+         <Loader2 className="h-6 w-6 animate-spin text-primary" />
+       </div>
+    )
+  }
+
+  if (error || ads.length === 0) {
+    // Don't render the component if there's an error or no ads
+    return null;
+  }
+
   const marqueeContent = [...ads, ...ads]; // Duplicate content for seamless loop
 
   return (

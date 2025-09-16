@@ -11,6 +11,8 @@ import {
   Settings,
   Save,
   Camera,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,11 +29,15 @@ import {
   setDoc,
   addDoc,
   serverTimestamp,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useAdmin } from '@/lib/hooks/useAdmin';
+import { useDocument } from 'react-firebase-hooks/firestore';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -529,6 +535,12 @@ function AdminView({ user }: { user: any }) {
   const [target, setTarget] = useState<'all' | 'specific'>('all');
   const [targetUid, setTargetUid] = useState('');
   const [isSending, setIsSending] = useState(false);
+  
+  const adMarqueeRef = useMemo(() => doc(db, 'siteContent', 'adMarquee'), []);
+  const [adMarqueeSnapshot, adMarqueeLoading] = useDocument(adMarqueeRef);
+  const [newAd, setNewAd] = useState('');
+
+  const ads = useMemo(() => adMarqueeSnapshot?.data()?.ads || [], [adMarqueeSnapshot]);
 
   const handleSendNotification = async () => {
     if (!title || !body) {
@@ -576,7 +588,38 @@ function AdminView({ user }: { user: any }) {
     }
   };
 
+  const handleAddAd = async () => {
+    if (!newAd.trim()) return;
+    try {
+        await updateDoc(adMarqueeRef, {
+            ads: arrayUnion(newAd.trim())
+        });
+        setNewAd('');
+         toast({ title: 'تمت إضافة الإعلان' });
+    } catch (e: any) {
+        if (e.code === 'not-found') {
+            await setDoc(adMarqueeRef, { ads: [newAd.trim()]});
+            setNewAd('');
+            toast({ title: 'تمت إضافة الإعلان' });
+        } else {
+             toast({ title: 'خطأ في إضافة الإعلان', variant: 'destructive'});
+        }
+    }
+  }
+
+  const handleRemoveAd = async (adToRemove: string) => {
+    try {
+        await updateDoc(adMarqueeRef, {
+            ads: arrayRemove(adToRemove)
+        });
+        toast({ title: 'تم حذف الإعلان' });
+    } catch (e) {
+        toast({ title: 'خطأ في حذف الإعلان', variant: 'destructive'});
+    }
+  }
+
   return (
+    <div className="space-y-8">
     <Card>
       <CardHeader>
         <CardTitle>إرسال إشعار للمستخدمين</CardTitle>
@@ -637,6 +680,48 @@ function AdminView({ user }: { user: any }) {
         </Button>
       </CardContent>
     </Card>
+
+    <Card>
+        <CardHeader>
+            <CardTitle>التحكم في شريط الإعلانات</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+             {adMarqueeLoading ? (
+                 <div className="flex justify-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin"/>
+                 </div>
+             ): (
+                 <div className="space-y-2">
+                    <Label>الإعلانات الحالية</Label>
+                    {ads.length > 0 ? (
+                        <div className="space-y-2 rounded-md border p-2">
+                            {ads.map((ad, i) => (
+                                <div key={i} className="flex items-center justify-between p-2 bg-secondary/50 rounded">
+                                    <p className="text-sm flex-1">{ad}</p>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveAd(ad)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center p-4">لا توجد إعلانات حاليًا.</p>
+                    )}
+                 </div>
+             )}
+             <div className="space-y-2 pt-4">
+                <Label htmlFor="new-ad">إضافة إعلان جديد</Label>
+                <div className="flex gap-2">
+                    <Input id="new-ad" value={newAd} onChange={(e) => setNewAd(e.target.value)} placeholder="نص الإعلان..."/>
+                    <Button onClick={handleAddAd} disabled={!newAd.trim()}>
+                        <Plus className="h-4 w-4 ml-2"/>
+                        إضافة
+                    </Button>
+                </div>
+             </div>
+        </CardContent>
+    </Card>
+    </div>
   );
 }
 
