@@ -54,15 +54,15 @@ export default function NotificationsPopover({ user }: { user: User }) {
   const [shownNotifications, setShownNotifications] = useState(new Set());
 
   const notifications = useMemo(() => {
-    return (
-      snapshot?.docs.map(
-        (doc) => ({ id: doc.id, path: doc.ref.path, ...doc.data() } as Notification)
-      ) || []
+    if (!snapshot) return [];
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, path: doc.ref.path, ...doc.data() } as Notification)
     );
   }, [snapshot]);
 
   useEffect(() => {
-    if (!notifications || notifications.length === 0) return;
+    if (loading || !notifications || notifications.length === 0) return;
+    
     const unreadAndUnshown = notifications.find(
       (n) => !n.read && !shownNotifications.has(n.id)
     );
@@ -72,10 +72,11 @@ export default function NotificationsPopover({ user }: { user: User }) {
         title: unreadAndUnshown.title,
         description: unreadAndUnshown.body,
       });
+      // Add to shown immediately to prevent re-toasting
       setShownNotifications((prev) => new Set(prev).add(unreadAndUnshown.id));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications, toast]);
+  }, [notifications, loading, toast]);
 
   const hasUnread = useMemo(
     () => notifications.some((n) => !n.read),
