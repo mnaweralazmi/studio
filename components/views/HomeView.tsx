@@ -17,6 +17,7 @@ import {
   DocumentData,
   Unsubscribe,
   Timestamp,
+  setDoc,
 } from 'firebase/firestore';
 import {
   ref,
@@ -195,7 +196,7 @@ function TopicDialog({
     setDescription('');
     setIsPublic(true);
     setFile(undefined);
-    if (preview) URL.revokeObjectURL(preview);
+    if (preview && preview.startsWith('blob:')) URL.revokeObjectURL(preview);
     setPreview(undefined);
     setImageRemoved(false);
   }, [preview]);
@@ -207,11 +208,13 @@ function TopicDialog({
             setDescription(initialTopic.description || '');
             setIsPublic(initialTopic.isPublic ?? true);
             setPreview(initialTopic.imageUrl);
+            setImageRemoved(false);
         } else {
             clearForm();
         }
     } else {
-        clearForm();
+        // Delay clearing form to prevent flash of empty content
+        setTimeout(clearForm, 300);
     }
   }, [isOpen, initialTopic, clearForm]);
   
@@ -281,7 +284,7 @@ function TopicDialog({
               <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 z-10" onClick={clearFile}>
                 <X className="h-4 w-4" />
               </Button>
-              { (file?.type.startsWith('image/') || preview.includes('firebasestorage')) && !file?.type.startsWith('video/') ? (
+              { (file?.type.startsWith('image/') || (preview.includes('firebasestorage') && !preview.includes('.mp4'))) && !file?.type.startsWith('video/') ? (
                 <Image src={preview} alt="Preview" width={400} height={225} className="rounded-md object-cover w-full aspect-video" />
               ) : (
                 <video src={preview} controls className="rounded-md w-full" />
@@ -298,7 +301,7 @@ function TopicDialog({
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">إلغاء</Button></DialogClose>
           <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Plus className="h-4 w-4 ml-2" />}
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : (initialTopic ? <Save className="h-4 w-4 ml-2" /> : <Plus className="h-4 w-4 ml-2" />)}
             {isSaving ? (initialTopic ? 'جاري الحفظ...' : 'جاري النشر...') : (initialTopic ? 'حفظ التعديلات' : 'نشر الموضوع')}
           </Button>
         </DialogFooter>
