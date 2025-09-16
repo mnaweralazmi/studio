@@ -602,7 +602,7 @@ function AdminView({ user }: { user: any }) {
             setNewAd('');
             toast({ title: 'تمت إضافة الإعلان' });
         } else {
-             toast({ title: 'خطأ في إضافة الإعلان', variant: 'destructive'});
+             toast({ title: 'لماذا', description: 'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.', variant: 'destructive'});
         }
     }
   }
