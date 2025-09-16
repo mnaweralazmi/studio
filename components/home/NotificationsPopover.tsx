@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import {
-  collection,
+  collectionGroup,
   query,
   where,
   orderBy,
   limit,
   writeBatch,
   Timestamp,
+  doc,
 } from 'firebase/firestore';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { db } from '@/lib/firebase';
@@ -27,6 +28,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 type Notification = {
   id: string;
+  path: string;
   title: string;
   body: string;
   createdAt: Timestamp;
@@ -39,7 +41,7 @@ export default function NotificationsPopover({ user }: { user: User }) {
     () =>
       user
         ? query(
-            collection(db, 'notifications'),
+            collectionGroup(db, 'notifications'),
             where('target', 'in', ['all', user.uid]),
             orderBy('createdAt', 'desc'),
             limit(10)
@@ -54,7 +56,7 @@ export default function NotificationsPopover({ user }: { user: User }) {
   const notifications = useMemo(() => {
     return (
       snapshot?.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Notification)
+        (doc) => ({ id: doc.id, path: doc.ref.path, ...doc.data() } as Notification)
       ) || []
     );
   }, [snapshot]);
@@ -81,11 +83,12 @@ export default function NotificationsPopover({ user }: { user: User }) {
   );
 
   const handleOpen = async (open: boolean) => {
-    if (open && hasUnread && snapshot) {
+    if (open && hasUnread && notifications.length > 0) {
       const batch = writeBatch(db);
-      snapshot.docs.forEach((d) => {
-        if (!d.data().read) {
-          batch.update(d.ref, { read: true });
+      notifications.forEach((n) => {
+        if (!n.read) {
+          const docRef = doc(db, n.path);
+          batch.update(docRef, { read: true });
         }
       });
       try {
