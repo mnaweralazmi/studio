@@ -9,10 +9,11 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
-     {
+    {
       "collectionGroup": "topics",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
@@ -26,10 +27,17 @@
     },
     {
       "collectionGroup": "expenses",
-      "queryScope": "COL_GROUP",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "expenses",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
       ]
     },
     {
@@ -41,6 +49,13 @@
       ]
     },
     {
+      "collectionGroup": "agriExpenses",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "poultryExpenses",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
@@ -48,12 +63,26 @@
         { "fieldPath": "date", "order": "DESCENDING" }
       ]
     },
-     {
+    {
+      "collectionGroup": "poultryExpenses",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "livestockExpenses",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "livestockExpenses",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
       ]
     },
     {
@@ -64,12 +93,26 @@
         { "fieldPath": "dueDate", "order": "DESCENDING" }
       ]
     },
-     {
+    {
+      "collectionGroup": "debts",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "workers",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workers",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
       ]
     },
     {
@@ -81,11 +124,25 @@
       ]
     },
     {
+      "collectionGroup": "agriSales",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "poultryEggSales",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "poultryEggSales",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
       ]
     },
     {
@@ -97,11 +154,25 @@
       ]
     },
     {
+      "collectionGroup": "poultrySales",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "livestockSales",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "livestockSales",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
       ]
     },
     {
@@ -113,6 +184,13 @@
       ]
     },
     {
+      "collectionGroup": "facilities",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "poultryFlocks",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
@@ -120,12 +198,26 @@
         { "fieldPath": "name", "order": "ASCENDING" }
       ]
     },
-     {
+    {
+      "collectionGroup": "poultryFlocks",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "livestockHerds",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "livestockHerds",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" }
       ]
     }
   ],
