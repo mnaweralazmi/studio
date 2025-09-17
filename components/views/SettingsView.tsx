@@ -591,21 +591,33 @@ function AdminView({ user }: { user: any }) {
   const handleAddAd = async () => {
     if (!newAd.trim()) return;
     try {
+      // Check if the document exists
+      const docSnap = await getDoc(adMarqueeRef);
+      if (docSnap.exists()) {
+        // If it exists, update it
         await updateDoc(adMarqueeRef, {
-            ads: arrayUnion(newAd.trim())
+          ads: arrayUnion(newAd.trim()),
         });
-        setNewAd('');
-         toast({ title: 'تمت إضافة الإعلان' });
+      } else {
+        // If it doesn't exist, create it
+        await setDoc(adMarqueeRef, { ads: [newAd.trim()] });
+      }
+      setNewAd('');
+      toast({
+        title: 'تمت الإضافة بنجاح',
+        description: 'تمت إضافة الإعلان إلى الشريط المتحرك.',
+        className: 'bg-green-600 text-white',
+      });
     } catch (e: any) {
-        if (e.code === 'not-found') {
-            await setDoc(adMarqueeRef, { ads: [newAd.trim()]});
-            setNewAd('');
-            toast({ title: 'تمت إضافة الإعلان' });
-        } else {
-             toast({ title: 'خطأ في إضافة الإعلان', description: 'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.', variant: 'destructive'});
-        }
+      console.error('Error adding ad:', e);
+      toast({
+        title: 'خطأ في إضافة الإعلان',
+        description:
+          'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   const handleRemoveAd = async (adToRemove: string) => {
     try {
