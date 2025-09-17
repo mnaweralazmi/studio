@@ -552,9 +552,13 @@ export default function HomeView({ user }: { user: User }) {
             <h2 className="mt-4 text-xl font-semibold">
               لا توجد مواضيع لعرضها حاليًا
             </h2>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-2 mb-4">
               كن أول من يشارك فكرة أو موضوعًا جديدًا!
             </p>
+             <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddDialogOpen(true)}>
+                <Plus className="h-4 w-4 ml-2" />
+                أضف فكرتك الآن
+            </Button>
           </div>
         )}
 
