@@ -13,6 +13,7 @@ import {
   Camera,
   Trash2,
   Plus,
+  MoreVertical,
 } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -33,7 +34,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useAdmin } from '@/lib/hooks/useAdmin';
@@ -55,6 +56,12 @@ import { Textarea } from '@/components/ui/textarea';
 import ArchiveView from './ArchiveView';
 import { toast } from '../ui/use-toast';
 import { Toggle } from '../ui/toggle';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -243,7 +250,7 @@ function ProfileView() {
 
       // 4. Update Firestore user document
       const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, { photoURL }, { merge: true });
+      await setDoc(userDocRef, { photoURL, photoPath: filePath }, { merge: true });
 
       toast({
         title: 'تم تحديث الصورة',
@@ -261,6 +268,44 @@ function ProfileView() {
       setIsUploading(false);
     }
   };
+
+   const handleRemoveImage = async () => {
+    if (!user) return;
+    setIsUploading(true);
+
+    try {
+      // 1. Delete image from Storage if path exists in Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      const photoPath = userDoc.data()?.photoPath;
+
+      if (photoPath) {
+        const imageRef = ref(storage, photoPath);
+        await deleteObject(imageRef).catch((e) => console.warn("Could not delete old photo, it might not exist", e));
+      }
+      
+      // 2. Update Auth and Firestore to remove URL
+      await updateProfile(user, { photoURL: '' });
+      await setDoc(userDocRef, { photoURL: '', photoPath: '' }, { merge: true });
+
+      toast({
+        title: "تمت إزالة الصورة",
+        description: "تم حذف صورتك الشخصية.",
+        className: "bg-green-600 text-white"
+      });
+
+    } catch (error) {
+      console.error("Error removing profile picture:", error);
+      toast({
+        title: "خطأ",
+        description: "لم نتمكن من إزالة صورتك الشخصية.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -286,32 +331,47 @@ function ProfileView() {
                 accept="image/png, image/jpeg, image/gif"
                 className="hidden"
               />
-              {user?.photoURL ? (
-                <Image
-                  src={user.photoURL}
-                  alt={user.displayName || 'صورة المستخدم'}
-                  width={80}
-                  height={80}
-                  className="rounded-full object-cover w-20 h-20"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
-                  <UserCircle className="w-12 h-12 text-muted-foreground" />
+               <div className="relative w-20 h-20">
+                    {user?.photoURL ? (
+                        <Image
+                        src={user.photoURL}
+                        alt={user.displayName || 'صورة المستخدم'}
+                        width={80}
+                        height={80}
+                        className="rounded-full object-cover w-20 h-20"
+                        />
+                    ) : (
+                        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
+                        <UserCircle className="w-12 h-12 text-muted-foreground" />
+                        </div>
+                    )}
+                     <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-10 w-10 rounded-full text-white hover:bg-black/50"
+                                    disabled={isUploading}
+                                >
+                                    {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <MoreVertical className="h-5 w-5" />}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                                    <Camera className="h-4 w-4 ml-2" />
+                                    <span>تغيير الصورة</span>
+                                </DropdownMenuItem>
+                                {user?.photoURL && (
+                                    <DropdownMenuItem onClick={handleRemoveImage} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="h-4 w-4 ml-2" />
+                                        <span>إزالة الصورة</span>
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
-              )}
-              <Button
-                size="icon"
-                variant="default"
-                className="absolute bottom-0 right-0 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-              </Button>
             </div>
             <div className="flex-1">
               <div className="space-y-2">
