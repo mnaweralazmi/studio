@@ -2,26 +2,115 @@
 
 import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import HomeView from '@/components/views/HomeView';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
+import AdMarquee from '@/components/home/AdMarquee';
+import {
+  collection,
+  collectionGroup,
+  getDocs,
+  orderBy,
+  query,
+  where,
+  Timestamp,
+} from 'firebase/firestore';
+
+type Topic = {
+  id: string;
+  path: string;
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  imagePath?: string;
+  createdAt?: Timestamp;
+  userId?: string;
+  authorName?: string;
+  archived?: boolean;
+  [k: string]: any;
+};
 
 export default function HomePage() {
   const [user, loading] = useAuthState(auth);
   const { isAdmin, loading: adminLoading } = useAdmin();
   const router = useRouter();
 
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(true);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
+
+  const fetchTopics = useCallback(async () => {
+    if (!isAdmin) {
+      setTopicsLoading(false);
+      return;
+    }
+    setTopicsLoading(true);
+    setTopicsError(null);
+    try {
+      const allTopics: Topic[] = [];
+
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const userIds = usersSnapshot.docs.map((doc) => doc.id);
+
+      const topicPromises = userIds.map((userId) => {
+        const topicsCollectionRef = collection(db, 'users', userId, 'topics');
+        const q = query(topicsCollectionRef, where('archived', '!=', true));
+        return getDocs(q);
+      });
+
+      const userTopicsSnapshots = await Promise.all(topicPromises);
+
+      userTopicsSnapshots.forEach((snapshot) => {
+        snapshot.forEach((doc) => {
+          allTopics.push({
+            id: doc.id,
+            path: doc.ref.path,
+            ...doc.data(),
+          } as Topic);
+        });
+      });
+
+      allTopics.sort((a, b) => {
+        const dateA = a.createdAt?.toDate()?.getTime() || 0;
+        const dateB = b.createdAt?.toDate()?.getTime() || 0;
+        return dateB - dateA;
+      });
+
+      setTopics(allTopics);
+    } catch (e: any) {
+      console.error('Error fetching topics:', e);
+      if (e.code === 'failed-precondition') {
+        setTopicsError(
+          'حدث خطأ في قاعدة البيانات. قد يتطلب هذا الاستعلام فهرسًا مخصصًا. يرجى مراجعة سجلات Firestore.'
+        );
+      } else {
+        setTopicsError(
+          'حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.'
+        );
+      }
+    } finally {
+      setTopicsLoading(false);
+    }
+  }, [isAdmin]);
+
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
     }
   }, [user, loading, router]);
+  
+  useEffect(() => {
+    if(!adminLoading && isAdmin){
+        fetchTopics();
+    }
+  }, [adminLoading, isAdmin, fetchTopics]);
+
 
   if (loading || !user || adminLoading) {
     return (
@@ -40,7 +129,9 @@ export default function HomePage() {
             <CardContent className="p-6">
               <Alert variant="destructive" className="border-0">
                 <ShieldAlert className="h-6 w-6" />
-                <AlertTitle className="text-xl font-bold">وصول مرفوض</AlertTitle>
+                <AlertTitle className="text-xl font-bold">
+                  وصول مرفوض
+                </AlertTitle>
                 <AlertDescription className="mt-2">
                   هذه الصفحة مخصصة للمسؤولين فقط. لا تملك الصلاحيات اللازمة
                   لعرض هذا المحتوى.
@@ -57,7 +148,21 @@ export default function HomePage() {
   return (
     <div className="pb-24">
       <main className="px-4 pt-4 container mx-auto">
-        <HomeView user={user} />
+        <header className="flex flex-col items-center justify-between pt-8 sm:flex-row mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            المواضيع والنقاشات
+          </h1>
+        </header>
+
+        <AdMarquee />
+
+        <HomeView
+          user={user}
+          topics={topics}
+          loading={topicsLoading}
+          error={topicsError}
+          onRefresh={fetchTopics}
+        />
       </main>
       <AppFooter activeView="home" />
       <Toaster />
