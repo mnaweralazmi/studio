@@ -516,97 +516,100 @@ export default function HomeView({ user }: { user: User }) {
 
         {!loading && topics.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
-            {topics.map((topic) => (
-              <Card
-                key={topic.id}
-                className="group flex flex-col overflow-hidden bg-card/50 shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 border"
-              >
-                <div className="relative aspect-[16/9] w-full overflow-hidden">
-                  {topic.imageUrl ? (
-                    (topic.imageUrl.includes('.mp4') || topic.imageUrl.includes('.mov') || topic.imageUrl.includes('video')) ? (
-                       <video src={topic.imageUrl} controls className="w-full h-full object-cover" />
+            {topics.map((topic) => {
+               const isVideo = topic.imageUrl && (topic.imageUrl.includes('.mp4') || topic.imageUrl.includes('.mov') || topic.imageUrl.includes('video'));
+               return (
+                <Card
+                  key={topic.id}
+                  className="group flex flex-col overflow-hidden bg-card/50 shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 border"
+                >
+                  <div className="relative aspect-[16/9] w-full overflow-hidden">
+                    {topic.imageUrl ? (
+                       isVideo ? (
+                         <video src={topic.imageUrl} controls className="w-full h-full object-cover" />
+                      ) : (
+                        <Image
+                          src={topic.imageUrl}
+                          alt={topic.title || 'Topic Image'}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      )
                     ) : (
-                      <Image
-                        src={topic.imageUrl}
-                        alt={topic.title || 'Topic Image'}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    )
-                  ) : (
-                    <div className="w-full h-full bg-secondary flex items-center justify-center">
-                      <Newspaper className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 flex flex-col p-4 bg-background/80">
-                  <div className="flex-1">
-                     <div className="flex justify-between items-start mb-2">
-                        {topic.isPublic ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700"
-                          >
-                            <Globe className="h-3 w-3 ml-1" />
-                            عام
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="destructive"
-                            className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700"
-                          >
-                            <Lock className="h-3 w-3 ml-1" />
-                            خاص
-                          </Badge>
-                        )}
-                         {topic.createdAt && (
-                           <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(topic.createdAt.toDate(), { addSuffix: true, locale: ar })}
-                           </p>
-                        )}
-                    </div>
-                    <CardTitle className="text-lg mb-2 leading-tight hover:text-primary transition-colors">
-                      {topic.title}
-                    </CardTitle>
-                    {topic.description && (
-                      <p className="text-muted-foreground text-sm line-clamp-3">
-                        {topic.description}
-                      </p>
+                      <div className="w-full h-full bg-secondary flex items-center justify-center">
+                        <Newspaper className="h-10 w-10 text-muted-foreground" />
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                     {topic.authorName && (
-                        <p className="text-xs text-muted-foreground">
-                          بواسطة: {topic.authorName}
+
+                  <div className="flex-1 flex flex-col p-4 bg-background/80">
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                          {topic.isPublic ? (
+                            <Badge
+                              variant="secondary"
+                              className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700"
+                            >
+                              <Globe className="h-3 w-3 ml-1" />
+                              عام
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="destructive"
+                              className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700"
+                            >
+                              <Lock className="h-3 w-3 ml-1" />
+                              خاص
+                            </Badge>
+                          )}
+                          {topic.createdAt && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(topic.createdAt.toDate(), { addSuffix: true, locale: ar })}
+                            </p>
+                          )}
+                      </div>
+                      <CardTitle className="text-lg mb-2 leading-tight hover:text-primary transition-colors">
+                        {topic.title}
+                      </CardTitle>
+                      {topic.description && (
+                        <p className="text-muted-foreground text-sm line-clamp-3">
+                          {topic.description}
                         </p>
                       )}
-                      <div className="flex gap-1">
-                          {canEdit(topic) && (
-                            <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(topic)}
-                            >
-                            <Pencil className="h-4 w-4" />
-                            </Button>
+                    </div>
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                      {topic.authorName && (
+                          <p className="text-xs text-muted-foreground">
+                            بواسطة: {topic.authorName}
+                          </p>
                         )}
-                        {canModify(topic) && (
-                            <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => openArchiveConfirmation(topic)}
-                            >
-                            <Archive className="h-4 w-4" />
-                            </Button>
-                        )}
-                      </div>
+                        <div className="flex gap-1">
+                            {canEdit(topic) && (
+                              <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => openEditDialog(topic)}
+                              >
+                              <Pencil className="h-4 w-4" />
+                              </Button>
+                          )}
+                          {canModify(topic) && (
+                              <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => openArchiveConfirmation(topic)}
+                              >
+                              <Archive className="h-4 w-4" />
+                              </Button>
+                          )}
+                        </div>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+               )
+            })}
           </div>
         )}
       </section>
