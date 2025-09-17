@@ -47,6 +47,7 @@ const COLLECTION_CONFIG = {
   facilities: { name: 'المرافق', fields: ['name', 'type'] },
   poultryFlocks: { name: 'قطعان الدواجن', fields: ['name', 'birdCount'] },
   livestockHerds: { name: 'قطعان المواشي', fields: ['name', 'animalCount'] },
+  topics: { name: 'المواضيع', fields: ['title', 'authorName', 'isPublic']}
 };
 
 
@@ -60,6 +61,9 @@ const formatValue = (key: string, value: any) => {
     if (value === undefined || value === null) return 'N/A';
     if (['amount', 'totalAmount', 'cartonPrice', 'pricePerUnit', 'salary'].includes(key)) {
         return `${Number(value).toFixed(3)} د.ك`;
+    }
+     if (key === 'isPublic') {
+        return value ? 'عام' : 'خاص';
     }
     if (value instanceof Timestamp) {
         return formatDate(value);

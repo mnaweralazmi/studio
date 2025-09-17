@@ -41,6 +41,7 @@ import {
   AlertCircle,
   Pencil,
   Save,
+  Archive,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,6 +107,7 @@ async function createTopic(
     createdAt: serverTimestamp() as Timestamp,
     imageUrl: '',
     imagePath: '',
+    archived: false,
   };
   
   if (data.file) {
@@ -164,13 +166,9 @@ async function updateTopic(
   await updateDoc(topicRef, updateData);
 }
 
-async function deleteTopic(topic: Topic): Promise<void> {
+async function archiveTopic(topic: Topic): Promise<void> {
     const topicRef = doc(db, topic.path);
-    await deleteDoc(topicRef);
-    if (topic.imagePath) {
-        const imageRef = ref(storage, topic.imagePath);
-        await deleteObject(imageRef).catch(e => console.error("Error deleting topic image", e));
-    }
+    await updateDoc(topicRef, { archived: true });
 }
 
 
@@ -353,8 +351,8 @@ export default function HomeView({ user }: { user: User }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [topicToArchive, setTopicToArchive] = useState<Topic | null>(null);
 
   // State for dialogs
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -374,12 +372,16 @@ export default function HomeView({ user }: { user: User }) {
     const topicStore: Record<string, Topic[]> = { public: [], user: [] };
 
     const processSnapshots = () => {
-      const merged = [...topicStore.user, ...topicStore.public];
-      const uniqueTopics = Array.from(new Map(merged.map(t => [t.id, t])).values());
-      uniqueTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-      setTopics(uniqueTopics);
-      setLoading(false);
+        const publicTopics = topicStore.public.filter(t => !t.archived);
+        const userTopics = topicStore.user.filter(t => !t.archived);
+
+        const merged = [...userTopics, ...publicTopics];
+        const uniqueTopics = Array.from(new Map(merged.map(t => [t.id, t])).values());
+        uniqueTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        setTopics(uniqueTopics);
+        setLoading(false);
     };
+    
 
     const handleSnapshotError = (e: any, label: string) => {
       console.error(`[${label}] snapshot error:`, e);
@@ -460,26 +462,26 @@ export default function HomeView({ user }: { user: User }) {
     }
   };
 
-  const openDeleteConfirmation = (topic: Topic) => {
-    setTopicToDelete(topic);
-    setShowDeleteConfirm(true);
+  const openArchiveConfirmation = (topic: Topic) => {
+    setTopicToArchive(topic);
+    setShowArchiveConfirm(true);
   };
 
-  const handleDeleteConfirmed = async () => {
-    if (!topicToDelete) return;
+  const handleArchiveConfirmed = async () => {
+    if (!topicToArchive) return;
     try {
-      await deleteTopic(topicToDelete);
+      await archiveTopic(topicToArchive);
       toast({
-        title: 'تم الحذف',
-        description: 'تم حذف الموضوع بنجاح.',
+        title: 'تمت الأرشفة',
+        description: 'تمت أرشفة الموضوع بنجاح.',
         className: 'bg-green-600 text-white',
       });
     } catch (e: any) {
-      console.error("Error deleting topic:", e);
-      toast({ variant: 'destructive', title: 'خطأ في الحذف', description: 'لم نتمكن من حذف الموضوع.' });
+      console.error("Error archiving topic:", e);
+      toast({ variant: 'destructive', title: 'خطأ في الأرشفة', description: 'لم نتمكن من أرشفة الموضوع.' });
     } finally {
-      setShowDeleteConfirm(false);
-      setTopicToDelete(null);
+      setShowArchiveConfirm(false);
+      setTopicToArchive(null);
     }
   };
   
@@ -488,7 +490,7 @@ export default function HomeView({ user }: { user: User }) {
     setIsEditDialogOpen(true);
   }
 
-  const canDelete = (topic: Topic) => isAdmin || (user && topic.userId === user.uid);
+  const canModify = (topic: Topic) => isAdmin || (user && topic.userId === user.uid);
   const canEdit = (topic: Topic) => user && topic.userId === user.uid;
 
 
@@ -574,14 +576,14 @@ export default function HomeView({ user }: { user: User }) {
                         <Pencil className="h-4 w-4" />
                         </Button>
                     )}
-                    {canDelete(topic) && (
+                    {canModify(topic) && (
                         <Button
                         variant="destructive"
                         size="icon"
                         className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => openDeleteConfirmation(topic)}
+                        onClick={() => openArchiveConfirmation(topic)}
                         >
-                        <Trash2 className="h-4 w-4" />
+                        <Archive className="h-4 w-4" />
                         </Button>
                     )}
                 </div>
@@ -667,21 +669,20 @@ export default function HomeView({ user }: { user: User }) {
         )}
 
 
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <Dialog open={showArchiveConfirm} onOpenChange={setShowArchiveConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تأكيد الحذف</DialogTitle>
+            <DialogTitle>تأكيد الأرشفة</DialogTitle>
             <DialogDescription>
-              هل أنت متأكد من رغبتك في حذف هذا الموضوع بشكل نهائي؟ لا يمكن
-              التراجع عن هذا الإجراء.
+              هل أنت متأكد من رغبتك في أرشفة هذا الموضوع؟ سيتم إخفاؤه من القائمة ونقله إلى الأرشيف.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">إلغاء</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleDeleteConfirmed}>
-              نعم، قم بالحذف
+            <Button variant="destructive" onClick={handleArchiveConfirmed}>
+              نعم، قم بالأرشفة
             </Button>
           </DialogFooter>
         </DialogContent>
