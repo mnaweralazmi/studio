@@ -2,20 +2,16 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  collection,
+  collectionGroup,
   query,
   orderBy,
   doc,
   updateDoc,
   addDoc,
-  collectionGroup,
-  where,
   serverTimestamp,
   onSnapshot,
   Timestamp,
   setDoc,
-  writeBatch,
-  getDocs,
 } from 'firebase/firestore';
 import {
   ref,
@@ -59,7 +55,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
-import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import AdMarquee from '../home/AdMarquee';
 
@@ -70,7 +65,6 @@ type Topic = {
   description?: string;
   imageUrl?: string;
   imagePath?: string;
-  isPublic?: boolean;
   createdAt?: Timestamp;
   userId?: string;
   authorName?: string;
@@ -102,7 +96,6 @@ async function createTopic(
     description: data.description.trim(),
     userId: currentUser.uid,
     authorName: currentUser.displayName || 'مستخدم غير معروف',
-    isPublic: true, // All topics are public by default now
     createdAt: serverTimestamp() as Timestamp,
     imageUrl: '',
     imagePath: '',
@@ -353,32 +346,38 @@ export default function HomeView({ user }: { user: User }) {
   useEffect(() => {
     setLoading(true);
     const q = query(
-        collectionGroup(db, 'topics'),
-        where('archived', '!=', true),
-        orderBy('createdAt', 'desc')
+      collectionGroup(db, 'topics'),
+      where('archived', '!=', true),
+      orderBy('createdAt', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, 
+    const unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
-        const fetchedTopics = snapshot.docs
-          .map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
-          
+        const fetchedTopics = snapshot.docs.map(
+          (d) => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic)
+        );
+
         setTopics(fetchedTopics);
         setLoading(false);
         setError(null);
       },
       (e) => {
-        console.error("Error fetching topics:", e);
+        console.error('Error fetching topics:', e);
         // Check for a specific Firestore error for missing indexes
         if (e.code === 'failed-precondition') {
-          setError('حدث خطأ في قاعدة البيانات. قد يتطلب هذا الاستعلام فهرسًا مخصصًا. يرجى مراجعة سجلات Firestore.');
+          setError(
+            'حدث خطأ في قاعدة البيانات. قد يتطلب هذا الاستعلام فهرسًا مخصصًا. يرجى مراجعة سجلات Firestore.'
+          );
         } else {
-          setError('حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.');
+          setError(
+            'حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.'
+          );
         }
         setLoading(false);
       }
     );
-    
+
     return () => unsubscribe();
   }, []);
 
@@ -492,7 +491,7 @@ export default function HomeView({ user }: { user: User }) {
         )}
 
         {error && (
-          <Alert variant="destructive" className="my-4">
+          <Alert variant="destructive" className="my-4 max-w-2xl mx-auto">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>حدث خطأ</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -500,7 +499,7 @@ export default function HomeView({ user }: { user: User }) {
         )}
 
         {!loading && topics.length === 0 && !error && (
-           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
+           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border max-w-2xl mx-auto">
             <Newspaper className="h-16 w-16 text-muted-foreground" />
             <h2 className="mt-4 text-xl font-semibold">
               لا توجد مواضيع لعرضها حاليًا
@@ -516,98 +515,83 @@ export default function HomeView({ user }: { user: User }) {
         )}
 
         {!loading && topics.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+           <div className="max-w-2xl mx-auto space-y-8">
             {topics.map((topic) => {
                const isVideo = topic.imageUrl && (topic.imageUrl.includes('.mp4') || topic.imageUrl.includes('.mov') || topic.imageUrl.includes('video'));
                return (
                 <Card
                   key={topic.id}
-                  className="group flex flex-col overflow-hidden bg-card/50 shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 border"
+                  className="overflow-hidden bg-card/50 shadow-lg border w-full"
                 >
-                  <div className="relative aspect-[16/9] w-full overflow-hidden">
-                    {topic.imageUrl ? (
-                       isVideo ? (
-                         <video src={topic.imageUrl} controls className="w-full h-full object-cover" />
-                      ) : (
-                        <Image
-                          src={topic.imageUrl}
-                          alt={topic.title || 'Topic Image'}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      )
-                    ) : (
-                      <div className="w-full h-full bg-secondary flex items-center justify-center">
-                        <Newspaper className="h-10 w-10 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 flex flex-col p-4 bg-background/80">
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                          {topic.isPublic ? (
-                            <Badge
-                              variant="secondary"
-                              className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-200 dark:border-green-700"
-                            >
-                              <Globe className="h-3 w-3 ml-1" />
-                              عام
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="destructive"
-                              className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-200 dark:border-red-700"
-                            >
-                              <Lock className="h-3 w-3 ml-1" />
-                              خاص
-                            </Badge>
-                          )}
-                          {topic.createdAt && (
-                            <p className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(topic.createdAt.toDate(), { addSuffix: true, locale: ar })}
-                            </p>
-                          )}
-                      </div>
-                      <CardTitle className="text-lg mb-2 leading-tight hover:text-primary transition-colors">
-                        {topic.title}
-                      </CardTitle>
-                      {topic.description && (
-                        <p className="text-muted-foreground text-sm line-clamp-3">
-                          {topic.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                      {topic.authorName && (
-                          <p className="text-xs text-muted-foreground">
-                            بواسطة: {topic.authorName}
-                          </p>
-                        )}
-                        <div className="flex gap-1">
-                            {canEdit(topic) && (
-                              <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => openEditDialog(topic)}
-                              >
-                              <Pencil className="h-4 w-4" />
-                              </Button>
-                          )}
-                          {canModify(topic) && (
-                              <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => openArchiveConfirmation(topic)}
-                              >
-                              <Archive className="h-4 w-4" />
-                              </Button>
-                          )}
+                  
+                  <CardHeader>
+                     <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                                <User className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-card-foreground">{topic.authorName}</p>
+                                {topic.createdAt && (
+                                <p className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(topic.createdAt.toDate(), { addSuffix: true, locale: ar })}
+                                </p>
+                                )}
+                            </div>
                         </div>
+                        {canModify(topic) && (
+                            <div className="flex gap-1">
+                                {canEdit(topic) && (
+                                <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openEditDialog(topic)}
+                                >
+                                <Pencil className="h-4 w-4" />
+                                </Button>
+                            )}
+                                <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => openArchiveConfirmation(topic)}
+                                >
+                                <Archive className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+                     </div>
+                  </CardHeader>
+
+                  <CardContent className="px-6 pb-6 pt-0">
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-bold leading-snug">{topic.title}</h2>
+
+                        {topic.description && (
+                            <p className="text-muted-foreground text-base whitespace-pre-wrap">
+                            {topic.description}
+                            </p>
+                        )}
+                        
+                        {topic.imageUrl && (
+                            <div className="relative mt-4 rounded-lg overflow-hidden border">
+                            { isVideo ? (
+                                <video src={topic.imageUrl} controls className="w-full h-full object-cover" />
+                            ) : (
+                                <Image
+                                src={topic.imageUrl}
+                                alt={topic.title || 'Topic Image'}
+                                width={800}
+                                height={450}
+                                className="object-cover w-full h-auto"
+                                />
+                            )}
+                            </div>
+                        )}
                     </div>
-                  </div>
+                  </CardContent>
+
                 </Card>
                )
             })}
@@ -656,3 +640,5 @@ export default function HomeView({ user }: { user: User }) {
     </div>
   );
 }
+
+    
