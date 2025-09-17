@@ -79,7 +79,6 @@ type Topic = {
 type TopicFormData = {
   title: string;
   description: string;
-  isPublic: boolean;
   file?: File;
   imageRemoved?: boolean;
 };
@@ -101,7 +100,7 @@ async function createTopic(
     description: data.description.trim(),
     userId: currentUser.uid,
     authorName: currentUser.displayName || 'مستخدم غير معروف',
-    isPublic: data.isPublic,
+    isPublic: true, // All topics are public by default now
     createdAt: serverTimestamp() as Timestamp,
     imageUrl: '',
     imagePath: '',
@@ -132,7 +131,6 @@ async function updateTopic(
   const updateData: any = {
     title: newData.title.trim(),
     description: newData.description.trim(),
-    isPublic: newData.isPublic,
   };
 
   // Case 1: New file is uploaded, replacing the old one
@@ -187,7 +185,6 @@ function TopicDialog({
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
   const [file, setFile] = useState<File | undefined>(undefined);
   const [preview, setPreview] = useState<string | undefined>(undefined);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -195,7 +192,6 @@ function TopicDialog({
   const clearForm = useCallback(() => {
     setTitle('');
     setDescription('');
-    setIsPublic(true);
     setFile(undefined);
     if (preview && preview.startsWith('blob:')) URL.revokeObjectURL(preview);
     setPreview(undefined);
@@ -207,7 +203,6 @@ function TopicDialog({
         if (initialTopic) {
             setTitle(initialTopic.title || '');
             setDescription(initialTopic.description || '');
-            setIsPublic(initialTopic.isPublic ?? true);
             setPreview(initialTopic.imageUrl);
             setImageRemoved(false); // Reset on open
         } else {
@@ -265,7 +260,7 @@ function TopicDialog({
       toast({ variant: 'destructive', title: 'خطأ', description: 'عنوان الموضوع مطلوب.' });
       return;
     }
-    await onSave({ title, description, isPublic, file, imageRemoved });
+    await onSave({ title, description, file, imageRemoved });
   };
 
   const isVideo = useMemo(() => {
@@ -321,12 +316,6 @@ function TopicDialog({
               )}
             </div>
           )}
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
-            <Switch id="is-public" checked={isPublic} onCheckedChange={setIsPublic} />
-            <Label htmlFor="is-public" className="cursor-pointer">
-              {isPublic ? 'موضوع عام (يظهر للجميع)' : 'موضوع خاص (يظهر لك فقط)'}
-            </Label>
-          </div>
         </div>
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">إلغاء</Button></DialogClose>
@@ -360,63 +349,37 @@ export default function HomeView({ user }: { user: User }) {
 
   // Fetching logic
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    
     setLoading(true);
-
-    const handleSnapshotError = (e: any, label: string) => {
-      console.error(`[${label}] snapshot error:`, e);
-      setError('حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.');
-      setLoading(false);
-    };
-
-    // Query for user's own topics (public and private)
-    const userQ = query(
-      collection(db, 'users', user.uid, 'topics'),
-      where('archived', '!=', true),
-      orderBy('archived'), // Firestore requirement
-      orderBy('createdAt', 'desc')
+    // This more robust query fetches all non-archived public topics
+    // across all users. It's simpler and less prone to race conditions.
+    const q = query(
+        collectionGroup(db, 'topics'),
+        where('archived', '!=', true),
+        where('isPublic', '==', true),
+        orderBy('createdAt', 'desc')
     );
-    const userUnsub = onSnapshot(userQ, 
-      (userSnap) => {
-        const userTopics = userSnap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
-        const userTopicIds = new Set(userTopics.map(t => t.id));
 
-        // Query for public topics, excluding the user's own topics which are already fetched
-        const publicQ = query(
-          collectionGroup(db, 'topics'),
-          where('isPublic', '==', true),
-          where('archived', '!=', true)
-        );
-
-        const publicUnsub = onSnapshot(publicQ, 
-          (publicSnap) => {
-            const publicTopics = publicSnap.docs
-              .map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic))
-              .filter(t => !userTopicIds.has(t.id)); // Exclude user's own topics
-
-            const allTopics = [...userTopics, ...publicTopics];
-            allTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-            setTopics(allTopics);
-            setLoading(false);
-            setError(null);
-          },
-          (e) => handleSnapshotError(e, 'public')
-        );
-
-        // This is a nested subscription, so we return it to be cleaned up
-        return () => publicUnsub();
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        const fetchedTopics = snapshot.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
+        setTopics(fetchedTopics);
+        setLoading(false);
+        setError(null);
       },
-      (e) => handleSnapshotError(e, 'user')
+      (e) => {
+        console.error("Error fetching topics:", e);
+        // Check for a specific Firestore error for missing indexes
+        if (e.code === 'failed-precondition') {
+          setError('حدث خطأ في قاعدة البيانات. قد يتطلب هذا الاستعلام فهرسًا مخصصًا. يرجى مراجعة سجلات Firestore.');
+        } else {
+          setError('حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.');
+        }
+        setLoading(false);
+      }
     );
     
-    return () => {
-      userUnsub();
-    };
-  }, [user]);
+    return () => unsubscribe();
+  }, []);
 
   // --- Handlers ---
 
