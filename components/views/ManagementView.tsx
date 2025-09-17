@@ -1977,14 +1977,16 @@ export default function ManagementView() {
       </header>
 
       <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
-           {availableTabs.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} className="flex items-center justify-center gap-2 h-12 text-xs sm:text-sm">
-                 <t.icon className={cn('h-5 w-5', t.rotate && 'rotate-90')} />
-                {t.label}
-              </TabsTrigger>
-            ))}
-        </TabsList>
+        <div className="flex justify-center">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto max-w-2xl">
+            {availableTabs.map((t) => (
+                <TabsTrigger key={t.value} value={t.value} className="flex items-center justify-center gap-2 h-12 text-xs sm:text-sm">
+                    <t.icon className={cn('h-5 w-5', t.rotate && 'rotate-90')} />
+                    {t.label}
+                </TabsTrigger>
+                ))}
+            </TabsList>
+        </div>
 
         {loadingUser ? (
            <div className="flex justify-center items-center py-16">

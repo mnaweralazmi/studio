@@ -69,30 +69,30 @@ function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, '
                 <DialogTitle>إضافة مهمة جديدة</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="task-title">عنوان المهمة</Label>
-                    <Input id="task-title" placeholder="مثال: ري قسم البطاطس" value={title} onChange={(e) => setTitle(e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="task-description">وصف المهمة (اختياري)</Label>
-                    <Textarea id="task-description" placeholder="تفاصيل إضافية عن المهمة" value={description} onChange={(e) => setDescription(e.target.value)} />
-                </div>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2 flex flex-col">
-                        <Label>تاريخ المهمة</Label>
-                        <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={setDate}
-                            className="rounded-md border self-center"
-                            locale={ar}
-                            />
+                    <div className="space-y-2">
+                        <Label htmlFor="task-title">عنوان المهمة</Label>
+                        <Input id="task-title" placeholder="مثال: ري قسم البطاطس" value={title} onChange={(e) => setTitle(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="task-time">وقت التذكير</Label>
                         <Input type="time" id="task-time" value={reminder} onChange={(e) => setReminder(e.target.value)} />
                     </div>
                  </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="task-description">وصف المهمة (اختياري)</Label>
+                    <Textarea id="task-description" placeholder="تفاصيل إضافية عن المهمة" value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+                 <div className="space-y-2 flex flex-col">
+                    <Label>تاريخ المهمة</Label>
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        className="rounded-md border self-center"
+                        locale={ar}
+                        />
+                </div>
             </div>
              <DialogFooter>
                 <DialogClose asChild>
@@ -120,7 +120,7 @@ export default function TasksView() {
     tasksCollection ? query(tasksCollection, orderBy('date', 'asc')) : null
   );
 
-  const { upcomingTasks, todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
+  const { allUpcomingTasks, todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
     const allTasks: Task[] = allTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
 
     const upcoming: Task[] = [];
@@ -128,8 +128,6 @@ export default function TasksView() {
     const selected: Task[] = [];
     const completed: Task[] = [];
     const dates: Date[] = [];
-    
-    const todayDate = startOfToday();
 
     allTasks.forEach(task => {
       const taskDate = task.date ? (task.date instanceof Timestamp ? task.date.toDate() : new Date(task.date)) : null;
@@ -141,10 +139,9 @@ export default function TasksView() {
       if (task.completed) {
         completed.push(task);
       } else if (taskDate) {
+        upcoming.push(task); // All non-completed tasks are upcoming/due
         if (isToday(taskDate)) {
           today.push(task);
-        } else if (taskDate > todayDate) {
-           upcoming.push(task);
         }
         if (selectedDate && isSameDay(taskDate, selectedDate)) {
           selected.push(task);
@@ -152,8 +149,12 @@ export default function TasksView() {
       }
     });
 
-    const allUpcoming = [...today, ...upcoming];
-    allUpcoming.sort((a,b) => new Date(a.date as string).getTime() - new Date(b.date as string).getTime());
+    // Sort all upcoming tasks by date (overdue tasks will appear first)
+    upcoming.sort((a,b) => {
+        const dateA = a.date ? (a.date instanceof Timestamp ? a.date.toDate() : new Date(a.date)) : new Date(0);
+        const dateB = b.date ? (b.date instanceof Timestamp ? b.date.toDate() : new Date(b.date)) : new Date(0);
+        return dateA.getTime() - dateB.getTime();
+    });
     
     completed.sort((a,b) => {
         const dateA = a.createdAt ? (a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
@@ -162,7 +163,7 @@ export default function TasksView() {
     });
 
     return { 
-        upcomingTasks: allUpcoming, 
+        allUpcomingTasks: upcoming, 
         todayTasks: today, 
         selectedDayTasks: selected, 
         completedTasks: completed, 
@@ -233,7 +234,7 @@ export default function TasksView() {
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
               <TabsTrigger value="calendar" className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />التقويم</TabsTrigger>
               <TabsTrigger value="today">مهام اليوم ({todayTasks.length})</TabsTrigger>
-              <TabsTrigger value="all">كل المهام ({upcomingTasks.length})</TabsTrigger>
+              <TabsTrigger value="all">المهام القادمة ({allUpcomingTasks.length})</TabsTrigger>
               <TabsTrigger value="completed">المنجزة ({completedTasks.length})</TabsTrigger>
             </TabsList>
             
@@ -284,10 +285,10 @@ export default function TasksView() {
             <TabsContent value="all" className="mt-6">
                 <Card>
                 <CardHeader>
-                    <CardTitle>كل المهام القادمة</CardTitle>
+                    <CardTitle>كل المهام القادمة (بما في ذلك المتأخرة)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <TaskList tasks={upcomingTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
+                    <TaskList tasks={allUpcomingTasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} showDate={true} />
                 </CardContent>
                 </Card>
             </TabsContent>
