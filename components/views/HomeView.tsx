@@ -15,6 +15,7 @@ import {
   Timestamp,
   setDoc,
   writeBatch,
+  getDocs,
 } from 'firebase/firestore';
 import {
   ref,
@@ -73,6 +74,7 @@ type Topic = {
   createdAt?: Timestamp;
   userId?: string;
   authorName?: string;
+  archived?: boolean;
   [k: string]: any;
 };
 
@@ -354,13 +356,15 @@ export default function HomeView({ user }: { user: User }) {
     // and orders them by creation date. It no longer needs a complex composite index.
     const q = query(
         collectionGroup(db, 'topics'),
-        where('archived', '!=', true),
         orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
-        const fetchedTopics = snapshot.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
+        const fetchedTopics = snapshot.docs
+          .map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic))
+          .filter(topic => topic.archived !== true); // Filter on the client-side
+          
         setTopics(fetchedTopics);
         setLoading(false);
         setError(null);
