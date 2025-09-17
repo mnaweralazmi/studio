@@ -352,18 +352,16 @@ export default function HomeView({ user }: { user: User }) {
   // Fetching logic
   useEffect(() => {
     setLoading(true);
-    // This query is now simpler and more robust. It fetches all non-archived topics
-    // and orders them by creation date. It no longer needs a complex composite index.
     const q = query(
         collectionGroup(db, 'topics'),
+        where('archived', '!=', true),
         orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
         const fetchedTopics = snapshot.docs
-          .map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic))
-          .filter(topic => topic.archived !== true); // Filter on the client-side
+          .map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
           
         setTopics(fetchedTopics);
         setLoading(false);
