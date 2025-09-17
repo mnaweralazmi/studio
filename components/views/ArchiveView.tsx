@@ -259,5 +259,3 @@ export default function ArchiveView({ user }: { user: User | null | undefined })
     </div>
   );
 }
-
-    
