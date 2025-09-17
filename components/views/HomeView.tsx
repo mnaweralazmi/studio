@@ -350,12 +350,11 @@ export default function HomeView({ user }: { user: User }) {
   // Fetching logic
   useEffect(() => {
     setLoading(true);
-    // This more robust query fetches all non-archived public topics
-    // across all users. It's simpler and less prone to race conditions.
+    // This query is now simpler and more robust. It fetches all non-archived topics
+    // and orders them by creation date. It no longer needs a complex composite index.
     const q = query(
         collectionGroup(db, 'topics'),
         where('archived', '!=', true),
-        where('isPublic', '==', true),
         orderBy('createdAt', 'desc')
     );
 

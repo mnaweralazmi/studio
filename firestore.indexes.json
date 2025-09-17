@@ -4,25 +4,8 @@
       "collectionGroup": "topics",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "isPublic", "order": "ASCENDING" },
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "topics",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-     {
-      "collectionGroup": "topics",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "archived", "order": "ASCENDING" }
       ]
     },
     {
