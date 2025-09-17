@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  collectionGroup,
+  collection,
   query,
   orderBy,
   doc,
   updateDoc,
   addDoc,
   serverTimestamp,
-  onSnapshot,
   Timestamp,
   setDoc,
+  getDocs,
   where,
+  collectionGroup,
 } from 'firebase/firestore';
 import {
   ref,
@@ -344,28 +345,46 @@ export default function HomeView({ user }: { user: FirebaseUser }) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [topicToEdit, setTopicToEdit] = useState<Topic | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Fetching logic
-  useEffect(() => {
+  
+  const fetchTopics = useCallback(async () => {
+    if (!isAdmin) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const q = query(
-      collectionGroup(db, 'topics'),
-      where('archived', '!=', true),
-      orderBy('createdAt', 'desc')
-    );
+    setError(null);
+    try {
+      const allTopics: Topic[] = [];
+      
+      // 1. Fetch all users
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const userIds = usersSnapshot.docs.map(doc => doc.id);
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetchedTopics = snapshot.docs.map(
-          (d) => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic)
-        );
+      // 2. Fetch topics for each user
+      const topicPromises = userIds.map(userId => {
+        const topicsCollectionRef = collection(db, 'users', userId, 'topics');
+        const q = query(topicsCollectionRef, where('archived', '!=', true));
+        return getDocs(q);
+      });
 
-        setTopics(fetchedTopics);
-        setLoading(false);
-        setError(null);
-      },
-      (e) => {
+      const userTopicsSnapshots = await Promise.all(topicPromises);
+
+      userTopicsSnapshots.forEach(snapshot => {
+        snapshot.forEach(doc => {
+          allTopics.push({ id: doc.id, path: doc.ref.path, ...doc.data() } as Topic);
+        });
+      });
+
+      // 3. Sort all topics by creation date
+      allTopics.sort((a, b) => {
+        const dateA = a.createdAt?.toDate()?.getTime() || 0;
+        const dateB = b.createdAt?.toDate()?.getTime() || 0;
+        return dateB - dateA; // Descending
+      });
+      
+      setTopics(allTopics);
+
+    } catch (e: any) {
         console.error('Error fetching topics:', e);
         // Check for a specific Firestore error for missing indexes
         if (e.code === 'failed-precondition') {
@@ -377,12 +396,16 @@ export default function HomeView({ user }: { user: FirebaseUser }) {
             'حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.'
           );
         }
+    } finally {
         setLoading(false);
-      }
-    );
+    }
+  }, [isAdmin]);
 
-    return () => unsubscribe();
-  }, []);
+
+  // Fetching logic
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
 
   // --- Handlers ---
 
@@ -396,6 +419,7 @@ export default function HomeView({ user }: { user: FirebaseUser }) {
         className: 'bg-green-600 text-white',
       });
       setIsAddDialogOpen(false);
+      fetchTopics(); // Refetch topics
     } catch (e: any) {
       console.error('Error saving topic: ', e);
       toast({ variant: 'destructive', title: 'خطأ في النشر', description: e.message || 'لم نتمكن من نشر موضوعك.' });
@@ -416,6 +440,7 @@ export default function HomeView({ user }: { user: FirebaseUser }) {
       });
       setIsEditDialogOpen(false);
       setTopicToEdit(null);
+      fetchTopics(); // Refetch topics
     } catch (e: any) {
       console.error('Error updating topic: ', e);
       toast({ variant: 'destructive', title: 'خطأ في التحديث', description: e.message || 'لم نتمكن من حفظ التغييرات.' });
@@ -438,6 +463,7 @@ export default function HomeView({ user }: { user: FirebaseUser }) {
         description: 'تمت أرشفة الموضوع بنجاح.',
         className: 'bg-green-600 text-white',
       });
+      fetchTopics(); // Refetch topics
     } catch (e: any) {
       console.error("Error archiving topic:", e);
       toast({ variant: 'destructive', title: 'خطأ في الأرشفة', description: 'لم نتمكن من أرشفة الموضوع.' });
@@ -457,7 +483,7 @@ export default function HomeView({ user }: { user: FirebaseUser }) {
 
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       <header className="flex flex-col items-center justify-between pt-8 sm:flex-row">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-full bg-primary/10 border border-primary/20">
