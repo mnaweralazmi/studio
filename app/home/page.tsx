@@ -127,10 +127,13 @@ export default function HomePage() {
   return (
     <div className="pb-24">
       <main className="px-4 pt-4 container mx-auto">
-        <header className="flex flex-col items-center justify-between pt-8 sm:flex-row mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            المواضيع والنقاشات
+        <header className="text-center pt-8 mb-8">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">
+            مجلس المزرعة
           </h1>
+          <p className="mt-2 text-lg text-muted-foreground">
+            ساحة لتبادل الأفكار والنقاشات بين أعضاء مجتمع المزارعين.
+          </p>
         </header>
 
         <AdMarquee />
