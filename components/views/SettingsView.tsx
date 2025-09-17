@@ -143,7 +143,7 @@ const COLLECTION_CONFIG = {
   facilities: { name: 'المرافق', fields: ['name', 'type'] },
   poultryFlocks: { name: 'قطعان الدواجن', fields: ['name', 'birdCount'] },
   livestockHerds: { name: 'قطعان المواشي', fields: ['name', 'animalCount'] },
-  topics: { name: 'المواضيع', fields: ['title', 'authorName', 'isPublic']}
+  publicTopics: { name: 'المواضيع العامة', fields: ['title', 'authorName']}
 };
 
 const formatDate = (date: any) => {
@@ -184,11 +184,19 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
     try {
       const allArchivedData: Record<string, any[]> = {};
       const collectionKeys = Object.keys(COLLECTION_CONFIG);
-      const promises = collectionKeys.map(collectionId => {
-        const q = query(
-          collectionGroup(db, collectionId),
-          where('archived', '==', true)
-        );
+      
+      const userRef = doc(db, 'users', user.uid);
+
+      const promises = collectionKeys.map(async (collectionId) => {
+        // Special handling for top-level collections like publicTopics
+        let collectionRef;
+        if (['publicTopics'].includes(collectionId)) {
+            collectionRef = collection(db, collectionId);
+        } else {
+            collectionRef = collection(userRef, collectionId);
+        }
+
+        const q = query(collectionRef, where('archived', '==', true));
         return getDocs(q);
       });
 
@@ -196,14 +204,12 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
 
       snapshots.forEach((snapshot, index) => {
         const collectionId = collectionKeys[index];
-        const userDocs = snapshot.docs.filter(d => d.ref.path.startsWith(`users/${user.uid}/`));
-        
-        if (userDocs.length > 0) {
-          allArchivedData[collectionId] = userDocs.map(d => ({
-            id: d.id,
-            path: d.ref.path,
-            ...d.data(),
-          }));
+        if (!snapshot.empty) {
+            allArchivedData[collectionId] = snapshot.docs.map(d => ({
+                id: d.id,
+                path: d.ref.path,
+                ...d.data(),
+            }));
         }
       });
       
@@ -311,7 +317,7 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
                                 ))}
                                 <div>
                                     <p className="font-semibold text-muted-foreground">تاريخ الأرشفة</p>
-                                    <p>{formatDate(item.date)}</p>
+                                    <p>{formatDate(item.createdAt || item.date)}</p>
                                 </div>
                             </div>
                             <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t">

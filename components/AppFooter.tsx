@@ -57,7 +57,7 @@ async function createTopic(data: TopicFormData): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('يجب تسجيل الدخول لإنشاء موضوع.');
 
-  const topicCollection = collection(db, 'users', currentUser.uid, 'topics');
+  const topicCollection = collection(db, 'publicTopics');
   const topicRef = doc(topicCollection);
 
   const newTopic = {
@@ -73,7 +73,7 @@ async function createTopic(data: TopicFormData): Promise<void> {
   };
 
   if (data.file) {
-    const imagePath = `users/${currentUser.uid}/topics/${topicRef.id}/${data.file.name}`;
+    const imagePath = `publicTopics/${topicRef.id}/${data.file.name}`;
     const imageRef = ref(storage, imagePath);
     await uploadBytes(imageRef, data.file);
     newTopic.imageUrl = await getDownloadURL(imageRef);

@@ -14,11 +14,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import AdMarquee from '@/components/home/AdMarquee';
 import {
   collection,
-  collectionGroup,
   getDocs,
   orderBy,
   query,
-  where,
   Timestamp,
 } from 'firebase/firestore';
 
@@ -53,35 +51,16 @@ export default function HomePage() {
     setTopicsLoading(true);
     setTopicsError(null);
     try {
-      const allTopics: Topic[] = [];
+      const topicsCollectionRef = collection(db, 'publicTopics');
+      const q = query(topicsCollectionRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
 
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      const userIds = usersSnapshot.docs.map((doc) => doc.id);
-
-      const topicPromises = userIds.map((userId) => {
-        const topicsCollectionRef = collection(db, 'users', userId, 'topics');
-        const q = query(topicsCollectionRef, where('archived', '!=', true));
-        return getDocs(q);
-      });
-
-      const userTopicsSnapshots = await Promise.all(topicPromises);
-
-      userTopicsSnapshots.forEach((snapshot) => {
-        snapshot.forEach((doc) => {
-          allTopics.push({
-            id: doc.id,
-            path: doc.ref.path,
-            ...doc.data(),
-          } as Topic);
-        });
-      });
-
-      allTopics.sort((a, b) => {
-        const dateA = a.createdAt?.toDate()?.getTime() || 0;
-        const dateB = b.createdAt?.toDate()?.getTime() || 0;
-        return dateB - dateA;
-      });
-
+      const allTopics = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        path: doc.ref.path,
+        ...doc.data(),
+      })) as Topic[];
+      
       setTopics(allTopics);
     } catch (e: any) {
       console.error('Error fetching topics:', e);

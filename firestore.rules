@@ -1,60 +1,66 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // A list of admin UIDs who have special access
-    function getAdminUids() {
-      return ['JU2IAJu8XEeCqM33bu1wzlrA7id2'];
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      // The adminUids are stored in the app code, not here.
+      // This rule checks if the incoming request's auth uid is in a list provided by the app.
+      // For this to work, you'd typically pass the admin list in the query, which isn't secure or practical.
+      // The common practice is to have a custom claim or a document that lists admins.
+      // For simplicity here, we will trust the client code's logic and secure writes.
+      // A hardcoded UID is fine for a single admin.
+      return isSignedIn() && request.auth.uid in [
+        'JU2IAJu8XEeCqM33bu1wzlrA7id2' // Admin UID
+      ];
     }
 
-    // --- User Profile ---
+    // --- Site Content (Ads, etc.) ---
+    match /siteContent/{docId} {
+      // Readable by any signed-in user
+      allow read: if isSignedIn();
+      // Writable only by admin
+      allow write: if isAdmin();
+    }
+    
+    // --- Public Topics (for Home Page) ---
+    match /publicTopics/{topicId} {
+        // Readable by any signed-in user
+        allow read: if isSignedIn();
+        // Writable only by admin
+        allow write: if isAdmin();
+    }
+
+    // --- User-specific data ---
+    match /users/{userId}/{document=**} {
+        // User can read and write their own data
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // --- Allow admin to read/write anything under /users/{userId} ---
+    match /users/{userId}/{document=**} {
+        allow read, write: if isAdmin();
+    }
+    
+    // --- User Profile Document ---
     match /users/{userId} {
-      // Public profile data is readable by anyone
-      // Private data (e.g., notes) is only accessible by the owner
-      allow read: if true; 
-      allow write: if request.auth != null && request.auth.uid == userId;
+        // Allow user to read their own profile, and admin to read any profile
+        allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+        // Allow user to write to their own profile
+        allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Topics Collection ---
-    match /users/{userId}/topics/{topicId} {
-      // Only admins can read topics
-      allow read: if request.auth != null && request.auth.uid in getAdminUids();
-
-      // Only the authenticated owner can create/update/delete their own topics
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // --- General Farm Data Collections ---
-    // (expenses, debts, workers, etc.)
-    match /users/{userId}/{collectionId}/{docId} {
-        // Users can only access their own data within their own collections
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // --- Notifications Collection (Admin Only) ---
+    // --- Notifications ---
     match /notifications/{notificationId} {
-        // Only admins can create notifications
-        allow create: if request.auth != null && request.auth.uid in getAdminUids();
-        
-        // Any authenticated user can read notifications targeted to them or 'all'
-        // This is necessary for the notifications popover to work
-        allow read: if request.auth != null;
-        
-        // Users can update (mark as read), but not delete
-        allow update: if request.auth != null;
-        allow delete: if false; // Prevent deletion by clients
-    }
-    
-    // --- Site Content (Ad Marquee) ---
-    match /siteContent/{contentId} {
-      // Anyone can read site content like ads
-      allow read: if true;
-      // Only admins can write/update site content
-      allow write: if request.auth != null && request.auth.uid in getAdminUids();
-    }
-    
-    // Deny all other access by default
-    match /{document=**} {
-      allow read, write: if false;
+      // Admin can create notifications
+      allow create: if isAdmin();
+      // Users can read notifications targeted to them or 'all'
+      // This is a simplified rule. A more robust rule would check a 'target' field.
+      allow read: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
   }
 }
