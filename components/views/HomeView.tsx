@@ -31,8 +31,6 @@ import { ar } from 'date-fns/locale';
 import {
   Loader2,
   Newspaper,
-  Trash2,
-  Leaf,
   Plus,
   X,
   Lock,
@@ -368,55 +366,53 @@ export default function HomeView({ user }: { user: User }) {
     
     setLoading(true);
 
-    const topicStore: Record<string, Topic[]> = { public: [], user: [] };
-
-    const processSnapshots = () => {
-        const publicTopics = topicStore.public.filter(t => !t.archived);
-        const userTopics = topicStore.user.filter(t => !t.archived);
-
-        const merged = [...userTopics, ...publicTopics];
-        const uniqueTopics = Array.from(new Map(merged.map(t => [t.id, t])).values());
-        uniqueTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-        setTopics(uniqueTopics);
-        setLoading(false);
-    };
-    
-
     const handleSnapshotError = (e: any, label: string) => {
       console.error(`[${label}] snapshot error:`, e);
       setError('حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.');
       setLoading(false);
     };
 
-    // Query for public topics
-    const publicQ = query(
-      collectionGroup(db, 'topics'),
-      where('isPublic', '==', true),
-      orderBy('createdAt', 'desc')
-    );
-    const publicUnsub = onSnapshot(publicQ, 
-      (snap) => {
-        topicStore.public = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
-        processSnapshots();
-      },
-      (e) => handleSnapshotError(e, 'public')
-    );
-
     // Query for user's own topics (public and private)
     const userQ = query(
       collection(db, 'users', user.uid, 'topics'),
+      where('archived', '!=', true),
+      orderBy('archived'), // Firestore requirement
       orderBy('createdAt', 'desc')
     );
     const userUnsub = onSnapshot(userQ, 
-      (snap) => {
-        topicStore.user = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
-        processSnapshots();
+      (userSnap) => {
+        const userTopics = userSnap.docs.map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic));
+        const userTopicIds = new Set(userTopics.map(t => t.id));
+
+        // Query for public topics, excluding the user's own topics which are already fetched
+        const publicQ = query(
+          collectionGroup(db, 'topics'),
+          where('isPublic', '==', true),
+          where('archived', '!=', true)
+        );
+
+        const publicUnsub = onSnapshot(publicQ, 
+          (publicSnap) => {
+            const publicTopics = publicSnap.docs
+              .map(d => ({ id: d.id, path: d.ref.path, ...d.data() } as Topic))
+              .filter(t => !userTopicIds.has(t.id)); // Exclude user's own topics
+
+            const allTopics = [...userTopics, ...publicTopics];
+            allTopics.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+            setTopics(allTopics);
+            setLoading(false);
+            setError(null);
+          },
+          (e) => handleSnapshotError(e, 'public')
+        );
+
+        // This is a nested subscription, so we return it to be cleaned up
+        return () => publicUnsub();
       },
       (e) => handleSnapshotError(e, 'user')
     );
     
     return () => {
-      publicUnsub();
       userUnsub();
     };
   }, [user]);
@@ -495,39 +491,32 @@ export default function HomeView({ user }: { user: User }) {
 
   return (
     <div className="space-y-12">
-      <header className="text-center space-y-4 pt-8">
-        <div className="flex justify-center">
-          <Badge
-            variant="outline"
-            className="border-primary/30 bg-primary/10 text-primary text-sm py-1 px-4"
-          >
-            <Leaf className="h-4 w-4 ml-2" />
-            مزارع كويتي
-          </Badge>
+      <header className="flex flex-col items-center justify-between pt-8 sm:flex-row">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-full bg-primary/10 border border-primary/20">
+            <Newspaper className="h-8 w-8 text-primary" />
+           </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              المواضيع والنقاشات
+            </h1>
+            <p className="max-w-2xl text-muted-foreground">
+              اكتشف، شارك، وناقش الأفكار مع مجتمع المزارعين.
+            </p>
+          </div>
         </div>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-muted-foreground">
-          بوابتك لعالم الزراعة
-        </h1>
-        <p className="max-w-2xl mx-auto text-lg text-muted-foreground">
-          اكتشف مقالات وفيديوهات ونصائح الخبراء لمساعدتك في كل خطوة من رحلتك
-          الزراعية.
-        </p>
+        <div className="flex items-center gap-2 mt-4 sm:mt-0">
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 ml-2" />
+              أضف فكرتك
+          </Button>
+          <NotificationsPopover user={user} />
+        </div>
       </header>
 
       <AdMarquee />
 
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-bold">المواضيع الزراعية</h2>
-          <div className="flex items-center gap-2">
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 ml-2" />
-                أضف فكرتك
-            </Button>
-            <NotificationsPopover user={user} />
-          </div>
-        </div>
-
         {loading && (
           <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
