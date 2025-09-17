@@ -12,6 +12,7 @@ import {
   onSnapshot,
   Timestamp,
   setDoc,
+  where,
 } from 'firebase/firestore';
 import {
   ref,
@@ -22,7 +23,7 @@ import {
 import Image from 'next/image';
 import { db, storage, auth } from '@/lib/firebase';
 import { useAdmin } from '@/lib/hooks/useAdmin';
-import type { User } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
@@ -37,6 +38,7 @@ import {
   Pencil,
   Save,
   Archive,
+  User,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,6 +102,7 @@ async function createTopic(
     imageUrl: '',
     imagePath: '',
     archived: false,
+    isPublic: true, // All topics are public by default now
   };
   
   if (data.file) {
@@ -325,7 +328,7 @@ function TopicDialog({
 }
 
 
-export default function HomeView({ user }: { user: User }) {
+export default function HomeView({ user }: { user: FirebaseUser }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
 
@@ -640,5 +643,3 @@ export default function HomeView({ user }: { user: User }) {
     </div>
   );
 }
-
-    
