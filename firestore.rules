@@ -2,33 +2,34 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Logged-in users can read/write their own data.
+  
+    // Rules for user-specific data
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Topics can be read publicly if isPublic is true.
-    match /users/{userId}/topics/{topicId} {
-      allow get: if resource.data.isPublic == true;
+    // Rules for public topics (from any user)
+    match /{path=**}/topics/{topicId} {
+       allow read: if resource.data.isPublic == true;
     }
     
-    // Notifications can be read by their target (or all). Only admins can create them.
-    match /notifications/{notificationId} {
-        allow read: if resource.data.target == 'all' || (request.auth != null && (resource.data.target == request.auth.uid || resource.data.target == 'admin' && request.auth.uid == 'JU2IAJu8XEeCqM33bu1wzlrA7id2'));
-        allow create: if request.auth != null && request.auth.uid == 'JU2IAJu8XEeCqM33bu1wzlrA7id2';
-    }
-
-    // AdMarquee content can be read by anyone, but only written by the admin.
-    match /siteContent/{docId} {
+    // Rules for the ad marquee
+    match /siteContent/adMarquee {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == 'JU2IAJu8XEeCqM33bu1wzlrA7id2';
     }
 
-    // Rules for collection groups
-    // Allow public access for listing topics that are public
-    match /{path=**}/topics/{topicId} {
-      allow list: if true; // A simple `list` on collection group is tricky. Allow reads via queries on the client.
+    // Rules for general notifications
+    // Allow read for 'all' or if user is the target, or if user is an admin and target is 'admin'
+    match /{path=**}/notifications/{notificationId} {
+      allow read: if resource.data.target == 'all' || 
+                   (request.auth != null && resource.data.target == request.auth.uid) ||
+                   (request.auth != null && resource.data.target == 'admin' && request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2']);
+      // Admins can create notifications
+      allow create: if request.auth != null && request.auth.uid in ['JU2IAJu8
+XEeCqM33bu1wzlrA7id2'];
+      // Users can mark their own notifications as read
+      allow update: if request.auth != null && request.auth.uid == resource.data.target; 
     }
   }
 }
