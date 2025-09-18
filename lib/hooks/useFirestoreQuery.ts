@@ -28,11 +28,18 @@ export function useFirestoreQuery<T>(
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
+    if (!user && !isCollectionGroup) {
+      // Don't run user-specific queries if the user is not logged in.
+      return null;
+    }
+    
     if (isCollectionGroup) {
+      // For collection group queries like 'publicTopics'
       return query(collectionGroup(db, collectionPath), ...constraints);
     }
     
     if (user) {
+      // For user-specific sub-collections like 'tasks', 'expenses', etc.
       return query(collection(db, 'users', user.uid, collectionPath), ...constraints);
     }
     

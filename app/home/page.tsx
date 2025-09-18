@@ -5,13 +5,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import {
-  Loader2,
-  Plus,
-  Leaf,
-  X,
-  Save,
-} from 'lucide-react';
+import { Loader2, Plus, Leaf, X, Save } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import HomeView from '@/components/views/HomeView';
 import {
@@ -281,7 +275,7 @@ export default function HomePage() {
   } = useFirestoreQuery<Topic>(
     'publicTopics',
     [where('archived', '!=', true), orderBy('createdAt', 'desc')],
-    true 
+    true
   );
 
   const handleTopicAdded = () => {
