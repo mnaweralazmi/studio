@@ -28,15 +28,16 @@ export function useFirestoreQuery<T>(
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
-    if (!isCollectionGroup && !user) {
-      return null;
+    if (isCollectionGroup) {
+      return query(collectionGroup(db, collectionPath), ...constraints);
     }
-
-    const baseCollection = isCollectionGroup
-      ? collectionGroup(db, collectionPath)
-      : collection(db, 'users', user!.uid, collectionPath);
     
-    return query(baseCollection, ...constraints);
+    if (user) {
+      return query(collection(db, 'users', user.uid, collectionPath), ...constraints);
+    }
+    
+    return null;
+
   }, [user, collectionPath, constraints, isCollectionGroup]);
 
   const [snapshot, loading, error] = useCollection(finalQuery);
