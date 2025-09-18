@@ -22,7 +22,7 @@ const storage = getStorage(app);
 // To get admin privileges, add your Firebase User ID (UID) to this array.
 // The UID below is the primary admin for this application.
 // This ensures that only you have admin access.
-export const adminUids = ['JU2IAJu8XEeCqM33bu1wzlrA7id2'];
+export const adminUids = ['JU2IAJu8XEeCqM33bu1wzlrA7id2', 'REPLACE_WITH_YOUR_UID'];
 
 
 export { app, auth, db, storage };
