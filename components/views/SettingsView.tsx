@@ -927,9 +927,16 @@ function AdminView({ user }: { user: any }) {
   const handleAddAd = async () => {
     if (!newAd.trim()) return;
     try {
-      await setDoc(adMarqueeRef, {
-          ads: arrayUnion(newAd.trim()),
-      }, { merge: true });
+      const docSnap = await getDoc(adMarqueeRef);
+      if (docSnap.exists()) {
+         await updateDoc(adMarqueeRef, {
+            ads: arrayUnion(newAd.trim()),
+        });
+      } else {
+         await setDoc(adMarqueeRef, {
+            ads: [newAd.trim()],
+        });
+      }
 
       setNewAd('');
       toast({
