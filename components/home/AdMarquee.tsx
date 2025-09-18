@@ -8,6 +8,7 @@ export default function AdMarquee() {
   const [snapshot, loading, error] = useDocument(doc(db, 'siteContent', 'adMarquee'));
   
   const ads = snapshot?.data()?.ads || [];
+  const hasAds = ads.length > 0;
 
   if (loading) {
     return (
@@ -16,13 +17,9 @@ export default function AdMarquee() {
        </div>
     )
   }
-
-  if (error || ads.length === 0) {
-    // Don't render the component if there's an error or no ads
-    return null;
-  }
-
-  const marqueeContent = [...ads, ...ads]; // Duplicate content for seamless loop
+  
+  // Display a default message if there's an error or no ads.
+  const marqueeContent = hasAds ? [...ads, ...ads] : ['✨ أهلاً بك في واحة المزرعة ✨', '✨ أهلاً بك في واحة المزرعة ✨'];
 
   return (
     <section className="relative flex overflow-hidden border-y bg-accent/50 text-accent-foreground py-3 my-8">
