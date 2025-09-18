@@ -2,38 +2,10 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check for admin role
-    function isAdmin() {
-      // Check if the user is in the hardcoded admin list or has isAdmin flag in their profile
-      return request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2', '0T5b331jchc32PucCqL1KqJ9d9h2'] ||
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    // Allow read-only access to public topics for any authenticated user.
-    // Admins or the author can write/update.
-    match /publicTopics/{topicId} {
-      allow read: if request.auth != null;
-      allow write: if (request.auth != null && request.resource.data.userId == request.auth.uid) || isAdmin();
-    }
-
-    // Admins can create notifications.
-    // Notifications can be read by their intended target.
-    match /notifications/{notificationId} {
-      allow create: if isAdmin();
-      allow read: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid || (isAdmin() && resource.data.target == 'admin'));
-    }
-
-    // Site-wide content like ads can be read by anyone, but only written by admins.
-    match /siteContent/{contentId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // User-specific data.
-    // Allow access if the user is the owner of the data OR if the user is an admin.
-    match /users/{userId}/{documents=**} {
-      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    // القاعدة الجديدة: السماح بالوصول الكامل (قراءة وكتابة) لجميع المسارات والبيانات
+    // لأي مستخدم، سواء كان مسجلاً أم لا.
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
