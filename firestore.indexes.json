@@ -206,8 +206,7 @@
         },
         {
           "fieldPath": "name",
-          "order": "ASCENDING"
-        }
+          "order": "ASCENDING"        }
       ]
     },
     {
