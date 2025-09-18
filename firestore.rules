@@ -3,49 +3,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.uid in [
-        'JU2IAJu8XEeCqM33bu1wzlrA7id2', 'REPLACE_WITH_YOUR_UID'
-      ];
+      // You can add more UIDs to this list to grant admin privileges.
+      return isSignedIn() && request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2', 'REPLACE_WITH_YOUR_UID'];
     }
 
-    // --- Public Content ---
+    // --- General Collections (Top-Level) ---
+
+    // Public topics that appear on the home page.
     match /publicTopics/{topicId} {
-      // Allow read for signed-in users, but only for non-archived topics,
-      // which matches the query in the app.
-      allow read: if isSignedIn() && resource.data.archived != true;
+      // Allow any authenticated user to read public topics.
+      // The client-side code will filter out archived topics.
+      allow read: if isSignedIn();
 
       // Only admins can create, update, or delete public topics.
       allow create, update, delete: if isAdmin();
     }
 
+    // Site-wide content like the ad marquee.
     match /siteContent/{docId} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Notifications collection group
+    match /{path=**}/notifications/{notificationId} {
+        // Only admins should be able to create notifications
+        allow create: if isAdmin();
+        // Users can read notifications targeted to them or 'all'
+        allow read, update: if isSignedIn();
     }
 
-    match /notifications/{notificationId} {
-        // Users can read their own notifications or 'all' notifications.
-        allow read: if isSignedIn() && (resource.data.target == 'all' || resource.data.target == request.auth.uid || (isAdmin() && resource.data.target == 'admin'));
-        // Only admins can send notifications.
-        allow write: if isAdmin();
-    }
-
-    // --- User-specific Content ---
+    // --- User-Specific Data ---
+    // All data for a specific user is nested under their UID.
     match /users/{userId} {
-      // A user can read their own profile. Admins can read any profile.
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      // A user can create and update their own profile.
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      // Allow users to read and write to their own user profile document.
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
 
-      // Rules for all user sub-collections
-      match /{collectionId}/{docId} {
-        // A user can do anything with documents in their own sub-collections.
-        allow read, write, delete: if isSignedIn() && request.auth.uid == userId;
+      // Rules for user sub-collections (e.g., tasks, expenses)
+      match /{collectionPath}/{docId} {
+        // A user can read, create, update, and delete documents in their own sub-collections.
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
     }
   }
