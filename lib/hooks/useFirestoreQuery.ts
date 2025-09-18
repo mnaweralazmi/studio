@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import {
   collection,
   query,
   where,
-  getDocs,
   QueryConstraint,
   collectionGroup,
-  DocumentData,
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
@@ -30,17 +28,18 @@ export function useFirestoreQuery<T>(
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
-    if (!user && !isGroup) return null; // Don't query user-specific collections if no user
+    // For user-specific collections, we MUST wait for the user object to be available.
+    if (!isGroup && !user) {
+      return null;
+    }
 
     const collectionRef = isGroup
       ? collectionGroup(db, collectionPath)
+      // If it's not a group query, we know the user object is available here.
       : collection(db, 'users', user!.uid, collectionPath);
       
-    // Always filter out archived documents, unless the collection is publicTopics
-    const allConstraints =
-      collectionPath === 'publicTopics'
-        ? [where('archived', '!=', true), ...constraints]
-        : [where('archived', '!=', true), ...constraints];
+    // Always filter out archived documents
+    const allConstraints = [where('archived', '!=', true), ...constraints];
 
     return query(collectionRef, ...allConstraints);
   }, [user, collectionPath, constraints, isGroup]);
@@ -57,12 +56,8 @@ export function useFirestoreQuery<T>(
   }, [snapshot]);
 
   const refetch = useCallback(() => {
-    // The useCollection hook automatically refetches on changes.
-    // This function is provided for manual refetching if ever needed,
-    // though its direct implementation is tied to the hook's lifecycle.
-    // In practice, changes to dependencies of useMemo for `finalQuery` would trigger a refetch.
-    // For now, it's a placeholder. To implement a true manual refetch,
-    // one might need to manage state differently, but react-firebase-hooks handles most cases.
+    // This is a placeholder as react-firebase-hooks handles refetching automatically.
+    // Changes to dependencies of `finalQuery` will trigger a refetch.
   }, []);
 
   const errorMessage = useMemo(() => {
