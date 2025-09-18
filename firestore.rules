@@ -1,55 +1,8 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      // You can add more UIDs to this list to grant admin privileges.
-      return isSignedIn() && request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2', 'REPLACE_WITH_YOUR_UID'];
-    }
-
-    // --- General Collections (Top-Level) ---
-
-    // Public topics that appear on the home page.
-    match /publicTopics/{topicId} {
-      // Allow any authenticated user to read public topics.
-      // The client-side code will filter out archived topics.
-      allow read: if isSignedIn();
-
-      // Only admins can create, update, or delete public topics.
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Site-wide content like the ad marquee.
-    match /siteContent/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    
-    // Notifications collection group
-    match /{path=**}/notifications/{notificationId} {
-        // Only admins should be able to create notifications
-        allow create: if isAdmin();
-        // Users can read notifications targeted to them or 'all'
-        allow read, update: if isSignedIn();
-    }
-
-    // --- User-Specific Data ---
-    // All data for a specific user is nested under their UID.
-    match /users/{userId} {
-      // Allow users to read and write to their own user profile document.
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-
-      // Rules for user sub-collections (e.g., tasks, expenses)
-      match /{collectionPath}/{docId} {
-        // A user can read, create, update, and delete documents in their own sub-collections.
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-      }
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
