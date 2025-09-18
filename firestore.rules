@@ -1,4 +1,5 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -8,27 +9,44 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && request.auth.uid in [
-        'JU2IAJu8XEeCqM33bu1wzlrA7id2',
-        // 'REPLACE_WITH_YOUR_UID'
+        'JU2IAJu8XEeCqM33bu1wzlrA7id2', 'REPLACE_WITH_YOUR_UID'
       ];
     }
-    
-    match /users/{userId}/{document=**} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-    }
 
+    // --- Public Content ---
     match /publicTopics/{topicId} {
-      allow read: if isSignedIn();
+      // Allow read for signed-in users, but only for non-archived topics,
+      // which matches the query in the app.
+      allow read: if isSignedIn() && resource.data.archived != true;
+
+      // Only admins can create, update, or delete public topics.
       allow create, update, delete: if isAdmin();
     }
 
-    match /siteContent/{contentId} {
+    match /siteContent/{docId} {
         allow read: if isSignedIn();
         allow write: if isAdmin();
     }
-    
+
     match /notifications/{notificationId} {
-      allow read, write: if isAdmin();
+        // Users can read their own notifications or 'all' notifications.
+        allow read: if isSignedIn() && (resource.data.target == 'all' || resource.data.target == request.auth.uid || (isAdmin() && resource.data.target == 'admin'));
+        // Only admins can send notifications.
+        allow write: if isAdmin();
+    }
+
+    // --- User-specific Content ---
+    match /users/{userId} {
+      // A user can read their own profile. Admins can read any profile.
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // A user can create and update their own profile.
+      allow write: if isSignedIn() && request.auth.uid == userId;
+
+      // Rules for all user sub-collections
+      match /{collectionId}/{docId} {
+        // A user can do anything with documents in their own sub-collections.
+        allow read, write, delete: if isSignedIn() && request.auth.uid == userId;
+      }
     }
   }
 }
