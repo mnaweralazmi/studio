@@ -2,63 +2,43 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
     
-    // Helper function to check if the user is an admin
     function isAdmin() {
-      // This UID is the primary admin for the application.
-      return request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2'];
+      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids;
     }
 
-    // Site-wide content, only admin can write
-    match /siteContent/{docId} {
-        // Anyone authenticated can read site content (like the ad marquee)
-        allow read: if request.auth != null;
-        // Only admins can create, update, or delete site content
-        allow write: if isAdmin();
+    // Rules for user-specific data
+    match /users/{userId}/{document=**} {
+      allow read, write: if isSignedIn() && isOwner(userId);
     }
     
-    // Notifications are write-only for admin, read for target users
-    match /notifications/{notifId} {
-        // Only admins can create notifications
-        allow create: if isAdmin();
-        // Users can read notifications if they are the target, or if it's for 'all',
-        // or if they are an admin and it's for 'admin'
-        allow read: if request.auth.uid == resource.data.target 
-                    || resource.data.target == 'all'
-                    || (resource.data.target == 'admin' && isAdmin());
-        // No update/delete allowed for now
-        allow update, delete: if false;
-    }
-
-    // Public topics can be read by anyone authenticated, created by the user,
-    // but only fully managed (archived/deleted) by an admin.
+    // Rules for publicly readable topics
     match /publicTopics/{topicId} {
-        // Allow authenticated users to read all public topics.
-        allow read: if request.auth != null;
-        
-        // Allow creating a topic if the user ID matches.
-        allow create: if request.auth.uid == request.resource.data.userId;
-
-        // Allow an admin to update a topic (e.g., to archive it).
-        // Also allow the original author to edit their own topic (future feature).
-        allow update: if isAdmin() || request.auth.uid == resource.data.userId;
-
-        // Only admins can delete public topics.
-        allow delete: if isAdmin();
-    }
-
-    // User-specific data
-    match /users/{userId}/{collection}/{docId} {
-      // A user can only access their own data.
-      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
     
-    // User profile document
-    match /users/{userId} {
-        // Allow a user to read, create and update their own profile.
-        allow read, create, update: if request.auth.uid == userId;
-        // Do not allow users to delete their profile document for data integrity.
-        allow delete: if false;
+    // Rules for site-wide content (e.g., ads)
+    match /siteContent/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Rules for notifications
+    match /notifications/{notificationId} {
+      allow create: if isAdmin();
+      allow read: if isSignedIn() && 
+                   (resource.data.target == 'all' || resource.data.target == request.auth.uid || (isAdmin() && resource.data.target == 'admin'));
+      allow update: if isSignedIn(); // Allow users to mark as read
     }
   }
 }

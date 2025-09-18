@@ -2,7 +2,7 @@
   "indexes": [
     {
       "collectionGroup": "publicTopics",
-      "queryScope": "COLLECTION_GROUP",
+      "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "archived",

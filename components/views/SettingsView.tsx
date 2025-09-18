@@ -888,6 +888,7 @@ function AdminView({ user }: { user: any }) {
       }
     } catch (e) {
       console.error("Error fetching ads:", e);
+      toast({ title: 'خطأ في جلب الإعلانات', variant: 'destructive'});
       setAds([]);
     } finally {
       setAdsLoading(false);
@@ -948,15 +949,17 @@ function AdminView({ user }: { user: any }) {
   const handleAddAd = async () => {
     if (!newAd.trim()) return;
     try {
-      // Use setDoc with merge to create or update the document
-      await setDoc(adMarqueeRef, {
-        ads: arrayUnion(newAd.trim())
-      }, { merge: true });
+      // Use setDoc with merge to create the document if it doesn't exist,
+      // and updateDoc with arrayUnion to add to the array.
+      const docSnap = await getDoc(adMarqueeRef);
+      if (docSnap.exists()) {
+        await updateDoc(adMarqueeRef, { ads: arrayUnion(newAd.trim()) });
+      } else {
+        await setDoc(adMarqueeRef, { ads: [newAd.trim()] });
+      }
 
-      // Optimistically update local state
       setAds(prevAds => [...prevAds, newAd.trim()]);
       setNewAd('');
-
       toast({
         title: 'تمت الإضافة بنجاح',
         description: 'تمت إضافة الإعلان إلى الشريط المتحرك.',
@@ -977,7 +980,6 @@ function AdminView({ user }: { user: any }) {
         await updateDoc(adMarqueeRef, {
             ads: arrayRemove(adToRemove)
         });
-        // Optimistically update local state
         setAds(prevAds => prevAds.filter(ad => ad !== adToRemove));
         toast({ title: 'تم حذف الإعلان' });
     } catch (e: any) {

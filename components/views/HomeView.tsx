@@ -39,6 +39,12 @@ type Topic = {
 };
 
 async function archiveTopic(topic: Topic): Promise<void> {
+  if (!topic.path) {
+     // Fallback for older documents that might not have a path
+    const topicRef = doc(db, 'publicTopics', topic.id);
+    await updateDoc(topicRef, { archived: true });
+    return;
+  }
   const topicRef = doc(db, topic.path);
   await updateDoc(topicRef, { archived: true });
 }
@@ -58,6 +64,9 @@ export default function HomeView({
 }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
+
+  // Filter out archived topics on the client-side as a fallback
+  const visibleTopics = useMemo(() => topics.filter(topic => !topic.archived), [topics]);
 
   const handleArchive = async (topic: Topic) => {
     try {
@@ -81,13 +90,20 @@ export default function HomeView({
   const isVideo = (topic: Topic) => {
     const url = topic.imageUrl;
     if (!url) return false;
-    return (
-      url.includes('.mp4') ||
-      url.includes('.mov') ||
-      url.includes('.webm') ||
-      url.includes('video')
-    );
+    // Check for common video file extensions or keywords in the URL
+    const videoIndicators = ['.mp4', '.mov', '.webm', '.mkv', 'video'];
+    const lowercasedUrl = url.toLowerCase();
+    
+    try {
+        const urlObject = new URL(lowercasedUrl);
+        const pathname = urlObject.pathname;
+        return videoIndicators.some(ext => pathname.includes(ext));
+    } catch(e) {
+        // Fallback for non-URL strings or data URIs
+        return videoIndicators.some(ext => lowercasedUrl.includes(ext));
+    }
   };
+
 
   return (
     <section>
@@ -108,7 +124,7 @@ export default function HomeView({
         </Alert>
       )}
 
-      {!loading && topics.length === 0 && !error && (
+      {!loading && visibleTopics.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border max-w-2xl mx-auto">
           <Newspaper className="h-16 w-16 text-muted-foreground" />
           <h2 className="mt-4 text-xl font-semibold">
@@ -120,9 +136,9 @@ export default function HomeView({
         </div>
       )}
 
-      {!loading && topics.length > 0 && (
+      {!loading && visibleTopics.length > 0 && (
         <div className="max-w-2xl mx-auto space-y-8">
-          {topics.map((topic) => (
+          {visibleTopics.map((topic) => (
             <Card
               key={topic.id}
               className="overflow-hidden bg-card/50 shadow-lg border w-full"

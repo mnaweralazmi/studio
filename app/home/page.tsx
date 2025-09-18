@@ -29,6 +29,7 @@ import {
   doc,
   setDoc,
   serverTimestamp,
+  where,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
@@ -287,7 +288,11 @@ export default function HomePage() {
     setTopicsError(null);
     try {
       const topicsCollectionRef = collection(db, 'publicTopics');
-      const q = query(topicsCollectionRef, orderBy('createdAt', 'desc'));
+      const q = query(
+        topicsCollectionRef,
+        where('archived', '==', false),
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
 
       const allTopics = querySnapshot.docs.map((doc) => ({
@@ -320,10 +325,9 @@ export default function HomePage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!adminLoading && isAdmin) {
-      fetchTopics();
-    }
-  }, [adminLoading, isAdmin, fetchTopics]);
+    // Fetch topics for all users now, not just admins
+    fetchTopics();
+  }, [fetchTopics]);
 
   if (loading || !user || adminLoading) {
     return (
@@ -334,30 +338,7 @@ export default function HomePage() {
     );
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="pb-24">
-        <main className="px-4 pt-4 container mx-auto flex items-center justify-center min-h-[80vh]">
-          <Card className="w-full max-w-md">
-            <CardContent className="p-6">
-              <Alert variant="destructive" className="border-0">
-                <ShieldAlert className="h-6 w-6" />
-                <AlertTitle className="text-xl font-bold">
-                  وصول مرفوض
-                </AlertTitle>
-                <AlertDescription className="mt-2">
-                  هذه الصفحة مخصصة للمسؤولين فقط. لا تملك الصلاحيات اللازمة
-                  لعرض هذا المحتوى.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </main>
-        <AppFooter activeView="home" />
-      </div>
-    );
-  }
-
+  // Everyone can see the home page now, but some actions might be admin-only within HomeView
   return (
     <div className="pb-24">
       <main className="px-4 pt-4 container mx-auto">
@@ -376,17 +357,19 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => setAddTopicOpen(true)}
-              >
-                <Plus className="h-4 w-4 ml-2" />
-                <span>إضافة موضوع</span>
-              </Button>
-              {user && <NotificationsPopover user={user} />}
-            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => setAddTopicOpen(true)}
+                >
+                  <Plus className="h-4 w-4 ml-2" />
+                  <span>إضافة موضوع</span>
+                </Button>
+                {user && <NotificationsPopover user={user} />}
+              </div>
+            )}
           </div>
         </header>
 
