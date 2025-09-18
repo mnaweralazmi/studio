@@ -1,4 +1,5 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -7,60 +8,47 @@ service cloud.firestore {
       return request.auth != null;
     }
     function isAdmin() {
-      // The adminUids are stored in the app code, not here.
-      // This rule checks if the incoming request's auth uid is in a list provided by the app.
-      // For this to work, you'd typically pass the admin list in the query, which isn't secure or practical.
-      // The common practice is to have a custom claim or a document that lists admins.
-      // For simplicity here, we will trust the client code's logic and secure writes.
-      // A hardcoded UID is fine for a single admin.
-      return isSignedIn() && request.auth.uid in [
-        'JU2IAJu8XEeCqM33bu1wzlrA7id2' // Admin UID
-      ];
+      // Check if user is authenticated and their UID is in the admin list
+      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
     }
 
-    // --- Site Content (Ads, etc.) ---
-    match /siteContent/{docId} {
-      // Readable by any signed-in user
-      allow read: if isSignedIn();
-      // Writable only by admin
-      allow write: if isAdmin();
-    }
-    
-    // --- Public Topics (for Home Page) ---
+    // ----------------- Public Topics (Home Page) -----------------
     match /publicTopics/{topicId} {
-        // Readable by any signed-in user
-        allow read: if isSignedIn();
-        // Writable only by admin
+      // Any signed-in user can read public topics
+      allow read: if isSignedIn();
+      
+      // Only admins can create, update, or delete public topics
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ----------------- Site Content (Ads, etc.) -----------------
+    match /siteContent/{contentId} {
+        // Allow anyone to read site content like ads or admin lists
+        allow read: if true;
+        // Only admins can write to site content
         allow write: if isAdmin();
     }
-
-    // --- User-specific data ---
+    
+    // ----------------- User-specific Data -----------------
     match /users/{userId}/{document=**} {
-        // User can read and write their own data
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      // User can read/write their own data
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
     
-    // --- Allow admin to read/write anything under /users/{userId} ---
-    match /users/{userId}/{document=**} {
-        allow read, write: if isAdmin();
-    }
-    
-    // --- User Profile Document ---
-    match /users/{userId} {
-        // Allow user to read their own profile, and admin to read any profile
-        allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-        // Allow user to write to their own profile
-        allow write: if isSignedIn() && request.auth.uid == userId;
+     match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Notifications ---
+    // ----------------- Notifications -----------------
     match /notifications/{notificationId} {
-      // Admin can create notifications
-      allow create: if isAdmin();
-      // Users can read notifications targeted to them or 'all'
-      // This is a simplified rule. A more robust rule would check a 'target' field.
-      allow read: if isSignedIn();
-      allow update, delete: if isAdmin();
+        // Admins can create notifications
+        allow create: if isAdmin();
+        // Users can read notifications targeted to them, 'all', or 'admin' if they are an admin
+        allow read: if isSignedIn() && 
+                    (resource.data.target == request.auth.uid || resource.data.target == 'all' || (isAdmin() && resource.data.target == 'admin'));
+        // Users can update their own notifications (e.g., mark as read)
+        allow update: if isSignedIn() && resource.data.target == request.auth.uid;
     }
   }
 }
