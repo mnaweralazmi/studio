@@ -2,40 +2,38 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Allow reading public topics for any authenticated user.
+
+    // Helper function to check for admin role
+    function isAdmin() {
+      // Check if the user is in the hardcoded admin list or has isAdmin flag in their profile
+      return request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2', '0T5b331jchc32PucCqL1KqJ9d9h2'] ||
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Allow read-only access to public topics for any authenticated user.
+    // Admins or the author can write/update.
     match /publicTopics/{topicId} {
       allow read: if request.auth != null;
-      allow write, delete: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
+      allow write: if (request.auth != null && request.resource.data.userId == request.auth.uid) || isAdmin();
+    }
+
+    // Admins can create notifications.
+    // Notifications can be read by their intended target.
+    match /notifications/{notificationId} {
+      allow create: if isAdmin();
+      allow read: if request.auth != null && (resource.data.target == 'all' || resource.data.target == request.auth.uid || (isAdmin() && resource.data.target == 'admin'));
+    }
+
+    // Site-wide content like ads can be read by anyone, but only written by admins.
+    match /siteContent/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
     
-    // Allow admins to manage site content like ads.
-    match /siteContent/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
-    }
-
-    // Allow admins to write notifications.
-    match /notifications/{notificationId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
-    }
-
-    // Secure user-specific data.
-    match /users/{userId} {
-      // Allow a user to read and write their own user document.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-
-      // Allow a user to read all documents and collections nested under their user document.
-      // This is crucial for fetching tasks, sales, expenses, etc.
-      match /{document=**} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-      }
-
-      // Allow write access only for admins or the user themselves on their own subcollections.
-      match /{subcollection}/{docId} {
-         allow write, delete, create: if request.auth != null && (request.auth.uid == userId || request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids);
-      }
+    // User-specific data.
+    // Allow access if the user is the owner of the data OR if the user is an admin.
+    match /users/{userId}/{documents=**} {
+      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
   }
 }
