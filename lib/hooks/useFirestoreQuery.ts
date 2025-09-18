@@ -5,73 +5,68 @@ import {
   collection,
   query,
   QueryConstraint,
-  collectionGroup,
+  DocumentData,
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
 import { useCollection } from 'react-firebase-hooks/firestore';
+import { auth, db } from '@/lib/firebase';
 
 /**
- * A custom hook to query a Firestore collection or collection group with real-time updates.
- * It also filters out documents where 'archived' is true on the client side.
- * @param collectionPath The path to the Firestore collection or collection group ID.
- * @param constraints Optional array of Firestore query constraints (e.g., orderBy, limit).
- * @param isCollectionGroup A boolean to indicate if this is a collection group query or a top-level collection.
- * @returns An object containing the data, loading state, error, and a refetch function.
+ * خطاف مخصص لجلب البيانات من Firestore مع تحديثات لحظية.
+ * @param collectionPath مسار المجموعة (Collection) في قاعدة البيانات.
+ * @param constraints شروط الاستعلام مثل الترتيب (orderBy) أو التصفية (where).
+ * @param isPublicQuery `true` إذا كانت المجموعة عامة (مثل publicTopics)، و `false` إذا كانت خاصة بالمستخدم.
+ * @returns بيانات محدثة، وحالة التحميل، وأي أخطاء.
  */
-export function useFirestoreQuery<T>(
+export function useFirestoreQuery<T extends DocumentData>(
   collectionPath: string,
   constraints: QueryConstraint[] = [],
-  isCollectionGroup: boolean = false
+  isPublicQuery: boolean = false
 ) {
   const [user] = useAuthState(auth);
 
+  // بناء الاستعلام بناءً على نوعه (عام أم خاص)
   const finalQuery = useMemo(() => {
-    // For public collection queries (like publicTopics), we use collection() or collectionGroup() at the root.
-    if (isCollectionGroup) {
-      // Note: Despite the name, we use `collection` for top-level collections.
-      // `collectionGroup` would be for querying all collections with the same ID, e.g., all 'comments' across all 'topics'.
+    if (isPublicQuery) {
+      // استعلام عام على المستوى الأعلى من قاعدة البيانات
       return query(collection(db, collectionPath), ...constraints);
     }
     
-    // For user-specific queries, user must be logged in. The path is nested under the user's UID.
+    // استعلام خاص بالمستخدم، يتطلب تسجيل الدخول
     if (user) {
-      return query(collection(db, 'users', user.uid, collectionPath), ...constraints);
+      return query(
+        collection(db, 'users', user.uid, collectionPath),
+        ...constraints
+      );
     }
 
-    // Return null if it's a user-specific query but the user is not logged in.
+    // إذا كان الاستعلام خاصًا والمستخدم غير مسجل، لا تقم بالاستعلام
     return null;
-
-  }, [user, collectionPath, constraints, isCollectionGroup]);
+  }, [user, collectionPath, constraints, isPublicQuery]);
 
   const [snapshot, loading, error] = useCollection(finalQuery);
 
+  // تصفية النتائج لإخفاء البيانات المؤرشفة
   const data = useMemo(() => {
-    if (!snapshot) return undefined;
-    
-    // Client-side filtering for archived documents
-    const filteredDocs = snapshot.docs.filter(doc => doc.data().archived !== true);
+    if (!snapshot) return [];
 
-    return filteredDocs.map(doc => ({
-      id: doc.id,
-      path: doc.ref.path,
-      ...doc.data(),
-    })) as (T & { id: string, path: string })[];
+    return snapshot.docs
+      .filter((doc) => doc.data().archived !== true)
+      .map(
+        (doc) =>
+          ({
+            id: doc.id,
+            path: doc.ref.path,
+            ...doc.data(),
+          } as T & { id: string; path: string })
+      );
   }, [snapshot]);
 
-  const errorMessage = useMemo(() => {
-    if (error?.code === 'failed-precondition') {
-      return 'فشل جلب البيانات. قد يتطلب هذا الاستعلام فهرسًا مخصصًا في Firestore.';
-    }
-    if (error?.code === 'permission-denied') {
-      return 'فشل جلب البيانات: ليست لديك الصلاحية الكافية لعرض هذا المحتوى. قد تحتاج إلى التحقق من قواعد الأمان في Firestore.';
-    }
-    return error ? error.message : null;
-  }, [error]);
-
+  // رسالة خطأ واضحة
+  const errorMessage = error ? `فشل جلب البيانات: ${error.message}` : null;
+  
   const refetch = () => {
-     // `useCollection` from react-firebase-hooks re-fetches automatically.
-     // This function is kept for API consistency.
+     // react-firebase-hooks يقوم بالتحديث تلقائيًا
   };
 
   return { data, loading, error: errorMessage, refetch };
