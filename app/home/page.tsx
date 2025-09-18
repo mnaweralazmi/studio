@@ -274,7 +274,7 @@ export default function HomePage() {
     refetch,
   } = useFirestoreQuery<Topic>(
     'publicTopics',
-    [where('archived', '!=', true), orderBy('createdAt', 'desc')],
+    [where('archived', '==', false), orderBy('createdAt', 'desc')],
     true
   );
 

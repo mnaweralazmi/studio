@@ -6,17 +6,18 @@ import {
   query,
   QueryConstraint,
   DocumentData,
+  collectionGroup,
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { auth, db } from '@/lib/firebase';
 
 /**
- * خطاف مخصص لجلب البيانات من Firestore مع تحديثات لحظية.
- * @param collectionPath مسار المجموعة (Collection) في قاعدة البيانات.
- * @param constraints شروط الاستعلام مثل الترتيب (orderBy) أو التصفية (where).
- * @param isPublicQuery `true` إذا كانت المجموعة عامة (مثل publicTopics)، و `false` إذا كانت خاصة بالمستخدم.
- * @returns بيانات محدثة، وحالة التحميل، وأي أخطاء.
+ * A custom hook to fetch Firestore data with real-time updates.
+ * @param collectionPath The path to the collection.
+ * @param constraints Query constraints like orderBy or where.
+ * @param isPublicQuery `true` if the collection is a top-level public collection (e.g., 'publicTopics').
+ * @returns Real-time data, loading state, and any errors.
  */
 export function useFirestoreQuery<T extends DocumentData>(
   collectionPath: string,
@@ -25,49 +26,48 @@ export function useFirestoreQuery<T extends DocumentData>(
 ) {
   const [user] = useAuthState(auth);
 
-  // بناء الاستعلام بناءً على نوعه (عام أم خاص)
   const finalQuery = useMemo(() => {
+    let q;
     if (isPublicQuery) {
-      // استعلام عام على المستوى الأعلى من قاعدة البيانات
-      return query(collection(db, collectionPath), ...constraints);
+      // Build a query on a top-level collection.
+      q = query(collection(db, collectionPath), ...constraints);
+    } else {
+      // For user-specific data, only proceed if the user is logged in.
+      if (user) {
+        q = query(
+          collection(db, 'users', user.uid, collectionPath),
+          ...constraints
+        );
+      } else {
+        // If it's a private query and there's no user, don't query at all.
+        return null;
+      }
     }
-    
-    // استعلام خاص بالمستخدم، يتطلب تسجيل الدخول
-    if (user) {
-      return query(
-        collection(db, 'users', user.uid, collectionPath),
-        ...constraints
-      );
-    }
-
-    // إذا كان الاستعلام خاصًا والمستخدم غير مسجل، لا تقم بالاستعلام
-    return null;
+    return q;
   }, [user, collectionPath, constraints, isPublicQuery]);
 
   const [snapshot, loading, error] = useCollection(finalQuery);
 
-  // تصفية النتائج لإخفاء البيانات المؤرشفة
+  // Memoize the data processing to prevent re-renders.
   const data = useMemo(() => {
     if (!snapshot) return [];
 
-    return snapshot.docs
-      .filter((doc) => doc.data().archived !== true)
-      .map(
-        (doc) =>
-          ({
-            id: doc.id,
-            path: doc.ref.path,
-            ...doc.data(),
-          } as T & { id: string; path: string })
-      );
+    // The `archived` field is filtered directly in the query where possible.
+    // This mapping just transforms the data into a more usable format.
+    return snapshot.docs.map(
+      (doc) =>
+        ({
+          id: doc.id,
+          path: doc.ref.path,
+          ...doc.data(),
+        } as T & { id: string; path: string })
+    );
   }, [snapshot]);
 
-  // رسالة خطأ واضحة
   const errorMessage = error ? `فشل جلب البيانات: ${error.message}` : null;
-  
-  const refetch = () => {
-     // react-firebase-hooks يقوم بالتحديث تلقائيًا
-  };
+
+  // react-firebase-hooks handles refetching automatically on data change.
+  const refetch = () => {};
 
   return { data, loading, error: errorMessage, refetch };
 }

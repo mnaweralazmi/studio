@@ -6,7 +6,7 @@ import {
   CalendarIcon
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
@@ -114,7 +114,7 @@ export default function TasksView() {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   
-  const { data: allTasksSnapshot, loading: loadingTasks, refetch } = useFirestoreQuery<Task>('tasks', [orderBy('date', 'asc')]);
+  const { data: allTasksSnapshot, loading: loadingTasks, refetch } = useFirestoreQuery<Task>('tasks', [where('archived', '==', false), orderBy('date', 'asc')]);
 
   const { allUpcomingTasks, todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
     const allTasks: Task[] = allTasksSnapshot || [];

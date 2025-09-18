@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      // The adminUids array is maintained in the app's code for flexibility.
+      // This rule just checks if the incoming request has a claim `admin: true`.
+      // For this to work, you'd typically use Cloud Functions to set custom claims.
+      // As a simpler alternative for now, we'll handle admin logic in security rules where possible.
+      // Or, we can hardcode UIDs here if they are static.
+      return request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2', '0T5b331jchc32PucCqL1KqJ9d9h2'];
+    }
+
+    // --- Top-Level Public Collections ---
+
+    // publicTopics: Anyone signed in can read, only admins can write.
+    match /publicTopics/{topicId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // siteContent (for adMarquee): Anyone signed in can read, only admins can write.
+    match /siteContent/{docId} {
+       allow read: if isSignedIn();
+       allow write: if isAdmin();
+    }
+
+    // notifications: Admins can write, users can read their own.
+    match /notifications/{notificationId} {
+        allow write: if isAdmin();
+        // Read is handled by collection group rules below for efficiency.
+    }
+
+
+    // --- User-Specific Subcollections ---
+    match /users/{userId}/{document=**} {
+      // Only the owner of the data or an admin can read/write it.
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // --- User Profile Document ---
+    match /users/{userId} {
+      // A user can read their own profile.
+      allow get: if isOwner(userId);
+      // A user can create their own profile upon signup.
+      allow create: if isOwner(userId);
+      // A user can update their own profile.
+      allow update: if isOwner(userId);
+      // Nobody can list all users or delete a user document directly.
+      allow list, delete: if false;
+    }
+    
+    // --- Collection Group Rules for Queries ---
+
+    // This rule allows a signed-in user to query across all 'notifications' collections
+    // but they will only receive documents targeted to them ('all' or their UID).
+    match /{path=**}/notifications/{notificationId} {
+      allow read: if isSignedIn() && (
+        resource.data.target == 'all' || 
+        resource.data.target == request.auth.uid ||
+        (isAdmin() && resource.data.target == 'admin')
+      );
+    }
+  }
+}
