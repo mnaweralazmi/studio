@@ -84,7 +84,7 @@ async function createTopic(data: TopicFormData): Promise<void> {
     createdAt: serverTimestamp(),
     imageUrl: '',
     imagePath: '',
-    archived: false, // Ensure this field is set by default
+    archived: false,
   };
 
   if (data.file) {
@@ -290,7 +290,7 @@ export default function HomePage() {
       const topicsCollectionRef = collection(db, 'publicTopics');
       const q = query(
         topicsCollectionRef,
-        where('archived', '==', false),
+        where('archived', '!=', true),
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
@@ -301,21 +301,7 @@ export default function HomePage() {
         ...doc.data(),
       })) as Topic[];
       
-      // Also fetch topics that don't have the `archived` field yet
-      const legacyQuery = query(topicsCollectionRef, orderBy('createdAt', 'desc'));
-      const legacySnapshot = await getDocs(legacyQuery);
-      const legacyTopics = legacySnapshot.docs
-        .map(doc => ({ id: doc.id, path: doc.ref.path, ...doc.data() } as Topic))
-        .filter(topic => topic.archived === undefined);
-        
-      // Combine and remove duplicates
-      const combined = [...allTopics, ...legacyTopics];
-      const uniqueTopics = Array.from(new Set(combined.map(t => t.id)))
-        .map(id => combined.find(t => t.id === id)!)
-        .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
-
-
-      setTopics(uniqueTopics);
+      setTopics(allTopics);
     } catch (e: any) {
       console.error('Error fetching topics:', e);
       if (e.code === 'failed-precondition') {

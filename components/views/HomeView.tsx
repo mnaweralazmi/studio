@@ -65,10 +65,6 @@ export default function HomeView({
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
 
-  // Filter out archived topics on the client-side as a fallback
-  // Also shows topics where `archived` is undefined (for legacy data)
-  const visibleTopics = useMemo(() => topics.filter(topic => topic.archived === false || topic.archived === undefined), [topics]);
-
   const handleArchive = async (topic: Topic) => {
     try {
       await archiveTopic(topic);
@@ -125,7 +121,7 @@ export default function HomeView({
         </Alert>
       )}
 
-      {!loading && visibleTopics.length === 0 && !error && (
+      {!loading && topics.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border max-w-2xl mx-auto">
           <Newspaper className="h-16 w-16 text-muted-foreground" />
           <h2 className="mt-4 text-xl font-semibold">
@@ -137,9 +133,9 @@ export default function HomeView({
         </div>
       )}
 
-      {!loading && visibleTopics.length > 0 && (
+      {!loading && topics.length > 0 && (
         <div className="max-w-2xl mx-auto space-y-8">
-          {visibleTopics.map((topic) => (
+          {topics.map((topic) => (
             <Card
               key={topic.id}
               className="overflow-hidden bg-card/50 shadow-lg border w-full"
