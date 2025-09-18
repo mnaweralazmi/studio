@@ -927,17 +927,10 @@ function AdminView({ user }: { user: any }) {
   const handleAddAd = async () => {
     if (!newAd.trim()) return;
     try {
-      // Check if the document exists
-      const docSnap = await getDoc(adMarqueeRef);
-      if (docSnap.exists()) {
-        // If it exists, update it
-        await updateDoc(adMarqueeRef, {
+      await setDoc(adMarqueeRef, {
           ads: arrayUnion(newAd.trim()),
-        });
-      } else {
-        // If it doesn't exist, create it
-        await setDoc(adMarqueeRef, { ads: [newAd.trim()] });
-      }
+      }, { merge: true });
+
       setNewAd('');
       toast({
         title: 'تمت الإضافة بنجاح',
