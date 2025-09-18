@@ -20,6 +20,8 @@ import {
   setDoc,
   serverTimestamp,
   collection,
+  where,
+  orderBy,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
@@ -279,7 +281,7 @@ export default function HomePage() {
     refetch,
   } = useFirestoreQuery<Topic>(
     'publicTopics',
-    [where('archived', '!=', true), where('createdAt', '!=', null), doc('createdAt', 'desc')],
+    [where('archived', '!=', true), where('createdAt', '!=', null), orderBy('createdAt', 'desc')],
     true // isCollectionGroup is true for top-level collections in this hook's context
   );
 
