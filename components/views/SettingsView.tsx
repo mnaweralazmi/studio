@@ -872,11 +872,32 @@ function AdminView({ user }: { user: any }) {
   const [targetUid, setTargetUid] = useState('');
   const [isSending, setIsSending] = useState(false);
   
-  const adMarqueeRef = useMemo(() => doc(db, 'siteContent', 'adMarquee'), []);
-  const [adMarqueeSnapshot, adMarqueeLoading] = useDocument(adMarqueeRef);
+  const [ads, setAds] = useState<string[]>([]);
+  const [adsLoading, setAdsLoading] = useState(true);
   const [newAd, setNewAd] = useState('');
+  const adMarqueeRef = useMemo(() => doc(db, 'siteContent', 'adMarquee'), []);
 
-  const ads = useMemo(() => adMarqueeSnapshot?.data()?.ads || [], [adMarqueeSnapshot]);
+  const fetchAds = useCallback(async () => {
+    setAdsLoading(true);
+    try {
+      const docSnap = await getDoc(adMarqueeRef);
+      if (docSnap.exists()) {
+        setAds(docSnap.data().ads || []);
+      } else {
+        setAds([]);
+      }
+    } catch (e) {
+      console.error("Error fetching ads:", e);
+      setAds([]);
+    } finally {
+      setAdsLoading(false);
+    }
+  }, [adMarqueeRef]);
+
+  useEffect(() => {
+    fetchAds();
+  }, [fetchAds]);
+
 
   const handleSendNotification = async () => {
     if (!title || !body) {
@@ -927,11 +948,15 @@ function AdminView({ user }: { user: any }) {
   const handleAddAd = async () => {
     if (!newAd.trim()) return;
     try {
+      // Use setDoc with merge to create or update the document
       await setDoc(adMarqueeRef, {
         ads: arrayUnion(newAd.trim())
       }, { merge: true });
 
+      // Optimistically update local state
+      setAds(prevAds => [...prevAds, newAd.trim()]);
       setNewAd('');
+
       toast({
         title: 'تمت الإضافة بنجاح',
         description: 'تمت إضافة الإعلان إلى الشريط المتحرك.',
@@ -941,7 +966,7 @@ function AdminView({ user }: { user: any }) {
       console.error('Error adding ad:', e);
       toast({
         title: 'خطأ في إضافة الإعلان',
-        description: 'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.',
+        description: e.message || 'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.',
         variant: 'destructive',
       });
     }
@@ -952,9 +977,12 @@ function AdminView({ user }: { user: any }) {
         await updateDoc(adMarqueeRef, {
             ads: arrayRemove(adToRemove)
         });
+        // Optimistically update local state
+        setAds(prevAds => prevAds.filter(ad => ad !== adToRemove));
         toast({ title: 'تم حذف الإعلان' });
-    } catch (e) {
-        toast({ title: 'خطأ في حذف الإعلان', variant: 'destructive'});
+    } catch (e: any) {
+        console.error('Error removing ad:', e);
+        toast({ title: 'خطأ في حذف الإعلان', description: e.message, variant: 'destructive'});
     }
   }
 
@@ -1026,7 +1054,7 @@ function AdminView({ user }: { user: any }) {
             <CardTitle>التحكم في شريط الإعلانات</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-             {adMarqueeLoading ? (
+             {adsLoading ? (
                  <div className="flex justify-center p-4">
                     <Loader2 className="h-6 w-6 animate-spin"/>
                  </div>
