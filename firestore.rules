@@ -1,82 +1,34 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    
     function isAdmin() {
-      // The UIDs of admin users are stored in the app's code.
-      // This is a simple way to manage roles for small apps.
-      // For larger apps, consider custom claims or a roles collection.
       return isSignedIn() && request.auth.uid in [
-          'JU2IAJu8XEeCqM33bu1wzlrA7id2',
-          'REPLACE_WITH_YOUR_UID'
+        'JU2IAJu8XEeCqM33bu1wzlrA7id2',
+        // 'REPLACE_WITH_YOUR_UID'
       ];
     }
     
-    // --- Public Content (Homepage Posts) ---
-    // Path: /publicTopics/{topicId}
+    match /users/{userId}/{document=**} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
     match /publicTopics/{topicId} {
-      // Any signed-in user can read.
       allow read: if isSignedIn();
-      // Only admins can create, update, or delete.
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /siteContent/{contentId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
     }
     
-    // --- Site-wide Content (e.g., Ad Marquee) ---
-    // Path: /siteContent/{contentId}
-    match /siteContent/{contentId} {
-       // Any signed-in user can read.
-       allow read: if isSignedIn();
-       // Only admins can write.
-       allow write: if isAdmin();
-    }
-
-    // --- Notifications (Sent by Admins) ---
-    // Path: /notifications/{notificationId}
     match /notifications/{notificationId} {
-        // Only Admins can create notifications
-        allow create: if isAdmin();
-        // Users can read notifications targeted to 'all' or to their specific UID.
-        // Admins can read all notifications.
-        allow read: if (isSignedIn() && (resource.data.target == 'all' || resource.data.target == request.auth.uid)) || isAdmin();
-        // Notifications are "read-only" for users, but can be updated (e.g., to mark as read)
-        allow update: if isSignedIn();
-        // Only admins can delete.
-        allow delete: if isAdmin();
-    }
-
-    // --- User-specific Data ---
-    // Path: /users/{userId} and all subcollections
-    match /users/{userId} {
-      // READ access:
-      // - The user can read their own profile.
-      // - An admin can read any user's profile.
-      allow read: if isOwner(userId) || isAdmin();
-
-      // WRITE access:
-      // - The user can write to their own profile.
-      allow write: if isOwner(userId);
-
-      // --- All user-specific subcollections ---
-      // This single rule applies to:
-      // - /users/{userId}/tasks/{taskId}
-      // - /users/{userId}/expenses/{expenseId}
-      // - /users/{userId}/agriSales/{saleId}
-      // - etc.
-      match /{collectionPath}/{docId} {
-        // Any user can read/write/delete THEIR OWN documents in any subcollection.
-        allow read, write, delete: if isOwner(userId);
-      }
+      allow read, write: if isAdmin();
     }
   }
 }
