@@ -2,12 +2,28 @@
 
 import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import { Loader2, Plus, Leaf, X, Save } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+
+import {
+  Loader2,
+  Plus,
+  X,
+  Save,
+  MessageCircle,
+  Heart,
+  TrendingUp,
+  Landmark,
+  Wallet,
+  CalendarCheck,
+  User as UserIcon,
+} from 'lucide-react';
+
 import { Toaster } from '@/components/ui/toaster';
-import HomeView from '@/components/views/HomeView';
+import HomeView, { Topic } from '@/components/views/HomeView';
 import {
   Timestamp,
   doc,
@@ -16,6 +32,8 @@ import {
   collection,
   where,
   orderBy,
+  query,
+  getDocs,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
@@ -33,24 +51,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import Image from 'next/image';
-import { db, storage } from '@/lib/firebase';
 import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
 import AdMarquee from '@/components/home/AdMarquee';
-
-type Topic = {
-  id: string;
-  path: string;
-  title?: string;
-  description?: string;
-  imageUrl?: string;
-  imagePath?: string;
-  createdAt?: Timestamp;
-  userId?: string;
-  authorName?: string;
-  archived?: boolean;
-  [k: string]: any;
-};
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 type TopicFormData = {
   title: string;
@@ -58,6 +63,73 @@ type TopicFormData = {
   file?: File;
 };
 
+// --- Quick Stats ---
+const useQuickStats = (userId?: string) => {
+  const [stats, setStats] = useState({
+    todayTasks: 0,
+    monthlyIncome: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        // Fetch Today's Tasks
+        const today = new Date();
+        const startOfToday = new Date(today.setHours(0, 0, 0, 0));
+        const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+
+        const tasksQuery = query(
+          collection(db, `users/${userId}/tasks`),
+          where('date', '>=', Timestamp.fromDate(startOfToday)),
+          where('date', '<=', Timestamp.fromDate(endOfToday)),
+          where('completed', '==', false)
+        );
+        const tasksSnap = await getDocs(tasksQuery);
+        const todayTasks = tasksSnap.size;
+
+        // Fetch Monthly Income
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const salesCollections = [
+          'agriSales',
+          'poultryEggSales',
+          'poultrySales',
+          'livestockSales',
+        ];
+        let totalIncome = 0;
+
+        for (const coll of salesCollections) {
+          const salesQuery = query(
+            collection(db, `users/${userId}/${coll}`),
+            where('date', '>=', Timestamp.fromDate(startOfMonth))
+          );
+          const salesSnap = await getDocs(salesQuery);
+          salesSnap.forEach((doc) => {
+            totalIncome += doc.data().totalAmount || 0;
+          });
+        }
+
+        setStats({
+          todayTasks,
+          monthlyIncome: totalIncome,
+        });
+      } catch (error) {
+        console.error('Error fetching quick stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [userId]);
+
+  return { stats, loading };
+};
+
+// --- Add Topic Dialog (Unchanged but kept for functionality) ---
 async function createTopic(data: TopicFormData): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('يجب تسجيل الدخول لإنشاء موضوع.');
@@ -74,6 +146,8 @@ async function createTopic(data: TopicFormData): Promise<void> {
     imageUrl: '',
     imagePath: '',
     archived: false,
+    likes: 0,
+    comments: 0,
   };
 
   if (data.file) {
@@ -262,10 +336,13 @@ function AddTopicDialog({
   );
 }
 
+// --- Main Home Page Component ---
 export default function HomePage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
+
+  const { stats: quickStats, loading: statsLoading } = useQuickStats(user?.uid);
 
   const {
     data: topics,
@@ -275,7 +352,7 @@ export default function HomePage() {
   } = useFirestoreQuery<Topic>(
     'publicTopics',
     [where('archived', '==', false), orderBy('createdAt', 'desc')],
-    true
+    true // isCollectionGroup
   );
 
   const handleTopicAdded = () => {
@@ -288,6 +365,33 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
+  const quickAccessLinks = [
+    {
+      title: 'إدارة المصاريف',
+      href: '/management?tab=farmManagement',
+      icon: Wallet,
+      color: 'bg-blue-500',
+    },
+    {
+      title: 'عرض الميزانية',
+      href: '/budget',
+      icon: Landmark,
+      color: 'bg-purple-500',
+    },
+    {
+      title: 'المهام والتقويم',
+      href: '/tasks',
+      icon: CalendarCheck,
+      color: 'bg-orange-500',
+    },
+    {
+      title: 'إدارة الأقسام',
+      href: '/management',
+      icon: TrendingUp,
+      color: 'bg-teal-500',
+    },
+  ];
+
   if (loading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background">
@@ -299,35 +403,113 @@ export default function HomePage() {
 
   return (
     <div className="pb-24">
-      <main className="px-4 pt-4 container mx-auto">
+      <main className="container mx-auto px-4 pt-4">
+        {/* --- Header --- */}
         <header className="pt-8 mb-8 space-y-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <Leaf className="h-8 w-8 text-primary" />
-              </div>
+            <div className="flex items-center gap-4">
+              {user.photoURL ? (
+                <Image
+                  src={user.photoURL}
+                  alt={user.displayName || 'User'}
+                  width={64}
+                  height={64}
+                  className="rounded-full object-cover border-2 border-primary/50"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
+                  <UserIcon className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
               <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                  واحة المزرعة
+                <p className="text-md text-muted-foreground">أهلاً بعودتك،</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                  {user.displayName || 'مستخدمنا العزيز'}
                 </h1>
-                <p className="mt-1 text-md text-muted-foreground">
-                  مكان واحد لمشاركة الأفكار وإدارة النقاشات.
-                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => setAddTopicOpen(true)}
-              >
-                <Plus className="h-4 w-4 ml-2" />
-                <span>إضافة موضوع</span>
-              </Button>
               {user && <NotificationsPopover user={user} />}
             </div>
           </div>
         </header>
+
+        {/* --- Quick Stats --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/50 dark:to-emerald-950/50 border-green-200 dark:border-green-800">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-green-800 dark:text-green-200">
+                مهام اليوم
+              </CardTitle>
+              <CalendarCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <div className="text-3xl font-bold text-green-900 dark:text-green-100">
+                  {quickStats.todayTasks}
+                </div>
+              )}
+              <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                مهام غير مكتملة لهذا اليوم
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-blue-50 to-sky-100 dark:from-blue-900/50 dark:to-sky-950/50 border-blue-200 dark:border-blue-800">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                دخل هذا الشهر
+              </CardTitle>
+              <Landmark className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
+                  {quickStats.monthlyIncome.toFixed(3)}
+                  <span className="text-lg font-normal"> د.ك</span>
+                </div>
+              )}
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                إجمالي المبيعات منذ بداية الشهر
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* --- Quick Access --- */}
+        <div className="mb-10">
+          <h2 className="text-lg font-semibold mb-3">وصول سريع</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {quickAccessLinks.map((link) => (
+              <Link href={link.href} key={link.title}>
+                <div
+                  className={cn(
+                    'p-4 rounded-lg text-white flex flex-col justify-between h-24 hover:scale-105 transition-transform duration-200',
+                    link.color
+                  )}
+                >
+                  <link.icon className="h-6 w-6" />
+                  <span className="font-semibold text-sm">{link.title}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* --- Community Feed Header --- */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">خلاصة المجتمع</h2>
+          <Button
+            className="bg-primary hover:bg-primary/90"
+            onClick={() => setAddTopicOpen(true)}
+          >
+            <Plus className="h-4 w-4 ml-2" />
+            <span>شارك فكرة</span>
+          </Button>
+        </div>
 
         <AdMarquee />
 
@@ -349,3 +531,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

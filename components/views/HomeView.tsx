@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useAdmin } from '@/lib/hooks/useAdmin';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,20 +11,23 @@ import { ar } from 'date-fns/locale';
 import {
   Loader2,
   Newspaper,
-  X,
-  AlertCircle,
-  Pencil,
   Archive,
-  User,
+  User as UserIcon,
+  Heart,
+  MessageCircle,
+  Send,
+  MoreHorizontal,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { Timestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Textarea } from '../ui/textarea';
 
-type Topic = {
+export type Topic = {
   id: string;
   path: string;
   title?: string;
@@ -34,13 +37,16 @@ type Topic = {
   createdAt?: Timestamp;
   userId?: string;
   authorName?: string;
+  authorPhotoURL?: string;
   archived?: boolean;
+  likes?: number;
+  comments?: number;
   [k: string]: any;
 };
 
 async function archiveTopic(topic: Topic): Promise<void> {
   if (!topic.path) {
-     // Fallback for older documents that might not have a path
+    // Fallback for older documents that might not have a path
     const topicRef = doc(db, 'publicTopics', topic.id);
     await updateDoc(topicRef, { archived: true });
     return;
@@ -54,7 +60,7 @@ export default function HomeView({
   topics,
   loading,
   error,
-  onRefresh
+  onRefresh,
 }: {
   user: FirebaseUser;
   topics: Topic[];
@@ -64,6 +70,7 @@ export default function HomeView({
 }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
+  const [likedTopics, setLikedTopics] = useState<Set<string>>(new Set());
 
   const handleArchive = async (topic: Topic) => {
     try {
@@ -84,23 +91,46 @@ export default function HomeView({
     }
   };
 
-  const isVideo = (topic: Topic) => {
-    const url = topic.imageUrl;
-    if (!url) return false;
-    // Check for common video file extensions or keywords in the URL
-    const videoIndicators = ['.mp4', '.mov', '.webm', '.mkv', 'video'];
-    const lowercasedUrl = url.toLowerCase();
-    
+  const handleLike = async (topicId: string, path: string) => {
+    if (!user) return;
+    const topicRef = doc(db, path);
+    const isLiked = likedTopics.has(topicId);
+
     try {
-        const urlObject = new URL(lowercasedUrl);
-        const pathname = urlObject.pathname;
-        return videoIndicators.some(ext => pathname.includes(ext));
-    } catch(e) {
-        // Fallback for non-URL strings or data URIs
-        return videoIndicators.some(ext => lowercasedUrl.includes(ext));
+      if (isLiked) {
+        // Unlike
+        await updateDoc(topicRef, { likes: increment(-1) });
+        setLikedTopics((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(topicId);
+          return newSet;
+        });
+      } else {
+        // Like
+        await updateDoc(topicRef, { likes: increment(1) });
+        setLikedTopics((prev) => new Set(prev).add(topicId));
+      }
+       // Note: We are not refetching here to avoid a jarring UI update.
+       // The UI will update optimistically.
+    } catch (e) {
+        console.error("Error liking topic: ", e);
     }
   };
 
+  const isVideo = (topic: Topic) => {
+    const url = topic.imageUrl;
+    if (!url) return false;
+    const videoIndicators = ['.mp4', '.mov', '.webm', '.mkv', 'video'];
+    const lowercasedUrl = url.toLowerCase();
+
+    try {
+      const urlObject = new URL(lowercasedUrl);
+      const pathname = urlObject.pathname;
+      return videoIndicators.some((ext) => pathname.includes(ext));
+    } catch (e) {
+      return videoIndicators.some((ext) => lowercasedUrl.includes(ext));
+    }
+  };
 
   return (
     <section>
@@ -115,7 +145,7 @@ export default function HomeView({
 
       {error && (
         <Alert variant="destructive" className="my-4 max-w-2xl mx-auto">
-          <AlertCircle className="h-4 w-4" />
+          <Newspaper className="h-4 w-4" />
           <AlertTitle>حدث خطأ</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -134,18 +164,22 @@ export default function HomeView({
       )}
 
       {!loading && topics.length > 0 && (
-        <div className="max-w-2xl mx-auto space-y-8">
-          {topics.map((topic) => (
+        <div className="max-w-2xl mx-auto space-y-6">
+          {topics.map((topic) => {
+            const isLiked = likedTopics.has(topic.id);
+            return (
             <Card
               key={topic.id}
-              className="overflow-hidden bg-card/50 shadow-lg border w-full"
+              className="overflow-hidden bg-card/70 shadow-md border w-full transition-all hover:border-primary/20"
             >
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
+              <CardHeader className="flex flex-row justify-between items-start">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                      <User className="w-5 h-5 text-muted-foreground" />
-                    </div>
+                    <Avatar>
+                        <AvatarImage src={topic.authorPhotoURL} alt={topic.authorName} />
+                        <AvatarFallback>
+                            <UserIcon className="w-5 h-5 text-muted-foreground" />
+                        </AvatarFallback>
+                    </Avatar>
                     <div>
                       <p className="font-semibold text-card-foreground">
                         {topic.authorName}
@@ -161,34 +195,31 @@ export default function HomeView({
                     </div>
                   </div>
                   {isAdmin && (
-                    <div className="flex gap-1">
-                      <Button
+                    <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => handleArchive(topic)}
                       >
                         <Archive className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    </Button>
                   )}
-                </div>
               </CardHeader>
 
-              <CardContent className="px-6 pb-6 pt-0">
-                <div className="space-y-4">
-                  <h2 className="text-xl font-bold leading-snug">
+              <CardContent className="px-6 pb-4 pt-0">
+                <div className="space-y-3">
+                  <h2 className="text-lg font-bold leading-snug">
                     {topic.title}
                   </h2>
 
                   {topic.description && (
-                    <p className="text-muted-foreground text-base whitespace-pre-wrap">
+                    <p className="text-muted-foreground text-sm whitespace-pre-wrap">
                       {topic.description}
                     </p>
                   )}
 
                   {topic.imageUrl && (
-                    <div className="relative mt-4 rounded-lg overflow-hidden border">
+                    <div className="relative mt-3 rounded-lg overflow-hidden border">
                       {isVideo(topic) ? (
                         <video
                           src={topic.imageUrl}
@@ -208,10 +239,51 @@ export default function HomeView({
                   )}
                 </div>
               </CardContent>
+
+              <CardFooter className="px-6 pb-4 flex flex-col items-start gap-4">
+                {/* --- Engagement Stats --- */}
+                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                        <Heart className={`h-4 w-4 ${isLiked ? 'text-red-500 fill-current' : ''}`}/>
+                        <span>{(topic.likes || 0) + (isLiked ? 1 : 0) - (likedTopics.has(topic.id) && !isLiked ? 1: 0) } إعجاب</span>
+                    </div>
+                     <div className="flex items-center gap-1">
+                        <MessageCircle className="h-4 w-4"/>
+                        <span>{topic.comments || 0} تعليق</span>
+                    </div>
+                </div>
+
+                {/* --- Action Buttons --- */}
+                <div className="w-full grid grid-cols-2 gap-2 border-t pt-2">
+                     <Button variant="ghost" className="flex-1" onClick={() => handleLike(topic.id, topic.path)}>
+                        <Heart className={`h-5 w-5 ml-2 ${isLiked ? 'text-red-500 fill-current' : ''}`} />
+                        {isLiked ? 'أعجبني' : 'إعجاب'}
+                    </Button>
+                    <Button variant="ghost" className="flex-1">
+                        <MessageCircle className="h-5 w-5 ml-2"/>
+                        تعليق
+                    </Button>
+                </div>
+                 {/* --- Add Comment Section --- */}
+                 <div className="w-full flex items-center gap-2 pt-2">
+                    <Avatar className="h-8 w-8">
+                       <AvatarImage src={user.photoURL || undefined} />
+                       <AvatarFallback>
+                           <UserIcon className="w-4 h-4" />
+                       </AvatarFallback>
+                    </Avatar>
+                    <Textarea placeholder="اكتب تعليقك..." rows={1} className="flex-1 bg-muted/50 focus-visible:ring-1"/>
+                    <Button size="icon" variant="ghost" className="h-9 w-9">
+                        <Send className="h-5 w-5"/>
+                    </Button>
+                 </div>
+              </CardFooter>
             </Card>
-          ))}
+          )})}
         </div>
       )}
     </section>
   );
 }
+
+    
