@@ -20,10 +20,6 @@ import {
   setDoc,
   serverTimestamp,
   collection,
-  getDocs,
-  query,
-  orderBy,
-  where,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import NotificationsPopover from '@/components/home/NotificationsPopover';
@@ -275,7 +271,7 @@ export default function HomePage() {
   const router = useRouter();
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
 
-  // Use the new centralized hook
+  // Use the centralized hook to fetch topics from the top-level 'publicTopics' collection
   const {
     data: topics,
     loading: topicsLoading,
@@ -283,8 +279,8 @@ export default function HomePage() {
     refetch,
   } = useFirestoreQuery<Topic>(
     'publicTopics',
-    [orderBy('createdAt', 'desc')],
-    true // isCollectionGroup
+    [where('archived', '!=', true), where('createdAt', '!=', null), doc('createdAt', 'desc')],
+    true // isCollectionGroup is true for top-level collections in this hook's context
   );
 
   const handleTopicAdded = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import {
   collection,
   query,
@@ -32,14 +32,20 @@ export function useFirestoreQuery<T>(
     if (!isGroup && !user) {
       return null;
     }
-
-    const collectionRef = isGroup
-      ? collectionGroup(db, collectionPath)
-      // If it's not a group query, we know the user object is available here.
-      : collection(db, 'users', user!.uid, collectionPath);
+    
+    let collectionRef;
+    if (isGroup) {
+      // For collection group queries, like 'publicTopics'
+      collectionRef = collectionGroup(db, collectionPath);
+    } else {
+       // For user-specific sub-collections (e.g., 'users/{uid}/tasks')
+      // At this point, we know 'user' is available.
+      collectionRef = collection(db, 'users', user!.uid, collectionPath);
+    }
       
-    // Always filter out archived documents
-    const allConstraints = [where('archived', '!=', true), ...constraints];
+    // Always filter out archived documents unless it's a collection group query
+    // because group queries might need their own specific filters.
+    const allConstraints = isGroup ? constraints : [where('archived', '!=', true), ...constraints];
 
     return query(collectionRef, ...allConstraints);
   }, [user, collectionPath, constraints, isGroup]);
@@ -55,17 +61,22 @@ export function useFirestoreQuery<T>(
     })) as (T & { id: string, path: string })[];
   }, [snapshot]);
 
-  const refetch = useCallback(() => {
-    // This is a placeholder as react-firebase-hooks handles refetching automatically.
-    // Changes to dependencies of `finalQuery` will trigger a refetch.
-  }, []);
-
   const errorMessage = useMemo(() => {
     if (error?.code === 'failed-precondition') {
       return 'فشل جلب البيانات. قد يتطلب هذا الاستعلام فهرسًا مخصصًا في Firestore.';
     }
+     if (error?.code === 'permission-denied') {
+      return 'فشل جلب البيانات: ليست لديك الصلاحية الكافية لعرض هذا المحتوى. قد تحتاج إلى التحقق من قواعد الأمان في Firestore.';
+    }
     return error ? error.message : null;
   }, [error]);
+
+  const refetch = () => {
+     // `useCollection` from react-firebase-hooks re-fetches automatically
+     // when the query object changes. This function is kept for API consistency
+     // if manual refetching logic is needed in the future.
+  };
+
 
   return { data, loading, error: errorMessage, refetch };
 }
