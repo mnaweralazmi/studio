@@ -949,15 +949,7 @@ function AdminView({ user }: { user: any }) {
   const handleAddAd = async () => {
     if (!newAd.trim()) return;
     try {
-      // Use setDoc with merge to create the document if it doesn't exist,
-      // and updateDoc with arrayUnion to add to the array.
-      const docSnap = await getDoc(adMarqueeRef);
-      if (docSnap.exists()) {
-        await updateDoc(adMarqueeRef, { ads: arrayUnion(newAd.trim()) });
-      } else {
-        await setDoc(adMarqueeRef, { ads: [newAd.trim()] });
-      }
-
+      await updateDoc(adMarqueeRef, { ads: arrayUnion(newAd.trim()) });
       setAds(prevAds => [...prevAds, newAd.trim()]);
       setNewAd('');
       toast({
@@ -966,12 +958,23 @@ function AdminView({ user }: { user: any }) {
         className: 'bg-green-600 text-white',
       });
     } catch (e: any) {
-      console.error('Error adding ad:', e);
-      toast({
-        title: 'خطأ في إضافة الإعلان',
-        description: e.message || 'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.',
-        variant: 'destructive',
-      });
+       if (e.code === 'not-found') {
+            await setDoc(adMarqueeRef, { ads: [newAd.trim()] });
+            setAds([newAd.trim()]);
+            setNewAd('');
+            toast({
+                title: 'تمت الإضافة بنجاح',
+                description: 'تمت إضافة الإعلان إلى الشريط المتحرك.',
+                className: 'bg-green-600 text-white',
+            });
+        } else {
+            console.error('Error adding ad:', e);
+            toast({
+                title: 'خطأ في إضافة الإعلان',
+                description: e.message || 'فشلت إضافة الإعلان.',
+                variant: 'destructive',
+            });
+        }
     }
   };
 
