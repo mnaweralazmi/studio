@@ -2,38 +2,40 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Global Collections ---
-
-    // Public topics can be read by any authenticated user.
-    // Only admins can create, update, or delete them.
+  
+    // Allow reading public topics for any authenticated user.
     match /publicTopics/{topicId} {
       allow read: if request.auth != null;
-      allow write, delete: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids;
-    }
-
-    // Site content (like admin list and marquee ads) can be read and written only by admins.
-    match /siteContent/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids;
-    }
-
-    // Notifications can be created by admins.
-    // They can be read by the user if they are the target or if the notification is for 'all'.
-    match /notifications/{notificationId} {
-       allow read: if request.auth != null && 
-                      (resource.data.target == 'all' || 
-                       request.auth.uid == resource.data.target || 
-                       ('admin' in resource.data.target && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids));
-       allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids;
+      allow write, delete: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
     }
     
-    // --- User-Specific Data ---
+    // Allow admins to manage site content like ads.
+    match /siteContent/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
+    }
 
-    // A user can read, write, update, and delete any document within their own user directory.
-    // This rule is broad to allow for collection group queries needed for stats and other features,
-    // while still securing data to the authenticated user.
-    match /users/{userId}/{document=**} {
+    // Allow admins to write notifications.
+    match /notifications/{notificationId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
+    }
+
+    // Secure user-specific data.
+    match /users/{userId} {
+      // Allow a user to read and write their own user document.
       allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Allow a user to read all documents and collections nested under their user document.
+      // This is crucial for fetching tasks, sales, expenses, etc.
+      match /{document=**} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Allow write access only for admins or the user themselves on their own subcollections.
+      match /{subcollection}/{docId} {
+         allow write, delete, create: if request.auth != null && (request.auth.uid == userId || request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids);
+      }
     }
   }
 }
