@@ -927,16 +927,9 @@ function AdminView({ user }: { user: any }) {
   const handleAddAd = async () => {
     if (!newAd.trim()) return;
     try {
-      const docSnap = await getDoc(adMarqueeRef);
-      if (docSnap.exists()) {
-         await updateDoc(adMarqueeRef, {
-            ads: arrayUnion(newAd.trim()),
-        });
-      } else {
-         await setDoc(adMarqueeRef, {
-            ads: [newAd.trim()],
-        });
-      }
+      await setDoc(adMarqueeRef, {
+        ads: arrayUnion(newAd.trim())
+      }, { merge: true });
 
       setNewAd('');
       toast({
@@ -948,8 +941,7 @@ function AdminView({ user }: { user: any }) {
       console.error('Error adding ad:', e);
       toast({
         title: 'خطأ في إضافة الإعلان',
-        description:
-          'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.',
+        description: 'فشلت إضافة الإعلان. تحقق من قواعد الأمان في Firestore.',
         variant: 'destructive',
       });
     }
