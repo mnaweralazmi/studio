@@ -13,8 +13,8 @@ import { auth, db } from '@/lib/firebase';
 import { useCollection } from 'react-firebase-hooks/firestore';
 
 /**
- * A custom hook to query a Firestore collection or collection group with real-time updates,
- * automatically filtering for non-archived documents.
+ * A custom hook to query a Firestore collection or collection group with real-time updates.
+ * It also filters out documents where 'archived' is true on the client side.
  * @param collectionPath The path to the Firestore collection or collection group ID.
  * @param constraints Optional array of Firestore query constraints (e.g., orderBy, limit).
  * @param isCollectionGroup A boolean to indicate if this is a collection group query.
@@ -28,34 +28,26 @@ export function useFirestoreQuery<T>(
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
-    // If it's a user-specific collection query but the user is not loaded, return null to prevent an invalid query.
     if (!isCollectionGroup && !user) {
       return null;
     }
 
-    let collectionRef;
-    let queryConstraints: QueryConstraint[];
-
-    if (isCollectionGroup) {
-      // For collection group queries, like 'publicTopics'
-      collectionRef = collectionGroup(db, collectionPath);
-      queryConstraints = constraints; // Use constraints as-is
-    } else {
-      // For user-specific sub-collections (e.g., 'users/{uid}/tasks')
-      // At this point, we know 'user' is available.
-      collectionRef = collection(db, 'users', user!.uid, collectionPath);
-      // Always filter out archived documents for user-specific collections.
-      queryConstraints = [where('archived', '!=', true), ...constraints];
-    }
+    const baseCollection = isCollectionGroup
+      ? collectionGroup(db, collectionPath)
+      : collection(db, 'users', user!.uid, collectionPath);
     
-    return query(collectionRef, ...queryConstraints);
+    return query(baseCollection, ...constraints);
   }, [user, collectionPath, constraints, isCollectionGroup]);
 
   const [snapshot, loading, error] = useCollection(finalQuery);
 
   const data = useMemo(() => {
     if (!snapshot) return undefined;
-    return snapshot.docs.map(doc => ({
+    
+    // Client-side filtering for archived documents
+    const filteredDocs = snapshot.docs.filter(doc => doc.data().archived !== true);
+
+    return filteredDocs.map(doc => ({
       id: doc.id,
       path: doc.ref.path,
       ...doc.data(),
@@ -73,9 +65,8 @@ export function useFirestoreQuery<T>(
   }, [error]);
 
   const refetch = () => {
-     // `useCollection` from react-firebase-hooks re-fetches automatically
-     // when the query object changes. This function is kept for API consistency
-     // if manual refetching logic is needed in the future.
+     // `useCollection` from react-firebase-hooks re-fetches automatically.
+     // This function is kept for API consistency.
   };
 
   return { data, loading, error: errorMessage, refetch };

@@ -273,7 +273,6 @@ export default function HomePage() {
   const router = useRouter();
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
 
-  // Use the centralized hook to fetch topics from the top-level 'publicTopics' collection
   const {
     data: topics,
     loading: topicsLoading,
@@ -282,7 +281,7 @@ export default function HomePage() {
   } = useFirestoreQuery<Topic>(
     'publicTopics',
     [where('archived', '!=', true), orderBy('createdAt', 'desc')],
-    true // isCollectionGroup is true for top-level collections in this hook's context
+    true 
   );
 
   const handleTopicAdded = () => {
