@@ -76,15 +76,15 @@ async function createTopic(data: TopicFormData): Promise<void> {
   const topicCollection = collection(db, 'publicTopics');
   const topicRef = doc(topicCollection);
 
-  const newTopic = {
+  const newTopic: any = {
     title: data.title.trim(),
     description: data.description.trim(),
     userId: currentUser.uid,
     authorName: currentUser.displayName || 'مستخدم غير معروف',
-    createdAt: serverTimestamp() as Timestamp,
+    createdAt: serverTimestamp(),
     imageUrl: '',
     imagePath: '',
-    archived: false,
+    archived: false, // Ensure this field is set by default
   };
 
   if (data.file) {
@@ -300,8 +300,22 @@ export default function HomePage() {
         path: doc.ref.path,
         ...doc.data(),
       })) as Topic[];
+      
+      // Also fetch topics that don't have the `archived` field yet
+      const legacyQuery = query(topicsCollectionRef, orderBy('createdAt', 'desc'));
+      const legacySnapshot = await getDocs(legacyQuery);
+      const legacyTopics = legacySnapshot.docs
+        .map(doc => ({ id: doc.id, path: doc.ref.path, ...doc.data() } as Topic))
+        .filter(topic => topic.archived === undefined);
+        
+      // Combine and remove duplicates
+      const combined = [...allTopics, ...legacyTopics];
+      const uniqueTopics = Array.from(new Set(combined.map(t => t.id)))
+        .map(id => combined.find(t => t.id === id)!)
+        .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
 
-      setTopics(allTopics);
+
+      setTopics(uniqueTopics);
     } catch (e: any) {
       console.error('Error fetching topics:', e);
       if (e.code === 'failed-precondition') {
@@ -325,7 +339,6 @@ export default function HomePage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    // Fetch topics for all users now, not just admins
     fetchTopics();
   }, [fetchTopics]);
 
@@ -338,7 +351,6 @@ export default function HomePage() {
     );
   }
 
-  // Everyone can see the home page now, but some actions might be admin-only within HomeView
   return (
     <div className="pb-24">
       <main className="px-4 pt-4 container mx-auto">
@@ -357,19 +369,18 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            {isAdmin && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => setAddTopicOpen(true)}
-                >
-                  <Plus className="h-4 w-4 ml-2" />
-                  <span>إضافة موضوع</span>
-                </Button>
-                {user && <NotificationsPopover user={user} />}
-              </div>
-            )}
+            {/* The button is available for all logged-in users now */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => setAddTopicOpen(true)}
+              >
+                <Plus className="h-4 w-4 ml-2" />
+                <span>إضافة موضوع</span>
+              </Button>
+              {user && <NotificationsPopover user={user} />}
+            </div>
           </div>
         </header>
 

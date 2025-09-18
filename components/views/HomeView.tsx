@@ -66,7 +66,8 @@ export default function HomeView({
   const { isAdmin } = useAdmin();
 
   // Filter out archived topics on the client-side as a fallback
-  const visibleTopics = useMemo(() => topics.filter(topic => !topic.archived), [topics]);
+  // Also shows topics where `archived` is undefined (for legacy data)
+  const visibleTopics = useMemo(() => topics.filter(topic => topic.archived === false || topic.archived === undefined), [topics]);
 
   const handleArchive = async (topic: Topic) => {
     try {
