@@ -16,7 +16,7 @@ import { useCollection } from 'react-firebase-hooks/firestore';
  * It also filters out documents where 'archived' is true on the client side.
  * @param collectionPath The path to the Firestore collection or collection group ID.
  * @param constraints Optional array of Firestore query constraints (e.g., orderBy, limit).
- * @param isCollectionGroup A boolean to indicate if this is a collection group query.
+ * @param isCollectionGroup A boolean to indicate if this is a collection group query or a top-level collection.
  * @returns An object containing the data, loading state, error, and a refetch function.
  */
 export function useFirestoreQuery<T>(
@@ -27,12 +27,14 @@ export function useFirestoreQuery<T>(
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
-    // For collection group queries, user is not required for the path.
+    // For public collection queries (like publicTopics), we use collection() or collectionGroup() at the root.
     if (isCollectionGroup) {
-      return query(collectionGroup(db, collectionPath), ...constraints);
+      // Note: Despite the name, we use `collection` for top-level collections.
+      // `collectionGroup` would be for querying all collections with the same ID, e.g., all 'comments' across all 'topics'.
+      return query(collection(db, collectionPath), ...constraints);
     }
     
-    // For user-specific queries, user must be logged in.
+    // For user-specific queries, user must be logged in. The path is nested under the user's UID.
     if (user) {
       return query(collection(db, 'users', user.uid, collectionPath), ...constraints);
     }
