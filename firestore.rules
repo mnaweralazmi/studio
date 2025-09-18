@@ -8,47 +8,48 @@ service cloud.firestore {
       return request.auth != null;
     }
     function isAdmin() {
-      // Check if user is authenticated and their UID is in the admin list
-      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/siteContent/adminConfig).data.adminUids;
+      return isSignedIn() && request.auth.uid in [
+        'JU2IAJu8XEeCqM33bu1wzlrA7id2' // Admin UID
+      ];
     }
 
-    // ----------------- Public Topics (Home Page) -----------------
+    // --- Public Topics (Home Feed) ---
     match /publicTopics/{topicId} {
-      // Any signed-in user can read public topics
       allow read: if isSignedIn();
-      
-      // Only admins can create, update, or delete public topics
       allow create, update, delete: if isAdmin();
     }
 
-    // ----------------- Site Content (Ads, etc.) -----------------
-    match /siteContent/{contentId} {
-        // Allow anyone to read site content like ads or admin lists
-        allow read: if true;
-        // Only admins can write to site content
-        allow write: if isAdmin();
+    // --- Site Content (Ad Marquee) ---
+    match /siteContent/adMarquee {
+      allow read: if isSignedIn();
+      // Allow admin to create the document if it doesn't exist, and update it if it does.
+      allow create, update: if isAdmin(); 
     }
-    
-    // ----------------- User-specific Data -----------------
+
+    // --- User-specific data ---
     match /users/{userId}/{document=**} {
-      // User can read/write their own data
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+        // Only the user themselves or an admin can access their own documents
+        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
     
-     match /users/{userId} {
+    // --- User Profile ---
+    match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
-
-    // ----------------- Notifications -----------------
+    
+    // --- Notifications ---
     match /notifications/{notificationId} {
-        // Admins can create notifications
-        allow create: if isAdmin();
-        // Users can read notifications targeted to them, 'all', or 'admin' if they are an admin
-        allow read: if isSignedIn() && 
-                    (resource.data.target == request.auth.uid || resource.data.target == 'all' || (isAdmin() && resource.data.target == 'admin'));
-        // Users can update their own notifications (e.g., mark as read)
-        allow update: if isSignedIn() && resource.data.target == request.auth.uid;
+      // Allow admin to create notifications
+      allow create: if isAdmin();
+      // Users can read notifications targeted to them, 'all', or 'admin' if they are an admin
+      allow read: if isSignedIn() && 
+                    (resource.data.target == 'all' || 
+                     resource.data.target == request.auth.uid ||
+                     (resource.data.target == 'admin' && isAdmin()));
+      // Allow users to update the 'read' status of their own notifications
+      allow update: if isSignedIn() && request.resource.data.keys().hasOnly(['read']);
     }
+
   }
 }
