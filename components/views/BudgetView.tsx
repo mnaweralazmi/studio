@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
 
 
 type Debt = { amount: number; type: 'دين لنا' | 'دين علينا' };
@@ -102,29 +103,21 @@ const SectionBudgetDisplay = ({ data }) => {
     );
 };
 
-const useArchivedFilteredCollection = (collectionName: string) => {
-    const [user] = useAuthState(auth);
-    const collectionRef = user ? collection(db, 'users', user.uid, collectionName) : null;
-    const q = collectionRef ? query(collectionRef, where('archived', '!=', true)) : null;
-    const [data, loading, error] = useCollectionData(q);
-    return { data, loading, error };
-}
-
 
 export default function BudgetView() {
   const [user, loadingUser] = useAuthState(auth);
   const [selectedSection, setSelectedSection] = useState('total');
-
-  const { data: expenses, loading: loadingExpenses } = useArchivedFilteredCollection('expenses');
-  const { data: agriExpenses, loading: loadingAgriExpenses } = useArchivedFilteredCollection('agriExpenses');
-  const { data: poultryExpenses, loading: loadingPoultryExpenses } = useArchivedFilteredCollection('poultryExpenses');
-  const { data: livestockExpenses, loading: loadingLivestockExpenses } = useArchivedFilteredCollection('livestockExpenses');
-  const { data: agriSales, loading: loadingAgriSales } = useArchivedFilteredCollection('agriSales');
-  const { data: poultryEggSales, loading: loadingPoultryEggSales } = useArchivedFilteredCollection('poultryEggSales');
-  const { data: poultrySales, loading: loadingPoultrySales } = useArchivedFilteredCollection('poultrySales');
-  const { data: livestockSales, loading: loadingLivestockSales } = useArchivedFilteredCollection('livestockSales');
-  const { data: debts, loading: loadingDebts } = useArchivedFilteredCollection('debts');
-  const { data: workers, loading: loadingWorkers } = useArchivedFilteredCollection('workers');
+  
+  const { data: expenses, loading: loadingExpenses } = useFirestoreQuery('expenses');
+  const { data: agriExpenses, loading: loadingAgriExpenses } = useFirestoreQuery('agriExpenses');
+  const { data: poultryExpenses, loading: loadingPoultryExpenses } = useFirestoreQuery('poultryExpenses');
+  const { data: livestockExpenses, loading: loadingLivestockExpenses } = useFirestoreQuery('livestockExpenses');
+  const { data: agriSales, loading: loadingAgriSales } = useFirestoreQuery('agriSales');
+  const { data: poultryEggSales, loading: loadingPoultryEggSales } = useFirestoreQuery('poultryEggSales');
+  const { data: poultrySales, loading: loadingPoultrySales } = useFirestoreQuery('poultrySales');
+  const { data: livestockSales, loading: loadingLivestockSales } = useFirestoreQuery('livestockSales');
+  const { data: debts, loading: loadingDebts } = useFirestoreQuery('debts');
+  const { data: workers, loading: loadingWorkers } = useFirestoreQuery('workers');
 
   const budgetData = useMemo(() => {
     const calculateTotal = (data: DocumentData[] | undefined, key: string) => data?.reduce((sum, doc) => sum + (doc[key] || 0), 0) || 0;

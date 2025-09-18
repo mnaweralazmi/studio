@@ -21,7 +21,6 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useCollection } from 'react-firebase-hooks/firestore';
 import {
   collection,
   addDoc,
@@ -74,6 +73,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from '../ui/use-toast';
+import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 // Helper to convert Firestore Timestamp to a readable string
 const formatDate = (date: any) => {
@@ -188,16 +189,8 @@ function DataView<T extends { id: string }>({
 
 // --- Generic Sub-page Components ---
 
-function ExpensesView({ user, collectionName, title }) {
-  const collectionRef = user
-    ? collection(db, 'users', user.uid, collectionName)
-    : null;
-  const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
-  );
-  const expenses =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Expense)) ||
-    [];
+function ExpensesView({ user, collectionName }: { user: FirebaseUser, collectionName: string }) {
+  const { data: expenses, loading, refetch } = useFirestoreQuery<Expense>(collectionName, [orderBy('date', 'desc')]);
 
   const [newExpense, setNewExpense] = useState({
     item: '',
@@ -207,11 +200,12 @@ function ExpensesView({ user, collectionName, title }) {
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddExpense = async () => {
-    if (!newExpense.item || !newExpense.amount || !collectionRef || isAdding)
+    if (!newExpense.item || !newExpense.amount || isAdding)
       return;
     setIsAdding(true);
 
     try {
+      const collectionRef = collection(db, 'users', user.uid, collectionName);
       await addDoc(collectionRef, {
         date: Timestamp.now(),
         item: newExpense.item,
@@ -220,6 +214,7 @@ function ExpensesView({ user, collectionName, title }) {
         archived: false,
       });
       setNewExpense({ item: '', category: '', amount: '' });
+      if (refetch) refetch();
     } catch (e) {
       console.error('Error adding expense:', e);
     } finally {
@@ -230,6 +225,7 @@ function ExpensesView({ user, collectionName, title }) {
   const handleArchiveExpense = async (id: string) => {
     if (!user || !collectionName) return;
     await updateDoc(doc(db, 'users', user.uid, collectionName, id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -294,7 +290,7 @@ function ExpensesView({ user, collectionName, title }) {
         <CardContent>
           <DataView<Expense>
             loading={loading}
-            data={expenses}
+            data={expenses || []}
             columns={['التاريخ', 'البند', 'الفئة', 'المبلغ', 'أرشفة']}
             emptyMessage="لا توجد مصاريف لعرضها."
             renderRow={(expense) => (
@@ -327,28 +323,24 @@ function ExpensesView({ user, collectionName, title }) {
 }
 
 // --- Farm Management Components ---
-function FacilitiesView({ user }) {
-  const collectionRef = user ? collection(db, 'users', user.uid, 'facilities') : null;
-  const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('name', 'asc')) : null
-  );
-  const facilities =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Facility)) ||
-    [];
-
+function FacilitiesView({ user }: { user: FirebaseUser }) {
+  const { data: facilities, loading, refetch } = useFirestoreQuery<Facility>('facilities', [orderBy('name', 'asc')]);
+  
   const [newFacility, setNewFacility] = useState({ name: '', type: 'محمية' as 'محمية' | 'حقلي' });
   const [isAdding, setIsAdding] = useState(false);
   
-  const greenhouses = facilities.filter(f => f.type === 'محمية').length;
-  const fields = facilities.filter(f => f.type === 'حقلي').length;
+  const greenhouses = (facilities || []).filter(f => f.type === 'محمية').length;
+  const fields = (facilities || []).filter(f => f.type === 'حقلي').length;
 
   const handleAdd = async () => {
     const { name, type } = newFacility;
-    if (!name || !type || !collectionRef || isAdding) return;
+    if (!name || !type || isAdding) return;
     setIsAdding(true);
     try {
+      const collectionRef = collection(db, 'users', user.uid, 'facilities');
       await addDoc(collectionRef, { name, type, archived: false, createdAt: Timestamp.now() });
       setNewFacility({ name: '', type: 'محمية' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -359,6 +351,7 @@ function FacilitiesView({ user }) {
   const handleArchive = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'facilities', id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -426,7 +419,7 @@ function FacilitiesView({ user }) {
         <CardContent>
           <DataView<Facility>
             loading={loading}
-            data={facilities}
+            data={facilities || []}
             columns={['الاسم', 'النوع', 'أرشفة']}
             emptyMessage="لا توجد مرافق لعرضها."
             renderRow={(facility) => (
@@ -453,16 +446,8 @@ function FacilitiesView({ user }) {
 }
 
 // --- Agriculture Components ---
-function AgriSalesView({ user }) {
-  const salesCollection = user
-    ? collection(db, 'users', user.uid, 'agriSales')
-    : null;
-  const [snapshot, loading] = useCollection(
-    salesCollection ? query(salesCollection, where('archived', '!=', true), orderBy('date', 'desc')) : null
-  );
-  const sales =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AgriSale)) ||
-    [];
+function AgriSalesView({ user }: { user: FirebaseUser }) {
+  const { data: sales, loading, refetch } = useFirestoreQuery<AgriSale>('agriSales', [orderBy('date', 'desc')]);
 
   const [newSale, setNewSale] = useState({
     item: '',
@@ -479,7 +464,6 @@ function AgriSalesView({ user }) {
       !cartonCount ||
       !cartonWeight ||
       !cartonPrice ||
-      !salesCollection ||
       isAdding
     )
       return;
@@ -490,6 +474,7 @@ function AgriSalesView({ user }) {
     const totalAmount = count * price;
 
     try {
+      const salesCollection = collection(db, 'users', user.uid, 'agriSales');
       await addDoc(salesCollection, {
         date: Timestamp.now(),
         item,
@@ -505,6 +490,7 @@ function AgriSalesView({ user }) {
         cartonWeight: '',
         cartonPrice: '',
       });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -515,6 +501,7 @@ function AgriSalesView({ user }) {
   const handleArchiveSale = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'agriSales', id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -601,7 +588,7 @@ function AgriSalesView({ user }) {
         <CardContent>
         <DataView<AgriSale>
           loading={loading}
-          data={sales}
+          data={sales || []}
           columns={[
             'التاريخ',
             'المنتج',
@@ -643,15 +630,8 @@ function AgriSalesView({ user }) {
   );
 }
 
-function DebtsView({ user }) {
-  const debtsCollection = user
-    ? collection(db, 'users', user.uid, 'debts')
-    : null;
-  const [snapshot, loading] = useCollection(
-    debtsCollection ? query(debtsCollection, where('archived', '!=', true), orderBy('dueDate', 'desc')) : null
-  );
-  const debts =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Debt)) || [];
+function DebtsView({ user }: { user: FirebaseUser }) {
+  const { data: debts, loading, refetch } = useFirestoreQuery<Debt>('debts', [orderBy('dueDate', 'desc')]);
 
   const [newDebt, setNewDebt] = useState({
     party: '',
@@ -665,10 +645,11 @@ function DebtsView({ user }) {
 
   const handleAddDebt = async () => {
     const { party, amount, type } = newDebt;
-    if (!party || !amount || !debtsCollection || isAdding) return;
+    if (!party || !amount || isAdding) return;
     setIsAdding(true);
 
     try {
+      const debtsCollection = collection(db, 'users', user.uid, 'debts');
       await addDoc(debtsCollection, {
         party,
         dueDate: Timestamp.now(),
@@ -677,6 +658,7 @@ function DebtsView({ user }) {
         archived: false,
       });
       setNewDebt({ party: '', amount: '', type: 'دين علينا' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -687,6 +669,7 @@ function DebtsView({ user }) {
   const handleArchiveDebt = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'debts', id), { archived: true });
+    if (refetch) refetch();
   };
 
   const handleOpenPaymentDialog = (debt: Debt) => {
@@ -714,6 +697,7 @@ function DebtsView({ user }) {
           description: `تم سداد مبلغ ${paymentValue.toFixed(3)} د.ك من دين ${selectedDebt.party}.`,
           className: "bg-green-600 text-white"
       });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
       toast({
@@ -794,7 +778,7 @@ function DebtsView({ user }) {
         <CardContent>
           <DataView<Debt>
             loading={loading}
-            data={debts}
+            data={debts || []}
             columns={['الجهة', 'تاريخ الاستحقاق', 'نوع الدين', 'المبلغ', 'الإجراءات']}
             emptyMessage="لا توجد ديون لعرضها."
             renderRow={(debt) => (
@@ -883,20 +867,8 @@ function DebtsView({ user }) {
   );
 }
 
-function WorkersView({ user }) {
-  const workersCollection = user
-    ? collection(db, 'users', user.uid, 'workers')
-    : null;
-  const expensesCollection = user
-    ? collection(db, 'users', user.uid, 'expenses')
-    : null;
-
-  const [snapshot, loading] = useCollection(
-    workersCollection ? query(workersCollection, where('archived', '!=', true), orderBy('name', 'asc')) : null
-  );
-  const workers =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Worker)) ||
-    [];
+function WorkersView({ user }: { user: FirebaseUser }) {
+  const { data: workers, loading, refetch } = useFirestoreQuery<Worker>('workers', [orderBy('name', 'asc')]);
 
   const [newWorker, setNewWorker] = useState({ name: '', salary: '' });
   const [isAdding, setIsAdding] = useState(false);
@@ -908,11 +880,13 @@ function WorkersView({ user }) {
 
   const handleAddWorker = async () => {
     const { name, salary } = newWorker;
-    if (!name || !salary || !workersCollection || isAdding) return;
+    if (!name || !salary || isAdding) return;
     setIsAdding(true);
     try {
+      const workersCollection = collection(db, 'users', user.uid, 'workers');
       await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0, archived: false, createdAt: Timestamp.now() });
       setNewWorker({ name: '', salary: '' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -923,14 +897,16 @@ function WorkersView({ user }) {
   const handleArchiveWorker = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'workers', id), { archived: true });
+    if (refetch) refetch();
   };
 
   const handleSalaryPayment = async (worker: Worker) => {
-    if (!expensesCollection || !worker || !worker.id) return;
+    if (!worker || !worker.id) return;
     setPayingSalaryFor(worker.id);
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
     try {
+      const expensesCollection = collection(db, 'users', user.uid, 'expenses');
       await addDoc(expensesCollection, {
         date: Timestamp.now(),
         item: `راتب العامل: ${worker.name} (شهر ${currentMonth}/${currentYear})`,
@@ -974,6 +950,7 @@ function WorkersView({ user }) {
           description: `تم تحديث راتب ${editingWorker.name} بنجاح.`,
           className: "bg-green-600 text-white"
       });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -1034,7 +1011,7 @@ function WorkersView({ user }) {
         <CardContent>
           <DataView<Worker>
             loading={loading}
-            data={workers}
+            data={workers || []}
             columns={['الاسم', 'راتب العامل', 'الإجراءات']}
             emptyMessage="لا يوجد عمال لعرضهم."
             renderRow={(worker) => (
@@ -1128,7 +1105,7 @@ function WorkersView({ user }) {
   );
 }
 
-function FarmManagementView({ user }) {
+function FarmManagementView({ user }: { user: FirebaseUser }) {
   return (
     <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
@@ -1149,7 +1126,6 @@ function FarmManagementView({ user }) {
         <ExpensesView
           user={user}
           collectionName="expenses"
-          title="المصاريف العامة"
         />
       </TabsContent>
       <TabsContent value="debts" className="mt-6">
@@ -1162,7 +1138,7 @@ function FarmManagementView({ user }) {
   );
 }
 
-function AgricultureView({ user }) {
+function AgricultureView({ user }: { user: FirebaseUser }) {
   return (
     <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
@@ -1183,7 +1159,6 @@ function AgricultureView({ user }) {
         <ExpensesView
           user={user}
           collectionName="agriExpenses"
-          title="المصاريف الزراعية"
         />
       </TabsContent>
       <TabsContent value="sales" className="mt-6">
@@ -1198,23 +1173,15 @@ function AgricultureView({ user }) {
 
 // --- Poultry Components ---
 
-function EggSalesView({ user }) {
-  const collectionRef = user
-    ? collection(db, 'users', user.uid, 'poultryEggSales')
-    : null;
-  const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
-  );
-  const sales =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as EggSale)) ||
-    [];
+function EggSalesView({ user }: { user: FirebaseUser }) {
+  const { data: sales, loading, refetch } = useFirestoreQuery<EggSale>('poultryEggSales', [orderBy('date', 'desc')]);
 
   const [newSale, setNewSale] = useState({ trayCount: '', trayPrice: '' });
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddSale = async () => {
     const { trayCount, trayPrice } = newSale;
-    if (!trayCount || !trayPrice || !collectionRef || isAdding) return;
+    if (!trayCount || !trayPrice || isAdding) return;
 
     setIsAdding(true);
     const count = parseFloat(trayCount) || 0;
@@ -1222,6 +1189,7 @@ function EggSalesView({ user }) {
     const totalAmount = count * price;
 
     try {
+      const collectionRef = collection(db, 'users', user.uid, 'poultryEggSales');
       await addDoc(collectionRef, {
         date: Timestamp.now(),
         trayCount: count,
@@ -1230,6 +1198,7 @@ function EggSalesView({ user }) {
         archived: false,
       });
       setNewSale({ trayCount: '', trayPrice: '' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -1240,6 +1209,7 @@ function EggSalesView({ user }) {
   const handleArchive = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'poultryEggSales', id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -1295,7 +1265,7 @@ function EggSalesView({ user }) {
         <CardContent>
           <DataView<EggSale>
             loading={loading}
-            data={sales}
+            data={sales || []}
             columns={['التاريخ', 'عدد الأطباق', 'سعر الطبق', 'المبلغ الإجمالي', 'أرشفة']}
             emptyMessage="لا توجد مبيعات بيض لعرضها."
             renderRow={(sale) => (
@@ -1327,16 +1297,8 @@ function EggSalesView({ user }) {
   );
 }
 
-function PoultrySalesView({ user }) {
-  const collectionRef = user
-    ? collection(db, 'users', user.uid, 'poultrySales')
-    : null;
-  const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
-  );
-  const sales =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PoultrySale)) ||
-    [];
+function PoultrySalesView({ user }: { user: FirebaseUser }) {
+  const { data: sales, loading, refetch } = useFirestoreQuery<PoultrySale>('poultrySales', [orderBy('date', 'desc')]);
 
   const [newSale, setNewSale] = useState({
     poultryType: 'دجاج حي',
@@ -1347,7 +1309,7 @@ function PoultrySalesView({ user }) {
 
   const handleAddSale = async () => {
     const { poultryType, count, pricePerUnit } = newSale;
-    if (!poultryType || !count || !pricePerUnit || !collectionRef || isAdding)
+    if (!poultryType || !count || !pricePerUnit || isAdding)
       return;
 
     setIsAdding(true);
@@ -1356,6 +1318,7 @@ function PoultrySalesView({ user }) {
     const totalAmount = numCount * price;
 
     try {
+      const collectionRef = collection(db, 'users', user.uid, 'poultrySales');
       await addDoc(collectionRef, {
         date: Timestamp.now(),
         poultryType,
@@ -1365,6 +1328,7 @@ function PoultrySalesView({ user }) {
         archived: false,
       });
       setNewSale({ poultryType: 'دجاج حي', count: '', pricePerUnit: '' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -1375,6 +1339,7 @@ function PoultrySalesView({ user }) {
   const handleArchive = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'poultrySales', id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -1441,7 +1406,7 @@ function PoultrySalesView({ user }) {
         <CardContent>
         <DataView<PoultrySale>
           loading={loading}
-          data={sales}
+          data={sales || []}
           columns={[
             'التاريخ',
             'النوع',
@@ -1481,24 +1446,18 @@ function PoultrySalesView({ user }) {
   );
 }
 
-function FlocksView({ user }) {
-  const collectionRef = user
-    ? collection(db, 'users', user.uid, 'poultryFlocks')
-    : null;
-  const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('name', 'asc')) : null
-  );
-  const flocks =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Flock)) || [];
+function FlocksView({ user }: { user: FirebaseUser }) {
+  const { data: flocks, loading, refetch } = useFirestoreQuery<Flock>('poultryFlocks', [orderBy('name', 'asc')]);
 
   const [newFlock, setNewFlock] = useState({ name: '', birdCount: '' });
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAdd = async () => {
     const { name, birdCount } = newFlock;
-    if (!name || !birdCount || !collectionRef || isAdding) return;
+    if (!name || !birdCount || isAdding) return;
     setIsAdding(true);
     try {
+      const collectionRef = collection(db, 'users', user.uid, 'poultryFlocks');
       await addDoc(collectionRef, {
         name,
         birdCount: parseInt(birdCount) || 0,
@@ -1506,6 +1465,7 @@ function FlocksView({ user }) {
         createdAt: Timestamp.now()
       });
       setNewFlock({ name: '', birdCount: '' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -1516,6 +1476,7 @@ function FlocksView({ user }) {
   const handleArchive = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'poultryFlocks', id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -1569,7 +1530,7 @@ function FlocksView({ user }) {
         <CardContent>
         <DataView<Flock>
           loading={loading}
-          data={flocks}
+          data={flocks || []}
           columns={['الاسم/النوع', 'عدد الطيور', 'أرشفة']}
           emptyMessage="لا يوجد قطعان لعرضها."
           renderRow={(flock) => (
@@ -1595,7 +1556,7 @@ function FlocksView({ user }) {
   );
 }
 
-function PoultryView({ user }) {
+function PoultryView({ user }: { user: FirebaseUser }) {
   return (
     <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-4">
@@ -1620,7 +1581,6 @@ function PoultryView({ user }) {
         <ExpensesView
           user={user}
           collectionName="poultryExpenses"
-          title="مصاريف الدواجن"
         />
       </TabsContent>
       <TabsContent value="eggSales" className="mt-6">
@@ -1638,17 +1598,8 @@ function PoultryView({ user }) {
 
 // --- Livestock Components ---
 
-function LivestockSalesView({ user }) {
-  const collectionRef = user
-    ? collection(db, 'users', user.uid, 'livestockSales')
-    : null;
-  const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('date', 'desc')) : null
-  );
-  const sales =
-    snapshot?.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as LivestockSale)
-    ) || [];
+function LivestockSalesView({ user }: { user: FirebaseUser }) {
+  const { data: sales, loading, refetch } = useFirestoreQuery<LivestockSale>('livestockSales', [orderBy('date', 'desc')]);
 
   const [newSale, setNewSale] = useState({
     animalType: 'خروف',
@@ -1659,7 +1610,7 @@ function LivestockSalesView({ user }) {
 
   const handleAddSale = async () => {
     const { animalType, count, pricePerUnit } = newSale;
-    if (!animalType || !count || !pricePerUnit || !collectionRef || isAdding)
+    if (!animalType || !count || !pricePerUnit || isAdding)
       return;
 
     setIsAdding(true);
@@ -1668,6 +1619,7 @@ function LivestockSalesView({ user }) {
     const totalAmount = numCount * price;
 
     try {
+      const collectionRef = collection(db, 'users', user.uid, 'livestockSales');
       await addDoc(collectionRef, {
         date: Timestamp.now(),
         animalType,
@@ -1677,6 +1629,7 @@ function LivestockSalesView({ user }) {
         archived: false,
       });
       setNewSale({ animalType: 'خروف', count: '', pricePerUnit: '' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -1687,6 +1640,7 @@ function LivestockSalesView({ user }) {
   const handleArchive = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'livestockSales', id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -1753,7 +1707,7 @@ function LivestockSalesView({ user }) {
         <CardContent>
         <DataView<LivestockSale>
           loading={loading}
-          data={sales}
+          data={sales || []}
           columns={[
             'التاريخ',
             'النوع',
@@ -1793,24 +1747,18 @@ function LivestockSalesView({ user }) {
   );
 }
 
-function HerdsView({ user }) {
-  const collectionRef = user
-    ? collection(db, 'users', user.uid, 'livestockHerds')
-    : null;
-  const [snapshot, loading] = useCollection(
-    collectionRef ? query(collectionRef, where('archived', '!=', true), orderBy('name', 'asc')) : null
-  );
-  const herds =
-    snapshot?.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Herd)) || [];
+function HerdsView({ user }: { user: FirebaseUser }) {
+  const { data: herds, loading, refetch } = useFirestoreQuery<Herd>('livestockHerds', [orderBy('name', 'asc')]);
 
   const [newHerd, setNewHerd] = useState({ name: '', animalCount: '' });
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAdd = async () => {
     const { name, animalCount } = newHerd;
-    if (!name || !animalCount || !collectionRef || isAdding) return;
+    if (!name || !animalCount || isAdding) return;
     setIsAdding(true);
     try {
+      const collectionRef = collection(db, 'users', user.uid, 'livestockHerds');
       await addDoc(collectionRef, {
         name,
         animalCount: parseInt(animalCount) || 0,
@@ -1818,6 +1766,7 @@ function HerdsView({ user }) {
         createdAt: Timestamp.now(),
       });
       setNewHerd({ name: '', animalCount: '' });
+      if (refetch) refetch();
     } catch (e) {
       console.error(e);
     } finally {
@@ -1828,6 +1777,7 @@ function HerdsView({ user }) {
   const handleArchive = async (id: string) => {
     if (!user) return;
     await updateDoc(doc(db, 'users', user.uid, 'livestockHerds', id), { archived: true });
+    if (refetch) refetch();
   };
 
   return (
@@ -1881,7 +1831,7 @@ function HerdsView({ user }) {
         <CardContent>
         <DataView<Herd>
           loading={loading}
-          data={herds}
+          data={herds || []}
           columns={['الاسم/النوع', 'عدد الرؤوس', 'أرشفة']}
           emptyMessage="لا يوجد قطعان لعرضها."
           renderRow={(herd) => (
@@ -1907,7 +1857,7 @@ function HerdsView({ user }) {
   );
 }
 
-function LivestockView({ user }) {
+function LivestockView({ user }: { user: FirebaseUser }) {
   return (
     <Tabs defaultValue="expenses" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
@@ -1928,7 +1878,6 @@ function LivestockView({ user }) {
         <ExpensesView
           user={user}
           collectionName="livestockExpenses"
-          title="مصاريف المواشي"
         />
       </TabsContent>
       <TabsContent value="sales" className="mt-6">

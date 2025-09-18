@@ -6,7 +6,6 @@ import {
   CalendarIcon
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -24,7 +23,7 @@ import { TaskList, type Task } from '@/components/task-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { isSameDay, format, isToday, startOfToday } from 'date-fns';
+import { isSameDay, format, isToday } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 import {
@@ -37,6 +36,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
 
 
 function AddTaskDialog({ onAddTask, isAdding }: { onAddTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void; isAdding: boolean; }) {
@@ -113,15 +113,11 @@ export default function TasksView() {
   const [user, loadingUser] = useAuthState(auth);
   const [isAdding, setIsAdding] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-
-  const tasksCollection = user ? collection(db, 'users', user.uid, 'tasks') : null;
   
-  const [allTasksSnapshot, loadingTasks] = useCollection(
-    tasksCollection ? query(tasksCollection, orderBy('date', 'asc')) : null
-  );
+  const { data: allTasksSnapshot, loading: loadingTasks, refetch } = useFirestoreQuery<Task>('tasks', [orderBy('date', 'asc')]);
 
   const { allUpcomingTasks, todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
-    const allTasks: Task[] = allTasksSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)) || [];
+    const allTasks: Task[] = allTasksSnapshot || [];
 
     const upcoming: Task[] = [];
     const today: Task[] = [];
@@ -175,14 +171,17 @@ export default function TasksView() {
   const modifiersClassNames = { hasTask: 'has-task' };
 
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
-    if (!tasksCollection) return;
+    if (!user) return;
+    const tasksCollection = collection(db, 'users', user.uid, 'tasks');
     setIsAdding(true);
     try {
       await addDoc(tasksCollection, {
         ...taskData,
         completed: false,
         createdAt: Timestamp.now(),
+        archived: false,
       });
+      if (refetch) refetch();
     } catch (error) {
       console.error("Error adding task: ", error);
     } finally {
@@ -195,6 +194,7 @@ export default function TasksView() {
     const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
     try {
       await updateDoc(taskRef, { completed: currentStatus });
+      // Refetch is handled by the real-time listener of useFirestoreQuery
     } catch (error) {
       console.error("Error updating task: ", error);
     }
@@ -205,6 +205,7 @@ export default function TasksView() {
      const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
      try {
       await deleteDoc(taskRef);
+      if (refetch) refetch();
     } catch (error) {
       console.error("Error deleting task: ", error);
     }

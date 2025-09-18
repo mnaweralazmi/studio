@@ -2,33 +2,27 @@
 
 import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db, storage } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   Loader2,
-  ShieldAlert,
   Plus,
   Leaf,
-  Bell,
   X,
   Save,
 } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import HomeView from '@/components/views/HomeView';
-import { useAdmin } from '@/lib/hooks/useAdmin';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
-import AdMarquee from '@/components/home/AdMarquee';
 import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
   Timestamp,
   doc,
   setDoc,
   serverTimestamp,
+  collection,
+  getDocs,
+  query,
+  orderBy,
   where,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -48,6 +42,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import Image from 'next/image';
+import { db, storage } from '@/lib/firebase';
+import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
+import AdMarquee from '@/components/home/AdMarquee';
 
 type Topic = {
   id: string;
@@ -275,48 +272,24 @@ function AddTopicDialog({
 
 export default function HomePage() {
   const [user, loading] = useAuthState(auth);
-  const { isAdmin, loading: adminLoading } = useAdmin();
   const router = useRouter();
-
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [topicsLoading, setTopicsLoading] = useState(true);
-  const [topicsError, setTopicsError] = useState<string | null>(null);
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
 
-  const fetchTopics = useCallback(async () => {
-    setTopicsLoading(true);
-    setTopicsError(null);
-    try {
-      const topicsCollectionRef = collection(db, 'publicTopics');
-      const q = query(
-        topicsCollectionRef,
-        where('archived', '!=', true),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
+  // Use the new centralized hook
+  const {
+    data: topics,
+    loading: topicsLoading,
+    error: topicsError,
+    refetch,
+  } = useFirestoreQuery<Topic>(
+    'publicTopics',
+    [orderBy('createdAt', 'desc')],
+    true // isCollectionGroup
+  );
 
-      const allTopics = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        path: doc.ref.path,
-        ...doc.data(),
-      })) as Topic[];
-      
-      setTopics(allTopics);
-    } catch (e: any) {
-      console.error('Error fetching topics:', e);
-      if (e.code === 'failed-precondition') {
-        setTopicsError(
-          'حدث خطأ في قاعدة البيانات. قد يتطلب هذا الاستعلام فهرسًا مخصصًا. يرجى مراجعة سجلات Firestore.'
-        );
-      } else {
-        setTopicsError(
-          'حدث خطأ أثناء جلب المواضيع. قد تكون مشكلة في الاتصال أو صلاحيات الوصول.'
-        );
-      }
-    } finally {
-      setTopicsLoading(false);
-    }
-  }, []);
+  const handleTopicAdded = () => {
+    if (refetch) refetch();
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -324,11 +297,7 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    fetchTopics();
-  }, [fetchTopics]);
-
-  if (loading || !user || adminLoading) {
+  if (loading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -355,7 +324,6 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            {/* The button is available for all logged-in users now */}
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -374,10 +342,10 @@ export default function HomePage() {
 
         <HomeView
           user={user}
-          topics={topics}
+          topics={topics || []}
           loading={topicsLoading}
           error={topicsError}
-          onRefresh={fetchTopics}
+          onRefresh={refetch}
         />
       </main>
       <AppFooter activeView="home" />
@@ -385,7 +353,7 @@ export default function HomePage() {
       <AddTopicDialog
         isOpen={isAddTopicOpen}
         setIsOpen={setAddTopicOpen}
-        onTopicAdded={fetchTopics}
+        onTopicAdded={handleTopicAdded}
       />
     </div>
   );
