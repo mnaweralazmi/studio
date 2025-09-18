@@ -281,7 +281,7 @@ export default function HomePage() {
     refetch,
   } = useFirestoreQuery<Topic>(
     'publicTopics',
-    [where('archived', '!=', true), where('createdAt', '!=', null), orderBy('createdAt', 'desc')],
+    [where('archived', '!=', true), orderBy('createdAt', 'desc')],
     true // isCollectionGroup is true for top-level collections in this hook's context
   );
 
