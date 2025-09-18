@@ -2,72 +2,38 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // --- Global Collections ---
 
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    function isAdmin() {
-      // The adminUids array is maintained in the app's code for flexibility.
-      // This rule just checks if the incoming request has a claim `admin: true`.
-      // For this to work, you'd typically use Cloud Functions to set custom claims.
-      // As a simpler alternative for now, we'll handle admin logic in security rules where possible.
-      // Or, we can hardcode UIDs here if they are static.
-      return request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2', '0T5b331jchc32PucCqL1KqJ9d9h2'];
-    }
-
-    // --- Top-Level Public Collections ---
-
-    // publicTopics: Anyone signed in can read, only admins can write.
+    // Public topics can be read by any authenticated user.
+    // Only admins can create, update, or delete them.
     match /publicTopics/{topicId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read: if request.auth != null;
+      allow write, delete: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids;
     }
-    
-    // siteContent (for adMarquee): Anyone signed in can read, only admins can write.
+
+    // Site content (like admin list and marquee ads) can be read and written only by admins.
     match /siteContent/{docId} {
-       allow read: if isSignedIn();
-       allow write: if isAdmin();
+      allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids;
     }
 
-    // notifications: Admins can write, users can read their own.
+    // Notifications can be created by admins.
+    // They can be read by the user if they are the target or if the notification is for 'all'.
     match /notifications/{notificationId} {
-        allow write: if isAdmin();
-        // Read is handled by collection group rules below for efficiency.
-    }
-
-
-    // --- User-Specific Subcollections ---
-    match /users/{userId}/{document=**} {
-      // Only the owner of the data or an admin can read/write it.
-      allow read, write: if isOwner(userId) || isAdmin();
-    }
-
-    // --- User Profile Document ---
-    match /users/{userId} {
-      // A user can read their own profile.
-      allow get: if isOwner(userId);
-      // A user can create their own profile upon signup.
-      allow create: if isOwner(userId);
-      // A user can update their own profile.
-      allow update: if isOwner(userId);
-      // Nobody can list all users or delete a user document directly.
-      allow list, delete: if false;
+       allow read: if request.auth != null && 
+                      (resource.data.target == 'all' || 
+                       request.auth.uid == resource.data.target || 
+                       ('admin' in resource.data.target && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids));
+       allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/siteContent/admins).data.uids;
     }
     
-    // --- Collection Group Rules for Queries ---
+    // --- User-Specific Data ---
 
-    // This rule allows a signed-in user to query across all 'notifications' collections
-    // but they will only receive documents targeted to them ('all' or their UID).
-    match /{path=**}/notifications/{notificationId} {
-      allow read: if isSignedIn() && (
-        resource.data.target == 'all' || 
-        resource.data.target == request.auth.uid ||
-        (isAdmin() && resource.data.target == 'admin')
-      );
+    // A user can read, write, update, and delete any document within their own user directory.
+    // This rule is broad to allow for collection group queries needed for stats and other features,
+    // while still securing data to the authenticated user.
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
