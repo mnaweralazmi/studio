@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import {
   collection,
   query,
-  where,
   QueryConstraint,
   collectionGroup,
 } from 'firebase/firestore';
@@ -28,21 +27,17 @@ export function useFirestoreQuery<T>(
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
-    if (!user && !isCollectionGroup) {
-      // Don't run user-specific queries if the user is not logged in.
-      return null;
-    }
-    
+    // For collection group queries, user is not required for the path.
     if (isCollectionGroup) {
-      // For collection group queries like 'publicTopics'
       return query(collectionGroup(db, collectionPath), ...constraints);
     }
     
+    // For user-specific queries, user must be logged in.
     if (user) {
-      // For user-specific sub-collections like 'tasks', 'expenses', etc.
       return query(collection(db, 'users', user.uid, collectionPath), ...constraints);
     }
-    
+
+    // Return null if it's a user-specific query but the user is not logged in.
     return null;
 
   }, [user, collectionPath, constraints, isCollectionGroup]);

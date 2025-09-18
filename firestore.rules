@@ -1,8 +1,89 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.uid in ['JU2IAJu8XEeCqM33bu1wzlrA7id2', '0T5b331jchc32PucCqL1KqJ9d9h2'];
+    }
+
+    // --- Collections ---
+
+    // Public topics that appear on the home page
+    match /publicTopics/{topicId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Content for the site like the ad marquee
+    match /siteContent/{docId} {
+       allow read: if isSignedIn();
+       allow write: if isAdmin();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+       allow read: if isSignedIn();
+       allow write: if isAdmin();
+    }
+
+    // User-specific data
+    match /users/{userId} {
+      // Allow user to read/write their own document
+      allow read, write: if isUser(userId);
+
+      // --- User Sub-collections ---
+      match /tasks/{taskId} {
+        allow read, write: if isUser(userId);
+      }
+      match /expenses/{expenseId} {
+        allow read, write: if isUser(userId);
+      }
+       match /agriExpenses/{expenseId} {
+        allow read, write: if isUser(userId);
+      }
+       match /poultryExpenses/{expenseId} {
+        allow read, write: if isUser(userId);
+      }
+       match /livestockExpenses/{expenseId} {
+        allow read, write: if isUser(userId);
+      }
+       match /agriSales/{saleId} {
+        allow read, write: if isUser(userId);
+      }
+       match /poultryEggSales/{saleId} {
+        allow read, write: if isUser(userId);
+      }
+       match /poultrySales/{saleId} {
+        allow read, write: if isUser(userId);
+      }
+       match /livestockSales/{saleId} {
+        allow read, write: if isUser(userId);
+      }
+      match /debts/{debtId} {
+        allow read, write: if isUser(userId);
+      }
+      match /workers/{workerId} {
+        allow read, write: if isUser(userId);
+      }
+       match /facilities/{facilityId} {
+        allow read, write: if isUser(userId);
+      }
+       match /poultryFlocks/{flockId} {
+        allow read, write: if isUser(userId);
+      }
+       match /livestockHerds/{herdId} {
+        allow read, write: if isUser(userId);
+      }
     }
   }
 }
