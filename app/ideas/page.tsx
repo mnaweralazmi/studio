@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { Toaster } from '@/components/ui/toaster';
-import IdeasView, { Topic } from '@/components/views/IdeasView';
+import IdeasView, { Topic } from '@/components/views/HomeView';
 import {
   Timestamp,
   doc,
