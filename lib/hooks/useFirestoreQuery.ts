@@ -43,6 +43,7 @@ export function useFirestoreQuery<T extends DocumentData>(
         break;
 
       case 'userSubcollection':
+      default:
         if (user) {
           const userDocRef = doc(db, 'users', user.uid);
           q = query(collection(userDocRef, collectionPath), ...constraints);
@@ -50,9 +51,6 @@ export function useFirestoreQuery<T extends DocumentData>(
           return null; // Don't query if it's a private query and no user is logged in
         }
         break;
-
-      default:
-        return null;
     }
 
     return q;
