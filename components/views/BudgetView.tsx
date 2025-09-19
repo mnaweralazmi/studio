@@ -1,10 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useCollectionData } from 'react-firebase-hooks/firestore';
-import { collection, query, where, DocumentData } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { DocumentData } from 'firebase/firestore';
 import {
   Loader2,
   ArrowUpCircle,
@@ -107,7 +104,6 @@ const SectionBudgetDisplay = ({ data }) => {
 
 
 export default function BudgetView() {
-  const [user, loadingUser] = useAuthState(auth);
   const [selectedSection, setSelectedSection] = useState('total');
   
   const { data: expenses, loading: loadingExpenses } = useFirestoreQuery('expenses');
@@ -188,7 +184,6 @@ export default function BudgetView() {
   ]);
 
   const loading =
-    loadingUser ||
     loadingExpenses || loadingAgriExpenses || loadingPoultryExpenses || loadingLivestockExpenses ||
     loadingAgriSales || loadingPoultryEggSales || loadingPoultrySales || loadingLivestockSales ||
     loadingDebts || loadingWorkers;
