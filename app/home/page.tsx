@@ -150,6 +150,7 @@ export default function HomePage() {
   return (
     <div className="pb-10">
       <main className="container mx-auto px-4 pt-4">
+        <AdMarquee />
         {/* --- Header --- */}
         <header className="pt-8 mb-4 space-y-4">
           <div className="flex justify-between items-center">
@@ -183,7 +184,6 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          <AdMarquee />
         </header>
 
         {/* --- Quick Stats --- */}
