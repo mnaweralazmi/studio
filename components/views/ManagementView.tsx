@@ -192,7 +192,7 @@ function DataView<T extends { id: string }>({
 // --- Generic Sub-page Components ---
 
 function ExpensesView({ user, collectionName }: { user: FirebaseUser, collectionName: string }) {
-  const { data: expenses, loading, refetch } = useFirestoreQuery<Expense>(collectionName, [where('archived', '==', false), orderBy('date', 'desc')], false);
+  const { data: expenses, loading, refetch } = useFirestoreQuery<Expense>(collectionName, [where('archived', '==', false), orderBy('date', 'desc')], 'userSubcollection');
 
   const [newExpense, setNewExpense] = useState({
     item: '',
@@ -326,7 +326,7 @@ function ExpensesView({ user, collectionName }: { user: FirebaseUser, collection
 
 // --- Farm Management Components ---
 function FacilitiesView({ user }: { user: FirebaseUser }) {
-  const { data: facilities, loading, refetch } = useFirestoreQuery<Facility>('facilities', [where('archived', '==', false), orderBy('name', 'asc')], false);
+  const { data: facilities, loading, refetch } = useFirestoreQuery<Facility>('facilities', [where('archived', '==', false), orderBy('name', 'asc')], 'userSubcollection');
   
   const [newFacility, setNewFacility] = useState({ name: '', type: 'محمية' as 'محمية' | 'حقلي' });
   const [isAdding, setIsAdding] = useState(false);
@@ -449,7 +449,7 @@ function FacilitiesView({ user }: { user: FirebaseUser }) {
 
 // --- Agriculture Components ---
 function AgriSalesView({ user }: { user: FirebaseUser }) {
-  const { data: sales, loading, refetch } = useFirestoreQuery<AgriSale>('agriSales', [where('archived', '==', false), orderBy('date', 'desc')], false);
+  const { data: sales, loading, refetch } = useFirestoreQuery<AgriSale>('agriSales', [where('archived', '==', false), orderBy('date', 'desc')], 'userSubcollection');
 
   const [newSale, setNewSale] = useState({
     item: '',
@@ -633,7 +633,7 @@ function AgriSalesView({ user }: { user: FirebaseUser }) {
 }
 
 function DebtsView({ user }: { user: FirebaseUser }) {
-  const { data: debts, loading, refetch } = useFirestoreQuery<Debt>('debts', [where('archived', '==', false), orderBy('dueDate', 'desc')], false);
+  const { data: debts, loading, refetch } = useFirestoreQuery<Debt>('debts', [where('archived', '==', false), orderBy('dueDate', 'desc')], 'userSubcollection');
 
   const [newDebt, setNewDebt] = useState({
     party: '',
@@ -870,7 +870,7 @@ function DebtsView({ user }: { user: FirebaseUser }) {
 }
 
 function WorkersView({ user }: { user: FirebaseUser }) {
-  const { data: workers, loading, refetch } = useFirestoreQuery<Worker>('workers', [where('archived', '==', false), orderBy('name', 'asc')], false);
+  const { data: workers, loading, refetch } = useFirestoreQuery<Worker>('workers', [where('archived', '==', false), orderBy('name', 'asc')], 'userSubcollection');
 
   const [newWorker, setNewWorker] = useState({ name: '', salary: '' });
   const [isAdding, setIsAdding] = useState(false);
@@ -1176,7 +1176,7 @@ function AgricultureView({ user }: { user: FirebaseUser }) {
 // --- Poultry Components ---
 
 function EggSalesView({ user }: { user: FirebaseUser }) {
-  const { data: sales, loading, refetch } = useFirestoreQuery<EggSale>('poultryEggSales', [where('archived', '==', false), orderBy('date', 'desc')], false);
+  const { data: sales, loading, refetch } = useFirestoreQuery<EggSale>('poultryEggSales', [where('archived', '==', false), orderBy('date', 'desc')], 'userSubcollection');
 
   const [newSale, setNewSale] = useState({ trayCount: '', trayPrice: '' });
   const [isAdding, setIsAdding] = useState(false);
@@ -1300,7 +1300,7 @@ function EggSalesView({ user }: { user: FirebaseUser }) {
 }
 
 function PoultrySalesView({ user }: { user: FirebaseUser }) {
-  const { data: sales, loading, refetch } = useFirestoreQuery<PoultrySale>('poultrySales', [where('archived', '==', false), orderBy('date', 'desc')], false);
+  const { data: sales, loading, refetch } = useFirestoreQuery<PoultrySale>('poultrySales', [where('archived', '==', false), orderBy('date', 'desc')], 'userSubcollection');
 
   const [newSale, setNewSale] = useState({
     poultryType: 'دجاج حي',
@@ -1449,7 +1449,7 @@ function PoultrySalesView({ user }: { user: FirebaseUser }) {
 }
 
 function FlocksView({ user }: { user: FirebaseUser }) {
-  const { data: flocks, loading, refetch } = useFirestoreQuery<Flock>('poultryFlocks', [where('archived', '==', false), orderBy('name', 'asc')], false);
+  const { data: flocks, loading, refetch } = useFirestoreQuery<Flock>('poultryFlocks', [where('archived', '==', false), orderBy('name', 'asc')], 'userSubcollection');
 
   const [newFlock, setNewFlock] = useState({ name: '', birdCount: '' });
   const [isAdding, setIsAdding] = useState(false);
@@ -1601,7 +1601,7 @@ function PoultryView({ user }: { user: FirebaseUser }) {
 // --- Livestock Components ---
 
 function LivestockSalesView({ user }: { user: FirebaseUser }) {
-  const { data: sales, loading, refetch } = useFirestoreQuery<LivestockSale>('livestockSales', [where('archived', '==', false), orderBy('date', 'desc')], false);
+  const { data: sales, loading, refetch } = useFirestoreQuery<LivestockSale>('livestockSales', [where('archived', '==', false), orderBy('date', 'desc')], 'userSubcollection');
 
   const [newSale, setNewSale] = useState({
     animalType: 'خروف',
@@ -1750,7 +1750,7 @@ function LivestockSalesView({ user }: { user: FirebaseUser }) {
 }
 
 function HerdsView({ user }: { user: FirebaseUser }) {
-  const { data: herds, loading, refetch } = useFirestoreQuery<Herd>('livestockHerds', [where('archived', '==', false), orderBy('name', 'asc')], false);
+  const { data: herds, loading, refetch } = useFirestoreQuery<Herd>('livestockHerds', [where('archived', '==', false), orderBy('name', 'asc')], 'userSubcollection');
 
   const [newHerd, setNewHerd] = useState({ name: '', animalCount: '' });
   const [isAdding, setIsAdding] = useState(false);

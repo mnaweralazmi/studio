@@ -271,7 +271,7 @@ export default function IdeasPage() {
   } = useFirestoreQuery<Topic>(
     'publicTopics',
     [where('archived', '==', false), orderBy('createdAt', 'desc')],
-    true
+    'publicCollection'
   );
 
   const handleTopicAdded = () => {

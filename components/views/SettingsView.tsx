@@ -99,6 +99,7 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
 
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -187,18 +188,15 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
       const allArchivedData: Record<string, any[]> = {};
       const collectionKeys = Object.keys(COLLECTION_CONFIG);
       
-      const userRef = doc(db, 'users', user.uid);
-
       const promises = collectionKeys.map(async (collectionId) => {
-        // Special handling for top-level collections like publicTopics
-        let collectionRef;
-        if (['publicTopics'].includes(collectionId)) {
-            collectionRef = collection(db, collectionId);
+        let q;
+        // publicTopics is a top-level collection, others are collection groups within users
+        if (collectionId === 'publicTopics') {
+            q = query(collection(db, collectionId), where('archived', '==', true));
         } else {
-            collectionRef = collection(userRef, collectionId);
+            // This is a collection group query that needs to be scoped correctly
+            q = query(collectionGroup(db, collectionId), where('archived', '==', true));
         }
-
-        const q = query(collectionRef, where('archived', '==', true));
         return getDocs(q);
       });
 
@@ -207,11 +205,14 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
       snapshots.forEach((snapshot, index) => {
         const collectionId = collectionKeys[index];
         if (!snapshot.empty) {
-            allArchivedData[collectionId] = snapshot.docs.map(d => ({
-                id: d.id,
-                path: d.ref.path,
-                ...d.data(),
-            }));
+            allArchivedData[collectionId] = snapshot.docs
+                // For collection group queries, we must filter by user ID on the client side
+                .filter(d => collectionId === 'publicTopics' || d.ref.path.startsWith(`users/${user.uid}/`))
+                .map(d => ({
+                    id: d.id,
+                    path: d.ref.path,
+                    ...d.data(),
+                }));
         }
       });
       

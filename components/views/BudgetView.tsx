@@ -106,16 +106,16 @@ const SectionBudgetDisplay = ({ data }) => {
 export default function BudgetView() {
   const [selectedSection, setSelectedSection] = useState('total');
   
-  const { data: expenses, loading: loadingExpenses } = useFirestoreQuery('expenses', [], false);
-  const { data: agriExpenses, loading: loadingAgriExpenses } = useFirestoreQuery('agriExpenses', [], false);
-  const { data: poultryExpenses, loading: loadingPoultryExpenses } = useFirestoreQuery('poultryExpenses', [], false);
-  const { data: livestockExpenses, loading: loadingLivestockExpenses } = useFirestoreQuery('livestockExpenses', [], false);
-  const { data: agriSales, loading: loadingAgriSales } = useFirestoreQuery('agriSales', [], false);
-  const { data: poultryEggSales, loading: loadingPoultryEggSales } = useFirestoreQuery('poultryEggSales', [], false);
-  const { data: poultrySales, loading: loadingPoultrySales } = useFirestoreQuery('poultrySales', [], false);
-  const { data: livestockSales, loading: loadingLivestockSales } = useFirestoreQuery('livestockSales', [], false);
-  const { data: debts, loading: loadingDebts } = useFirestoreQuery('debts', [], false);
-  const { data: workers, loading: loadingWorkers } = useFirestoreQuery('workers', [], false);
+  const { data: expenses, loading: loadingExpenses } = useFirestoreQuery('expenses', [], 'userSubcollection');
+  const { data: agriExpenses, loading: loadingAgriExpenses } = useFirestoreQuery('agriExpenses', [], 'userSubcollection');
+  const { data: poultryExpenses, loading: loadingPoultryExpenses } = useFirestoreQuery('poultryExpenses', [], 'userSubcollection');
+  const { data: livestockExpenses, loading: loadingLivestockExpenses } = useFirestoreQuery('livestockExpenses', [], 'userSubcollection');
+  const { data: agriSales, loading: loadingAgriSales } = useFirestoreQuery('agriSales', [], 'userSubcollection');
+  const { data: poultryEggSales, loading: loadingPoultryEggSales } = useFirestoreQuery('poultryEggSales', [], 'userSubcollection');
+  const { data: poultrySales, loading: loadingPoultrySales } = useFirestoreQuery('poultrySales', [], 'userSubcollection');
+  const { data: livestockSales, loading: loadingLivestockSales } = useFirestoreQuery('livestockSales', [], 'userSubcollection');
+  const { data: debts, loading: loadingDebts } = useFirestoreQuery('debts', [], 'userSubcollection');
+  const { data: workers, loading: loadingWorkers } = useFirestoreQuery('workers', [], 'userSubcollection');
 
   const budgetData = useMemo(() => {
     const calculateTotal = (data: DocumentData[] | undefined, key: string) => data?.reduce((sum, doc) => sum + (doc[key] || 0), 0) || 0;

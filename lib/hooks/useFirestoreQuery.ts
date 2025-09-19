@@ -13,48 +13,55 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { auth, db } from '@/lib/firebase';
 
+export type QueryType = 'userSubcollection' | 'publicCollection' | 'collectionGroup';
+
+
 /**
  * A custom hook to fetch Firestore data with real-time updates.
- * @param collectionPath The path to the collection.
+ * @param collectionPath The path to the collection or the ID of the collection group.
  * @param constraints Query constraints like orderBy or where.
- * @param isPublicQuery `true` if the collection is a top-level public collection (e.g., 'publicTopics').
+ * @param queryType Determines the type of query: 'userSubcollection', 'publicCollection', or 'collectionGroup'.
  * @returns Real-time data, loading state, and any errors.
  */
 export function useFirestoreQuery<T extends DocumentData>(
   collectionPath: string,
   constraints: QueryConstraint[] = [],
-  isPublicQuery: boolean = false
+  queryType: QueryType = 'userSubcollection'
 ) {
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
     let q;
-    if (isPublicQuery) {
-      // Build a query on a top-level collection.
-      q = query(collection(db, collectionPath), ...constraints);
-    } else {
-      // For user-specific data, only proceed if the user is logged in.
-      if (user) {
-        // Construct a reference to the user's document first
-        const userDocRef = doc(db, 'users', user.uid);
-        // Then construct the query on the sub-collection
-        q = query(collection(userDocRef, collectionPath), ...constraints);
-      } else {
-        // If it's a private query and there's no user, don't query at all.
+
+    switch (queryType) {
+      case 'publicCollection':
+        q = query(collection(db, collectionPath), ...constraints);
+        break;
+      
+      case 'collectionGroup':
+        q = query(collectionGroup(db, collectionPath), ...constraints);
+        break;
+
+      case 'userSubcollection':
+        if (user) {
+          const userDocRef = doc(db, 'users', user.uid);
+          q = query(collection(userDocRef, collectionPath), ...constraints);
+        } else {
+          return null; // Don't query if it's a private query and no user is logged in
+        }
+        break;
+
+      default:
         return null;
-      }
     }
+
     return q;
-  }, [user, collectionPath, constraints, isPublicQuery]);
+  }, [user, collectionPath, constraints, queryType]);
 
   const [snapshot, loading, error] = useCollection(finalQuery);
 
-  // Memoize the data processing to prevent re-renders.
   const data = useMemo(() => {
     if (!snapshot) return [];
-
-    // The `archived` field is filtered directly in the query where possible.
-    // This mapping just transforms the data into a more usable format.
     return snapshot.docs.map(
       (doc) =>
         ({
@@ -67,7 +74,6 @@ export function useFirestoreQuery<T extends DocumentData>(
 
   const errorMessage = error ? `فشل جلب البيانات: ${error.message}` : null;
 
-  // react-firebase-hooks handles refetching automatically on data change.
   const refetch = () => {};
 
   return { data, loading, error: errorMessage, refetch };
