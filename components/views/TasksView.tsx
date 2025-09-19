@@ -116,7 +116,7 @@ export default function TasksView() {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   
-  const { data: allTasksSnapshot, loading: loadingTasks, refetch } = useFirestoreQuery<Task>('tasks', [where('archived', '==', false), orderBy('date', 'asc')]);
+  const { data: allTasksSnapshot, loading: loadingTasks, refetch } = useFirestoreQuery<Task>('tasks', [where('archived', '==', false), orderBy('date', 'asc')], false);
 
   const { allUpcomingTasks, todayTasks, selectedDayTasks, completedTasks, taskDates } = useMemo(() => {
     const allTasks: Task[] = allTasksSnapshot || [];
