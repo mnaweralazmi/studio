@@ -18,26 +18,32 @@ export default function AdMarquee() {
     )
   }
   
-  if (!hasAds || error) {
-    return null; // Don't render the component if there are no ads or an error occurs
+  if (error) {
+    console.error("AdMarquee error:", error);
+    return null; // Don't render the component if there is an error
   }
-
-  // Duplicate ads for a seamless loop
-  const marqueeContent = [...ads, ...ads];
 
   return (
     <section className="relative flex overflow-hidden border-y bg-accent/50 text-accent-foreground py-3 my-4">
       <div className="absolute inset-y-0 left-0 z-10 flex items-center bg-background pr-4 pl-2">
         <Megaphone className="h-6 w-6 text-primary" />
       </div>
-      <div className="flex animate-marquee whitespace-nowrap pl-12">
-        {marqueeContent.map((ad, index) => (
-          <span key={index} className="mx-8 text-sm font-medium">
-            {ad}
-          </span>
-        ))}
-      </div>
-       <div className="absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-background to-transparent" />
+      {!hasAds ? (
+         <div className="flex justify-center items-center w-full pl-12">
+            <span className="text-sm font-medium">لا توجد إعلانات حاليًا. أضف إعلانًا من لوحة تحكم المشرف.</span>
+        </div>
+      ) : (
+        <>
+            <div className="flex animate-marquee whitespace-nowrap pl-12">
+                {[...ads, ...ads].map((ad, index) => (
+                <span key={index} className="mx-8 text-sm font-medium">
+                    {ad}
+                </span>
+                ))}
+            </div>
+            <div className="absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-background to-transparent" />
+        </>
+      )}
     </section>
   );
 }
