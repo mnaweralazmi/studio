@@ -12,17 +12,21 @@ export default function AdMarquee() {
 
   if (loading) {
     return (
-       <div className="relative flex items-center justify-center overflow-hidden border-y bg-accent/50 text-accent-foreground py-3 my-8 h-16">
+       <div className="relative flex items-center justify-center overflow-hidden border-y bg-accent/50 text-accent-foreground py-3 my-4 h-12">
          <Loader2 className="h-6 w-6 animate-spin text-primary" />
        </div>
     )
   }
   
-  // Display a default message if there's an error or no ads.
-  const marqueeContent = hasAds ? [...ads, ...ads] : ['✨ أهلاً بك في واحة المزرعة ✨', '✨ أهلاً بك في واحة المزرعة ✨'];
+  if (!hasAds || error) {
+    return null; // Don't render the component if there are no ads or an error occurs
+  }
+
+  // Duplicate ads for a seamless loop
+  const marqueeContent = [...ads, ...ads];
 
   return (
-    <section className="relative flex overflow-hidden border-y bg-accent/50 text-accent-foreground py-3 my-8">
+    <section className="relative flex overflow-hidden border-y bg-accent/50 text-accent-foreground py-3 my-4">
       <div className="absolute inset-y-0 left-0 z-10 flex items-center bg-background pr-4 pl-2">
         <Megaphone className="h-6 w-6 text-primary" />
       </div>

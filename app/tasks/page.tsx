@@ -1,6 +1,5 @@
 'use client';
 
-import AppFooter from '@/components/AppFooter';
 import TasksView from '@/components/views/TasksView';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
@@ -28,11 +27,10 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-10">
       <main className="px-4 pt-4 container mx-auto">
         <TasksView />
       </main>
-      <AppFooter activeView="tasks" />
     </div>
   );
 }

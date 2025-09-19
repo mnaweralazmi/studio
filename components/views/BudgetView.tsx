@@ -18,11 +18,13 @@ import {
   Scaling,
   Landmark,
   GitCommit,
+  Home,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
-
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 type Debt = { amount: number; type: 'دين لنا' | 'دين علينا' };
 
@@ -201,11 +203,19 @@ export default function BudgetView() {
   
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold text-foreground">الميزانية</h1>
-        <p className="mt-1 text-muted-foreground">
-          اختر قسمًا لعرض ملخصه المالي المفصل.
-        </p>
+      <header className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">الميزانية</h1>
+          <p className="mt-1 text-muted-foreground">
+            اختر قسمًا لعرض ملخصه المالي المفصل.
+          </p>
+        </div>
+        <Link href="/home">
+          <Button variant="outline">
+            <Home className="h-4 w-4 ml-2" />
+            العودة للرئيسية
+          </Button>
+        </Link>
       </header>
         
         <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">

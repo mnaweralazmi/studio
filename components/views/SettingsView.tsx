@@ -16,9 +16,11 @@ import {
   MoreVertical,
   AlertCircle,
   RotateCcw,
+  Home,
 } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   signOut,
   linkWithPopup,
@@ -1144,11 +1146,19 @@ export default function SettingsView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold text-foreground">الإعدادات</h1>
-        <p className="mt-1 text-muted-foreground">
-          قم بتخصيص إعدادات التطبيق والمزرعة.
-        </p>
+      <header className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">الإعدادات</h1>
+          <p className="mt-1 text-muted-foreground">
+            قم بتخصيص إعدادات التطبيق والمزرعة.
+          </p>
+        </div>
+        <Link href="/home">
+          <Button variant="outline">
+            <Home className="h-4 w-4 ml-2" />
+            العودة للرئيسية
+          </Button>
+        </Link>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">

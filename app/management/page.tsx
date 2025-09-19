@@ -1,6 +1,5 @@
 'use client';
 
-import AppFooter from '@/components/AppFooter';
 import ManagementView from '@/components/views/ManagementView';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
@@ -28,11 +27,10 @@ export default function ManagementPage() {
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-10">
       <main className="px-4 pt-4 container mx-auto">
         <ManagementView />
       </main>
-      <AppFooter activeView="management" />
     </div>
   );
 }

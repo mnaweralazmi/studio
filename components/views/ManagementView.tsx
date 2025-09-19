@@ -19,6 +19,7 @@ import {
   Briefcase,
   Building2,
   ClipboardList,
+  Home,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import {
@@ -35,6 +36,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -1916,13 +1918,19 @@ export default function ManagementView() {
   
   return (
     <div className="space-y-6">
-      <header className="space-y-4">
+      <header className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-foreground">إدارة المزرعة</h1>
           <p className="mt-1 text-muted-foreground">
             اختر قسمًا لإدارة عملياته وبياناته.
           </p>
         </div>
+         <Link href="/home">
+          <Button variant="outline">
+            <Home className="h-4 w-4 ml-2" />
+            العودة للرئيسية
+          </Button>
+        </Link>
       </header>
 
       <Tabs value={selectedSection} onValueChange={setSelectedSection} className="w-full">

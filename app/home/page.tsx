@@ -1,6 +1,5 @@
 'use client';
 
-import AppFooter from '@/components/AppFooter';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -20,6 +19,7 @@ import {
   Wallet,
   CalendarCheck,
   User as UserIcon,
+  Settings,
 } from 'lucide-react';
 
 import { Toaster } from '@/components/ui/toaster';
@@ -349,11 +349,10 @@ export default function HomePage() {
     loading: topicsLoading,
     error: topicsError,
     refetch,
-  } = useFirestoreQuery<Topic>(
-    'publicTopics',
-    [where('archived', '==', false), orderBy('createdAt', 'desc')],
-    true // isCollectionGroup
-  );
+  } = useFirestoreQuery<Topic>('publicTopics', [
+    where('archived', '==', false),
+    orderBy('createdAt', 'desc'),
+  ]);
 
   const handleTopicAdded = () => {
     if (refetch) refetch();
@@ -402,10 +401,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-10">
       <main className="container mx-auto px-4 pt-4">
         {/* --- Header --- */}
-        <header className="pt-8 mb-8 space-y-6">
+        <header className="pt-8 mb-4 space-y-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               {user.photoURL ? (
@@ -428,10 +427,16 @@ export default function HomePage() {
                 </h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {user && <NotificationsPopover user={user} />}
+              <Link href="/settings">
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </Link>
             </div>
           </div>
+          <AdMarquee />
         </header>
 
         {/* --- Quick Stats --- */}
@@ -511,8 +516,6 @@ export default function HomePage() {
           </Button>
         </div>
 
-        <AdMarquee />
-
         <HomeView
           user={user}
           topics={topics || []}
@@ -521,7 +524,7 @@ export default function HomePage() {
           onRefresh={refetch}
         />
       </main>
-      <AppFooter activeView="home" />
+
       <Toaster />
       <AddTopicDialog
         isOpen={isAddTopicOpen}

@@ -3,12 +3,14 @@
 import {
   Plus,
   Loader2,
-  CalendarIcon
+  CalendarIcon,
+  Home,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import Link from 'next/link';
 
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -215,14 +217,22 @@ export default function TasksView() {
 
   return (
     <div className="space-y-6">
-      <header className="flex justify-between items-center">
+      <header className="flex justify-between items-start">
         <div>
             <h1 className="text-3xl font-bold text-foreground">التقويم والمهام</h1>
             <p className="mt-1 text-muted-foreground">
                 عرض وإدارة المهام المجدولة لمزرعتك.
             </p>
         </div>
-        <AddTaskDialog onAddTask={handleAddTask} isAdding={isAdding} />
+        <div className="flex items-center gap-2">
+            <AddTaskDialog onAddTask={handleAddTask} isAdding={isAdding} />
+            <Link href="/home">
+              <Button variant="outline">
+                <Home className="h-4 w-4 ml-2" />
+                العودة للرئيسية
+              </Button>
+            </Link>
+        </div>
       </header>
 
       {loading ? (
