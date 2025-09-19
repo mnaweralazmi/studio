@@ -20,6 +20,7 @@ import {
   CalendarCheck,
   User as UserIcon,
   Settings,
+  Lightbulb,
 } from 'lucide-react';
 
 import { Toaster } from '@/components/ui/toaster';
@@ -368,9 +369,9 @@ export default function HomePage() {
 
   const quickAccessLinks = [
     {
-      title: 'إدارة المصاريف',
-      href: '/management?tab=farmManagement',
-      icon: Wallet,
+      title: 'بنك الأفكار',
+      href: '#community-feed',
+      icon: Lightbulb,
       color: 'bg-blue-500',
     },
     {
@@ -507,8 +508,12 @@ export default function HomePage() {
         </div>
 
         {/* --- Community Feed Header --- */}
-        <div className="flex justify-between items-center mb-6">
+        <div id="community-feed" className="flex justify-between items-center mb-6 scroll-mt-20">
           <h2 className="text-xl font-bold">خلاصة المجتمع</h2>
+          <Button onClick={() => setAddTopicOpen(true)}>
+            <Plus className="h-4 w-4 ml-2" />
+            أضف موضوعًا
+          </Button>
         </div>
 
         <HomeView
