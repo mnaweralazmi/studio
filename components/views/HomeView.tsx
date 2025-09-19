@@ -55,7 +55,7 @@ async function archiveTopic(topic: Topic): Promise<void> {
   await updateDoc(topicRef, { archived: true });
 }
 
-export default function HomeView({
+export default function IdeasView({
   user,
   topics,
   loading,

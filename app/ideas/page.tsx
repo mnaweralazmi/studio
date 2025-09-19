@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { Toaster } from '@/components/ui/toaster';
-import HomeView, { Topic } from '@/components/views/HomeView';
+import IdeasView, { Topic } from '@/components/views/IdeasView';
 import {
   Timestamp,
   doc,
@@ -319,7 +319,7 @@ export default function IdeasPage() {
             </div>
         </header>
         
-        <HomeView
+        <IdeasView
           user={user}
           topics={topics || []}
           loading={topicsLoading}
