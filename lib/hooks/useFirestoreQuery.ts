@@ -72,6 +72,8 @@ export function useFirestoreQuery<T extends DocumentData>(
 
   const errorMessage = error ? `فشل جلب البيانات: ${error.message}` : null;
 
+  // The refetch function is not implemented as useCollection provides real-time updates.
+  // This function is kept for API consistency if manual refetching is needed in the future.
   const refetch = () => {};
 
   return { data, loading, error: errorMessage, refetch };
