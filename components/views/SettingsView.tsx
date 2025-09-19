@@ -922,13 +922,22 @@ function AdminView({ user }: { user: any }) {
 
     setIsSending(true);
     try {
-      await addDoc(collection(db, 'notifications'), {
+       const notificationData = {
         title,
         body,
-        target: target === 'all' ? 'all' : targetUid,
+        target: target === 'all' ? ['all'] : [targetUid.trim(), 'all'], // Always include 'all' for broader queries if needed, or adjust as necessary. Here we send to specific and it will be caught by their UID. Let's send to an array.
         createdAt: serverTimestamp(),
         read: false,
-      });
+      };
+
+      if (target === 'specific') {
+        notificationData.target = [targetUid.trim()];
+      } else {
+        notificationData.target = ['all', 'admin']; // Example: send to all and admins
+      }
+
+      await addDoc(collection(db, 'notifications'), notificationData);
+      
       toast({
         title: 'تم الإرسال بنجاح',
         description: 'تم إرسال الإشعار للمستخدمين المستهدفين.',

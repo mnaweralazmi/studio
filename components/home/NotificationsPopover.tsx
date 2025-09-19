@@ -34,25 +34,27 @@ type Notification = {
   body: string;
   createdAt: Timestamp;
   read: boolean;
-  target?: string;
+  target?: string[] | string; // Can be 'all' string or an array of UIDs
 };
 
 export default function NotificationsPopover({ user }: { user: User }) {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
-  
+
   const notificationsQuery = useMemo(() => {
     if (!user) return null;
 
-    const targets = ['all', user.uid];
-    // Admin user also gets notifications targeted to 'admin'
+    const targets: string[] = ['all', user.uid];
     if (isAdmin) {
       targets.push('admin');
     }
 
+    // This query fetches notifications where the 'target' field (an array)
+    // contains any of the values in the 'targets' array ('all', user's UID, or 'admin').
+    // This requires a composite index on (target array-contains, createdAt desc).
     return query(
       collectionGroup(db, 'notifications'),
-      where('target', 'in', targets),
+      where('target', 'array-contains-any', targets),
       orderBy('createdAt', 'desc'),
       limit(10)
     );
@@ -70,7 +72,7 @@ export default function NotificationsPopover({ user }: { user: User }) {
 
   useEffect(() => {
     if (loading || !notifications || notifications.length === 0) return;
-    
+
     const unreadAndUnshown = notifications.find(
       (n) => !n.read && !shownNotifications.has(n.id)
     );
