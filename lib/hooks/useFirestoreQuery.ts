@@ -31,6 +31,11 @@ export function useFirestoreQuery<T extends DocumentData>(
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
+    if (!user && (queryType === 'userSubcollection' || queryType === 'collectionGroup')) {
+        // Don't query user-specific or group data if no user is logged in
+        return null;
+    }
+
     let q;
 
     switch (queryType) {
@@ -45,10 +50,9 @@ export function useFirestoreQuery<T extends DocumentData>(
       case 'userSubcollection':
       default:
         if (user) {
-          const userDocRef = doc(db, 'users', user.uid);
-          q = query(collection(userDocRef, collectionPath), ...constraints);
+          q = query(collection(db, 'users', user.uid, collectionPath), ...constraints);
         } else {
-          return null; // Don't query if it's a private query and no user is logged in
+          return null; 
         }
         break;
     }
