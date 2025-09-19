@@ -7,6 +7,7 @@ import {
   QueryConstraint,
   DocumentData,
   collectionGroup,
+  doc,
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -34,10 +35,10 @@ export function useFirestoreQuery<T extends DocumentData>(
     } else {
       // For user-specific data, only proceed if the user is logged in.
       if (user) {
-        q = query(
-          collection(db, 'users', user.uid, collectionPath),
-          ...constraints
-        );
+        // Construct a reference to the user's document first
+        const userDocRef = doc(db, 'users', user.uid);
+        // Then construct the query on the sub-collection
+        q = query(collection(userDocRef, collectionPath), ...constraints);
       } else {
         // If it's a private query and there's no user, don't query at all.
         return null;
