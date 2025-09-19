@@ -142,6 +142,7 @@ async function createTopic(data: TopicFormData): Promise<void> {
     description: data.description.trim(),
     userId: currentUser.uid,
     authorName: currentUser.displayName || 'مستخدم غير معروف',
+    authorPhotoURL: currentUser.photoURL || '',
     createdAt: serverTimestamp(),
     imageUrl: '',
     imagePath: '',
@@ -349,10 +350,11 @@ export default function HomePage() {
     loading: topicsLoading,
     error: topicsError,
     refetch,
-  } = useFirestoreQuery<Topic>('publicTopics', [
-    where('archived', '==', false),
-    orderBy('createdAt', 'desc'),
-  ]);
+  } = useFirestoreQuery<Topic>(
+    'publicTopics',
+    [where('archived', '==', false), orderBy('createdAt', 'desc')],
+    true // This is a public query
+  );
 
   const handleTopicAdded = () => {
     if (refetch) refetch();
