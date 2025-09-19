@@ -509,13 +509,6 @@ export default function HomePage() {
         {/* --- Community Feed Header --- */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">خلاصة المجتمع</h2>
-          <Button
-            className="bg-primary hover:bg-primary/90"
-            onClick={() => setAddTopicOpen(true)}
-          >
-            <Plus className="h-4 w-4 ml-2" />
-            <span>شارك فكرة</span>
-          </Button>
         </div>
 
         <HomeView

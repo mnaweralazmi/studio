@@ -143,14 +143,6 @@ export default function HomeView({
         </div>
       )}
 
-      {error && (
-        <Alert variant="destructive" className="my-4 max-w-2xl mx-auto">
-          <Newspaper className="h-4 w-4" />
-          <AlertTitle>حدث خطأ</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       {!loading && topics.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border max-w-2xl mx-auto">
           <Newspaper className="h-16 w-16 text-muted-foreground" />
@@ -285,5 +277,3 @@ export default function HomeView({
     </section>
   );
 }
-
-    
