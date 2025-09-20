@@ -1,8 +1,17 @@
+
 {
   "indexes": [
     {
       "collectionGroup": "publicTopics",
       "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "publicTopics",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
@@ -21,7 +30,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "ASCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -29,7 +39,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -37,7 +48,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -45,7 +57,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -53,7 +66,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -61,7 +75,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "dueDate", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -69,7 +84,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -77,7 +93,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -85,7 +102,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -93,7 +111,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -101,7 +120,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -109,7 +129,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -117,7 +138,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -125,7 +147,8 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "archived", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

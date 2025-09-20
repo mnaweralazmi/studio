@@ -1,49 +1,23 @@
+
 'use client';
 
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { auth, db, storage } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState, useMemo } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-
-import {
-  Loader2,
-  Plus,
-  X,
-  Save,
-  Home,
-  AlertCircle,
-} from 'lucide-react';
-
-import { Toaster } from '@/components/ui/toaster';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { collection, collectionGroup, query, where, orderBy, onSnapshot, getDocs, serverTimestamp, setDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import IdeasView, { Topic } from '@/components/views/HomeView';
-import {
-  Timestamp,
-  doc,
-  setDoc,
-  serverTimestamp,
-  collection,
-  where,
-  orderBy,
-  query,
-} from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { AlertCircle, Home, Plus, Loader2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+import Link from 'next/link';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
+import Image from 'next/image';
 
 
 type TopicFormData = {
@@ -51,7 +25,6 @@ type TopicFormData = {
   description: string;
   file?: File;
 };
-
 
 async function createTopic(data: TopicFormData): Promise<void> {
   const currentUser = auth.currentUser;
@@ -262,34 +235,88 @@ function AddTopicDialog({
 
 
 export default function IdeasPage() {
-  const [user, loading] = useAuthState(auth);
+  const [user, loadingAuth] = useAuthState(auth);
   const router = useRouter();
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
   
-  const topicsQuery = useMemo(() => {
-    return query(
-        collection(db, 'publicTopics'), 
-        where('archived', '==', false), 
-        orderBy('createdAt', 'desc')
-    );
+  const refetch = useCallback(() => {
+    // This function will be called to refresh data.
+    // In this new implementation, onSnapshot handles realtime updates,
+    // but we can keep this function to manually trigger a re-render if needed
+    // or to re-initiate the listener. For now, a reload is a simple way.
+     window.location.reload();
   }, []);
 
-  const { 
-    data: topics, 
-    loading: topicsLoading, 
-    error: topicsError,
-    refetch
-  } = useFirestoreQuery<Topic>(topicsQuery);
-
-
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loadingAuth && !user) {
       router.replace('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loadingAuth, router]);
+  
+  // Helper to normalize createdAt (serverTimestamp or Date)
+  const normalize = (d: any) => {
+    const obj = { ...d };
+    if (obj.createdAt && obj.createdAt.toDate) {
+      obj.createdAt = obj.createdAt.toDate();
+    } else if (!obj.createdAt) {
+      // If createdAt is missing, use a very old date for sorting purposes
+      console.warn(`Document ${d.id} is missing 'createdAt' field.`);
+      obj.createdAt = new Date(0);
+    } else if (typeof obj.createdAt === 'number') {
+      obj.createdAt = new Date(obj.createdAt);
+    }
+    return obj;
+  };
 
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
 
-  if (loading || !user) {
+    // Try realtime snapshot on root collection first
+    try {
+      const q = query(collection(db, 'publicTopics'), where('archived', '==', false), orderBy('createdAt', 'desc'));
+      const unsub = onSnapshot(q, async (snap) => {
+        const fetchedDocs = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...normalize(d.data()) } as Topic));
+        console.log('[IdeasPage] Fetched from root `publicTopics` collection.', fetchedDocs);
+        
+        if (fetchedDocs.length > 0) {
+            setTopics(fetchedDocs);
+            setLoading(false);
+        } else {
+             // Fallback: If root is empty, try collectionGroup
+             console.warn('[IdeasPage] Root collection is empty or filtered to empty. Trying fallback to collectionGroup...');
+             try {
+                const q2 = query(collectionGroup(db, 'publicTopics'), where('archived', '==', false), orderBy('createdAt', 'desc'));
+                const snap2 = await getDocs(q2);
+                const docs2 = snap2.docs.map(d => ({ id: d.id, path: d.ref.path, ...normalize(d.data()) } as Topic));
+                console.log('[IdeasPage] Fallback to collectionGroup successful.', docs2);
+                setTopics(docs2);
+             } catch (err2: any) {
+                console.error('[IdeasPage] Error in collectionGroup fallback query. This likely means you need a composite index.', err2);
+                setError(`خطأ في الفهرس: الاستعلام يتطلب فهرسًا مخصصًا. يرجى مراجعة console المتصفح لإنشاء الفهرس.`);
+             } finally {
+                setLoading(false);
+             }
+        }
+      }, (err) => {
+        console.error('[IdeasPage] Error onSnapshot for root collection. This could be a permissions issue.', err);
+        setError(`خطأ في الصلاحيات: تأكد من أن قواعد Firestore تسمح بقراءة مجموعة 'publicTopics'.`);
+        setLoading(false);
+      });
+
+      return () => unsub(); // Unsubscribe on cleanup
+    } catch (e: any) {
+      console.error('[IdeasPage] Error setting up initial query. This should not happen.', e);
+      setError(`حدث خطأ غير متوقع عند إعداد الاستعلام.`);
+      setLoading(false);
+    }
+  }, [user]);
+
+  if (loadingAuth || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -323,21 +350,21 @@ export default function IdeasPage() {
             </div>
         </header>
         
-        {topicsError && (
+        {error && (
           <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-4 my-4 flex items-center gap-4">
               <AlertCircle className="h-8 w-8" />
               <div>
                   <h3 className="font-bold">خطأ في جلب البيانات</h3>
-                  <p>خطأ في الفهرس: الاستعلام يتطلب فهرسًا مخصصًا. يرجى مراجعة console المتصفح لإنشاء الفهرس.</p>
+                  <p>{error}</p>
               </div>
           </div>
         )}
 
         <IdeasView
           user={user}
-          topics={topics || []}
-          loading={topicsLoading}
-          error={null}
+          topics={topics}
+          loading={loading}
+          error={error}
           onRefresh={refetch}
         />
       </main>

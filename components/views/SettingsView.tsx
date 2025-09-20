@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -130,9 +131,10 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-// --- ARCHIVE VIEW COMPONENT (MERGED) ---
+// --- ARCHIVE VIEW COMPONENT (MERGED AND UPDATED) ---
 
 const COLLECTION_CONFIG = {
+  publicTopics: { name: 'المواضيع العامة', fields: ['title', 'authorName']},
   expenses: { name: 'المصاريف العامة', fields: ['item', 'category', 'amount'] },
   agriExpenses: { name: 'مصاريف الزراعة', fields: ['item', 'category', 'amount'] },
   poultryExpenses: { name: 'مصاريف الدواجن', fields: ['item', 'category', 'amount'] },
@@ -146,7 +148,7 @@ const COLLECTION_CONFIG = {
   facilities: { name: 'المرافق', fields: ['name', 'type'] },
   poultryFlocks: { name: 'قطعان الدواجن', fields: ['name', 'birdCount'] },
   livestockHerds: { name: 'قطعان المواشي', fields: ['name', 'animalCount'] },
-  publicTopics: { name: 'المواضيع العامة', fields: ['title', 'authorName']}
+  tasks: { name: 'المهام', fields: ['title', 'date'] }
 };
 
 const formatDate = (date: any) => {
@@ -165,6 +167,9 @@ const formatValue = (key: string, value: any) => {
     }
     if (value instanceof Timestamp) {
         return formatDate(value);
+    }
+    if (typeof value === 'object' && value.toDate) { // Handle Firestore Timestamps that might not be instances
+        return formatDate(value.toDate());
     }
     return value.toString();
 }
@@ -189,7 +194,7 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
       const allArchivedData: Record<string, any[]> = {};
       const collectionKeys = Object.keys(COLLECTION_CONFIG);
   
-      const promises = collectionKeys.map(async (collectionId) => {
+      for (const collectionId of collectionKeys) {
         let q;
         if (collectionId === 'publicTopics') {
           q = query(
@@ -205,23 +210,21 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
             orderBy('createdAt', 'desc')
           );
         }
-        return getDocs(q);
-      });
-  
-      const snapshots = await Promise.all(promises);
-  
-      snapshots.forEach((snapshot, index) => {
-        const collectionId = collectionKeys[index];
-        if (!snapshot.empty) {
-          allArchivedData[collectionId] = snapshot.docs.map(d => ({
-            id: d.id,
-            path: d.ref.path,
-            ...d.data(),
-          }));
-        } else {
-          allArchivedData[collectionId] = [];
+        
+        try {
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            allArchivedData[collectionId] = snapshot.docs.map(d => ({
+              id: d.id,
+              path: d.ref.path,
+              ...d.data(),
+            }));
+          }
+        } catch (e: any) {
+            console.warn(`Could not query collection/group '${collectionId}'. This might be due to missing index or rules.`, e.message);
+            // If the query fails for one collection, continue with others.
         }
-      });
+      }
   
       setArchivedData(allArchivedData);
     } catch (e: any) {
@@ -240,7 +243,7 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
 
   const handleRestore = async (path: string) => {
     try {
-      const docRef = doc(db, ...path.split('/'));
+      const docRef = doc(db, path);
       await updateDoc(docRef, { archived: false });
       toast({ title: 'تمت الاستعادة', description: 'تم استعادة العنصر بنجاح.', className: 'bg-green-600 text-white'});
       fetchArchivedData();
@@ -258,18 +261,28 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
   const handlePermanentDelete = async () => {
     if (!selectedItem) return;
     try {
-      const docRef = doc(db, ...selectedItem.path.split('/'));
+      const docRef = doc(db, selectedItem.path);
       const docSnap = await getDoc(docRef);
+
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Check for image paths to delete from Storage
         const imagePath = data?.imagePath || data?.photoPath;
         if (imagePath) {
-          const imageRef = ref(storage, imagePath);
-          await deleteObject(imageRef).catch(err => console.warn("Could not delete file from Storage:", err));
+          try {
+            const imageRef = ref(storage, imagePath);
+            await deleteObject(imageRef);
+            console.log(`Successfully deleted storage file: ${imagePath}`);
+          } catch (storageError: any) {
+            // Non-fatal error, log it but proceed with doc deletion
+            console.warn("Could not delete file from Storage (it may not exist or rules forbid it):", storageError);
+          }
         }
       }
   
+      // Delete the document from Firestore
       await deleteDoc(docRef);
+
       toast({ title: 'تم الحذف', description: 'تم حذف العنصر نهائياً.', className: 'bg-green-600 text-white'});
       fetchArchivedData();
     } catch (e: any) {
@@ -298,7 +311,7 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
     );
   }
 
-  const hasData = Object.keys(archivedData).length > 0 && Object.values(archivedData).some(arr => arr.length > 0);
+  const hasData = Object.values(archivedData).some(arr => arr && arr.length > 0);
 
 
   return (
@@ -318,7 +331,7 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
           ) : (
             <Accordion type="multiple" className="w-full">
               {Object.entries(archivedData).map(([collectionId, items]) => {
-                if(items.length === 0) return null;
+                if(!items || items.length === 0) return null;
                 const config = COLLECTION_CONFIG[collectionId];
                 if (!config) return null;
                 return (
