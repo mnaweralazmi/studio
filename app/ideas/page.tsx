@@ -27,8 +27,6 @@ import {
   where,
   orderBy,
   query,
-  onSnapshot,
-  getDocs,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,6 +43,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
+
 
 type TopicFormData = {
   title: string;
@@ -266,56 +266,18 @@ export default function IdeasPage() {
   const router = useRouter();
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
   
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [topicsLoading, setTopicsLoading] = useState(true);
-  const [topicsError, setTopicsError] = useState<string | null>(null);
-
-  const refetch = useCallback(() => {
-    if (!user) return;
-    setTopicsLoading(true);
-    setTopicsError(null);
-    const q = query(
-      collection(db, 'publicTopics'),
+  const { 
+    data: topics, 
+    loading: topicsLoading, 
+    error: topicsError,
+    refetch
+  } = useFirestoreQuery<Topic>('publicTopics', 
+    [
       where('archived', '==', false),
       orderBy('createdAt', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(q, 
-      (querySnapshot) => {
-        const topicsData: Topic[] = [];
-        querySnapshot.forEach((doc) => {
-          if (!doc.data().createdAt) {
-            console.warn(`Document ${doc.id} is missing 'createdAt' field and will be skipped.`);
-            return;
-          }
-          topicsData.push({ id: doc.id, path: doc.ref.path, ...doc.data() } as Topic);
-        });
-        setTopics(topicsData);
-        setTopicsLoading(false);
-      }, 
-      (error) => {
-        console.error("Firebase onSnapshot error:", error);
-        if (error.code === 'permission-denied') {
-          setTopicsError('خطأ في الصلاحيات: ليس لديك إذن لقراءة هذه البيانات. تأكد من قواعد الأمان في Firestore.');
-        } else if (error.code === 'failed-precondition') {
-          setTopicsError('خطأ في الفهرس: الاستعلام يتطلب فهرسًا مخصصًا. يرجى مراجعة console المتصفح لإنشاء الفهرس.');
-        } else {
-          setTopicsError('حدث خطأ أثناء جلب البيانات.');
-        }
-        setTopicsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      const unsubscribe = refetch();
-      return () => unsubscribe();
-    }
-  }, [user, refetch]);
-
+    ], 
+    'publicCollection'
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -363,7 +325,7 @@ export default function IdeasPage() {
               <AlertCircle className="h-8 w-8" />
               <div>
                   <h3 className="font-bold">خطأ في جلب البيانات</h3>
-                  <p>{topicsError}</p>
+                  <p>خطأ في الفهرس: الاستعلام يتطلب فهرسًا مخصصًا. يرجى مراجعة console المتصفح لإنشاء الفهرس.</p>
               </div>
           </div>
         )}
