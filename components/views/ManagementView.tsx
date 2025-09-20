@@ -214,6 +214,8 @@ function ExpensesView({ user, collectionName }: { user: FirebaseUser, collection
         category: newExpense.category,
         amount: parseFloat(newExpense.amount) || 0,
         archived: false,
+        userId: user.uid,
+        createdAt: Timestamp.now(),
       });
       setNewExpense({ item: '', category: '', amount: '' });
       if (refetch) refetch();
@@ -340,7 +342,7 @@ function FacilitiesView({ user }: { user: FirebaseUser }) {
     setIsAdding(true);
     try {
       const collectionRef = collection(db, 'users', user.uid, 'facilities');
-      await addDoc(collectionRef, { name, type, archived: false, createdAt: Timestamp.now() });
+      await addDoc(collectionRef, { name, type, archived: false, createdAt: Timestamp.now(), userId: user.uid });
       setNewFacility({ name: '', type: 'محمية' });
       if (refetch) refetch();
     } catch (e) {
@@ -485,6 +487,8 @@ function AgriSalesView({ user }: { user: FirebaseUser }) {
         cartonPrice: price,
         totalAmount,
         archived: false,
+        userId: user.uid,
+        createdAt: Timestamp.now(),
       });
       setNewSale({
         item: '',
@@ -658,6 +662,8 @@ function DebtsView({ user }: { user: FirebaseUser }) {
         amount: parseFloat(amount) || 0,
         type,
         archived: false,
+        userId: user.uid,
+        createdAt: Timestamp.now(),
       });
       setNewDebt({ party: '', amount: '', type: 'دين علينا' });
       if (refetch) refetch();
@@ -886,7 +892,7 @@ function WorkersView({ user }: { user: FirebaseUser }) {
     setIsAdding(true);
     try {
       const workersCollection = collection(db, 'users', user.uid, 'workers');
-      await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0, archived: false, createdAt: Timestamp.now() });
+      await addDoc(workersCollection, { name, salary: parseFloat(salary) || 0, archived: false, createdAt: Timestamp.now(), userId: user.uid });
       setNewWorker({ name: '', salary: '' });
       if (refetch) refetch();
     } catch (e) {
@@ -915,6 +921,8 @@ function WorkersView({ user }: { user: FirebaseUser }) {
         category: 'رواتب',
         amount: worker.salary || 0,
         archived: false,
+        userId: user.uid,
+        createdAt: Timestamp.now(),
       });
       toast({
           title: "تم دفع الراتب بنجاح",
@@ -1198,6 +1206,8 @@ function EggSalesView({ user }: { user: FirebaseUser }) {
         trayPrice: price,
         totalAmount,
         archived: false,
+        userId: user.uid,
+        createdAt: Timestamp.now(),
       });
       setNewSale({ trayCount: '', trayPrice: '' });
       if (refetch) refetch();
@@ -1328,6 +1338,8 @@ function PoultrySalesView({ user }: { user: FirebaseUser }) {
         pricePerUnit: price,
         totalAmount,
         archived: false,
+        userId: user.uid,
+        createdAt: Timestamp.now(),
       });
       setNewSale({ poultryType: 'دجاج حي', count: '', pricePerUnit: '' });
       if (refetch) refetch();
@@ -1464,7 +1476,8 @@ function FlocksView({ user }: { user: FirebaseUser }) {
         name,
         birdCount: parseInt(birdCount) || 0,
         archived: false,
-        createdAt: Timestamp.now()
+        createdAt: Timestamp.now(),
+        userId: user.uid,
       });
       setNewFlock({ name: '', birdCount: '' });
       if (refetch) refetch();
@@ -1629,6 +1642,8 @@ function LivestockSalesView({ user }: { user: FirebaseUser }) {
         pricePerUnit: price,
         totalAmount,
         archived: false,
+        userId: user.uid,
+        createdAt: Timestamp.now(),
       });
       setNewSale({ animalType: 'خروف', count: '', pricePerUnit: '' });
       if (refetch) refetch();
@@ -1766,6 +1781,7 @@ function HerdsView({ user }: { user: FirebaseUser }) {
         animalCount: parseInt(animalCount) || 0,
         archived: false,
         createdAt: Timestamp.now(),
+        userId: user.uid,
       });
       setNewHerd({ name: '', animalCount: '' });
       if (refetch) refetch();

@@ -43,6 +43,7 @@ import {
   getDocs,
   deleteDoc,
   Timestamp,
+  orderBy,
 } from 'firebase/firestore';
 import {
   ref,
@@ -184,42 +185,51 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
     }
     setLoading(true);
     setError(null);
+  
     try {
       const allArchivedData: Record<string, any[]> = {};
       const collectionKeys = Object.keys(COLLECTION_CONFIG);
-      
+  
       const promises = collectionKeys.map(async (collectionId) => {
         let q;
-        // publicTopics is a top-level collection, others are collection groups within users
         if (collectionId === 'publicTopics') {
-            q = query(collection(db, collectionId), where('archived', '==', true));
+          // publicTopics هو مجموعة علوية
+          q = query(
+            collection(db, collectionId),
+            where('archived', '==', true),
+            orderBy('createdAt', 'desc')
+          );
         } else {
-            // This is a collection group query that needs to be scoped correctly
-            q = query(collectionGroup(db, collectionId), where('archived', '==', true));
+          // نفترض أن كل مستند يحتوي على حقل userId -> فلترة على الخادم
+          q = query(
+            collectionGroup(db, collectionId),
+            where('archived', '==', true),
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
         }
         return getDocs(q);
       });
-
+  
       const snapshots = await Promise.all(promises);
-
+  
       snapshots.forEach((snapshot, index) => {
         const collectionId = collectionKeys[index];
         if (!snapshot.empty) {
-            allArchivedData[collectionId] = snapshot.docs
-                // For collection group queries, we must filter by user ID on the client side
-                .filter(d => collectionId === 'publicTopics' || d.ref.path.startsWith(`users/${user.uid}/`))
-                .map(d => ({
-                    id: d.id,
-                    path: d.ref.path,
-                    ...d.data(),
-                }));
+          allArchivedData[collectionId] = snapshot.docs.map(d => ({
+            id: d.id,
+            path: d.ref.path,
+            ...d.data(),
+          }));
+        } else {
+          allArchivedData[collectionId] = [];
         }
       });
-      
+  
       setArchivedData(allArchivedData);
     } catch (e: any) {
       console.error("Error fetching archived data:", e);
-      setError('حدث خطأ أثناء جلب البيانات المؤرشفة. قد تحتاج بعض الاستعلامات إلى فهارس خاصة في Firestore.');
+      setError('حدث خطأ أثناء جلب البيانات المؤرشفة. قد تحتاج بعض الاستعلامات إلى فهارس في Firestore.');
     } finally {
       setLoading(false);
     }
@@ -233,11 +243,14 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
 
   const handleRestore = async (path: string) => {
     try {
-      await updateDoc(doc(db, path), { archived: false });
-      fetchArchivedData(); // Refresh data
-    } catch (e) {
+      const parts = path.split('/').filter(Boolean);
+      const docRef = doc(db, ...parts);
+      await updateDoc(docRef, { archived: false });
+      toast({ title: 'تمت الاستعادة', description: 'تم استعادة العنصر.' , className: 'bg-green-600 text-white'});
+      fetchArchivedData();
+    } catch (e: any) {
       console.error(e);
-      // Show error to user
+      toast({ title: 'خطأ', description: e.message || 'فشل استعادة العنصر.', variant: 'destructive' });
     }
   };
 
@@ -249,10 +262,28 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
   const handlePermanentDelete = async () => {
     if (!selectedItem) return;
     try {
-      await deleteDoc(doc(db, selectedItem.path));
-      fetchArchivedData(); // Refresh data
-    } catch (e) {
+      const parts = selectedItem.path.split('/').filter(Boolean);
+      const docRef = doc(db, ...parts);
+      // إحضار المستند أولاً للحصول على imagePath إن وُجد
+      const docSnap = await getDoc(docRef);
+      const data = docSnap.exists() ? docSnap.data() : null;
+      const imagePath = data?.imagePath || data?.photoPath;
+  
+      if (imagePath) {
+        try {
+          const imageRef = ref(storage, imagePath);
+          await deleteObject(imageRef);
+        } catch (err) {
+          console.warn('Could not delete storage object (may not exist):', err);
+        }
+      }
+  
+      await deleteDoc(docRef);
+      toast({ title: 'تم الحذف', description: 'تم حذف العنصر نهائياً.' , className: 'bg-green-600 text-white'});
+      fetchArchivedData();
+    } catch (e: any) {
       console.error(e);
+      toast({ title: 'خطأ', description: e.message || 'فشل حذف العنصر.', variant: 'destructive' });
     } finally {
       setDialogOpen(false);
       setSelectedItem(null);
