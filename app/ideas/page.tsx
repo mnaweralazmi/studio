@@ -13,6 +13,7 @@ import {
   X,
   Save,
   Home,
+  AlertCircle,
 } from 'lucide-react';
 
 import { Toaster } from '@/components/ui/toaster';
@@ -25,6 +26,8 @@ import {
   collection,
   where,
   orderBy,
+  query,
+  onSnapshot,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +44,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
 
 type TopicFormData = {
   title: string;
@@ -262,21 +264,56 @@ export default function IdeasPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
+  
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(true);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
 
-  const {
-    data: topics,
-    loading: topicsLoading,
-    error: topicsError,
-    refetch,
-  } = useFirestoreQuery<Topic>(
-    'publicTopics',
-    [where('archived', '==', false), orderBy('createdAt', 'desc')],
-    'publicCollection'
-  );
+  const refetch = useCallback(() => {
+    setTopicsLoading(true);
+    setTopicsError(null);
+    const q = query(
+      collection(db, 'publicTopics'),
+      where('archived', '==', false),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        const topicsData: Topic[] = [];
+        querySnapshot.forEach((doc) => {
+          if (!doc.data().createdAt) {
+            console.warn(`Document ${doc.id} is missing 'createdAt' field and will be skipped.`);
+            return;
+          }
+          topicsData.push({ id: doc.id, path: doc.ref.path, ...doc.data() } as Topic);
+        });
+        setTopics(topicsData);
+        setTopicsLoading(false);
+      }, 
+      (error) => {
+        console.error("Firebase onSnapshot error:", error);
+        if (error.code === 'permission-denied') {
+          setTopicsError('خطأ في الصلاحيات: ليس لديك إذن لقراءة هذه البيانات. تأكد من قواعد الأمان في Firestore.');
+        } else if (error.code === 'failed-precondition') {
+          setTopicsError('خطأ في الفهرس: الاستعلام يتطلب فهرسًا مخصصًا. يرجى مراجعة console المتصفح لإنشاء الفهرس.');
+        } else {
+          setTopicsError('حدث خطأ أثناء جلب البيانات.');
+        }
+        setTopicsLoading(false);
+      }
+    );
 
-  const handleTopicAdded = () => {
-    if (refetch) refetch();
-  };
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      const unsubscribe = refetch();
+      return () => unsubscribe();
+    }
+  }, [user, refetch]);
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -319,11 +356,21 @@ export default function IdeasPage() {
             </div>
         </header>
         
+        {topicsError && (
+          <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-4 my-4 flex items-center gap-4">
+              <AlertCircle className="h-8 w-8" />
+              <div>
+                  <h3 className="font-bold">خطأ في جلب البيانات</h3>
+                  <p>{topicsError}</p>
+              </div>
+          </div>
+        )}
+
         <IdeasView
           user={user}
           topics={topics || []}
           loading={topicsLoading}
-          error={topicsError}
+          error={null}
           onRefresh={refetch}
         />
       </main>
@@ -332,7 +379,7 @@ export default function IdeasPage() {
       <AddTopicDialog
         isOpen={isAddTopicOpen}
         setIsOpen={setAddTopicOpen}
-        onTopicAdded={handleTopicAdded}
+        onTopicAdded={refetch}
       />
     </div>
   );

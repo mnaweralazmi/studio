@@ -100,7 +100,6 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { useFirestoreQuery } from '@/lib/hooks/useFirestoreQuery';
 
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -193,14 +192,12 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
       const promises = collectionKeys.map(async (collectionId) => {
         let q;
         if (collectionId === 'publicTopics') {
-          // publicTopics هو مجموعة علوية
           q = query(
             collection(db, collectionId),
             where('archived', '==', true),
             orderBy('createdAt', 'desc')
           );
         } else {
-          // نفترض أن كل مستند يحتوي على حقل userId -> فلترة على الخادم
           q = query(
             collectionGroup(db, collectionId),
             where('archived', '==', true),
@@ -243,10 +240,9 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
 
   const handleRestore = async (path: string) => {
     try {
-      const parts = path.split('/').filter(Boolean);
-      const docRef = doc(db, ...parts);
+      const docRef = doc(db, ...path.split('/'));
       await updateDoc(docRef, { archived: false });
-      toast({ title: 'تمت الاستعادة', description: 'تم استعادة العنصر.' , className: 'bg-green-600 text-white'});
+      toast({ title: 'تمت الاستعادة', description: 'تم استعادة العنصر بنجاح.', className: 'bg-green-600 text-white'});
       fetchArchivedData();
     } catch (e: any) {
       console.error(e);
@@ -262,24 +258,19 @@ function ArchiveView({ user }: { user: FirebaseUser | null | undefined }) {
   const handlePermanentDelete = async () => {
     if (!selectedItem) return;
     try {
-      const parts = selectedItem.path.split('/').filter(Boolean);
-      const docRef = doc(db, ...parts);
-      // إحضار المستند أولاً للحصول على imagePath إن وُجد
+      const docRef = doc(db, ...selectedItem.path.split('/'));
       const docSnap = await getDoc(docRef);
-      const data = docSnap.exists() ? docSnap.data() : null;
-      const imagePath = data?.imagePath || data?.photoPath;
-  
-      if (imagePath) {
-        try {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const imagePath = data?.imagePath || data?.photoPath;
+        if (imagePath) {
           const imageRef = ref(storage, imagePath);
-          await deleteObject(imageRef);
-        } catch (err) {
-          console.warn('Could not delete storage object (may not exist):', err);
+          await deleteObject(imageRef).catch(err => console.warn("Could not delete file from Storage:", err));
         }
       }
   
       await deleteDoc(docRef);
-      toast({ title: 'تم الحذف', description: 'تم حذف العنصر نهائياً.' , className: 'bg-green-600 text-white'});
+      toast({ title: 'تم الحذف', description: 'تم حذف العنصر نهائياً.', className: 'bg-green-600 text-white'});
       fetchArchivedData();
     } catch (e: any) {
       console.error(e);
