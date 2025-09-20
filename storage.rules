@@ -1,31 +1,22 @@
-// لجعل قراءة جميع الملفات مقتصرة على المستخدمين المسجلين فقط، غيّر `allow read: if true` إلى `allow read: if request.auth != null;` في القواعد أدناه.
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // --- مسار ملفات تعريف المستخدمين ---
-    // يسمح للمستخدم بكتابة صورته الشخصية فقط.
-    // القراءة متاحة للجميع (عامة).
-    match /users/{userId}/avatar/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-      allow read: if true;
-    }
-
-    // --- مسار ملفات المواضيع (صور وفيديوهات) ---
-    // يسمح للمستخدم بالكتابة في مساره الخاص فقط.
-    // القراءة تعتمد على حالة الموضوع في Firestore:
-    // - إذا كان الموضوع `isPublic == true`، فالقراءة متاحة للجميع.
-    // - إذا كان الموضوع خاصًا، فالقراءة متاحة لصاحب الموضوع فقط.
-    match /users/{userId}/topics/{topicId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-      allow read: if get(/databases/$(database)/documents/users/$(userId)/topics/$(topicId)).data.isPublic == true || (request.auth != null && request.auth.uid == userId);
+    
+    // Rule for user-specific files (e.g., profile pictures)
+    // Users can only read and write to their own folder.
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // --- منع الوصول إلى جميع المسارات الأخرى بشكل افتراضي ---
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Rule for public content (e.g., images for public topics)
+    // Allow anyone to read these files.
+    match /publicTopics/{allPaths=**} {
+      allow read: if true;
+      // Allow authenticated users to write (create/update/delete) public topic images.
+      // You might want to restrict this further to admins or topic authors in firestore.rules logic.
+      allow write: if request.auth != null;
     }
+    
   }
 }
