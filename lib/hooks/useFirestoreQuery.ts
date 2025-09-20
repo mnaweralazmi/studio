@@ -8,6 +8,7 @@ import {
   DocumentData,
   collectionGroup,
   doc,
+  Query,
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -18,21 +19,26 @@ export type QueryType = 'userSubcollection' | 'publicCollection' | 'collectionGr
 
 /**
  * A custom hook to fetch Firestore data with real-time updates.
- * @param collectionPath The path to the collection or the ID of the collection group.
- * @param constraints Query constraints like orderBy or where.
- * @param queryType Determines the type of query: 'userSubcollection', 'publicCollection', or 'collectionGroup'.
+ * @param firestoreQuery A full Firestore Query object, or a string for simple user subcollections.
+ * @param constraints Query constraints (only used if firestoreQuery is a string).
+ * @param queryType The type of query (only used if firestoreQuery is a string).
  * @returns Real-time data, loading state, and any errors.
  */
 export function useFirestoreQuery<T extends DocumentData>(
-  collectionPath: string,
+  firestoreQuery: Query | string,
   constraints: QueryConstraint[] = [],
   queryType: QueryType = 'userSubcollection'
 ) {
   const [user] = useAuthState(auth);
 
   const finalQuery = useMemo(() => {
+    // If a full query object is passed, use it directly.
+    if (typeof firestoreQuery !== 'string') {
+        return firestoreQuery;
+    }
+
+    // The following logic is for when a string path is passed.
     if (!user && (queryType === 'userSubcollection' || queryType === 'collectionGroup')) {
-        // Don't query user-specific or group data if no user is logged in
         return null;
     }
 
@@ -40,17 +46,17 @@ export function useFirestoreQuery<T extends DocumentData>(
 
     switch (queryType) {
       case 'publicCollection':
-        q = query(collection(db, collectionPath), ...constraints);
+        q = query(collection(db, firestoreQuery), ...constraints);
         break;
       
       case 'collectionGroup':
-        q = query(collectionGroup(db, collectionPath), ...constraints);
+        q = query(collectionGroup(db, firestoreQuery), ...constraints);
         break;
 
       case 'userSubcollection':
       default:
         if (user) {
-          q = query(collection(db, 'users', user.uid, collectionPath), ...constraints);
+          q = query(collection(db, 'users', user.uid, firestoreQuery), ...constraints);
         } else {
           return null; 
         }
@@ -58,7 +64,7 @@ export function useFirestoreQuery<T extends DocumentData>(
     }
 
     return q;
-  }, [user, collectionPath, constraints, queryType]);
+  }, [user, firestoreQuery, constraints, queryType]);
 
   const [snapshot, loading, error] = useCollection(finalQuery);
 

@@ -266,18 +266,21 @@ export default function IdeasPage() {
   const router = useRouter();
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
   
+  const topicsQuery = useMemo(() => {
+    return query(
+        collection(db, 'publicTopics'), 
+        where('archived', '==', false), 
+        orderBy('createdAt', 'desc')
+    );
+  }, []);
+
   const { 
     data: topics, 
     loading: topicsLoading, 
     error: topicsError,
     refetch
-  } = useFirestoreQuery<Topic>('publicTopics', 
-    [
-      where('archived', '==', false),
-      orderBy('createdAt', 'desc')
-    ], 
-    'publicCollection'
-  );
+  } = useFirestoreQuery<Topic>(topicsQuery);
+
 
   useEffect(() => {
     if (!loading && !user) {
