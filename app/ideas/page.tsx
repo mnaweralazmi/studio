@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { auth, db, storage } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { collection, collectionGroup, query, where, orderBy, onSnapshot, getDocs, serverTimestamp, setDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -243,10 +243,8 @@ export default function IdeasPage() {
   const [isAddTopicOpen, setAddTopicOpen] = useState(false);
   
   const refetch = useCallback(() => {
-    // This function will be called to refresh data.
-    // In this new implementation, onSnapshot handles realtime updates,
-    // but we can keep this function to manually trigger a re-render if needed
-    // or to re-initiate the listener. For now, a reload is a simple way.
+    // This function is kept for the 'onTopicAdded' callback.
+    // A full reload is a simple way to ensure all states are fresh.
      window.location.reload();
   }, []);
 
@@ -276,44 +274,33 @@ export default function IdeasPage() {
     setLoading(true);
     setError(null);
 
-    // Try realtime snapshot on root collection first
-    try {
-      const q = query(collection(db, 'publicTopics'), where('archived', '==', false), orderBy('createdAt', 'desc'));
-      const unsub = onSnapshot(q, async (snap) => {
-        const fetchedDocs = snap.docs.map(d => ({ id: d.id, path: d.ref.path, ...normalize(d.data()) } as Topic));
-        console.log('[IdeasPage] Fetched from root `publicTopics` collection.', fetchedDocs);
-        
-        if (fetchedDocs.length > 0) {
-            setTopics(fetchedDocs);
-            setLoading(false);
-        } else {
-             // Fallback: If root is empty, try collectionGroup
-             console.warn('[IdeasPage] Root collection is empty or filtered to empty. Trying fallback to collectionGroup...');
-             try {
-                const q2 = query(collectionGroup(db, 'publicTopics'), where('archived', '==', false), orderBy('createdAt', 'desc'));
-                const snap2 = await getDocs(q2);
-                const docs2 = snap2.docs.map(d => ({ id: d.id, path: d.ref.path, ...normalize(d.data()) } as Topic));
-                console.log('[IdeasPage] Fallback to collectionGroup successful.', docs2);
-                setTopics(docs2);
-             } catch (err2: any) {
-                console.error('[IdeasPage] Error in collectionGroup fallback query. This likely means you need a composite index.', err2);
-                setError(`خطأ في الفهرس: الاستعلام يتطلب فهرسًا مخصصًا. يرجى مراجعة console المتصفح لإنشاء الفهرس.`);
-             } finally {
-                setLoading(false);
-             }
-        }
-      }, (err) => {
-        console.error('[IdeasPage] Error onSnapshot for root collection. This could be a permissions issue.', err);
-        setError(`خطأ في الصلاحيات: تأكد من أن قواعد Firestore تسمح بقراءة مجموعة 'publicTopics'.`);
-        setLoading(false);
-      });
+    const q = query(collection(db, 'publicTopics'), where('archived', '==', false), orderBy('createdAt', 'desc'));
 
-      return () => unsub(); // Unsubscribe on cleanup
-    } catch (e: any) {
-      console.error('[IdeasPage] Error setting up initial query. This should not happen.', e);
-      setError(`حدث خطأ غير متوقع عند إعداد الاستعلام.`);
-      setLoading(false);
-    }
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        const fetchedDocs = querySnapshot.docs.map(d => ({ id: d.id, path: d.ref.path, ...normalize(d.data()) } as Topic));
+        setTopics(fetchedDocs);
+        setLoading(false);
+      }, 
+      (err) => {
+        console.error("Firestore onSnapshot Error:", err);
+        // This is the critical part for debugging index issues.
+        // Firestore provides a URL in the error message to create the required index.
+        if (err.message.includes("indexes?create_composite=")) {
+          setError(`خطأ في الفهرس: الاستعلام يتطلب فهرسًا مخصصًا. يرجى مراجعة console المتصفح لإنشاء الفهرس.`);
+          console.error("--- Firestore Index Creation Required ---");
+          console.error("Please visit the following URL to create the composite index in Firebase Console:");
+          console.error(err.message);
+          console.error("-----------------------------------------");
+        } else {
+          setError(`حدث خطأ أثناء جلب البيانات: ${err.message}`);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, [user]);
 
   if (loadingAuth || !user) {
