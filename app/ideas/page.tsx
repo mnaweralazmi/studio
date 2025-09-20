@@ -28,6 +28,7 @@ import {
   orderBy,
   query,
   onSnapshot,
+  getDocs,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -270,6 +271,7 @@ export default function IdeasPage() {
   const [topicsError, setTopicsError] = useState<string | null>(null);
 
   const refetch = useCallback(() => {
+    if (!user) return;
     setTopicsLoading(true);
     setTopicsError(null);
     const q = query(
@@ -305,7 +307,7 @@ export default function IdeasPage() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (user) {
