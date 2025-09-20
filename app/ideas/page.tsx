@@ -255,18 +255,17 @@ export default function IdeasPage() {
   }, [user, loadingAuth, router]);
   
   // Helper to normalize createdAt (serverTimestamp or Date)
-  const normalize = (d: any) => {
+  const normalize = (d: any): Topic => {
     const obj = { ...d };
-    if (obj.createdAt && obj.createdAt.toDate) {
+    if (obj.createdAt && typeof obj.createdAt.toDate === 'function') {
       obj.createdAt = obj.createdAt.toDate();
+    } else if (obj.createdAt && typeof obj.createdAt === 'number') {
+      obj.createdAt = new Date(obj.createdAt);
     } else if (!obj.createdAt) {
-      // If createdAt is missing, use a very old date for sorting purposes
       console.warn(`Document ${d.id} is missing 'createdAt' field.`);
       obj.createdAt = new Date(0);
-    } else if (typeof obj.createdAt === 'number') {
-      obj.createdAt = new Date(obj.createdAt);
     }
-    return obj;
+    return obj as Topic;
   };
 
   useEffect(() => {
@@ -278,7 +277,7 @@ export default function IdeasPage() {
 
     const unsubscribe = onSnapshot(q, 
       (querySnapshot) => {
-        const fetchedDocs = querySnapshot.docs.map(d => ({ id: d.id, path: d.ref.path, ...normalize(d.data()) } as Topic));
+        const fetchedDocs = querySnapshot.docs.map(d => normalize({ id: d.id, path: d.ref.path, ...d.data() }));
         setTopics(fetchedDocs);
         setLoading(false);
       }, 

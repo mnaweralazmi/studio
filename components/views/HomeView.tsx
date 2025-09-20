@@ -34,7 +34,7 @@ export type Topic = {
   description?: string;
   imageUrl?: string;
   imagePath?: string;
-  createdAt?: Timestamp;
+  createdAt?: Date; // It is now a Date object
   userId?: string;
   authorName?: string;
   authorPhotoURL?: string;
@@ -144,7 +144,7 @@ export default function IdeasView({
       )}
 
       {!loading && topics.length === 0 && (
-        <div className="flex flex-col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border max-w-2xl mx-auto">
+        <div className="flex flex_col items-center justify-center text-center py-16 bg-card/30 rounded-lg border-2 border-dashed border-border max-w-2xl mx-auto">
           <Newspaper className="h-16 w-16 text-muted-foreground" />
           <h2 className="mt-4 text-xl font-semibold">
             لا توجد مواضيع لعرضها حاليًا
@@ -178,7 +178,7 @@ export default function IdeasView({
                       </p>
                       {topic.createdAt && (
                         <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(topic.createdAt.toDate(), {
+                          {formatDistanceToNow(topic.createdAt, {
                             addSuffix: true,
                             locale: ar,
                           })}
